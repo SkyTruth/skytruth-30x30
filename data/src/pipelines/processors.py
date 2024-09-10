@@ -5,6 +5,7 @@ import geopandas as gpd
 import numpy as np
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
+from shapely.validation import make_valid
 import json
 
 import asyncio
@@ -23,6 +24,10 @@ from pipelines.utils import background
 def filter_by_methodology(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     mask = (df["STATUS"] != "Not Reported") & ~(df["DESIG_ENG"].str.contains("MAB", case=False))
     return df[mask].reset_index(drop=True)
+
+
+def filter_by_terrestrial(gdf):
+    return gdf[gdf["MARINE"].astype(int) != 2].reset_index(drop=True)
 
 
 def filter_by_exluding_propossed_mpas(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -243,7 +248,7 @@ def repair_geometry(geom):
     if not geom:
         return Polygon()
     elif not geom.is_valid:
-        geom = collection_to_multipolygon(geom.buffer(0.0).make_valid())
+        geom = collection_to_multipolygon(make_valid(geom.buffer(0.0)))
     elif geom.geom_type == "GeometryCollection":
         geom = collection_to_multipolygon(geom)
     return geom

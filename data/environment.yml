@@ -38,6 +38,7 @@ dependencies:
   - pandera-geopandas=>0.18.0
   - libgdal-arrow-parquet=>0.1.0
   - openpyxl=>3.1.0
+  - pyarrow
   - pip:
       - jupyterlab-code-formatter==2.2.1
       - jupyter_collaboration
