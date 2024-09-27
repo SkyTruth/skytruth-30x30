@@ -243,11 +243,8 @@ def clean_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 def collection_to_multipolygon(geometry_collection):
     """Convert collection of polygons to multipolygon."""
-    print(type(geometry_collection.geoms))
     geom_list = [
-        geom
-        for geom in geometry_collection.geoms
-        if geom.geom_type == "Polygon" or geom.geom_type == "MultiPolygon"
+        geom for geom in geometry_collection.geoms if geom.geom_type in ("Polygon", "MultiPolygon")
     ]
     return unary_union(geom_list)
 
