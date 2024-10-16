@@ -263,8 +263,12 @@ def add_envelope(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return df.assign(geometry=lambda row: row["geometry"].envelope)
 
 
+def round_to_list(bounds):
+    return list(np.round(bounds, decimals=5))
+
+
 def add_bbox(df: gpd.GeoDataFrame, col_name: str = "bounds") -> gpd.GeoDataFrame:
-    return df.assign(**{col_name: df.geometry.bounds.apply(list, axis=1)})
+    return df.assign(**{col_name: df.geometry.bounds.apply(round_to_list, axis=1)})
 
 
 def calculate_area(
