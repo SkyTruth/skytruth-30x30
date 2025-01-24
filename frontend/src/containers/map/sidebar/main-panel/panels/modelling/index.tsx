@@ -53,8 +53,11 @@ const SidebarModelling: FCWithMessages = () => {
           <h1
             className={cn({
               'text-ellipsis font-black transition-all': true,
-              'text-5xl': containerScroll === 0,
-              'overflow-hidden whitespace-nowrap text-xl': containerScroll > 0,
+              'text-5xl': containerScroll <= 5,
+              'text-4xl': containerScroll > 5 && containerScroll <= 10,
+              'text-3xl': containerScroll > 10 && containerScroll <= 20,
+              'text-2xl': containerScroll > 20 && containerScroll <= 30,
+              'overflow-hidden whitespace-nowrap text-xl': containerScroll > 30,
             })}
           >
             {showIntro ? t('conservation-scenarios') : t('custom-area')}
