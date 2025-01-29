@@ -16,17 +16,39 @@ External services:
 
 - *Mapbox*: used for serving layers for the map
 
-- *HubSpot*: used for the contact form, see [configuration instructions](hubspot.md)
+- *HubSpot*: used for the contact form, see [configuration instructions][hubspot]
 
 This repository contains all the code and documentation necessary to set up and deploy the project. It is organised in 5 main subdirectories, with accompanying documentation inside each.
 
-| Subdirectory name | Description                                                 | Documentation                                                                                            |
-|-------------------|-------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
-| frontend          | The Next.js client application                            | [frontend/README.md](frontend/README.md)             |
-| cms               | The Strapi CMS / API                            | [cms/README.md](cms/README.md)             |
-| cloud_functions/analysis   | The on-the-fly analysis cloud function   | [cloud_functions/analysis/README.md](cloud_functions/analysis/README.md)               |
-| data           | The Python data importers and uploaders   | [data/README.md](data/README.md)               |
-| infrastructure    | The Terraform project & GH Actions workflow (provisioning & deployment to Google Cloud Platform) | [infrastructure/README.md](infrastructure/README.md) |
+| Subdirectory name        | Description                                                                                      | Documentation                               |
+|--------------------------|--------------------------------------------------------------------------------------------------|---------------------------------------------|
+| frontend                 | The Next.js client application                                                                   | [frontend][frontend]                        |
+| cms                      | The Strapi CMS / API                                                                             | [cms]                                       |
+| cloud_functions/analysis | The on-the-fly analysis cloud function                                                           | [cloud functions][cloud_functions_analysis] |
+| data                     | The Python data importers and uploaders                                                          | [data]                                      |
+| infrastructure           | The Terraform project & GH Actions workflow (provisioning & deployment to Google Cloud Platform) | [infrastructure]                            |
+
 
 ### Deployment and Infrastructure
 The project is deployed on the Google Cloud Platform (GCP) using GitHub Actions for continuous integration and deployment. The infrastructure is provisioned and managed using Terraform scripts, ensuring consistent and reproducible deployments.
+
+### Development
+In General each of subdirectories listed above act as standalone services and can be developed in isolation. For detailed instructions on development in those services please see the linked README's for the given service. There are, however, a few exceptions to this which are outlined below.
+
+#### Frontend Typescript Types
+Type definitions and internal data fetching hooks are automatically generated via integrations with [Orval][orval] and [Strapi][strapi]. Please see the [frontend documentation][frontend_types] for how to manage this dependency when developing locally.
+
+#### Development Hooks
+This repo uses `husky` to manage development flow hooks. There are hooks for: `pre-commit`, `post-checkout`, and `post-merge`. These hooks ensure the code is linted and formatted, as well as ensuring that generated types are up to date and the Strapi CMS config models are all up to date. For these checks to pass you must have an accurate `.env` file in the CMS directory and have the config file synced from the Strapi back office. Please refer to the [developing strapi docs][strapi_config] and the [strapi config sync docs][strapi_config_sync] to set this up prior to branching and committing. 
+
+[cloud_functions_analysis]: cloud_functions/analysis/README.md
+[cms]: cms/README.md
+[data]: data/README.md
+[frontend]: frontend/README.md
+[frontend_types]: frontend/README.md#automatic-type-building
+[hubspot]: hubspot.md
+[infrastructure]: infrastructure/README.md
+[orval]: https://orval.dev/overview
+[strapi]: https://strapi.io/
+[strapi_config_sync]: cms/README.md#config-sync-plugin-and-configuration-version-control
+[strapi_config]: cms/README.md#local-config-setup
