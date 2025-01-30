@@ -18,8 +18,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -32,8 +31,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -46,8 +44,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -67,8 +64,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -88,8 +84,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -107,8 +102,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -121,33 +115,13 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "actionParameters": {},
-      "subject": "api::data-info.data-info",
-      "properties": {
-        "fields": [
-          "slug",
-          "content",
-          "data_sources"
-        ],
-        "locales": [
-          "en",
-          "fr",
-          "es",
-          "fr"
-        ]
-      },
-      "conditions": []
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "actionParameters": {},
       "subject": "api::data-info.data-info",
       "properties": {
@@ -159,8 +133,25 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
+        ]
+      },
+      "conditions": []
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "actionParameters": {},
+      "subject": "api::data-info.data-info",
+      "properties": {
+        "fields": [
+          "slug",
+          "content",
+          "data_sources"
+        ],
+        "locales": [
+          "en",
+          "fr",
+          "es"
         ]
       },
       "conditions": []
@@ -178,8 +169,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -192,33 +182,13 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "actionParameters": {},
-      "subject": "api::data-source.data-source",
-      "properties": {
-        "fields": [
-          "slug",
-          "title",
-          "url"
-        ],
-        "locales": [
-          "en",
-          "fr",
-          "es",
-          "fr"
-        ]
-      },
-      "conditions": []
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "actionParameters": {},
       "subject": "api::data-source.data-source",
       "properties": {
@@ -230,8 +200,25 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
+        ]
+      },
+      "conditions": []
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "actionParameters": {},
+      "subject": "api::data-source.data-source",
+      "properties": {
+        "fields": [
+          "slug",
+          "title",
+          "url"
+        ],
+        "locales": [
+          "en",
+          "fr",
+          "es"
         ]
       },
       "conditions": []
@@ -247,8 +234,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -261,8 +247,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -275,8 +260,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -292,8 +276,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -309,8 +292,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -328,8 +310,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -342,8 +323,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -356,8 +336,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -375,8 +354,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -394,8 +372,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -411,8 +388,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -425,8 +401,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -439,8 +414,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -456,8 +430,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -473,8 +446,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -496,8 +468,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -510,8 +481,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -524,8 +494,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -547,8 +516,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -570,8 +538,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -589,8 +556,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -603,8 +569,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -617,8 +582,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -636,8 +600,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -655,8 +618,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -673,8 +635,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -687,8 +648,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -705,8 +665,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -723,8 +682,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -791,8 +749,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -805,8 +762,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -824,8 +780,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -843,8 +798,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -917,8 +871,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -931,8 +884,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -950,8 +902,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -969,8 +920,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1004,8 +954,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1018,8 +967,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1032,8 +980,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1067,8 +1014,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1102,8 +1048,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1206,8 +1151,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1220,8 +1164,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1239,8 +1182,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1258,8 +1200,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1277,8 +1218,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1291,8 +1231,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1310,8 +1249,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1329,8 +1267,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1397,8 +1334,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1411,8 +1347,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1430,8 +1365,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1449,8 +1383,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1620,8 +1553,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1634,8 +1566,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1653,8 +1584,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1672,8 +1602,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1692,8 +1621,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1706,8 +1634,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1720,8 +1647,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1740,8 +1666,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
@@ -1760,8 +1685,7 @@
         "locales": [
           "en",
           "fr",
-          "es",
-          "fr"
+          "es"
         ]
       },
       "conditions": []
