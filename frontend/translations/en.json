@@ -215,7 +215,7 @@
       "re-draw": "Re-draw",
       "how-to-draw": "<b>How to draw a custom area</b> on the map, using the drawing functionality?",
       "step-1-alt": "Step 01",
-      "step-1-description": "Click on the <b>Draw a shape</b> button located above, in the blue section at the top of the panel.",
+      "step-1-description": "Click on the <b>Draw a shape</b> button located below.",
       "step-2-alt": "Step 02",
       "step-2-description": "<b>Start drawing on the map</b> by clicking. Each click adds an anchor point. All sides of the polygon are connected through anchor points.",
       "step-3-alt": "Step 03",
