@@ -58,47 +58,27 @@ const MapDetails: FCWithMessages = () => {
         locationTypes: ['worldwide', 'region'],
         component: GlobalRegionalTable,
         title: {
-          summary: {
-            worldwide: t('environmental-conservation-national-regional-levels'),
-            region: t('environmental-conservation-location'),
+            worldwide: t('national-regional-levels'),
+            region: t('location'),
             // Fallback to use in case the slug/code isn't defined, in order to prevent crashes
-            fallback: t('environmental-conservation'),
-          },
-          marine: {
-            worldwide: t('marine-conservation-national-regional-levels'),
-            region: t('marine-conservation-location'),
-            // Fallback to use in case the slug/code isn't defined, in order to prevent crashes
-            fallback: t('marine-conservation'),
-          },
-          terrestrial: {
-            worldwide: t('terrestrial-conservation-national-regional-levels'),
-            region: t('terrestrial-conservation-location'),
-            // Fallback to use in case the slug/code isn't defined, in order to prevent crashes
-            fallback: t('terrestrial-conservation'),
-          },
+            fallback: {
+              summary: t('environmental-conservation'),
+              marine: t('marine-conservation'),
+              terrestrial: t('terrestrial-conservation'),
+            },
         },
       },
       countryHighseas: {
         locationTypes: ['country', 'highseas'],
         component: NationalHighSeasTable,
         title: {
-          summary: {
-            country: t('environmental-conservation-location'),
-            highseas: t('environmental-conservation-high-seas'),
+            country: t('location'),
+            highseas: t('high-seas'),
             // Fallback to use in case the slug/code isn't defined, in order to prevent crashes
-            fallback: t('environmental-conservation'),
-          },
-          marine: {
-            country: t('marine-conservation-location'),
-            highseas: t('marine-conservation-high-seas'),
-            // Fallback to use in case the slug/code isn't defined, in order to prevent crashes
-            fallback: t('marine-conservation'),
-          },
-          terrestrial: {
-            country: t('terrestrial-conservation-location'),
-            highseas: t('terrestrial-conservation-high-seas'),
-            // Fallback to use in case the slug/code isn't defined, in order to prevent crashes
-            fallback: t('terrestrial-conservation'),
+            fallback: {
+              summary: t('environmental-conservation'),
+              marine: t('marine-conservation'),
+              terrestrial: t('terrestrial-conservation'),
           },
         },
       },
@@ -123,8 +103,8 @@ const MapDetails: FCWithMessages = () => {
     }
 
     const parsedTitle =
-      tableSettings.title[tab][locationsQuery.data?.type]?.replace('{location}', locationName) ||
-      tableSettings.title[tab].fallback;
+      tableSettings.title[locationsQuery.data?.type]?.replace('{location}', locationName) ||
+      tableSettings.title.fallback[tab];
 
     return {
       title: parsedTitle,
