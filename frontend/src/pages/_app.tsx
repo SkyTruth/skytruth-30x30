@@ -5,7 +5,7 @@ import { MapProvider } from 'react-map-gl';
 import type { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
 
-import { GoogleTagManager } from '@next/third-parties/google'
+import { GoogleTagManager } from '@next/third-parties/google';
 import { QueryClient, QueryClientProvider, Hydrate } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 
