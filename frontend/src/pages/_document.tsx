@@ -1,5 +1,6 @@
 import Document, { Html, Main, NextScript, Head } from 'next/document';
 
+import Analytics from '@/components/analytics';
 import { mediaStyles } from '@/media';
 
 export default class MyDocument extends Document {
@@ -26,6 +27,7 @@ export default class MyDocument extends Document {
         <body>
           <Main />
           <NextScript />
+          <Analytics isBody={true} />
         </body>
       </Html>
     );

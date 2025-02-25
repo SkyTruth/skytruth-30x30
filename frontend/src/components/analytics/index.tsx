@@ -6,7 +6,7 @@ type AnalyticsProps = {
   isBody?: boolean;
 };
 
-const Analytics: FC = ({ isBody = false }: AnalyticsProps) => {
+const Analytics: FC<AnalyticsProps> = ({ isBody = false }) => {
   const GTMID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS;
   const heapID = process.env.NEXT_PUBLIC_HEAP_ANALYTICS_ID;
 
