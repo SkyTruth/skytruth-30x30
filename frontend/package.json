@@ -1,6 +1,6 @@
 {
   "name": "skytruth-30x30-frontend",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "scripts": {
     "dev": "yarn types && next dev",
@@ -29,7 +29,6 @@
     "@loaders.gl/zip": "^3.4.14",
     "@localazy/cdn-client": "^1.5.2",
     "@mapbox/mapbox-gl-draw": "1.4.3",
-    "@next/third-parties": "latest",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-collapsible": "^1.0.3",
