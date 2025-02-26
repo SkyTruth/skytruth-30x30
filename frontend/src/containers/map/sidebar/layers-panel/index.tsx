@@ -32,7 +32,7 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
   return (
     <div className="h-full overflow-auto px-4 text-xs">
       <div className="py-1">
-        <h3 className="text-xl font-extrabold">{t('layers')}</h3>
+        <h3 className="text-xl font-extrabold">{t('map-layers')}</h3>
       </div>
       <LayersGroup
         name={t('terrestrial-data')}

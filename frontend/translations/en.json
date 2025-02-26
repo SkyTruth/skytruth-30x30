@@ -181,7 +181,7 @@
     },
     "map-sidebar": {
       "close-layers": "Close layers",
-      "layers": "Layers",
+      "map-layers": "Map Layers",
       "toggle-sidebar": "Toggle sidebar"
     },
     "map-sidebar-main-panel": {
@@ -240,7 +240,7 @@
       "data-disclaimer": "Data disclaimer"
     },
     "map-sidebar-layers-panel": {
-      "layers": "Layers",
+      "map-layers": "Map Layers",
       "labels": "Labels",
       "basemap": "Basemap",
       "marine-data": "Marine Data",
