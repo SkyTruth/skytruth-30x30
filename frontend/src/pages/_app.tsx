@@ -5,7 +5,6 @@ import { MapProvider } from 'react-map-gl';
 import type { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
 
-import { GoogleTagManager } from '@next/third-parties/google';
 import { QueryClient, QueryClientProvider, Hydrate } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 
@@ -35,7 +34,6 @@ const App: React.FC<AppProps> = ({ Component, pageProps }: Props) => {
   );
 
   const router = useRouter();
-  const GTMID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS;
 
   const Layout = Component?.layout?.Component ?? ((page) => page?.children);
 
@@ -63,7 +61,6 @@ const App: React.FC<AppProps> = ({ Component, pageProps }: Props) => {
               <Analytics />
               <Layout {...layoutProps}>
                 <Component {...pageProps} />
-                <GoogleTagManager gtmId={GTMID} />
               </Layout>
             </MapProvider>
           </Hydrate>

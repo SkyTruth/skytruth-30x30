@@ -9,7 +9,7 @@ import { LayerResponseDataObject } from '@/types/generated/strapi.schemas';
 import type { ModellingData } from '@/types/modelling';
 
 export const sidebarAtom = atom(true);
-export const layersAtom = atom(true);
+export const layersAtom = atom(false);
 
 // ? Map state
 export const layersInteractiveAtom = atom<LayerResponseDataObject['id'][]>([]);
