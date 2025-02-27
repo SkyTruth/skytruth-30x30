@@ -35,7 +35,6 @@ const App: React.FC<AppProps> = ({ Component, pageProps }: Props) => {
   );
 
   const router = useRouter();
-  const GTMID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS;
 
   const Layout = Component?.layout?.Component ?? ((page) => page?.children);
 
@@ -63,7 +62,6 @@ const App: React.FC<AppProps> = ({ Component, pageProps }: Props) => {
               <Analytics />
               <Layout {...layoutProps}>
                 <Component {...pageProps} />
-                <GoogleTagManager gtmId={GTMID} />
               </Layout>
             </MapProvider>
           </Hydrate>
