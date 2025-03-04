@@ -102,7 +102,7 @@ const MapSidebar: FCWithMessages<MapSidebarProps> = ({ type }) => {
             {!isLayersOpen && (
               <>
                 <Icon icon={LayersIcon} className="ml-0.5 h-4 w-4 pb-px" />
-                <span className="pl-3 pr-1 font-mono text-xs font-normal normal-case">
+                <span className="whitespace-break-spaces pl-3 pr-1 font-mono text-xs font-normal normal-case">
                   {t('map-layers')}
                 </span>
               </>
