@@ -1074,7 +1074,8 @@
           "name_es",
           "name_fr",
           "marine_target",
-          "marine_target_year"
+          "marine_target_year",
+          "pas"
         ]
       },
       "conditions": []
@@ -1107,7 +1108,8 @@
           "name_es",
           "name_fr",
           "marine_target",
-          "marine_target_year"
+          "marine_target_year",
+          "pas"
         ]
       },
       "conditions": []
@@ -1133,7 +1135,8 @@
           "name_es",
           "name_fr",
           "marine_target",
-          "marine_target_year"
+          "marine_target_year",
+          "pas"
         ]
       },
       "conditions": []
