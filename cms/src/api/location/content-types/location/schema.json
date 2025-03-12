@@ -101,6 +101,12 @@
     },
     "marine_target_year": {
       "type": "integer"
+    },
+    "pas": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::pa.pa",
+      "mappedBy": "location"
     }
   }
 }
