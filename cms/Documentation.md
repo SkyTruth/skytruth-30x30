@@ -65,14 +65,261 @@ Error Responses are fairly consistent and take on the form:
 
 ## Resources
 
+* [Data Sources][data_source]
+* [Environments][environment]
+* [Fishing Protection Level][fishing_protection_level]
+* [Fishing Protection Level][fishing_protection_level_stats]
+* [Habitat Stats][habitat_stats]
 * [Locations][location]
+* [Marine Protection Level][mpaa_protection_level]
+* [Marine Protection Level Establishment Stage][mpaa_stage]
 * [Marine Protection Stats][mpaa_protection_level_stats]
 * [Protected Areas][protected_areas]
 * [Protection Coverage Stats][protection_coverage_stats]
+* [Protection Status][protection_status]
 
 ## Queryable Resources and Endpoints
 
 Below are queryable data entities and their related data that you can request. Fields marked with a 🖇️ indicate a related field that can be linked in a query using the `populate` query parameter.
+
+### Fishing Protection Level Stats
+
+#### Description
+
+Data related to fishing protection levels.
+
+<details>
+  <summary>Fishing Protection Level Stats Fields</summary>
+
+  | Name                     | Type                                | Description |
+  |--------------------------|-------------------------------------|-------------|
+  | location                 | Relation with Location 🖇️           | [Location][location] |
+  | fishing_protection_level | Relation with Fishing Protection Level 🖇️ | [Fishing Protection Level][fishing_protection_level_stats] |
+  | area                     | Number                              | Protected area in km&#178; |
+  | pct                      | Number                              | Percentage of the total location area that is protected |
+
+</details>
+
+#### End Points
+
+* `GET /fishing-protection-level-stats`
+* `GET /fishing-protection-level-stats/{id}`
+
+#### Example Requests
+
+<details>
+  <summary>cURL</summary>
+
+  ```bash
+  curl -X GET --globoff 'https://30x30.skytruth.org/cms/api/fishing-protection-level-stats?populate[fishing_protection_level][fields]=name&populate[fishing_protection_level][fields]=info&populate[location][fields]=name' \
+  -H "Content-Type: application/json;"
+  ```
+
+</details>
+
+<details>
+  <summary>JavaScript</summary>
+
+  ```javascript
+  fetch("https://30x30.skytruth.org/cms/api/fishing-protection-level-stats?populate[fishing_protection_level][fields]=name&populate[fishing_protection_level][fields]=info&populate[location][fields]=name", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json;"
+    }
+  })
+  .then(response => response.json())
+  .then(data => console.log(data));
+  ```
+
+</details>
+
+<details>
+  <summary>Python</summary>
+
+  ```python
+  import requests
+
+  url = "https://30x30.skytruth.org/cms/api/fishing-protection-level-stats?populate[fishing_protection_level][fields]=name&populate[fishing_protection_level][fields]=info&populate[location][fields]=name"
+  headers = {
+    "Content-Type": "application/json;"
+  }
+
+  response = requests.get(url, headers=headers)
+  print(response.json())
+  ```
+
+</details>
+
+#### Example Responses
+
+<details>
+  <summary>
+  Example Success Response</summary>
+
+  ```json
+  {
+    "data": [
+        {
+            "id": 1,
+            "attributes": {
+                "area": 704165.07,
+                "createdAt": "2024-10-10T13:33:42.833Z",
+                "updatedAt": "2024-10-10T13:33:42.828Z",
+                "pct": 4.73,
+                "fishing_protection_level": {
+                    "data": {
+                        "id": 1,
+                        "attributes": {
+                            "name": "Highly",
+                            "info": "MPAs that are highly protected from fishing (e.g., Most Restrictive or Heavily Restrictive LFP score) based on ProtectedSeas. Learn more at https://navigatormap.org."
+                        }
+                    }
+                },
+                "location": {
+                    "data": {
+                        "id": 3,
+                        "attributes": {
+                            "name": "Africa"
+                        }
+                    }
+                }
+            }
+        },
+        // ... Data Truncated ...
+    ],
+    "meta": {
+        "pagination": {
+            "page": 1,
+            "pageSize": 25,
+            "pageCount": 20,
+            "total": 492
+        }
+    }
+  }
+  ```
+
+</details>
+
+### Habitat Stats
+
+#### Description
+
+Data related to habitat statistics.
+
+<details>
+  <summary>Habitat Stats Fields</summary>
+
+  | Name            | Type                        | Description |
+  |-----------------|-----------------------------|-------------|
+  | location        | Relation with Location 🖇️   | [Location][location] |
+  | habitat         | Relation with Habitat 🖇️    | [Habitat][habitat] |
+  | year            | Number                      | Year of the habitat stat |
+  | protected_area  | Number                      | Protected area in km&#178; |
+  | total_area      | Number                      | Total area in km&#178; |
+  | environment     | Relation with Environment 🖇️ | [Environment][environment] |
+
+</details>
+
+#### End Points
+
+* `GET /habitat-stats`
+* `GET /habitat-stats/{id}`
+
+#### Example Requests
+
+<details>
+  <summary>cURL</summary>
+
+  ```bash
+  curl -X GET --globoff 'https://30x30.skytruth.org/cms/api/habitat-stats?filters[location][type]=region&populate[habitat][fields]=name&populate[location][fields]=name' \
+  -H "Content-Type: application/json;"
+  ```
+
+</details>
+
+<details>
+  <summary>JavaScript</summary>
+
+  ```javascript
+  fetch("https://30x30.skytruth.org/cms/api/habitat-stats?filters[location][type]=region&populate[habitat][fields]=name&populate[location][fields]=name", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json;"
+    }
+  })
+  .then(response => response.json())
+  .then(data => console.log(data));
+  ```
+
+</details>
+
+<details>
+  <summary>Python</summary>
+
+  ```python
+  import requests
+
+  url = "https://30x30.skytruth.org/cms/api/habitat-stats?filters[location][type]=region&populate[habitat][fields]=name&populate[location][fields]=name"
+  headers = {
+    "Content-Type": "application/json;"
+  }
+
+  response = requests.get(url, headers=headers)
+  print(response.json())
+  ```
+
+</details>
+
+#### Example Responses
+
+<details>
+  <summary>
+  Example Success Response</summary>
+
+  ```json
+  {
+    "data": [
+        {
+            "id": 1999,
+            "attributes": {
+                "year": 2020,
+                "protected_area": 27151.74,
+                "total_area": 39893.44,
+                "createdAt": "2024-12-11T08:06:30.082Z",
+                "updatedAt": "2024-12-11T08:06:30.079Z",
+                "habitat": {
+                    "data": {
+                        "id": 5,
+                        "attributes": {
+                            "name": "Mangroves"
+                        }
+                    }
+                },
+                "location": {
+                    "data": {
+                        "id": 8,
+                        "attributes": {
+                            "name": "Latin America & Caribbean"
+                        }
+                    }
+                }
+            }
+        }
+        // ... data truncated ...
+    ],
+    "meta": {
+        "pagination": {
+            "page": 1,
+            "pageSize": 25,
+            "pageCount": 4,
+            "total": 85
+        },
+        "updatedAt": "2024-12-11T08:06:30.100Z"
+    }
+  }
+  ```
+
+</details>
 
 ### Locations
 
@@ -215,8 +462,6 @@ Data related to locations.
   ```
 
 </details>
-
-### MPAA Protection Level Stats
 
 ### MPAA Protection Level Stats
 
@@ -602,12 +847,117 @@ This example gets terrestrial protected area stats for all regions
 
 </details>
 
+## Related Resources
+
+### Data Source
+
+#### Description
+
+Data related to data sources. This field is queryable as a related field to [Protected Areas][protected_areas]. See the note on [data citation][citation]
+
+<details>
+  <summary>Data Sources Fields</summary>
+
+  | Name  | Type | Description |
+  |-------|------|-------------|
+  | slug  | Text | Unique identifier for the data source |
+  | title | Text | Title of the data source |
+  | url   | Text | URL of the data source |
+
+</details>
+
+
+### Environment
+
+#### Description
+
+Data related to environments. This field is queryable as a related field to various resources.
+
+<details>
+  <summary>Environments Fields</summary>
+
+  | Name | Type | Description |
+  |------|------|-------------|
+  | name | Text | Name of the environment |
+  | slug | Text | Unique identifier for the environment |
+
+</details>
+
+### Fishing Protection Level
+
+#### Description
+
+Data related to fishing protection levels. This field is queryable as a related field to [Fishing Protection Level Stats][fishing_protection_level_stats].
+
+<details>
+  <summary>Fishing Protection Level Fields</summary>
+
+  | Name | Type | Description |
+  |------|------|-------------|
+  | slug | Text | Unique identifier for the fishing protection level |
+  | name | Text | Name of the fishing protection level |
+  | info | Text | Additional information about the fishing protection level |
+
+</details>
+
+### MPAA Establishment Stage
+
+#### Description
+
+Data related to Marine Protected Area (MPA) establishment stages. This field is queryable as a related field to [Protected Areas][protected_areas].
+
+<details>
+  <summary>MPAA Establishment Stage Fields</summary>
+
+  | Name | Type | Description |
+  |------|------|-------------|
+  | slug | Text | Unique identifier for the MPAA establishment stage |
+  | name | Text | Name of the MPAA establishment stage |
+  | info | Text | Additional information about the MPAA establishment stage |
+
+</details>
+
+### MPAA Protection Level
+
+#### Description
+
+Data related to Marine Protected Area (MPA) protection levels. This field is queryable as a related field to [MPAA Protection Level Stats][mpaa_protection_level_stats].
+
+<details>
+  <summary>MPAA Protection Level Fields</summary>
+
+  | Name | Type | Description |
+  |------|------|-------------|
+  | slug | Text | Unique identifier for the MPAA protection level |
+  | name | Text | Name of the MPAA protection level |
+  | info | Text | Additional information about the MPAA protection level |
+
+</details>
+
 ### Protection Status
 
+#### Description
+
+Data related to protection status. This field is queryable as a related field to [Protected Areas][protected_areas]
+
+<details>
+  <summary>Protection Status Fields</summary>
+
+  | Name | Type | Description |
+  |------|------|-------------|
+  | slug | Text | Unique identifier for the protection status |
+  | name | Text | Name of the protection status |
+  | info | Text | Additional information about the protection status |
+
+</details>
+
 <!-- Internal Sections -->
+[citation]: #citation
 [data_source]: #data-source
 [environment]: #environment
+[fishing_protection_level]: #fishing-protection-level
 [fishing_protection_level_stats]: #fishing-protection-level-stats
+[habitat_stats]: #habitat-stats
 [location]: #locations
 [mpaa_protection_level]: #mpaa-protection-level
 [mpaa_protection_level_stats]: #mpaa-protection-level-stats
@@ -619,8 +969,3 @@ This example gets terrestrial protected area stats for all regions
 <!-- External Resources -->
 [parameter_docs]: https://docs.strapi.io/dev-docs/api/rest/parameters
 [populate_docs]: https://docs.strapi.io/dev-docs/api/rest/guides/understanding-populate
-
-```
-`protection-coverage-stats?fields[]=coverage&fields[]=protected_area&fields[]=pas&fields[]=oecms&fields[]=global_contribution&populate[location][fields][0]=name&filters[environment][slug][%24eq]=terrestrial&filters[location][code][%24eq]=CHL&sort=location.name%3Aasc%2Cenvironment.name%3Aasc&populate[location][fields]=code&populate[location][populate][pas][populate][data_source][fields]=title&filters[is_last_year][%24eq]=true'`
-
-```
