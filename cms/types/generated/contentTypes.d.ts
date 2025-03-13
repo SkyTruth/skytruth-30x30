@@ -1593,6 +1593,11 @@ export interface ApiLocationLocation extends Schema.CollectionType {
         max: 100;
       }>;
     marine_target_year: Attribute.Integer;
+    pas: Attribute.Relation<
+      'api::location.location',
+      'oneToMany',
+      'api::pa.pa'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1880,7 +1885,7 @@ export interface ApiPaPa extends Schema.CollectionType {
     >;
     location: Attribute.Relation<
       'api::pa.pa',
-      'oneToOne',
+      'manyToOne',
       'api::location.location'
     >;
     wdpaid: Attribute.BigInteger;

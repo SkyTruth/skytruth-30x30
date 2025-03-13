@@ -59,8 +59,9 @@
     },
     "location": {
       "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::location.location"
+      "relation": "manyToOne",
+      "target": "api::location.location",
+      "inversedBy": "pas"
     },
     "wdpaid": {
       "type": "biginteger"

@@ -249,6 +249,21 @@
           "sortable": true
         }
       },
+      "pas": {
+        "edit": {
+          "label": "pas",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true,
+          "mainField": "name"
+        },
+        "list": {
+          "label": "pas",
+          "searchable": false,
+          "sortable": false
+        }
+      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -309,6 +324,12 @@
       }
     },
     "layouts": {
+      "list": [
+        "id",
+        "code",
+        "name",
+        "total_marine_area"
+      ],
       "edit": [
         [
           {
@@ -393,13 +414,13 @@
             "name": "marine_target_year",
             "size": 4
           }
+        ],
+        [
+          {
+            "name": "pas",
+            "size": 6
+          }
         ]
-      ],
-      "list": [
-        "id",
-        "code",
-        "name",
-        "total_marine_area"
       ]
     }
   },
