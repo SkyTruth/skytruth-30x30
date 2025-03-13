@@ -65,17 +65,22 @@ Error Responses are fairly consistent and take on the form:
 
 ## Resources
 
+### Queryable Resources Table of Contents
+
+* [Fishing Protection Level Stats][fishing_protection_level_stats]
+* [Habitat Stats][habitat_stats]
+* [Locations][location]
+* [Marine Protection Level Stats][mpaa_protection_level_stats]
+* [Protected Areas][protected_areas]
+* [Protection Coverage Stats][protection_coverage_stats]
+
+### Related Resources Table of Contents
+
 * [Data Sources][data_source]
 * [Environments][environment]
 * [Fishing Protection Level][fishing_protection_level]
-* [Fishing Protection Level][fishing_protection_level_stats]
-* [Habitat Stats][habitat_stats]
-* [Locations][location]
 * [Marine Protection Level][mpaa_protection_level]
 * [Marine Protection Level Establishment Stage][mpaa_stage]
-* [Marine Protection Stats][mpaa_protection_level_stats]
-* [Protected Areas][protected_areas]
-* [Protection Coverage Stats][protection_coverage_stats]
 * [Protection Status][protection_status]
 
 ## Queryable Resources and Endpoints
