@@ -77,7 +77,6 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
       },
       { name: t('knowledge-hub'), href: PAGES.knowledgeHub, colorClassName: 'text-green' },
       { name: t('about'), href: PAGES.about, colorClassName: 'text-violet' },
-      { name: t('contact'), href: PAGES.contact, colorClassName: 'text-black' },
     ],
     [t]
   );

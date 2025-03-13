@@ -22,11 +22,6 @@
       "page-title": "Internal server error",
       "page-description": "Something went wrong. We are working on the problem."
     },
-    "contact": {
-      "page-title": "Contact us",
-      "want-know-more": "Want to <br></br>know more?",
-      "get-in-touch": "Get in touch."
-    },
     "about": {
       "page-title": "About",
       "definition": "Definition",
@@ -107,33 +102,6 @@
     "conservation-builder": {}
   },
   "containers": {
-    "contact-form": {
-      "thanks-for-message": "Thanks for your message. We will get back to you as soon as possible.",
-      "go-to-homepage": "Go to homepage",
-      "submit": "Submit",
-      "inputs": {
-        "name-label": "First and last names",
-        "name-placeholder": "Your name",
-        "email-label": "Email address",
-        "email-placeholder": "Your email address",
-        "organization-label": "Organization",
-        "organization-placeholder": "Your organization",
-        "country-label": "Country",
-        "country-placeholder": "Your country",
-        "reason-label": "Reason",
-        "reason-placeholder": "Please, select a contact reason",
-        "message-label": "Message",
-        "message-placeholder": "Your message",
-        "privacy-consent": "By submitting this form you agree with processing your personal data in accordance with the <a>Privacy Policy</a>.",
-        "feedback": "Feedback",
-        "data-update-request": "Data update request",
-        "bug-reporting": "Bug reporting",
-        "error-mandatory-field": "This field is mandatory.",
-        "error-invalid-email-format": "Invalid email format.",
-        "error-empty-message": "The message cannot be empty.",
-        "error-accept-privacy-policy": "You must agree with the privacy policy."
-      }
-    },
     "logos-grid": {
       "skytruth-description": "Serves as project lead",
       "vizzuality-description": "Leads design and development",

@@ -496,15 +496,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hookform/resolvers@npm:3.3.2":
-  version: 3.3.2
-  resolution: "@hookform/resolvers@npm:3.3.2"
-  peerDependencies:
-    react-hook-form: ^7.0.0
-  checksum: bcaefe2a8a212b015b3ea99c93d7ecb5c8f475606d83be9d82dc6cc0cbb3cda03f7fd7a4426688c2de29b6800b93adbf9abb932a1dafee1d053dcaa69ec13f3f
-  languageName: node
-  linkType: hard
-
 "@humanwhocodes/config-array@npm:^0.11.14":
   version: 0.11.14
   resolution: "@humanwhocodes/config-array@npm:0.11.14"
@@ -12831,7 +12822,6 @@ __metadata:
     "@deck.gl/json": 8.9.31
     "@deck.gl/layers": 8.9.31
     "@deck.gl/mapbox": 8.9.31
-    "@hookform/resolvers": 3.3.2
     "@loaders.gl/core": ^3.4.14
     "@loaders.gl/kml": ^3.4.14
     "@loaders.gl/loader-utils": ^3.4.14
@@ -12912,7 +12902,6 @@ __metadata:
     tailwindcss-animate: 1.0.7
     typescript: 5.6.3
     typescript-eslint: 8.9.0
-    zod: 3.22.4
   languageName: unknown
   linkType: soft
 
@@ -14577,12 +14566,5 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: f77b3d8d00310def622123df93d4ee654fc6a0096182af8bd60679ddcdfb3474c56c6c7190817c84a2785648cdee9d721c0154eb45698c62176c322fb46fc700
-  languageName: node
-  linkType: hard
-
-"zod@npm:3.22.4":
-  version: 3.22.4
-  resolution: "zod@npm:3.22.4"
-  checksum: 80bfd7f8039b24fddeb0718a2ec7c02aa9856e4838d6aa4864335a047b6b37a3273b191ef335bf0b2002e5c514ef261ffcda5a589fb084a48c336ffc4cdbab7f
   languageName: node
   linkType: hard

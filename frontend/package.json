@@ -21,7 +21,6 @@
     "@deck.gl/json": "8.9.31",
     "@deck.gl/layers": "8.9.31",
     "@deck.gl/mapbox": "8.9.31",
-    "@hookform/resolvers": "3.3.2",
     "@loaders.gl/core": "^3.4.14",
     "@loaders.gl/kml": "^3.4.14",
     "@loaders.gl/loader-utils": "^3.4.14",
@@ -78,8 +77,7 @@
     "tailwind-merge": "2.5.4",
     "tailwindcss": "3.4.14",
     "tailwindcss-animate": "1.0.7",
-    "typescript-eslint": "8.9.0",
-    "zod": "3.22.4"
+    "typescript-eslint": "8.9.0"
   },
   "devDependencies": {
     "@types/google.analytics": "0.0.42",
