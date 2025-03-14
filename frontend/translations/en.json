@@ -30,9 +30,6 @@
       "future-objectives": "Future Objectives",
       "team-and-funders": "Team & Funders",
       "intro-title": "A global movement to protect 30% of the world’s lands and waters by 2030.",
-      "outro-title": "How can I get involved?",
-      "outro-description": "If you have questions, feedback, or interest in partnering on this project, please get in touch at our contact page.",
-      "outro-button": "Get in touch",
       "section-definition-title": "What is 30x30",
       "section-definition-description": "30x30 is a global movement to <b>protect 30% of the world’s lands and waters by 2030</b>. This target has been <a>formally adopted by nearly every country</a> on earth, and ecosystem protection is being advanced and monitored by governments, NGOs, and local communities around the world.",
       "section-problem-title": "Why build a 30x30 hub?",
@@ -60,9 +57,6 @@
       "section-funders-title": "Funders"
     },
     "home": {
-      "outro-title": "Take action.",
-      "outro-description": "Do you want to contribute to the Knowledge Hub and add a tool?",
-      "outro-button": "Get in touch",
       "services": "Services",
       "impact": "Impact",
       "context": "Context",
@@ -88,9 +82,6 @@
       "page-title": "Knowledge hub",
       "intro-title": "Resources for 30x30 monitoring, planning and decision making.",
       "intro-description": "We intend to provide an entry point that is accessible and relevant to stakeholders at various levels, democratizing the conversation around 30x30 so everyone can participate in the process from a common starting point.",
-      "outro-title": "Submit resources.",
-      "outro-description": "Do you want to contribute to the Knowledge Hub and add a tool?",
-      "outro-button": "Get in touch",
       "looking-for": "I am looking for..."
     },
     "progress-tracker": {
@@ -295,8 +286,6 @@
       "french": "French"
     },
     "footer": {
-      "title": "Would you like to know more?",
-      "button": "Get in touch",
       "privacy-policy": "Privacy policy",
       "terms-of-use": "Terms of use"
     },

@@ -4,7 +4,6 @@ import { QueryClient, dehydrate } from '@tanstack/react-query';
 import { GetServerSideProps } from 'next';
 import { useTranslations } from 'next-intl';
 
-import Cta from '@/components/static-pages/cta';
 import Intro from '@/components/static-pages/intro';
 import Section, {
   SectionTitle,
@@ -13,7 +12,6 @@ import Section, {
 } from '@/components/static-pages/section';
 import StatsImage from '@/components/static-pages/stats-image';
 import TwoColSubsection from '@/components/static-pages/two-col-subsection';
-import { PAGES } from '@/constants/pages';
 import HighlightedText from '@/containers/about/highlighted-text';
 import Logo from '@/containers/about/logo';
 import LogosGrid from '@/containers/about/logos-grid';
@@ -84,18 +82,6 @@ const About: FCWithMessages = ({
           color="purple"
           image="tablet"
           onScrollClick={handleIntroScrollClick}
-        />
-      }
-      bottom={
-        <Cta
-          title={t('outro-title')}
-          description={t('outro-description')}
-          color="purple"
-          image="cta1"
-          button={{
-            text: t('outro-button'),
-            link: PAGES.contact,
-          }}
         />
       }
     >

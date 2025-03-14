@@ -6,10 +6,8 @@ import { GetServerSideProps } from 'next';
 import { useTranslations } from 'next-intl';
 
 import MobileDisclaimerDialogStatic from '@/components/mobile-disclaimer-dialog';
-import Cta from '@/components/static-pages/cta';
 import Intro from '@/components/static-pages/intro';
 import Section from '@/components/static-pages/section';
-import { PAGES } from '@/constants/pages';
 import CardFilters from '@/containers/knowledge-hub/card-filters';
 import CardList from '@/containers/knowledge-hub/card-list';
 import Layout, { Content } from '@/layouts/static-page';
@@ -39,18 +37,6 @@ const KnowledgeHubPage: FCWithMessages = () => {
           color="green"
           image="magnifyingGlass"
           onScrollClick={handleIntroScrollClick}
-        />
-      }
-      bottom={
-        <Cta
-          title={t('outro-title')}
-          description={t('outro-description')}
-          button={{
-            text: t('outro-button'),
-            link: PAGES.contact,
-          }}
-          color="green"
-          image="cta2"
         />
       }
     >

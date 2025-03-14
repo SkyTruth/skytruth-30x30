@@ -133,6 +133,23 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
     </Select>
   );
 
+  // const Contact = (
+  //   <Select
+  //     value={locale}
+  //     onValueChange={(newLocale) => push({ pathname, query }, asPath, { locale: newLocale })}
+  //   >
+  //     <SelectTrigger variant="alternative">
+  //       <span>{t('contact')}</span>
+  //     </SelectTrigger>
+  //     <SelectContent>
+  //       <SelectItem value="en">English{locale !== 'en' && ` (${t('english')})`}</SelectItem>
+  //       <SelectItem value="es">Español{locale !== 'es' && ` (${t('spanish')})`}</SelectItem>
+  //       <SelectItem value="fr">Français{locale !== 'fr' && ` (${t('french')})`}</SelectItem>
+  //     </SelectContent>
+  //   </Select>
+  // );
+
+
   return (
     <header className={cn('border-b font-mono text-sm', headerVariants({ theme }))}>
       <nav
@@ -220,6 +237,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
               </ActiveLink>
             </li>
           ))}
+          {/* <li>{Contact}</li> */}
           <li>{languageSelector}</li>
         </ul>
       </nav>
