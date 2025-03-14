@@ -279,11 +279,7 @@
       "global": "Global",
       "open-main-menu": "Open main menu",
       "main-menu": "Main menu",
-      "close": "Close",
-      "selected-language": "Selected language: {language}",
-      "english": "English",
-      "spanish": "Spanish",
-      "french": "French"
+      "close": "Close"
     },
     "footer": {
       "privacy-policy": "Privacy policy",
@@ -338,6 +334,12 @@
       "page-optimized-for-desktop-viewing": "This page is optimized for desktop viewing.",
       "please-visit-us-from-larger-screen": "For full functionality and a better experience, please visit us from a larger screen.",
       "i-understand": "I understand"
+    },
+    "language-selector": {
+      "selected-language": "Selected language: {language}",
+      "english": "English",
+      "spanish": "Spanish",
+      "french": "French"
     }
   }
 }

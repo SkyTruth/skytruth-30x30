@@ -103,11 +103,7 @@ const Home: FCWithMessages = ({
   }, [locale, protectionCoverageStats]);
 
   return (
-    <Layout
-      theme="dark"
-      hideLogo={true}
-      hero={<Intro onScrollClick={handleIntroScrollClick} />}
-    >
+    <Layout theme="dark" hideLogo={true} hero={<Intro onScrollClick={handleIntroScrollClick} />}>
       <Sidebar sections={sections} activeSection={scrollActiveId} arrowColor={'orange'} />
       <Content>
         <Section ref={sections.services.ref}>

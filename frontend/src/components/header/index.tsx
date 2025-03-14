@@ -10,7 +10,6 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import ActiveLink from '@/components/active-link';
 import Icon from '@/components/ui/icon';
-import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   Sheet,
   SheetContent,
@@ -19,6 +18,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import LanguageSelector from '@/components/header/dropdowns/language-selector';
+import Contact from "@/components/header/dropdowns/contact";
 import { PAGES } from '@/constants/pages';
 import {
   useSyncMapLayerSettings,
@@ -60,7 +61,7 @@ export type HeaderProps = VariantProps<typeof headerVariants> & {
 const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const t = useTranslations('components.header');
   const locale = useLocale();
-
+  
   const navigationItems = useMemo(
     () => [
       {
@@ -81,10 +82,18 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
     [t]
   );
 
+  const contactOptions = useMemo(
+    () => [
+      { name: t('contact'), href: PAGES.contact },
+      { name: t('language'), href: PAGES.language },
+    ],
+    [t]
+  );
+
   const [mapSettings] = useSyncMapSettings();
   const [mapLayers] = useSyncMapLayers();
   const [mapLayerSettings] = useSyncMapLayerSettings();
-  const { pathname, asPath, query, push } = useRouter();
+  const { query } = useRouter();
   const { locationCode = 'GLOB' } = query;
 
   const navigationEntries = useMemo(() => {
@@ -112,28 +121,28 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
     });
   }, [navigationItems, locationCode, mapSettings, mapLayers, mapLayerSettings]);
 
-  const languageSelector = (
-    <Select
-      value={locale}
-      onValueChange={(newLocale) => push({ pathname, query }, asPath, { locale: newLocale })}
-    >
-      <SelectTrigger variant="alternative">
-        <span className="sr-only">
-          {t('selected-language', {
-            language: locale === 'es' ? t('spanish') : locale === 'fr' ? t('french') : t('english'),
-          })}
-        </span>
-        <span className="not-sr-only">{locale.toLocaleUpperCase()}</span>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="en">English{locale !== 'en' && ` (${t('english')})`}</SelectItem>
-        <SelectItem value="es">Español{locale !== 'es' && ` (${t('spanish')})`}</SelectItem>
-        <SelectItem value="fr">Français{locale !== 'fr' && ` (${t('french')})`}</SelectItem>
-      </SelectContent>
-    </Select>
-  );
+  // const languageSelector = (
+  //   <Select
+  //     value={locale}
+  //     onValueChange={(newLocale) => push({ pathname, query }, asPath, { locale: newLocale })}
+  //   >
+  //     <SelectTrigger variant="alternative">
+  //       <span className="sr-only">
+  //         {t('selected-language', {
+  //           language: locale === 'es' ? t('spanish') : locale === 'fr' ? t('french') : t('english'),
+  //         })}
+  //       </span>
+  //       <span className="not-sr-only">{locale.toLocaleUpperCase()}</span>
+  //     </SelectTrigger>
+  //     <SelectContent>
+  //       <SelectItem value="en">English{locale !== 'en' && ` (${t('english')})`}</SelectItem>
+  //       <SelectItem value="es">Español{locale !== 'es' && ` (${t('spanish')})`}</SelectItem>
+  //       <SelectItem value="fr">Français{locale !== 'fr' && ` (${t('french')})`}</SelectItem>
+  //     </SelectContent>
+  //   </Select>
+  // );
 
-  // const Contact = (
+  // const ContactDropdown = (
   //   <Select
   //     value={locale}
   //     onValueChange={(newLocale) => push({ pathname, query }, asPath, { locale: newLocale })}
@@ -148,7 +157,6 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   //     </SelectContent>
   //   </Select>
   // );
-
 
   return (
     <header className={cn('border-b font-mono text-sm', headerVariants({ theme }))}>
@@ -207,7 +215,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
                             {name}
                           </ActiveLink>
                         ))}
-                        <div className="-mx-3">{languageSelector}</div>
+                        <div className="-mx-3"><LanguageSelector /></div>
                       </div>
                     </div>
                   </div>
@@ -237,14 +245,14 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
               </ActiveLink>
             </li>
           ))}
-          {/* <li>{Contact}</li> */}
-          <li>{languageSelector}</li>
+          <li><Contact /></li>
+          <li><LanguageSelector /></li>
         </ul>
       </nav>
     </header>
   );
 };
 
-Header.messages = ['components.header'];
+Header.messages = ['components.header', ...LanguageSelector.messages];
 
 export default Header;
