@@ -38,8 +38,10 @@ const NavigationMenuTrigger = React.forwardRef<
     onPointerMove={(event) => event.preventDefault()}
     onPointerLeave={(event) => event.preventDefault()}
     className={cn(
-      'flex w-full items-center gap-x-1 px-3 py-2 ring-offset-white placeholder:text-slate-500 dark:bg-slate-950 dark:ring-offset-slate-950 [&>span]:line-clamp-1', // className={cn(selectTriggerVariants({ variant }), className)}
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-gray-300 dark:placeholder:text-slate-400 dark:focus-visible:ring-slate-300',
+      'flex w-full items-center gap-x-1 px-3 py-2 ring-offset-white placeholder:text-slate-500',
+      'dark:bg-slate-950 dark:ring-offset-slate-950 [&>span]:line-clamp-1 focus-visible:outline-none',
+      'focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed',
+      'disabled:opacity-50 data-[placeholder]:text-gray-300 dark:placeholder:text-slate-400 dark:focus-visible:ring-slate-300',
       className
     )}
     {...props}
@@ -62,7 +64,9 @@ const NavigationMenuListItem = React.forwardRef<HTMLAnchorElement, NavigationMen
       <NavigationMenuPrimitive.Link
         asChild
         className={cn(
-          'relative flex w-full cursor-default select-none items-center px-2 py-1.5 font-mono text-xs outline-none hover:bg-slate-100 hover:text-slate-900 focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-50',
+          'relative flex w-full cursor-default select-none items-center px-2 py-1.5 font-mono text-xs outline-none',
+          'hover:bg-slate-100 hover:text-slate-900 focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none',
+          'data-[disabled]:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-50',
           className
         )}
       >
