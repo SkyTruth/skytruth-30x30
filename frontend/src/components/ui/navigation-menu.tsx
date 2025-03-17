@@ -20,7 +20,8 @@ const NavigationMenuContent = React.forwardRef<
       'absolute z-50 max-h-96 min-w-[10rem] overflow-hidden border border-black bg-white text-slate-950 shadow-md',
       'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-top-2',
       'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-2',
-      'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
+      'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+      className
     )}
     {...props}
   >
@@ -39,7 +40,7 @@ const NavigationMenuTrigger = React.forwardRef<
     onPointerLeave={(event) => event.preventDefault()}
     className={cn(
       'flex w-full items-center gap-x-1 px-3 py-2 ring-offset-white placeholder:text-slate-500',
-      'dark:bg-slate-950 dark:ring-offset-slate-950 [&>span]:line-clamp-1 focus-visible:outline-none',
+      'focus-visible:outline-none dark:bg-slate-950 dark:ring-offset-slate-950 [&>span]:line-clamp-1',
       'focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:cursor-not-allowed',
       'disabled:opacity-50 data-[placeholder]:text-gray-300 dark:placeholder:text-slate-400 dark:focus-visible:ring-slate-300',
       className
