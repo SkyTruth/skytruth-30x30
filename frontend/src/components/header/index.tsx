@@ -6,9 +6,11 @@ import { useRouter } from 'next/router';
 
 import { VariantProps, cva } from 'class-variance-authority';
 import { Menu } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 
 import ActiveLink from '@/components/active-link';
+import Contact from '@/components/header/dropdowns/contact';
+import LanguageSelector from '@/components/header/dropdowns/language-selector';
 import Icon from '@/components/ui/icon';
 import {
   Sheet,
@@ -18,8 +20,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import LanguageSelector from '@/components/header/dropdowns/language-selector';
-import Contact from "@/components/header/dropdowns/contact";
 import { PAGES } from '@/constants/pages';
 import {
   useSyncMapLayerSettings,
@@ -60,8 +60,7 @@ export type HeaderProps = VariantProps<typeof headerVariants> & {
 
 const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const t = useTranslations('components.header');
-  const locale = useLocale();
-  
+
   const navigationItems = useMemo(
     () => [
       {
@@ -78,14 +77,6 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
       },
       { name: t('knowledge-hub'), href: PAGES.knowledgeHub, colorClassName: 'text-green' },
       { name: t('about'), href: PAGES.about, colorClassName: 'text-violet' },
-    ],
-    [t]
-  );
-
-  const contactOptions = useMemo(
-    () => [
-      { name: t('contact'), href: PAGES.contact },
-      { name: t('language'), href: PAGES.language },
     ],
     [t]
   );
@@ -215,7 +206,9 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
                             {name}
                           </ActiveLink>
                         ))}
-                        <div className="-mx-3"><LanguageSelector /></div>
+                        <div className="-mx-3">
+                          <LanguageSelector />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -245,8 +238,12 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
               </ActiveLink>
             </li>
           ))}
-          <li><Contact /></li>
-          <li><LanguageSelector /></li>
+          <li>
+            <Contact />
+          </li>
+          <li>
+            <LanguageSelector />
+          </li>
         </ul>
       </nav>
     </header>

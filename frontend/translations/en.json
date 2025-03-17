@@ -279,7 +279,9 @@
       "global": "Global",
       "open-main-menu": "Open main menu",
       "main-menu": "Main menu",
-      "close": "Close"
+      "close": "Close",
+      "log-issue": "Log an issue",
+      "request-improvement": "Request an improvement"
     },
     "footer": {
       "privacy-policy": "Privacy policy",

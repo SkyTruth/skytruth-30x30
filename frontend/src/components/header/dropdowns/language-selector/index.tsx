@@ -13,6 +13,7 @@ const LanguageSelector: FCWithMessages = () => {
 
   return (
     <Select
+      // open={true}
       value={locale}
       onValueChange={(newLocale) => push({ pathname, query }, asPath, { locale: newLocale })}
     >
