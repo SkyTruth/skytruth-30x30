@@ -3,6 +3,5 @@ export const PAGES = {
   conservationBuilder: '/conservation-builder',
   homepage: '/',
   knowledgeHub: '/knowledge-hub',
-  contact: '/contact',
   about: '/about',
 } as const;

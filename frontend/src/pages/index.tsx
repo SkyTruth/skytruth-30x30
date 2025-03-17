@@ -4,7 +4,6 @@ import { QueryClient, dehydrate } from '@tanstack/react-query';
 import { GetServerSideProps } from 'next';
 import { useLocale, useTranslations } from 'next-intl';
 
-import Cta from '@/components/static-pages/cta';
 import Section, {
   SectionTitle,
   SectionDescription,
@@ -12,7 +11,6 @@ import Section, {
 } from '@/components/static-pages/section';
 import StatsImage from '@/components/static-pages/stats-image';
 import TwoColSubsection from '@/components/static-pages/two-col-subsection';
-import { PAGES } from '@/constants/pages';
 import EarthSurfaceCoverage from '@/containers/homepage/earth-surface-coverage';
 import InteractiveMap from '@/containers/homepage/interactive-map';
 import Intro from '@/containers/homepage/intro';
@@ -105,21 +103,7 @@ const Home: FCWithMessages = ({
   }, [locale, protectionCoverageStats]);
 
   return (
-    <Layout
-      theme="dark"
-      hideLogo={true}
-      hero={<Intro onScrollClick={handleIntroScrollClick} />}
-      bottom={
-        <Cta
-          title={t('outro-title')}
-          description={t('outro-description')}
-          button={{
-            text: t('outro-button'),
-            link: PAGES.contact,
-          }}
-        />
-      }
-    >
+    <Layout theme="dark" hideLogo={true} hero={<Intro onScrollClick={handleIntroScrollClick} />}>
       <Sidebar sections={sections} activeSection={scrollActiveId} arrowColor={'orange'} />
       <Content>
         <Section ref={sections.services.ref}>
