@@ -28,7 +28,7 @@ const ContactDropdown: FCWithMessages = () => {
     <NavigationMenu>
       <NavigationMenuList>
         <NavigationMenuItem>
-          <NavigationMenuTrigger>Contacts</NavigationMenuTrigger>
+          <NavigationMenuTrigger>{t('contact')}</NavigationMenuTrigger>
           <NavigationMenuContent>
             <ul>
               {contactLinks.map((link, idx) => (
