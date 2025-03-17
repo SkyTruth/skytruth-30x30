@@ -6,7 +6,7 @@ import {
   NavigationMenuItem,
   NavigationMenuTrigger,
   NavigationMenuList,
-  NavigationMenuListItem
+  NavigationMenuListItem,
 } from '@/components/ui/navigation-menu';
 import { FCWithMessages } from '@/types';
 
@@ -16,13 +16,13 @@ const ContactDropdown: FCWithMessages = () => {
   const contactLinks = [
     {
       title: t('log-issue'),
-      href: 'https://skytruth.atlassian.net/servicedesk/customer/portal/1/group/1/create/14'
+      href: 'https://skytruth.atlassian.net/servicedesk/customer/portal/1/group/1/create/14',
     },
     {
       title: t('request-improvement'),
-      href: 'https://skytruth.canny.io/feature-requests'
-    }
-  ]
+      href: 'https://skytruth.canny.io/feature-requests',
+    },
+  ];
 
   return (
     <NavigationMenu>
