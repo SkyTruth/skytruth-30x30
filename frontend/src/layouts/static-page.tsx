@@ -71,12 +71,11 @@ export interface StaticPageLayoutProps {
   title?: string;
   description?: string;
   hero?: ReactNode;
-  bottom?: ReactNode;
 }
 
 const StaticPageLayout: FCWithMessages<
   PropsWithChildren<StaticPageLayoutProps & Pick<HeaderProps, 'theme' | 'hideLogo'>>
-> = ({ title, description, hero, bottom, children, theme, hideLogo }) => (
+> = ({ title, description, hero, children, theme, hideLogo }) => (
   <>
     <Head title={title} description={description} />
     <div className="flex h-screen w-full flex-col">
@@ -89,7 +88,6 @@ const StaticPageLayout: FCWithMessages<
           {children}
         </div>
       </div>
-      <span className="border-x border-black">{bottom && <>{bottom}</>}</span>
       <Footer />
     </div>
   </>

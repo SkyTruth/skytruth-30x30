@@ -22,11 +22,6 @@
       "page-title": "Internal server error",
       "page-description": "Something went wrong. We are working on the problem."
     },
-    "contact": {
-      "page-title": "Contact us",
-      "want-know-more": "Want to <br></br>know more?",
-      "get-in-touch": "Get in touch."
-    },
     "about": {
       "page-title": "About",
       "definition": "Definition",
@@ -35,9 +30,6 @@
       "future-objectives": "Future Objectives",
       "team-and-funders": "Team & Funders",
       "intro-title": "A global movement to protect 30% of the world’s lands and waters by 2030.",
-      "outro-title": "How can I get involved?",
-      "outro-description": "If you have questions, feedback, or interest in partnering on this project, please get in touch at our contact page.",
-      "outro-button": "Get in touch",
       "section-definition-title": "What is 30x30",
       "section-definition-description": "30x30 is a global movement to <b>protect 30% of the world’s lands and waters by 2030</b>. This target has been <a>formally adopted by nearly every country</a> on earth, and ecosystem protection is being advanced and monitored by governments, NGOs, and local communities around the world.",
       "section-problem-title": "Why build a 30x30 hub?",
@@ -65,9 +57,6 @@
       "section-funders-title": "Funders"
     },
     "home": {
-      "outro-title": "Take action.",
-      "outro-description": "Do you want to contribute to the Knowledge Hub and add a tool?",
-      "outro-button": "Get in touch",
       "services": "Services",
       "impact": "Impact",
       "context": "Context",
@@ -93,9 +82,6 @@
       "page-title": "Knowledge hub",
       "intro-title": "Resources for 30x30 monitoring, planning and decision making.",
       "intro-description": "We intend to provide an entry point that is accessible and relevant to stakeholders at various levels, democratizing the conversation around 30x30 so everyone can participate in the process from a common starting point.",
-      "outro-title": "Submit resources.",
-      "outro-description": "Do you want to contribute to the Knowledge Hub and add a tool?",
-      "outro-button": "Get in touch",
       "looking-for": "I am looking for..."
     },
     "progress-tracker": {
@@ -107,33 +93,6 @@
     "conservation-builder": {}
   },
   "containers": {
-    "contact-form": {
-      "thanks-for-message": "Thanks for your message. We will get back to you as soon as possible.",
-      "go-to-homepage": "Go to homepage",
-      "submit": "Submit",
-      "inputs": {
-        "name-label": "First and last names",
-        "name-placeholder": "Your name",
-        "email-label": "Email address",
-        "email-placeholder": "Your email address",
-        "organization-label": "Organization",
-        "organization-placeholder": "Your organization",
-        "country-label": "Country",
-        "country-placeholder": "Your country",
-        "reason-label": "Reason",
-        "reason-placeholder": "Please, select a contact reason",
-        "message-label": "Message",
-        "message-placeholder": "Your message",
-        "privacy-consent": "By submitting this form you agree with processing your personal data in accordance with the <a>Privacy Policy</a>.",
-        "feedback": "Feedback",
-        "data-update-request": "Data update request",
-        "bug-reporting": "Bug reporting",
-        "error-mandatory-field": "This field is mandatory.",
-        "error-invalid-email-format": "Invalid email format.",
-        "error-empty-message": "The message cannot be empty.",
-        "error-accept-privacy-policy": "You must agree with the privacy policy."
-      }
-    },
     "logos-grid": {
       "skytruth-description": "Serves as project lead",
       "vizzuality-description": "Leads design and development",
@@ -321,14 +280,10 @@
       "open-main-menu": "Open main menu",
       "main-menu": "Main menu",
       "close": "Close",
-      "selected-language": "Selected language: {language}",
-      "english": "English",
-      "spanish": "Spanish",
-      "french": "French"
+      "log-issue": "Log an issue",
+      "request-improvement": "Request an improvement"
     },
     "footer": {
-      "title": "Would you like to know more?",
-      "button": "Get in touch",
       "privacy-policy": "Privacy policy",
       "terms-of-use": "Terms of use"
     },
@@ -381,6 +336,12 @@
       "page-optimized-for-desktop-viewing": "This page is optimized for desktop viewing.",
       "please-visit-us-from-larger-screen": "For full functionality and a better experience, please visit us from a larger screen.",
       "i-understand": "I understand"
+    },
+    "language-selector": {
+      "selected-language": "Selected language: {language}",
+      "english": "English",
+      "spanish": "Spanish",
+      "french": "French"
     }
   }
 }

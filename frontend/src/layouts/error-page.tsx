@@ -49,6 +49,6 @@ const ErrorPageLayout: FCWithMessages<ErrorPageLayoutProps> = ({
   );
 };
 
-ErrorPageLayout.messages = ['layouts.error'];
+ErrorPageLayout.messages = ['layouts.error', ...Header.messages];
 
 export default ErrorPageLayout;

@@ -4,7 +4,6 @@ import { Copyright } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { EXTERNAL_LINKS } from '@/constants/external-links';
-import { PAGES } from '@/constants/pages';
 import { FCWithMessages } from '@/types';
 import { useGetContactDetail } from '@/types/generated/contact-detail';
 
@@ -29,15 +28,6 @@ const Footer: FCWithMessages = () => {
       <div className="px-8 md:mx-auto md:max-w-7xl">
         <div className="flex w-full flex-col">
           <div className="my-6">
-            <div className="my-6">
-              <h2 className="text-4xl font-extrabold md:text-5xl">{t('title')}</h2>
-              <Link
-                href={PAGES.contact}
-                className="mt-8 inline-block bg-white px-4 py-2.5 font-mono text-xs uppercase text-black"
-              >
-                {t('button')}
-              </Link>
-            </div>
             <address className="my-4 flex flex-col gap-0.5 pt-6 text-xs not-italic text-black-300 md:my-8">
               {contactDetails?.name && <span>{contactDetails?.name}</span>}
               {contactDetails?.address && <span>{contactDetails?.address}</span>}
