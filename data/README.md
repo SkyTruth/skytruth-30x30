@@ -8,17 +8,19 @@ Develop an MVP platform that tracks country progress towards global protection 3
 ## Setup
 
 ### The environment
+
 To run the notebooks you need to create an environment with the dependencies. There are two options:
+
 #### Docker
 
-If you have [docker](https://docs.docker.com/engine/install/) in your system, 
+If you have [docker](https://docs.docker.com/engine/install/) in your system,
 you run a jupyter lab server with:
 
 ``` bash
 docker compose up --build
 ```
 
-And if you want to get into the container, use a terminal in jupyter lab, 
+And if you want to get into the container, use a terminal in jupyter lab,
 vscode remote development or run this command:
 
 ```shell
@@ -32,6 +34,7 @@ Create the environment with:
 ``` bash
 mamba env create -n skytruth_30x30 -f environment.yml
 ```
+
 This will create an environment called skytruth_30x30 with a common set of dependencies.
 
 ### `git` (if needed) and pre-commit hooks
