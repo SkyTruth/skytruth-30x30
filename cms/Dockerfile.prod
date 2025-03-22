@@ -1,17 +1,17 @@
 FROM node:18.17-bullseye-slim as build
 
 RUN apt-get update -y && \
-    apt-get upgrade -y && \
-    apt-get install -y \
-      build-essential \
-      gcc autoconf \
-      automake \
-      zlib1g-dev \
-      libpng-dev \
-      nasm bash \
-      libvips-dev \
-      git \
-    && apt-get clean
+  apt-get upgrade -y && \
+  apt-get install -y \
+  build-essential \
+  gcc autoconf \
+  automake \
+  zlib1g-dev \
+  libpng-dev \
+  nasm bash \
+  libvips-dev \
+  git \
+  && apt-get clean
 
 ENV NODE_ENV production
 
@@ -22,16 +22,17 @@ COPY config ./config
 COPY database ./database
 COPY public ./public
 COPY src ./src
+COPY types ./types
 
 COPY .env \
-     .nvmrc \
-     .yarnrc.yml \
-     favicon.png \
-     package.json \
-     entrypoint.sh \
-     tsconfig.json \
-     yarn.lock \
-     ./
+  .nvmrc \
+  .yarnrc.yml \
+  favicon.png \
+  package.json \
+  entrypoint.sh \
+  tsconfig.json \
+  yarn.lock \
+  ./
 
 RUN yarn install
 
@@ -40,9 +41,9 @@ RUN yarn build
 # Copy only the built files into the final image
 FROM node:18.17-bullseye-slim AS runner
 RUN apt-get update -y && \
-    apt-get upgrade -y && \
-    apt-get install -y libvips-dev && \
-    apt-get clean
+  apt-get upgrade -y && \
+  apt-get install -y libvips-dev && \
+  apt-get clean
 
 ENV NODE_ENV production
 

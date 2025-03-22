@@ -4,7 +4,11 @@
 
 import { factories } from '@strapi/strapi'
 
-import { ApiEnvironmentEnvironment, ApiLocationLocation, ApiProtectionCoverageStatProtectionCoverageStat } from '../../../../types/generated/contentTypes';
+import {
+    ApiEnvironmentEnvironment,
+    ApiLocationLocation,
+    ApiProtectionCoverageStatProtectionCoverageStat
+} from '@/types/generated/contentTypes';
 
 export default factories.createCoreController('api::protection-coverage-stat.protection-coverage-stat', ({ strapi }) => ({
     async find(ctx) {
@@ -23,7 +27,7 @@ export default factories.createCoreController('api::protection-coverage-stat.pro
 
             const dataQuery = {
                 ...query,
-                pagination: { pageSize: 1000000, page: 1 } //Max allowed by the API config. Will paginate after datais sorted
+                pagination: { pageSize: 1000000, page: 1 } // Max allowed by the API config. Will paginate after sorting
             }
             delete dataQuery.sort; // We will sort the data after we get it
             ctx.query = dataQuery;
@@ -42,14 +46,15 @@ export default factories.createCoreController('api::protection-coverage-stat.pro
                             return 0;
                         }
                         // nulls sort after anything else
-                        if (first === null) {
+                        if (first === null || first === undefined) {
                             return 1;
                         }
-                        if (second === null) {
+                        if (second === null || second === undefined) {
                             return -1;
                         }
 
                         if (sortParams[sortIndex + 1] === 'asc') {
+                            console.log(first, second);
                             return first < second ? -1 : 1;
                         }
 
@@ -76,7 +81,7 @@ interface Pagination {
 }
 
 function getPaginationBounds(pagination: Pagination, dataLength: number): [number, number] {
-    const { start = null, limit = 25, page = 1, pageSize = 10 } = pagination;
+    const { start = null, limit = 25, page = 1, pageSize = 25 } = pagination;
     if (limit === -1) {
         return [start ?? 0, dataLength];
     }
@@ -97,9 +102,8 @@ function getValueByPath(
     path: string
 ): keyof ApiProtectionCoverageStatProtectionCoverageStat {
     return path.split('.').reduce((acc, key) => {
-        // acc ? acc[key] : undefined
         if (!acc) {
-            return undefined;
+            return null;
         }
         if (acc[key]) {
             return acc[key];
