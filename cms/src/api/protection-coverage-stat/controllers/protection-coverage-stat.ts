@@ -72,7 +72,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             return { data: paginatedData, meta: { ...meta, updatedAt } };
         } catch (error) {
             Logger.error('Error fetching protection coverage stat data', error);
-            return ctx.badRequest('Error fetching protection coverage stat data', error);
+            return ctx.badRequest('Error fetching protection coverage stat data');
         }
     }
 }));
