@@ -9,7 +9,9 @@ Strapi comes with a full featured [Command Line Interface][strapi_cli] (CLI) whi
 The CMS needs to be configured with server and PostgreSQL database instance connection details. Please check the `.env.example` file for required environment variables. Those are set by Terraform in GH Secrets, and then passed into the docker images during deployment by GH Actions. Please refer to [infrastructure documentation][infrastructure] for details.
 
 ### Local Config Setup
+
 In order to make changes to the database schema or to add new data to exiting tables, you need to make the desired changes in the [strapi backoffice][backoffice]. The following steps are also needed for initial development to ensure database configs are in sync with prod, even if no changes are being made to the database. To set this up:
+
 - Create a new Postgres DB on your local machine
 - Start your local postgres server
 - Install the postgis extension on your new table
@@ -56,11 +58,12 @@ yarn build
 ```
 
 ### Usage with Docker (recommended)
+
 To run with docker:
 
 docker compose up --build
 
-Open the app at http://localhost:1337
+Open the app at <http://localhost:1337>
 
 ## Deploy
 
@@ -74,11 +77,11 @@ The documentation is available at `/documentation` path locally, `/cms/documenta
 
 The data model definitions can be found in `src/api`. Each model corresponds to a database table, with linking tables where there are associations between models.
 
-What is important to note is that the data might be updated differently depending on model. 
+What is important to note is that the data might be updated differently depending on model.
 
 ### Models updated via the admin backoffice
 
-These models are intended to be updated manually. 
+These models are intended to be updated manually.
 
 *For all models which contain a slug, that needs to managed carefully, as it is referenced either in the client application or the data pipelines.*
 
@@ -94,6 +97,7 @@ Layers for the map:
 - layer
 
 Static data for the homepage:
+
 - static_indicators
 - contact_details
 
@@ -125,6 +129,7 @@ These models are updated by an import script, which utilises the Strapi import /
 - protection-coverage-stat
 
 ## config-sync plugin and configuration version control
+
 This Strapi is configured to use the [config-sync plugin](https://market.strapi.io/plugins/strapi-plugin-config-sync), which allows to version control config data and migrate it between environments.
 
 Examples of configuration under config-sync are user and admin role permissions, API permissions and settings of the admin panel. The consequence of this is that if any settings are changed directly in the staging / production admin panel, but not synced in the repository, they will be overwritten on subsequent deployments.
@@ -144,7 +149,6 @@ Feel free to check out the [Strapi GitHub repository](https://github.com/strapi/
 [data]: ../data/README.md
 [infrastructure]: ../infrastructure/README.md
 [local_backoffice]: http://localhost:1337/admin/
-[local_config_setup]: #local-config-setup
 [start]: #start
 [strapi]:https://strapi.io/
 [strapi_changelog]: https://strapi.io/changelog
