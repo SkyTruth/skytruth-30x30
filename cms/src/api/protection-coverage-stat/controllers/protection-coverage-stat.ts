@@ -10,7 +10,11 @@ import {
     ApiProtectionCoverageStatProtectionCoverageStat
 } from '@/types/generated/contentTypes';
 
-export default factories.createCoreController('api::protection-coverage-stat.protection-coverage-stat', ({ strapi }) => ({
+import Logger from '../../../utils/Logger';
+
+const PROTECTION_COVERAGE_STAT_NAMESPACE = 'api::protection-coverage-stat.protection-coverage-stat';
+
+export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE, ({ strapi }) => ({
     async find(ctx) {
         try {
             const { query } = ctx;
@@ -21,7 +25,7 @@ export default factories.createCoreController('api::protection-coverage-stat.pro
                 sort: { updatedAt: 'desc' },
                 limit: 1
             };
-            const updatedAt = await strapi.entityService.findMany('api::protection-coverage-stat.protection-coverage-stat', updatedAtQuery).then((data) => {
+            const updatedAt = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE, updatedAtQuery).then((data) => {
                 return data[0]?.updatedAt ?? null;
             });
 
@@ -54,7 +58,6 @@ export default factories.createCoreController('api::protection-coverage-stat.pro
                         }
 
                         if (sortParams[sortIndex + 1] === 'asc') {
-                            console.log(first, second);
                             return first < second ? -1 : 1;
                         }
 
@@ -68,7 +71,8 @@ export default factories.createCoreController('api::protection-coverage-stat.pro
             const paginatedData = data.slice(start, end);
             return { data: paginatedData, meta: { ...meta, updatedAt } };
         } catch (error) {
-            return ctx.badRequest('Something went wrong', error);
+            Logger.error('Error fetching protection coverage stat data', error);
+            return ctx.badRequest('Error fetching protection coverage stat data', error);
         }
     }
 }));
@@ -80,7 +84,14 @@ interface Pagination {
     pageSize?: number;
 }
 
-function getPaginationBounds(pagination: Pagination, dataLength: number): [number, number] {
+/**
+ * Helper function to get the start and end bounds for pagination
+ * @param pagination Object containing pagination parameters. The pair of start and limit are preferred 
+ *  over page and pageSize
+ * @param dataLength Total length of the data to be paginated
+ * @returns start and end (exclusive) bounds for pagination
+ */
+function getPaginationBounds(pagination: Pagination, dataLength: number): [start: number, end: number] {
     const { start = null, limit = 25, page = 1, pageSize = 25 } = pagination;
     if (limit === -1) {
         return [start ?? 0, dataLength];
@@ -97,6 +108,13 @@ interface ProtectionCoverageStatResponse
     data?: ApiLocationLocation | ApiEnvironmentEnvironment
 }
 
+/**
+ * Helper method to get data from a nested object using a string path. Similar to Lodash's get, except it 
+ *  also looks for data and attributes keys where appropriate
+ * @param data Returned data from the API
+ * @param path String path to the desired value, e.g. 'data.attributes.name'
+ * @returns 
+ */
 function getValueByPath(
     data: ProtectionCoverageStatResponse,
     path: string
