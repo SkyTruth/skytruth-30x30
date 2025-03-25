@@ -11,7 +11,6 @@ import {
 } from '@/types/generated/contentTypes';
 
 import Logger from '../../../utils/Logger';
-import pa from '../../pa/controllers/pa';
 
 const PROTECTION_COVERAGE_STAT_NAMESPACE = 'api::protection-coverage-stat.protection-coverage-stat';
 
