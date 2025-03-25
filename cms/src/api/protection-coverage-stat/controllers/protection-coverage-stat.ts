@@ -13,6 +13,7 @@ import {
 import Logger from '../../../utils/Logger';
 
 const PROTECTION_COVERAGE_STAT_NAMESPACE = 'api::protection-coverage-stat.protection-coverage-stat';
+const DEFAULT_PAGE_SIZE = 25;
 
 export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE, ({ strapi }) => ({
     async find(ctx) {
@@ -69,9 +70,18 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             }
             const [start, end] = getPaginationBounds(query.pagination, data.length);
             const paginatedData = data.slice(start, end);
+
+            if (!query.pagination) {
+                meta.pagination = {
+                    page: 1,
+                    pageSize: DEFAULT_PAGE_SIZE,
+                    pageCount: Math.ceil(data.length / DEFAULT_PAGE_SIZE),
+                    totalCount: data.length
+                }
+            }
             return { data: paginatedData, meta: { ...meta, updatedAt } };
         } catch (error) {
-            Logger.error('Error fetching protection coverage stat data', error);
+            Logger.error('Error fetching protection coverage stat data', { error });
             return ctx.badRequest('Error fetching protection coverage stat data');
         }
     }
@@ -91,7 +101,7 @@ interface Pagination {
  * @param dataLength Total length of the data to be paginated
  * @returns start and end (exclusive) bounds for pagination
  */
-function getPaginationBounds(pagination: Pagination, dataLength: number): [start: number, end: number] {
+function getPaginationBounds(pagination: Pagination = {}, dataLength: number): [start: number, end: number] {
     const { start = null, limit = 25, page = 1, pageSize = 25 } = pagination;
     if (limit === -1) {
         return [start ?? 0, dataLength];
