@@ -18,6 +18,7 @@ import type {
   Error,
   GetDataInfosParams,
   DataInfoResponse,
+  DataInfoRequest,
   GetDataInfosIdParams,
   DataInfoLocalizationResponse,
   DataInfoLocalizationRequest,
@@ -91,6 +92,69 @@ export const useGetDataInfos = <
   return query;
 };
 
+export const postDataInfos = (
+  dataInfoRequest: BodyType<DataInfoRequest>,
+  options?: SecondParameter<typeof API>
+) => {
+  return API<DataInfoResponse>(
+    {
+      url: `/data-infos`,
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' },
+      data: dataInfoRequest,
+    },
+    options
+  );
+};
+
+export const getPostDataInfosMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postDataInfos>>,
+    TError,
+    { data: BodyType<DataInfoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof postDataInfos>>,
+  TError,
+  { data: BodyType<DataInfoRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof postDataInfos>>,
+    { data: BodyType<DataInfoRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return postDataInfos(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PostDataInfosMutationResult = NonNullable<Awaited<ReturnType<typeof postDataInfos>>>;
+export type PostDataInfosMutationBody = BodyType<DataInfoRequest>;
+export type PostDataInfosMutationError = ErrorType<Error>;
+
+export const usePostDataInfos = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postDataInfos>>,
+    TError,
+    { data: BodyType<DataInfoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getPostDataInfosMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};
 export const getDataInfosId = (
   id: number,
   params?: GetDataInfosIdParams,
@@ -155,6 +219,70 @@ export const useGetDataInfosId = <
   return query;
 };
 
+export const putDataInfosId = (
+  id: number,
+  dataInfoRequest: BodyType<DataInfoRequest>,
+  options?: SecondParameter<typeof API>
+) => {
+  return API<DataInfoResponse>(
+    {
+      url: `/data-infos/${id}`,
+      method: 'put',
+      headers: { 'Content-Type': 'application/json' },
+      data: dataInfoRequest,
+    },
+    options
+  );
+};
+
+export const getPutDataInfosIdMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putDataInfosId>>,
+    TError,
+    { id: number; data: BodyType<DataInfoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putDataInfosId>>,
+  TError,
+  { id: number; data: BodyType<DataInfoRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putDataInfosId>>,
+    { id: number; data: BodyType<DataInfoRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return putDataInfosId(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PutDataInfosIdMutationResult = NonNullable<Awaited<ReturnType<typeof putDataInfosId>>>;
+export type PutDataInfosIdMutationBody = BodyType<DataInfoRequest>;
+export type PutDataInfosIdMutationError = ErrorType<Error>;
+
+export const usePutDataInfosId = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putDataInfosId>>,
+    TError,
+    { id: number; data: BodyType<DataInfoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getPutDataInfosIdMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};
 export const postDataInfosIdLocalizations = (
   id: number,
   dataInfoLocalizationRequest: BodyType<DataInfoLocalizationRequest>,
