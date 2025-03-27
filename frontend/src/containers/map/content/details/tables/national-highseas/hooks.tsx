@@ -78,9 +78,9 @@ const useTooltips = () => {
       locale,
       filters: {
         slug: {
-          $in: Object.entries(TOOLTIP_MAPPING).map(entry => entry[1])
-        }
-      }
+          $in: Object.entries(TOOLTIP_MAPPING).map((entry) => entry[1]),
+        },
+      },
     },
     {
       query: {
@@ -94,9 +94,8 @@ const useTooltips = () => {
   const tooltips: {
     [key: string]: {
       text: string;
-    }
+    };
   } = {};
-
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
     const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes;
@@ -287,7 +286,7 @@ export const useColumns = (
       {
         id: 'environment.name',
         accessorKey: 'environment.name',
-        header: ({ column }) => (
+        header: () => (
           <HeaderItem className="ml-1">
             {!environment && (
               <FiltersButton
@@ -355,7 +354,7 @@ export const useColumns = (
       {
         id: 'data_source.title',
         accessorKey: 'data_source.title',
-        header: ({ column }) => (
+        header: () => (
           <HeaderItem>
             {environment !== 'terrestrial' && (
               <FiltersButton
@@ -422,7 +421,7 @@ export const useColumns = (
           {
             id: 'mpaa_establishment_stage.name',
             accessorKey: 'mpaa_establishment_stage.name',
-            header: ({ column }) => (
+            header: () => (
               <HeaderItem>
                 <FiltersButton
                   field="mpaa_establishment_stage.slug"
@@ -457,7 +456,7 @@ export const useColumns = (
           {
             id: 'mpaa_protection_level.name',
             accessorKey: 'mpaa_protection_level.name',
-            header: ({ column }) => (
+            header: () => (
               <HeaderItem>
                 <FiltersButton
                   field="mpaa_protection_level.slug"
