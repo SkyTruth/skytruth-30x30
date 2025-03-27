@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
-interface Source {
+export interface Source {
   id: number;
   title: string;
   url: string;

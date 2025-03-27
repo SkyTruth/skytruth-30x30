@@ -1,7 +1,7 @@
 {
   "key": "plugin_localazy_plugin-settings",
   "value": {
-    "defaultRoute": "upload",
+    "defaultRoute": "download",
     "upload": {
       "allowAutomated": true,
       "automatedTriggers": [

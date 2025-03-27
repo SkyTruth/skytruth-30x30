@@ -20,6 +20,7 @@ import { useGetEnvironments } from '@/types/generated/environment';
 import { useGetLocations } from '@/types/generated/location';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { ProtectionCoverageStatListResponseMetaPagination } from '@/types/generated/strapi.schemas';
+import type { Source } from '@/components/tooltip-button';
 
 export type GlobalRegionalTableColumns = {
   location: {
@@ -48,16 +49,25 @@ const TOOLTIP_MAPPING = {
   coverage: 'coverage',
   pas: 'pas',
   oecms: 'oecms',
-  area: 'protected-area',
+  protectedArea: 'protected-area',
   fullyHighlyProtected: 'fully-highly-protected',
   globalContribution: 'global-contribution',
 };
+
 
 const useTooltips = () => {
   const locale = useLocale();
 
   const { data: dataInfo } = useGetDataInfos(
-    { locale },
+    {
+      locale,
+      populate: 'data_sources',
+      filters: {
+        slug: {
+          $in: Object.entries(TOOLTIP_MAPPING).map(entry => entry[1])
+        }
+      }
+    },
     {
       query: {
         select: ({ data }) => data,
@@ -65,15 +75,23 @@ const useTooltips = () => {
       },
     }
   );
+  const tooltips: {
+    [key: string]: {
+      text: string;
+      sources: Source[];
+    }
+  } = {};
 
-  const tooltips = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes
-      ?.content;
+    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes;
 
     if (!tooltip) return;
-    tooltips[key] = tooltip;
+    const sources = !!tooltip?.data_sources?.data?.length ?
+      tooltip?.data_sources?.data.map(({ id, attributes: { slug, title = null, url = null } }) => { return { id, slug, url, title } }) :
+      null;
+
+    tooltips[key] = { text: tooltip?.content, sources };
   });
 
   return tooltips;
@@ -136,7 +154,7 @@ export const useColumns = (
           <HeaderItem className="ml-1">
             <SortingButton column={column} />
             {t('name')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.location} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -160,7 +178,7 @@ export const useColumns = (
       {
         id: 'environment.name',
         accessorKey: 'environment.name',
-        header: ({ column }) => (
+        header: () => (
           <HeaderItem className="ml-1">
             {!environment && (
               <FiltersButton
@@ -171,7 +189,7 @@ export const useColumns = (
               />
             )}
             {t('ecosystem')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.environment} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -186,7 +204,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('coverage')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.coverage} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -205,13 +223,13 @@ export const useColumns = (
         },
       },
       {
-        id: 'protected_area',
-        accessorKey: 'protected_area',
+        id: 'protected-area',
+        accessorKey: 'protected-area',
         header: ({ column }) => (
           <HeaderItem>
             <SortingButton column={column} />
             {t('area')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.protectedArea} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -227,7 +245,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('pas')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips.pas} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -245,7 +263,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('oecms')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.oecms} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -258,32 +276,32 @@ export const useColumns = (
       },
       ...(environment === 'marine'
         ? [
-            {
-              id: 'location.mpaa_protection_level_stats.percentage',
-              accessorKey: 'location.mpaa_protection_level_stats.percentage',
-              header: ({ column }) => (
-                <HeaderItem>
-                  <SortingButton column={column} />
-                  {t('fully-highly-protected')}
-                  <TooltipButton column={column} tooltips={tooltips} />
-                </HeaderItem>
-              ),
-              cell: ({ row }) => {
-                const { location } = row.original;
+          {
+            id: 'location.mpaa_protection_level_stats.percentage',
+            accessorKey: 'location.mpaa_protection_level_stats.percentage',
+            header: ({ column }) => (
+              <HeaderItem>
+                <SortingButton column={column} />
+                {t('fully-highly-protected')}
+                <TooltipButton tooltip={tooltips?.fullyHighlyProtected} />
+              </HeaderItem>
+            ),
+            cell: ({ row }) => {
+              const { location } = row.original;
 
-                const value = location.mpaa_protection_level_stats.percentage;
-                if (value === null || value === undefined) {
-                  return <span className="text-xs">{t('no-data-available')}</span>;
-                }
+              const value = location.mpaa_protection_level_stats.percentage;
+              if (value === null || value === undefined) {
+                return <span className="text-xs">{t('no-data-available')}</span>;
+              }
 
-                const formattedValue = cellFormatter.percentage(locale, value ?? 0);
+              const formattedValue = cellFormatter.percentage(locale, value ?? 0);
 
-                return (
-                  <span className="text-xs">{t('percentage', { percentage: formattedValue })}</span>
-                );
-              },
+              return (
+                <span className="text-xs">{t('percentage', { percentage: formattedValue })}</span>
+              );
             },
-          ]
+          },
+        ]
         : []),
       {
         id: 'global_contribution',
@@ -292,7 +310,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('global-contribution')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.globalContribution} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -369,10 +387,10 @@ export const useData = (
           populate: {
             ...(environment === 'marine'
               ? {
-                  mpaa_protection_level_stats: {
-                    fields: ['percentage'],
-                  },
-                }
+                mpaa_protection_level_stats: {
+                  fields: ['percentage'],
+                },
+              }
               : {}),
           },
         },
@@ -388,27 +406,27 @@ export const useData = (
       filters: {
         ...(environment
           ? {
-              environment: {
-                slug: {
-                  $eq: environment,
-                },
+            environment: {
+              slug: {
+                $eq: environment,
               },
-            }
+            },
+          }
           : {}),
         location: {
           ...(locationType === 'region'
             ? {
-                groups: {
-                  code: {
-                    $eq: locationCode,
-                  },
+              groups: {
+                code: {
+                  $eq: locationCode,
                 },
-              }
+              },
+            }
             : {
-                type: {
-                  $in: ['country', 'highseas'],
-                },
-              }),
+              type: {
+                $in: ['country', 'highseas'],
+              },
+            }),
         },
         is_last_year: {
           $eq: true,
