@@ -58,6 +58,7 @@ module "backend_cloudrun" {
   max_scale             = var.backend_max_scale
   tag                   = var.environment
   use_hello_world_image = var.use_hello_world_image
+  cloudrun_memory_limit = var.cloudrun_memory_limit
 }
 
 module "database" {
