@@ -65,6 +65,7 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
   );
 
   const showNoData = !loading && (noData || error);
+  const validSources = Array.isArray(sources) ? sources.length > 0 : !!sources;
 
   return (
     <div className={cn('px-4 py-4 md:px-8', className)}>
@@ -72,7 +73,11 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
         <span className="flex items-baseline justify-between">
           {title && <h2 className="font-sans text-xl font-bold leading-tight">{title}</h2>}
           {(info || sources) && (
-            <TooltipButton text={info} sources={sources} extraContent={tooltipExtraContent} />
+            <TooltipButton
+              text={info}
+              sources={validSources && sources}
+              extraContent={tooltipExtraContent}
+            />
           )}
         </span>
         {!showNoData && lastUpdated && (

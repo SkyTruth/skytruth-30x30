@@ -147,7 +147,7 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
     {
       locale,
       filters: {
-        slug: 'habitat-widget',
+        slug: `habitat-widget-${tab}`,
       },
       populate: 'data_sources',
     },

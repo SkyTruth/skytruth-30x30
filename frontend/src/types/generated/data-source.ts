@@ -18,8 +18,8 @@ import type {
   Error,
   GetDataSourcesParams,
   DataSourceResponse,
-  GetDataSourcesIdParams,
   DataSourceRequest,
+  GetDataSourcesIdParams,
   DataSourceLocalizationResponse,
   DataSourceLocalizationRequest,
 } from './strapi.schemas';
@@ -95,6 +95,71 @@ export const useGetDataSources = <
   return query;
 };
 
+export const postDataSources = (
+  dataSourceRequest: BodyType<DataSourceRequest>,
+  options?: SecondParameter<typeof API>
+) => {
+  return API<DataSourceResponse>(
+    {
+      url: `/data-sources`,
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' },
+      data: dataSourceRequest,
+    },
+    options
+  );
+};
+
+export const getPostDataSourcesMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postDataSources>>,
+    TError,
+    { data: BodyType<DataSourceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof postDataSources>>,
+  TError,
+  { data: BodyType<DataSourceRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof postDataSources>>,
+    { data: BodyType<DataSourceRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return postDataSources(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PostDataSourcesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postDataSources>>
+>;
+export type PostDataSourcesMutationBody = BodyType<DataSourceRequest>;
+export type PostDataSourcesMutationError = ErrorType<Error>;
+
+export const usePostDataSources = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postDataSources>>,
+    TError,
+    { data: BodyType<DataSourceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getPostDataSourcesMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};
 export const getDataSourcesId = (
   id: number,
   params?: GetDataSourcesIdParams,
