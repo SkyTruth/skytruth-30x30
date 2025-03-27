@@ -418,73 +418,73 @@ export const useColumns = (
       },
       ...(environment === 'marine'
         ? [
-          {
-            id: 'mpaa_establishment_stage.name',
-            accessorKey: 'mpaa_establishment_stage.name',
-            header: () => (
-              <HeaderItem>
-                <FiltersButton
-                  field="mpaa_establishment_stage.slug"
-                  options={filtersOptions.mpaaEstablishmentStage}
-                  values={filters['mpaa_establishment_stage.slug'] ?? []}
-                  onChange={(field, values) => onChangeFilters({ ...filters, [field]: values })}
-                />
-                {t('establishment-stage')}
-                <TooltipButton tooltip={tooltips?.establishmentStage} />
-              </HeaderItem>
-            ),
-            cell: ({ row }) => {
-              const { mpaa_establishment_stage } = row.original;
+            {
+              id: 'mpaa_establishment_stage.name',
+              accessorKey: 'mpaa_establishment_stage.name',
+              header: () => (
+                <HeaderItem>
+                  <FiltersButton
+                    field="mpaa_establishment_stage.slug"
+                    options={filtersOptions.mpaaEstablishmentStage}
+                    values={filters['mpaa_establishment_stage.slug'] ?? []}
+                    onChange={(field, values) => onChangeFilters({ ...filters, [field]: values })}
+                  />
+                  {t('establishment-stage')}
+                  <TooltipButton tooltip={tooltips?.establishmentStage} />
+                </HeaderItem>
+              ),
+              cell: ({ row }) => {
+                const { mpaa_establishment_stage } = row.original;
 
-              const hasSubRowWithValue =
-                row.subRows.length > 0 &&
-                row.subRows.some((row) => !!row.original.mpaa_establishment_stage);
+                const hasSubRowWithValue =
+                  row.subRows.length > 0 &&
+                  row.subRows.some((row) => !!row.original.mpaa_establishment_stage);
 
-              let fallbackValue = t('not-assessed');
-              if (hasSubRowWithValue) {
-                fallbackValue = '−';
-              }
+                let fallbackValue = t('not-assessed');
+                if (hasSubRowWithValue) {
+                  fallbackValue = '−';
+                }
 
-              const formattedValue = mpaa_establishment_stage.name ?? fallbackValue;
-              return <>{formattedValue}</>;
+                const formattedValue = mpaa_establishment_stage.name ?? fallbackValue;
+                return <>{formattedValue}</>;
+              },
             },
-          },
-        ]
+          ]
         : []),
       ...(environment === 'marine'
         ? [
-          {
-            id: 'mpaa_protection_level.name',
-            accessorKey: 'mpaa_protection_level.name',
-            header: () => (
-              <HeaderItem>
-                <FiltersButton
-                  field="mpaa_protection_level.slug"
-                  options={filtersOptions.mpaaProtectionLevel}
-                  values={filters['mpaa_protection_level.slug'] ?? []}
-                  onChange={(field, values) => onChangeFilters({ ...filters, [field]: values })}
-                />
-                {t('protection-level')}
-                <TooltipButton tooltip={tooltips?.protectionLevel} />
-              </HeaderItem>
-            ),
-            cell: ({ row }) => {
-              const { mpaa_protection_level } = row.original;
+            {
+              id: 'mpaa_protection_level.name',
+              accessorKey: 'mpaa_protection_level.name',
+              header: () => (
+                <HeaderItem>
+                  <FiltersButton
+                    field="mpaa_protection_level.slug"
+                    options={filtersOptions.mpaaProtectionLevel}
+                    values={filters['mpaa_protection_level.slug'] ?? []}
+                    onChange={(field, values) => onChangeFilters({ ...filters, [field]: values })}
+                  />
+                  {t('protection-level')}
+                  <TooltipButton tooltip={tooltips?.protectionLevel} />
+                </HeaderItem>
+              ),
+              cell: ({ row }) => {
+                const { mpaa_protection_level } = row.original;
 
-              const hasSubRowWithValue =
-                row.subRows.length > 0 &&
-                row.subRows.some((row) => !!row.original.mpaa_protection_level);
+                const hasSubRowWithValue =
+                  row.subRows.length > 0 &&
+                  row.subRows.some((row) => !!row.original.mpaa_protection_level);
 
-              let fallbackValue = t('not-assessed');
-              if (hasSubRowWithValue) {
-                fallbackValue = '−';
-              }
+                let fallbackValue = t('not-assessed');
+                if (hasSubRowWithValue) {
+                  fallbackValue = '−';
+                }
 
-              const formattedValue = mpaa_protection_level.name ?? fallbackValue;
-              return <>{formattedValue}</>;
+                const formattedValue = mpaa_protection_level.name ?? fallbackValue;
+                return <>{formattedValue}</>;
+              },
             },
-          },
-        ]
+          ]
         : []),
     ];
   }, [locale, environment, t, tooltips, filters, onChangeFilters, filtersOptions]);
@@ -539,27 +539,27 @@ export const useData = (
       },
       ...(environment === 'marine'
         ? {
-          mpaa_establishment_stage: {
-            fields: ['slug', 'name', 'locale'],
-            populate: {
-              localizations: {
-                fields: ['slug', 'name', 'locale'],
+            mpaa_establishment_stage: {
+              fields: ['slug', 'name', 'locale'],
+              populate: {
+                localizations: {
+                  fields: ['slug', 'name', 'locale'],
+                },
               },
             },
-          },
-        }
+          }
         : {}),
       ...(environment === 'marine'
         ? {
-          mpaa_protection_level: {
-            fields: ['slug', 'name', 'locale'],
-            populate: {
-              localizations: {
-                fields: ['slug', 'name', 'locale'],
+            mpaa_protection_level: {
+              fields: ['slug', 'name', 'locale'],
+              populate: {
+                localizations: {
+                  fields: ['slug', 'name', 'locale'],
+                },
               },
             },
-          },
-        }
+          }
         : {}),
     }),
     [environment]
@@ -585,12 +585,12 @@ export const useData = (
     () => ({
       ...(environment
         ? {
-          environment: {
-            slug: {
-              $eq: environment,
+            environment: {
+              slug: {
+                $eq: environment,
+              },
             },
-          },
-        }
+          }
         : {}),
       location: {
         code: {
@@ -708,8 +708,8 @@ export const useData = (
             ...getData(attributes),
             ...(attributes.children.data.length > 0
               ? {
-                subRows: attributes.children.data.map(({ attributes }) => getData(attributes)),
-              }
+                  subRows: attributes.children.data.map(({ attributes }) => getData(attributes)),
+                }
               : {}),
           };
         }) ?? [],
