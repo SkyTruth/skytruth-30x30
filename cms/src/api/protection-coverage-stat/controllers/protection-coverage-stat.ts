@@ -40,12 +40,23 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             const { data, meta } = await super.find(ctx);
             // Update sort so null values are at the end
             if (query?.sort) {
-                const sortParams = query.sort.split(/[,:]/);
-                let sortIndex = 0;
-                while (sortIndex < sortParams.length) {
+                let sortParams = {}
+                if (typeof query.sort === 'string') {
+                    const sortParamsArray = query.sort.split(/[,:]/);
+
+                    sortParamsArray.forEach((param, index) => {
+                        if (index % 2 === 0) {
+                            sortParams[param] = sortParamsArray[index + 1];
+                        }
+                    }
+                    )
+                } else if (typeof query.sort === 'object') {
+                    sortParams = query.sort;
+                }
+                for (const sortItem in sortParams) {
                     data.sort((a, b) => {
-                        const first = getValueByPath(a, sortParams[sortIndex]);
-                        const second = getValueByPath(b, sortParams[sortIndex]);
+                        const first = getValueByPath(a, sortItem);
+                        const second = getValueByPath(b, sortItem);
 
                         if (first === second) {
                             return 0;
@@ -58,14 +69,12 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                             return -1;
                         }
 
-                        if (sortParams[sortIndex + 1] === 'asc') {
+                        if (sortParams[sortItem] === 'asc') {
                             return first < second ? -1 : 1;
                         }
 
                         return first < second ? 1 : -1;
                     })
-
-                    sortIndex += 2;
                 }
             }
             const [start, end] = getPaginationBounds(query.pagination, data.length);
@@ -81,7 +90,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             }
             return { data: paginatedData, meta: { ...meta, updatedAt } };
         } catch (error) {
-            Logger.error('Error fetching protection coverage stat data', { error });
+            Logger.error('Error fetching protection coverage stat data: ' + error?.message, error);
             return ctx.badRequest('Error fetching protection coverage stat data');
         }
     }
