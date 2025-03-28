@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
-interface Source {
+export interface Source {
   id: number;
   title: string;
   url: string;
@@ -32,6 +32,17 @@ const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
   const t = useTranslations('components.tooltip-button');
 
   const [isTooltipOpen, setIsTooltipOpen] = useState<boolean>(false);
+
+  const renderSource = (url: string | undefined, children: ReactNode): ReactNode => {
+    if (url) {
+      return (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+          {children}
+        </a>
+      );
+    }
+    return <span className="font-semibold">{children}</span>;
+  };
 
   return (
     <Popover open={isTooltipOpen} onOpenChange={setIsTooltipOpen}>
@@ -74,29 +85,13 @@ const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
             <span>{t('data-sources:')} </span>
             {sources.map(({ id, title, url }, index) => (
               <Fragment key={id}>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold underline"
-                >
-                  {title}
-                </a>
+                {renderSource(url, title)}
                 {index < sources.length - 1 && <span>, </span>}
               </Fragment>
             ))}
           </div>
         )}
-        {sources && !Array.isArray(sources) && (
-          <a
-            href={sources?.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold underline"
-          >
-            {t('data-source')}
-          </a>
-        )}
+        {sources && !Array.isArray(sources) && renderSource(sources?.url, t('data-source'))}
         {extraContent}
       </PopoverContent>
     </Popover>

@@ -140,6 +140,9 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
                       isActive: boolean
                     ) => void;
                     const metadata = layer?.attributes?.metadata;
+                    const sources = metadata?.citation
+                      ? [{ id: layer?.id, title: metadata?.citation, url: metadata?.source }]
+                      : null;
 
                     return (
                       <li key={layer.id} className="flex items-start justify-between">
@@ -155,7 +158,11 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
                           </Label>
                         </span>
                         {metadata?.description && (
-                          <TooltipButton className="mt-px" text={metadata?.description} />
+                          <TooltipButton
+                            className="mt-px"
+                            text={metadata?.description}
+                            sources={sources}
+                          />
                         )}
                       </li>
                     );

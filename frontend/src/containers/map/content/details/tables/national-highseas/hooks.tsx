@@ -74,7 +74,14 @@ const useTooltips = () => {
   const locale = useLocale();
 
   const { data: dataInfo } = useGetDataInfos(
-    { locale },
+    {
+      locale,
+      filters: {
+        slug: {
+          $in: Object.entries(TOOLTIP_MAPPING).map((entry) => entry[1]),
+        },
+      },
+    },
     {
       query: {
         select: ({ data }) => data,
@@ -83,14 +90,19 @@ const useTooltips = () => {
     }
   );
 
-  const tooltips = {};
+  // Sources are kept out of these tooltips because there is a source column in the table
+  const tooltips: {
+    [key: string]: {
+      text: string;
+    };
+  } = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes
-      ?.content;
+    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes;
 
     if (!tooltip) return;
-    tooltips[key] = tooltip;
+
+    tooltips[key] = { text: tooltip?.content };
   });
 
   return tooltips;
@@ -256,7 +268,7 @@ export const useColumns = (
           <HeaderItem className="ml-6">
             <SortingButton column={column} />
             {t('name')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.protectedArea} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -274,7 +286,7 @@ export const useColumns = (
       {
         id: 'environment.name',
         accessorKey: 'environment.name',
-        header: ({ column }) => (
+        header: () => (
           <HeaderItem className="ml-1">
             {!environment && (
               <FiltersButton
@@ -285,7 +297,7 @@ export const useColumns = (
               />
             )}
             {t('ecosystem')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.environment} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -300,7 +312,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('coverage')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.coverage} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -330,7 +342,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('area')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.area} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -342,7 +354,7 @@ export const useColumns = (
       {
         id: 'data_source.title',
         accessorKey: 'data_source.title',
-        header: ({ column }) => (
+        header: () => (
           <HeaderItem>
             {environment !== 'terrestrial' && (
               <FiltersButton
@@ -353,7 +365,7 @@ export const useColumns = (
               />
             )}
             {t('data-source')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.dataSource} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -365,7 +377,7 @@ export const useColumns = (
       {
         id: 'protection_status.name',
         accessorKey: 'protection_status.name',
-        header: ({ column }) => (
+        header: () => (
           <HeaderItem>
             <FiltersButton
               field="protection_status.slug"
@@ -374,7 +386,7 @@ export const useColumns = (
               onChange={(field, values) => onChangeFilters({ ...filters, [field]: values })}
             />
             {t('type')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.protectedAreaType} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -386,7 +398,7 @@ export const useColumns = (
       {
         id: 'iucn_category.name',
         accessorKey: 'iucn_category.name',
-        header: ({ column }) => (
+        header: () => (
           <HeaderItem>
             <FiltersButton
               field="iucn_category.slug"
@@ -395,7 +407,7 @@ export const useColumns = (
               onChange={(field, values) => onChangeFilters({ ...filters, [field]: values })}
             />
             {t('iucn-category')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.iucnCategory} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -409,7 +421,7 @@ export const useColumns = (
             {
               id: 'mpaa_establishment_stage.name',
               accessorKey: 'mpaa_establishment_stage.name',
-              header: ({ column }) => (
+              header: () => (
                 <HeaderItem>
                   <FiltersButton
                     field="mpaa_establishment_stage.slug"
@@ -418,7 +430,7 @@ export const useColumns = (
                     onChange={(field, values) => onChangeFilters({ ...filters, [field]: values })}
                   />
                   {t('establishment-stage')}
-                  <TooltipButton column={column} tooltips={tooltips} />
+                  <TooltipButton tooltip={tooltips?.establishmentStage} />
                 </HeaderItem>
               ),
               cell: ({ row }) => {
@@ -444,7 +456,7 @@ export const useColumns = (
             {
               id: 'mpaa_protection_level.name',
               accessorKey: 'mpaa_protection_level.name',
-              header: ({ column }) => (
+              header: () => (
                 <HeaderItem>
                   <FiltersButton
                     field="mpaa_protection_level.slug"
@@ -453,7 +465,7 @@ export const useColumns = (
                     onChange={(field, values) => onChangeFilters({ ...filters, [field]: values })}
                   />
                   {t('protection-level')}
-                  <TooltipButton column={column} tooltips={tooltips} />
+                  <TooltipButton tooltip={tooltips?.protectionLevel} />
                 </HeaderItem>
               ),
               cell: ({ row }) => {

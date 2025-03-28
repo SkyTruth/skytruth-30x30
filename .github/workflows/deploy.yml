@@ -209,7 +209,7 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
-          version: '>= 363.0.0'
+          version: '>= 516.0.0'
       - name: 'Use gcloud CLI'
         run: 'gcloud info'
       - name: 'Deploy to gen2 cloud function'

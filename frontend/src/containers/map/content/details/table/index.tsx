@@ -109,7 +109,7 @@ const MapTable: MapTableProps<unknown> = <TData,>({
                         style={{
                           minWidth: column.getSize() ? `${column.getSize()}px` : undefined,
                           width: column.getSize() ? `${column.getSize()}px` : undefined,
-                          maxWidth: column.getSize() ? `${column.getSize()}px` : undefined,
+                          maxWidth: column.getSize() ? `${column.getSize() + 15}px` : undefined,
                         }}
                       >
                         {flexRender(column.columnDef.header, header.getContext())}

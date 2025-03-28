@@ -1,20 +1,15 @@
-import { Column } from '@tanstack/react-table';
-
 import TooltipButton from '@/components/tooltip-button';
-import type { GlobalRegionalTableColumns } from '@/containers/map/content/details/tables/global-regional/hooks';
-import type { NationalHighseasTableColumns } from '@/containers/map/content/details/tables/national-highseas/hooks';
+import type { Source } from '@/components/tooltip-button';
 
 type TableTooltipButtonProps = {
-  column:
-    | Column<GlobalRegionalTableColumns, unknown>
-    | Column<NationalHighseasTableColumns, unknown>;
-  tooltips: { [key: string]: string };
+  tooltip: { text: string; sources?: Source | Source[] };
 };
 
-const TableTooltipButton: React.FC<TableTooltipButtonProps> = ({ column, tooltips }) => {
-  const tooltipText = tooltips[column.id];
+const TableTooltipButton: React.FC<TableTooltipButtonProps> = ({ tooltip }) => {
+  const tooltipText = tooltip?.text;
+  const tooltipSources = tooltip?.sources;
   if (!tooltipText) return null;
-  return <TooltipButton text={tooltipText} />;
+  return <TooltipButton text={tooltipText} sources={tooltipSources} />;
 };
 
 export default TableTooltipButton;

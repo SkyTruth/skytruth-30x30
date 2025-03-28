@@ -4,6 +4,48 @@
   "type": "authenticated",
   "permissions": [
     {
+      "action": "api::data-info.data-info.create"
+    },
+    {
+      "action": "api::data-info.data-info.find"
+    },
+    {
+      "action": "api::data-info.data-info.findOne"
+    },
+    {
+      "action": "api::data-info.data-info.update"
+    },
+    {
+      "action": "api::data-source.data-source.create"
+    },
+    {
+      "action": "api::data-source.data-source.find"
+    },
+    {
+      "action": "api::data-source.data-source.findOne"
+    },
+    {
+      "action": "api::data-source.data-source.update"
+    },
+    {
+      "action": "api::dataset.dataset.find"
+    },
+    {
+      "action": "api::dataset.dataset.findOne"
+    },
+    {
+      "action": "api::dataset.dataset.update"
+    },
+    {
+      "action": "api::layer.layer.find"
+    },
+    {
+      "action": "api::layer.layer.findOne"
+    },
+    {
+      "action": "api::layer.layer.update"
+    },
+    {
       "action": "plugin::users-permissions.auth.changePassword"
     },
     {

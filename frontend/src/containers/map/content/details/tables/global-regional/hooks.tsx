@@ -6,6 +6,7 @@ import { AccessorKeyColumnDef, PaginationState, SortingState } from '@tanstack/r
 import { useLocale, useTranslations } from 'next-intl';
 
 import FiltersButton from '@/components/filters-button';
+import type { Source } from '@/components/tooltip-button';
 import Icon from '@/components/ui/icon';
 import { PAGES } from '@/constants/pages';
 import HeaderItem from '@/containers/map/content/details/table/header-item';
@@ -48,7 +49,7 @@ const TOOLTIP_MAPPING = {
   coverage: 'coverage',
   pas: 'pas',
   oecms: 'oecms',
-  area: 'protected-area',
+  protectedArea: 'protected-area',
   fullyHighlyProtected: 'fully-highly-protected',
   globalContribution: 'global-contribution',
 };
@@ -57,7 +58,15 @@ const useTooltips = () => {
   const locale = useLocale();
 
   const { data: dataInfo } = useGetDataInfos(
-    { locale },
+    {
+      locale,
+      populate: 'data_sources',
+      filters: {
+        slug: {
+          $in: Object.entries(TOOLTIP_MAPPING).map((entry) => entry[1]),
+        },
+      },
+    },
     {
       query: {
         select: ({ data }) => data,
@@ -65,15 +74,26 @@ const useTooltips = () => {
       },
     }
   );
-
-  const tooltips = {};
+  const tooltips: {
+    [key: string]: {
+      text: string;
+      sources: Source[];
+    };
+  } = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes
-      ?.content;
+    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes;
 
     if (!tooltip) return;
-    tooltips[key] = tooltip;
+    const sources = !!tooltip?.data_sources?.data?.length
+      ? tooltip?.data_sources?.data.map(
+          ({ id, attributes: { slug, title = null, url = null } }) => {
+            return { id, slug, url, title };
+          }
+        )
+      : null;
+
+    tooltips[key] = { text: tooltip?.content, sources };
   });
 
   return tooltips;
@@ -136,7 +156,7 @@ export const useColumns = (
           <HeaderItem className="ml-1">
             <SortingButton column={column} />
             {t('name')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.location} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -160,7 +180,7 @@ export const useColumns = (
       {
         id: 'environment.name',
         accessorKey: 'environment.name',
-        header: ({ column }) => (
+        header: () => (
           <HeaderItem className="ml-1">
             {!environment && (
               <FiltersButton
@@ -171,7 +191,7 @@ export const useColumns = (
               />
             )}
             {t('ecosystem')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.environment} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -186,7 +206,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('coverage')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.coverage} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -205,13 +225,13 @@ export const useColumns = (
         },
       },
       {
-        id: 'protected_area',
-        accessorKey: 'protected_area',
+        id: 'protected-area',
+        accessorKey: 'protected-area',
         header: ({ column }) => (
           <HeaderItem>
             <SortingButton column={column} />
             {t('area')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.protectedArea} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -227,7 +247,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('pas')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips.pas} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -245,7 +265,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('oecms')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.oecms} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
@@ -265,7 +285,7 @@ export const useColumns = (
                 <HeaderItem>
                   <SortingButton column={column} />
                   {t('fully-highly-protected')}
-                  <TooltipButton column={column} tooltips={tooltips} />
+                  <TooltipButton tooltip={tooltips?.fullyHighlyProtected} />
                 </HeaderItem>
               ),
               cell: ({ row }) => {
@@ -292,7 +312,7 @@ export const useColumns = (
           <HeaderItem>
             <SortingButton column={column} />
             {t('global-contribution')}
-            <TooltipButton column={column} tooltips={tooltips} />
+            <TooltipButton tooltip={tooltips?.globalContribution} />
           </HeaderItem>
         ),
         cell: ({ row }) => {
