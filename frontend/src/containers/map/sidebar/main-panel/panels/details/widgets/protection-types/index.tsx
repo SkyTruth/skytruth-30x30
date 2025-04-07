@@ -29,9 +29,6 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
         location: {
           code: location?.code || 'GLOB',
         },
-        mpaa_protection_level: {
-          slug: 'fully-highly-protected',
-        },
       },
       populate: '*',
       'pagination[limit]': -1,
@@ -59,15 +56,15 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
         select: ({ data }) =>
           data[0]
             ? {
-                info: data[0]?.attributes?.content,
-                sources: data[0]?.attributes?.data_sources?.data?.map(
-                  ({ id, attributes: { title, url } }) => ({
-                    id,
-                    title,
-                    url,
-                  })
-                ),
-              }
+              info: data[0]?.attributes?.content,
+              sources: data[0]?.attributes?.data_sources?.data?.map(
+                ({ id, attributes: { title, url } }) => ({
+                  id,
+                  title,
+                  url,
+                })
+              ),
+            }
             : undefined,
       },
     }
