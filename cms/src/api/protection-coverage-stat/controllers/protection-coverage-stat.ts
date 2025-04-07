@@ -40,19 +40,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             const { data, meta } = await super.find(ctx);
             // Update sort so null values are at the end
             if (query?.sort) {
-                let sortParams = {}
-                if (typeof query.sort === 'string') {
-                    const sortParamsArray = query.sort.split(/[,:]/);
-
-                    sortParamsArray.forEach((param, index) => {
-                        if (index % 2 === 0) {
-                            sortParams[param] = sortParamsArray[index + 1];
-                        }
-                    }
-                    )
-                } else if (typeof query.sort === 'object') {
-                    sortParams = query.sort;
-                }
+                const sortParams = normalizeSortParams(query.sort);
                 for (const sortItem in sortParams) {
                     data.sort((a, b) => {
                         const first = getValueByPath(a, sortItem);
@@ -153,4 +141,79 @@ function getValueByPath(
         }
 
     }, data);
+}
+/**
+ * Helper method to flatten deeply nested sort parameters into a sinlge level object
+ * with dot notation keys
+ * @param sort An object of variable depth containing the sort parameters
+ * @example {{ location: { name: 'asc' }, environment: 'asc'  }
+ * @param prefix the previous collapsed key
+ * @returns a flattened object with dot notation keys
+ * @example { 'location.name': 'asc', environment: 'asc' }
+ */
+function flattenSortParams(
+    sort: Record<string, any>,
+    prefix: string = ''
+): Record<string, string> {
+    const flattened: Record<string, string> = {};
+
+    for (const key in sort) {
+        if (Object.hasOwn(sort, key)) {
+            const value = sort[key];
+            const newKey = prefix ? `${prefix}.${key}` : key;
+            if (value !== null && typeof value === 'object') {
+                Object.assign(flattened, flattenSortParams(value, newKey));
+            } else {
+                flattened[newKey] = value;
+            }
+        }
+    }
+
+    return flattened;
+}
+
+/**
+ * * Normalizes sort parameters that might be provided as:
+ * a string, e.g. 'year:asc,environment.name:asc'
+ * a nested object, e.g. { location: { name: 'asc' } }
+ * or an array mixing both formats.
+ * @param sortInput 
+ * @Returns a flat object with keys in dot-notation.
+ * @example { 'location.name': 'asc', environment: 'asc' }
+ */
+function normalizeSortParams(
+    sortInput: string | Record<string, any> | Array<string | Record<string, any>>
+): Record<string, string> {
+    let sortParams: Record<string, string> = {};
+
+    if (Array.isArray(sortInput)) {
+        sortInput.forEach(item => {
+            if (typeof item === 'string') {
+                // Split by comma to separate sort pairs
+                const pairs = item.split(',');
+                pairs.forEach(pair => {
+                    const [key, order] = pair.split(':');
+                    if (key && order) {
+                        sortParams[key.trim()] = order.trim();
+                    }
+                });
+            } else if (typeof item === 'object' && item !== null) {
+                // Flatten the object and merge its keys
+                const flattened = flattenSortParams(item);
+                sortParams = { ...sortParams, ...flattened };
+            }
+        });
+    } else if (typeof sortInput === 'string') {
+        const pairs = sortInput.split(',');
+        pairs.forEach(pair => {
+            const [key, order] = pair.split(':');
+            if (key && order) {
+                sortParams[key.trim()] = order.trim();
+            }
+        });
+    } else if (typeof sortInput === 'object' && sortInput !== null) {
+        sortParams = flattenSortParams(sortInput);
+    }
+
+    return sortParams;
 }
