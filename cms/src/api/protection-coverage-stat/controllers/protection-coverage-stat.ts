@@ -158,7 +158,7 @@ function flattenSortParams(
     const flattened: Record<string, string> = {};
 
     for (const key in sort) {
-        if (Object.prototype.hasOwnProperty.call(sort, key)) {
+        if (Object.hasOwn(sort, key)) {
             const value = sort[key];
             const newKey = prefix ? `${prefix}.${key}` : key;
             if (value !== null && typeof value === 'object') {
@@ -174,9 +174,9 @@ function flattenSortParams(
 
 /**
  * * Normalizes sort parameters that might be provided as:
- * - a string, e.g. 'year:asc,environment.name:asc'
- * - a nested object, e.g. { location: { name: 'asc' } }
- * - or an array mixing both formats.
+ * a string, e.g. 'year:asc,environment.name:asc'
+ * a nested object, e.g. { location: { name: 'asc' } }
+ * or an array mixing both formats.
  * @param sortInput 
  * @Returns a flat object with keys in dot-notation.
  * @example { 'location.name': 'asc', environment: 'asc' }
