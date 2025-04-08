@@ -29,9 +29,6 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
         location: {
           code: location?.code || 'GLOB',
         },
-        mpaa_protection_level: {
-          slug: 'fully-highly-protected',
-        },
       },
       populate: '*',
       'pagination[limit]': -1,

@@ -228,10 +228,20 @@ const useFiltersOptions = () => {
     {
       query: {
         select: ({ data }) =>
-          data.map((mpaaProtectionLevel) => ({
-            name: mpaaProtectionLevel.attributes.name,
-            value: mpaaProtectionLevel.attributes.slug,
-          })),
+          data
+            .filter(
+              /**
+               * The following levels are not valid mpaa protection levels and hence don't make
+               * sense as filters. They are just used internally for aggregating protection stats
+               */
+              (mpaaProtectionLevel) =>
+                mpaaProtectionLevel.attributes.slug !== 'fully-highly-protected' &&
+                mpaaProtectionLevel.attributes.slug !== 'less-protected-unknown'
+            )
+            .map((mpaaProtectionLevel) => ({
+              name: mpaaProtectionLevel.attributes.name,
+              value: mpaaProtectionLevel.attributes.slug,
+            })),
         placeholderData: { data: [] },
       },
     }
