@@ -10,7 +10,7 @@ import {
   useSyncMapLayers,
 } from '@/containers/map/content/map/sync-settings';
 
-const LayerManager = ({ }: { cursor: CustomMapProps['cursor'] }) => {
+const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
   const { default: map } = useMap();
 
   const [zoom, setZoom] = useState(map?.getZoom() ?? 1);
@@ -30,7 +30,14 @@ const LayerManager = ({ }: { cursor: CustomMapProps['cursor'] }) => {
     () =>
       activeLayers.map((slug, idx) => {
         const beforeId = idx === 0 ? 'custom-layers' : `${activeLayers[idx - 1]}-layer`;
-        return <LayerManagerItem key={slug} slug={slug} beforeId={beforeId} settings={getSettings(slug)} />;
+        return (
+          <LayerManagerItem
+            key={slug}
+            slug={slug}
+            beforeId={beforeId}
+            settings={getSettings(slug)}
+          />
+        );
       }),
     [activeLayers, getSettings]
   );

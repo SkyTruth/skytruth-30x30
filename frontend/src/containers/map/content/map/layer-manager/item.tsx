@@ -41,29 +41,30 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
   // }
   // );
 
-  const { data: layer } = useGetLayers({
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    filters: {
-      slug: {
-        $eq: slug,
+  const { data: layer } = useGetLayers(
+    {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      filters: {
+        slug: {
+          $eq: slug,
+        },
       },
+      locale,
+      populate: 'metadata',
     },
-    locale,
-    populate: 'metadata',
-  },
     {
       query: {
         select: ({ data }) => data[0]?.attributes,
       },
-    });
+    }
+  );
 
   const [, setLayersInteractive] = useAtom(layersInteractiveAtom);
   const [, setLayersInteractiveIds] = useAtom(layersInteractiveIdsAtom);
   const { locationCode = 'GLOB' } = useParams();
 
-  const { type, config, params_config } =
-    (layer as LayerTyped) ?? ({} as LayerTyped);
+  const { type, config, params_config } = (layer as LayerTyped) ?? ({} as LayerTyped);
 
   const configParams = useMemo(
     () => ({

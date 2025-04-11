@@ -54,7 +54,7 @@ const MainMap: FCWithMessages = () => {
     {
       locale,
       filters: {
-        id: {
+        slug: {
           $in: layersInteractive,
         },
       },

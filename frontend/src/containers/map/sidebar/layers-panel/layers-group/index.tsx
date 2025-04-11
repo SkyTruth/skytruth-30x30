@@ -14,7 +14,11 @@ import {
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
-import { DatasetUpdatedByData, Layer, LayerResponseDataObject } from '@/types/generated/strapi.schemas';
+import {
+  DatasetUpdatedByData,
+  Layer,
+  LayerResponseDataObject,
+} from '@/types/generated/strapi.schemas';
 
 export const SWITCH_LABEL_CLASSES = '-mb-px cursor-pointer pt-px font-mono text-xs font-normal';
 const COLLAPSIBLE_TRIGGER_ICONS_CLASSES = 'w-5 h-5 hidden';

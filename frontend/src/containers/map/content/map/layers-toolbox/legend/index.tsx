@@ -59,12 +59,12 @@ const Legend: FCWithMessages = () => {
       filters: {
         ...(tab !== 'summary'
           ? {
-            environment: {
-              slug: {
-                $in: tab,
+              environment: {
+                slug: {
+                  $in: tab,
+                },
               },
-            },
-          }
+            }
           : {}),
       },
     },

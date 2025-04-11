@@ -11,7 +11,7 @@ import { LayerSettings, layerSettingsSchema } from '@/types/layers';
 const mapSettingsSchema = z.object({
   bbox: z.array(z.number()).optional(),
   labels: z.boolean().optional(),
-})
+});
 
 type MapSettings = z.infer<typeof mapSettingsSchema>;
 

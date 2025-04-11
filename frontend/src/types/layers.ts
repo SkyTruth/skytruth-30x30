@@ -1,4 +1,5 @@
 import type { AnyLayer, AnySource } from 'react-map-gl';
+
 import { z } from 'zod';
 
 import { FormatProps } from '@/lib/utils/formats';
@@ -52,7 +53,7 @@ export const layerSettingsSchema = z.record(
     visibility: z.boolean().optional(),
     expand: z.boolean().optional(),
   })
-)
+);
 
 export type LayerSettings = z.infer<typeof layerSettingsSchema>;
 
