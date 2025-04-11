@@ -5,14 +5,14 @@ import { atom } from 'jotai';
 import { atomWithReset, atomWithStorage } from 'jotai/utils';
 
 import { CustomMapProps } from '@/components/map/types';
-import { LayerResponseDataObject } from '@/types/generated/strapi.schemas';
+import { Layer } from '@/types/generated/strapi.schemas';
 import type { ModellingData } from '@/types/modelling';
 
 export const sidebarAtom = atom(true);
 export const layersAtom = atom(false);
 
 // ? Map state
-export const layersInteractiveAtom = atom<LayerResponseDataObject['id'][]>([]);
+export const layersInteractiveAtom = atom<Layer['slug'][]>([]);
 export const layersInteractiveIdsAtom = atom<string[]>([]);
 export const bboxLocationAtom = atomWithReset<CustomMapProps['bounds']['bbox']>([
   -180, -85.5624999997749, 180, 90,

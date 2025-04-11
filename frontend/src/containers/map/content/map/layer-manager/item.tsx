@@ -9,30 +9,61 @@ import DeckJsonLayer from '@/components/map/layers/deck-json-layer';
 import MapboxLayer from '@/components/map/layers/mapbox-layer';
 import { layersInteractiveAtom, layersInteractiveIdsAtom } from '@/containers/map/store';
 import useResolvedConfig from '@/hooks/use-resolved-config';
-import { useGetLayersId } from '@/types/generated/layer';
-import { LayerResponseDataObject } from '@/types/generated/strapi.schemas';
+import { useGetLayers } from '@/types/generated/layer';
+import { Layer } from '@/types/generated/strapi.schemas';
 import { Config, LayerTyped } from '@/types/layers';
 
-interface LayerManagerItemProps extends Required<Pick<LayerResponseDataObject, 'id'>> {
+interface LayerManagerItemProps extends Required<Pick<Layer, 'slug'>> {
   beforeId: string;
   settings: Record<string, unknown>;
 }
 
-const LayerManagerItem = ({ id, beforeId, settings }: LayerManagerItemProps) => {
+const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) => {
   const locale = useLocale();
 
-  const { data } = useGetLayersId(id, {
+  // const { data } = useGetLayers(
+  //   {
+  //     locale,
+  //     fields: 'slug',
+  //     filters: {
+  //       default: {
+  //         $eq: true,
+  //       },
+  //     },
+  //     // Makes sure that the default interactive layers are displayed on top so that their
+  //     // highlighted states are fully visible
+  //     sort: 'interaction_config',
+  //   },
+  // {
+  //   query: {
+  //     select: ({ data }) => data.map(({ attributes }) => attributes?.slug),
+  //   },
+  // }
+  // );
+
+  const { data: layer } = useGetLayers({
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
+    filters: {
+      slug: {
+        $eq: slug,
+      },
+    },
     locale,
     populate: 'metadata',
-  });
+  },
+    {
+      query: {
+        select: ({ data }) => data[0]?.attributes,
+      },
+    });
+
   const [, setLayersInteractive] = useAtom(layersInteractiveAtom);
   const [, setLayersInteractiveIds] = useAtom(layersInteractiveIdsAtom);
   const { locationCode = 'GLOB' } = useParams();
 
   const { type, config, params_config } =
-    (data?.data?.attributes as LayerTyped) ?? ({} as LayerTyped);
+    (layer as LayerTyped) ?? ({} as LayerTyped);
 
   const configParams = useMemo(
     () => ({
@@ -50,34 +81,34 @@ const LayerManagerItem = ({ id, beforeId, settings }: LayerManagerItemProps) => 
 
   const handleAddMapboxLayer = useCallback(
     ({ styles }: Config) => {
-      if (!data?.data?.attributes) return null;
+      if (layer) return null;
 
-      const { interaction_config } = data.data.attributes as LayerTyped;
+      const { interaction_config } = layer as LayerTyped;
 
       if (interaction_config?.enabled) {
         const ids = styles.map((l) => l.id);
 
-        setLayersInteractive((prev) => Array.from(new Set([...prev, id])));
+        setLayersInteractive((prev) => Array.from(new Set([...prev, slug])));
         setLayersInteractiveIds((prev) => Array.from(new Set([...prev, ...ids])));
       }
     },
-    [data?.data?.attributes, id, setLayersInteractive, setLayersInteractiveIds]
+    [layer, slug, setLayersInteractive, setLayersInteractiveIds]
   );
 
   const handleRemoveMapboxLayer = useCallback(
     ({ styles }: Config) => {
-      if (!data?.data?.attributes) return null;
+      if (layer) return null;
 
-      const { interaction_config } = data.data.attributes as LayerTyped;
+      const { interaction_config } = layer as LayerTyped;
 
       if (interaction_config?.enabled) {
         const ids = styles.map((l) => l.id);
 
-        setLayersInteractive((prev) => prev.filter((i) => i !== id));
+        setLayersInteractive((prev) => prev.filter((i) => i !== slug));
         setLayersInteractiveIds((prev) => prev.filter((i) => !ids.includes(i)));
       }
     },
-    [data?.data?.attributes, id, setLayersInteractive, setLayersInteractiveIds]
+    [layer, slug, setLayersInteractive, setLayersInteractiveIds]
   );
 
   if (!parsedConfig) {
@@ -87,7 +118,7 @@ const LayerManagerItem = ({ id, beforeId, settings }: LayerManagerItemProps) => 
   if (type === 'mapbox') {
     return (
       <MapboxLayer
-        id={`${id}-layer`}
+        id={`${slug}-layer`}
         beforeId={beforeId}
         config={parsedConfig as Config}
         onAdd={handleAddMapboxLayer}
@@ -97,7 +128,7 @@ const LayerManagerItem = ({ id, beforeId, settings }: LayerManagerItemProps) => 
   }
 
   if (type === 'deckgl') {
-    return <DeckJsonLayer id={`${id}-layer`} beforeId={beforeId} config={parsedConfig} />;
+    return <DeckJsonLayer id={`${slug}-layer`} beforeId={beforeId} config={parsedConfig} />;
   }
 
   return null;

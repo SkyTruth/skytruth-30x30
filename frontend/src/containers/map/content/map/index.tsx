@@ -70,7 +70,7 @@ const MainMap: FCWithMessages = () => {
   const { data: defaultLayers } = useGetLayers(
     {
       locale,
-      fields: 'id',
+      fields: 'slug',
       filters: {
         default: {
           $eq: true,
@@ -82,11 +82,10 @@ const MainMap: FCWithMessages = () => {
     },
     {
       query: {
-        select: ({ data }) => data.map(({ id }) => id),
+        select: ({ data }) => data.map(({ attributes }) => attributes?.slug),
       },
     }
   );
-
   const previousDefaultLayersRef = useRef(defaultLayers);
 
   // Once we have fetched from the CMS which layers are active by default, we set toggle them on, if

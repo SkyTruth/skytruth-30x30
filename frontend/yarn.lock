@@ -11171,6 +11171,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nuqs@npm:^2.4.1":
+  version: 2.4.1
+  resolution: "nuqs@npm:2.4.1"
+  dependencies:
+    mitt: ^3.0.1
+  peerDependencies:
+    "@remix-run/react": ">=2"
+    next: ">=14.2.0"
+    react: ">=18.2.0 || ^19.0.0-0"
+    react-router: ^6 || ^7
+    react-router-dom: ^6 || ^7
+  peerDependenciesMeta:
+    "@remix-run/react":
+      optional: true
+    next:
+      optional: true
+    react-router:
+      optional: true
+    react-router-dom:
+      optional: true
+  checksum: fc297d271573b1dff98d049cbe1e2f6969e5548d1f88b70e7b5322a322fb7a811cd21ee292709eef1ae5b2725bb41f2865d29dbb6e0cd52d420bb5bab37a4acf
+  languageName: node
+  linkType: hard
+
 "oas-kit-common@npm:^1.0.8":
   version: 1.0.8
   resolution: "oas-kit-common@npm:1.0.8"
@@ -13162,6 +13186,7 @@ __metadata:
     next-auth: ^4.24.7
     next-intl: ^3.15.0
     next-usequerystate: 1.9.2
+    nuqs: ^2.4.1
     orval: 6.18.1
     postcss: 8.4.21
     prettier: 3.3.3
@@ -13183,6 +13208,7 @@ __metadata:
     tailwindcss-animate: 1.0.7
     typescript: 5.6.3
     typescript-eslint: 8.9.0
+    zod: ^3.24.2
   languageName: unknown
   linkType: soft
 
@@ -14847,5 +14873,12 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: f77b3d8d00310def622123df93d4ee654fc6a0096182af8bd60679ddcdfb3474c56c6c7190817c84a2785648cdee9d721c0154eb45698c62176c322fb46fc700
+  languageName: node
+  linkType: hard
+
+"zod@npm:^3.24.2":
+  version: 3.24.2
+  resolution: "zod@npm:3.24.2"
+  checksum: c02455c09678c5055c636d64f9fcda2424fea0aa46ac7d9681e7f41990bc55f488bcd84b9d7cfef0f6e906f51f55b245239d92a9f726248aa74c5b84edf00c2d
   languageName: node
   linkType: hard

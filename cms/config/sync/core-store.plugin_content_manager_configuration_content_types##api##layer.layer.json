@@ -162,6 +162,20 @@
           "sortable": true
         }
       },
+      "slug": {
+        "edit": {
+          "label": "slug",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "slug",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -247,6 +261,10 @@
           {
             "name": "default",
             "size": 4
+          },
+          {
+            "name": "slug",
+            "size": 6
           }
         ],
         [
