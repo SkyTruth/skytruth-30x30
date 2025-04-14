@@ -52,19 +52,19 @@ const Legend: FCWithMessages = () => {
             items: true,
           },
         },
-        environment: {
-          fields: ['slug'],
-        },
+        // environment: {
+        //   fields: ['slug'],
+        // },
       },
       filters: {
         ...(tab !== 'summary'
           ? {
-            environment: {
-              slug: {
-                $in: tab,
+              environment: {
+                slug: {
+                  $in: tab,
+                },
               },
-            },
-          }
+            }
           : {}),
       },
     },
