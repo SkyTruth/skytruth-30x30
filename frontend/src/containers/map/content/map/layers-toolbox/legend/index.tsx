@@ -79,7 +79,7 @@ const Legend: FCWithMessages = () => {
               return indexA - indexB;
             }),
         placeholderData: { data: [] },
-        queryKey: ['layers', activeLayers],
+        queryKey: ['layers', locale, activeLayers],
         keepPreviousData: true,
       },
     }
