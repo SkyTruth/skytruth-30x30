@@ -21,26 +21,6 @@ interface LayerManagerItemProps extends Required<Pick<Layer, 'slug'>> {
 const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) => {
   const locale = useLocale();
 
-  // const { data } = useGetLayers(
-  //   {
-  //     locale,
-  //     fields: 'slug',
-  //     filters: {
-  //       default: {
-  //         $eq: true,
-  //       },
-  //     },
-  //     // Makes sure that the default interactive layers are displayed on top so that their
-  //     // highlighted states are fully visible
-  //     sort: 'interaction_config',
-  //   },
-  // {
-  //   query: {
-  //     select: ({ data }) => data.map(({ attributes }) => attributes?.slug),
-  //   },
-  // }
-  // );
-
   const { data: layer } = useGetLayers(
     {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -50,6 +30,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
           $eq: slug,
         },
       },
+      sort: 'interaction_config',
       locale,
       populate: 'metadata',
     },

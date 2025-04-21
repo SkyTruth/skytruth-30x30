@@ -92,7 +92,7 @@ const SidebarDetails: FCWithMessages = () => {
   }, [tab, locationCode]);
 
   // Update the map's default layers based on the tab
-  // useMapDefaultLayers();
+  useMapDefaultLayers();
 
   // Update the map's position based on the location
   useMapLocationBounds();
