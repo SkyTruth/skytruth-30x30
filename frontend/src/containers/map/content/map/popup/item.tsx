@@ -18,22 +18,23 @@ const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
 
   const { data: layer } = useGetLayers(
     {
-  //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  //   // @ts-ignore
-  filters: {
-    slug: {
-      $eq: slug,
+      //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      //   // @ts-ignore
+      filters: {
+        slug: {
+          $eq: slug,
+        },
+      },
+      locale,
+      sort: 'interaction_config',
+      populate: 'metadata',
     },
-  },
-  locale,
-  sort: 'interaction_config',
-  populate: 'metadata',
-  },
-  {
-    query: {
-      select: ({ data }) => data[0]?.attributes,
-    },
-  });
+    {
+      query: {
+        select: ({ data }) => data[0]?.attributes,
+      },
+    }
+  );
 
   // const { data: layer } = useGetLayers(
   //   {
@@ -54,7 +55,7 @@ const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
   //     },
   //   }
   // );
-  console.log("DATA", layer)
+  console.log('DATA', layer);
 
   const attributes = layer as LayerTyped;
 

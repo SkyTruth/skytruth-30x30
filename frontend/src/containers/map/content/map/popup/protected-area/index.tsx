@@ -37,9 +37,9 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
       locale,
       filters: {
         slug: {
-          $eq: layerSlug
+          $eq: layerSlug,
+        },
       },
-    },
       populate: 'metadata',
     },
     {

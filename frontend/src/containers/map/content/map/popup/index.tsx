@@ -30,7 +30,7 @@ const PopupContainer: FCWithMessages = () => {
 
   const popup = useAtomValue(popupAtom);
   const layersInteractive = useAtomValue(layersInteractiveAtom);
-  
+
   const [syncedLayers] = useSyncMapLayers();
 
   const [selectedLayerSlug, setSelectedLayerSlug] = useState<string | null>(null);

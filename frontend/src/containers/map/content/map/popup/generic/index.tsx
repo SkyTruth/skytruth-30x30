@@ -36,9 +36,9 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
       locale,
       filters: {
         slug: {
-          $eq: layerSlug
+          $eq: layerSlug,
+        },
       },
-    },
       populate: 'metadata',
     },
     {
