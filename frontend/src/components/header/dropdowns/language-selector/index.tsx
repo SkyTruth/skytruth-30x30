@@ -4,20 +4,18 @@ import { useRouter } from 'next/router';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
-import { PAGES } from '@/constants/pages';
-import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
+// import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
 import { FCWithMessages } from '@/types';
 
 const LanguageSelector: FCWithMessages = () => {
   const t = useTranslations('components.language-selector');
   const locale = useLocale();
-  const searchParams = useMapSearchParams();
+  // const searchParams = useMapSearchParams();
 
-  const { push, pathname, asPath } = useRouter();
-  const path = usePathname();
-  console.log(asPath, '\n\nSearch Params:\n ', searchParams.toString());
-  const currentPage = asPath.split('/')[0];
-  const locationCode = asPath.split('/')[2];
+  const { push, asPath } = useRouter();
+  // const path = usePathname();
+  // const currentPage = asPath.split('/')[0];
+  // const locationCode = asPath.split('/')[2];
   // console.log('PATH', `${currentPage}/${locationCode.toUpperCase()}?${searchParams.toString()}`)
   return (
     <Select

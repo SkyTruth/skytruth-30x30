@@ -30,9 +30,10 @@ const PopupContainer: FCWithMessages = () => {
 
   const popup = useAtomValue(popupAtom);
   const layersInteractive = useAtomValue(layersInteractiveAtom);
+  
   const [syncedLayers] = useSyncMapLayers();
 
-  const [selectedLayerId, setSelectedLayerId] = useState<number | null>(null);
+  const [selectedLayerSlug, setSelectedLayerSlug] = useState<string | null>(null);
 
   const setPopup = useSetAtom(popupAtom);
 
@@ -45,7 +46,7 @@ const PopupContainer: FCWithMessages = () => {
     {
       locale,
       filters: {
-        id: {
+        slug: {
           $in: layersInteractive,
         },
       },
@@ -65,12 +66,12 @@ const PopupContainer: FCWithMessages = () => {
                 },
               }) => availableSources?.includes(sourceId)
             )
-            .map(({ attributes: { title: label }, id: value }) => ({
+            .map(({ attributes: { title: label, slug: value } }) => ({
               label,
-              value: value.toString(),
+              value,
             }))
             .sort((a, b) =>
-              syncedLayers.indexOf(Number(a.value)) > syncedLayers.indexOf(Number(b.value)) ? 1 : -1
+              syncedLayers.indexOf(a.value) > syncedLayers.indexOf(b.value) ? 1 : -1
             ),
       },
     }
@@ -105,7 +106,7 @@ const PopupContainer: FCWithMessages = () => {
 
   useEffect(() => {
     if (layersInteractiveData?.[0]?.value) {
-      setSelectedLayerId(Number(layersInteractiveData[0].value));
+      setSelectedLayerSlug(layersInteractiveData[0].value);
     }
   }, [layersInteractiveData]);
 
@@ -141,8 +142,8 @@ const PopupContainer: FCWithMessages = () => {
         )}
         {isClickedTooltip && availableSources.length > 1 && (
           <Select
-            onValueChange={(v) => {
-              setSelectedLayerId(+v);
+            onValueChange={(layer) => {
+              setSelectedLayerSlug(layer);
             }}
             defaultValue={layersInteractiveData?.[0].value}
           >
@@ -161,7 +162,7 @@ const PopupContainer: FCWithMessages = () => {
         {isHoveredTooltip && (
           <div className="font-mono text-sm text-black">{hoverTooltipContent}</div>
         )}
-        {isClickedTooltip && selectedLayerId && <PopupItem id={selectedLayerId} />}
+        {isClickedTooltip && selectedLayerSlug && <PopupItem slug={selectedLayerSlug} />}
       </div>
     </Popup>
   );

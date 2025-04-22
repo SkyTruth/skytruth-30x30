@@ -13,14 +13,14 @@ import { useMapSearchParams, useSyncMapLayers } from '@/containers/map/content/m
 import { layersInteractiveIdsAtom, popupAtom } from '@/containers/map/store';
 import { formatPercentage, formatKM } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
-import { useGetLayersId } from '@/types/generated/layer';
+import { useGetLayers } from '@/types/generated/layer';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { ProtectionCoverageStat } from '@/types/generated/strapi.schemas';
 import { LayerTyped } from '@/types/layers';
 
 import { POPUP_BUTTON_CONTENT_BY_SOURCE, POPUP_PROPERTIES_BY_SOURCE } from '../constants';
 
-const BoundariesPopup: FCWithMessages<{ layerId: number }> = ({ layerId }) => {
+const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
 
@@ -39,16 +39,20 @@ const BoundariesPopup: FCWithMessages<{ layerId: number }> = ({ layerId }) => {
 
   const {
     data: { source, environment },
-  } = useGetLayersId<{
+  } = useGetLayers<{
     source: LayerTyped['config']['source'];
     environment: string;
   }>(
-    layerId,
     {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       locale,
-      fields: ['config'],
+      fields: 'config',
+      filters: {
+        slug: {
+          $eq: layerSlug
+      },
+    },
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
@@ -61,8 +65,8 @@ const BoundariesPopup: FCWithMessages<{ layerId: number }> = ({ layerId }) => {
       query: {
         placeholderData: { data: {} },
         select: ({ data }) => ({
-          source: (data.attributes as LayerTyped)?.config?.source,
-          environment: data.attributes?.environment?.data?.attributes.slug,
+          source: (data[0].attributes as LayerTyped)?.config?.source,
+          environment: data[0].attributes?.environment?.data?.attributes.slug,
         }),
       },
     }
@@ -195,10 +199,10 @@ const BoundariesPopup: FCWithMessages<{ layerId: number }> = ({ layerId }) => {
 
   // Close the tooltip if the layer that was clicked is not active anymore
   useEffect(() => {
-    if (!activeLayers.includes(layerId)) {
+    if (!activeLayers.includes(layerSlug)) {
       setPopup({});
     }
-  }, [layerId, activeLayers, setPopup]);
+  }, [layerSlug, activeLayers, setPopup]);
 
   if (!geometryData) return null;
 

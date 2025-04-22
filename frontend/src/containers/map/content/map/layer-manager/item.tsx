@@ -63,14 +63,17 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
 
   const handleAddMapboxLayer = useCallback(
     ({ styles }: Config) => {
-      if (layer) return null;
+      console.log("STYLES", styles, "slug", slug)
+      console.log("LAYER", layer)
 
       const { interaction_config } = layer as LayerTyped;
 
       if (interaction_config?.enabled) {
         const ids = styles.map((l) => l.id);
 
-        setLayersInteractive((prev) => Array.from(new Set([...prev, slug])));
+        setLayersInteractive((prev) => {
+          console.log("New ids: ", Array.from(new Set([...prev, slug])))
+          return Array.from(new Set([...prev, slug]))});
         setLayersInteractiveIds((prev) => Array.from(new Set([...prev, ...ids])));
       }
     },
@@ -79,7 +82,6 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
 
   const handleRemoveMapboxLayer = useCallback(
     ({ styles }: Config) => {
-      if (layer) return null;
 
       const { interaction_config } = layer as LayerTyped;
 
