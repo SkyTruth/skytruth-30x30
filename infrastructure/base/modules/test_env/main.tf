@@ -6,18 +6,19 @@ locals {
 }
 
 
-module "network" {
-  source     = "../network"
-  project_id = var.gcp_project_id
-  region     = var.gcp_region
-  name       = var.project_name
+resource "google_vpc_access_connector" "connector" {
+  name          = "test-function-connector"
+  region        = var.gcp_region
+  network       = var.network_name
+  ip_cidr_range = "10.8.0.0/28"
 }
+
 
 module "test_cloud_function" {
   source                           = "../cloudfunction"
   region                           = var.gcp_region
   project                          = var.gcp_project_id
-  vpc_connector_name               = module.network.vpc_access_connector_name
+  vpc_connector_name               = google_vpc_access_connector.connector.name
   function_name                    = "${var.project_name}-test"
   description                      = "Test Cloud Function"
   source_dir                       = "${path.root}/../../cloud_functions/test"

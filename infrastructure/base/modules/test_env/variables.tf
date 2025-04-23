@@ -9,6 +9,11 @@ variable "gcp_project_id" {
   description = "GCP project id"
 }
 
+variable "network_name" {
+  type        = string
+  description = "GCP network name"
+}
+
 variable "project_name" {
   type        = string
   description = "Name of the project"
@@ -19,7 +24,6 @@ variable "test_function_timeout_seconds" {
   default     = 180
   description = "Timeout for the test function"
 }
-
 
 variable "test_function_available_memory" {
   type        = string

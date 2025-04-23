@@ -11,6 +11,7 @@ module "test" {
   source                                             = "./modules/test_env"
   gcp_project_id                                     = var.gcp_project_id
   gcp_region                                         = var.gcp_region
+  network_name                                       = "default"
   project_name                                       = var.test_project_name
   test_function_timeout_seconds                      = 600
   test_function_max_instance_count                   = 2
