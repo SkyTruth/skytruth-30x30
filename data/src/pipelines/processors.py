@@ -10,6 +10,9 @@ import json
 
 import asyncio
 from tqdm.asyncio import tqdm
+from itertools import product
+from shapely.geometry import box
+
 
 from data_commons.loader import (
     load_regions,
@@ -19,6 +22,13 @@ from data_commons.loader import (
     load_locations_data,
 )
 from pipelines.utils import background
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("fiona").setLevel(logging.WARNING)
+logger = logging.getLogger("notebook")
 
 
 ## DATAFRAME PROCESSORS
@@ -112,26 +122,44 @@ def create_year(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.GeoDa
 
 
 def split_by_year(
-    gdf: gpd.GeoDataFrame, year_col: str = "STATUS_YR", year_val: int = 2010
+    gdf: gpd.GeoDataFrame,
+    year_col: str = "STATUS_YR",
+    year_val: int = 2010,
+    environment: Literal['marine', 'terrestrial'] = 'marine'
 ) -> List[gpd.GeoDataFrame]:
-    """Split data by year. relevant for MPA data.(coverage indicator)"""
-    prior_2010 = (
-        gdf[gdf[year_col] <= year_val]
-        .dissolve(
-            by=["PA_DEF", "iso_3"],
-            aggfunc={
-                "PA_DEF": "count",
-            },
+    """
+    Split data by year. Relevant for MPA and terrestrial data (coverage indicator).
+    """
+    if environment == 'marine':
+        prior_2010 = (
+            gdf[gdf[year_col] <= year_val]
+            .dissolve(
+                by=["PA_DEF", "iso_3"],
+                aggfunc={"PA_DEF": "count"},
+            )
+            .assign(year=2010)
+            .rename(columns={"PA_DEF": "protectedAreasCount"})
+            .reset_index()
         )
-        .assign(year=2010)
-        .rename(columns={"PA_DEF": "protectedAreasCount"})
-        .reset_index()
-    )
-    after_2010 = (
-        gdf[gdf["STATUS_YR"] > 2010][["iso_3", "STATUS_YR", "PA_DEF", "geometry"]]
-        .assign(protectedAreasCount=1)
-        .rename(columns={"STATUS_YR": "year"})
-    )
+        after_2010 = (
+            gdf[gdf[year_col] > year_val][["iso_3", "STATUS_YR", "PA_DEF", "geometry"]]
+            .assign(protectedAreasCount=1)
+            .rename(columns={"STATUS_YR": "year"})
+        )
+    elif environment == 'terrestrial':
+        prior_2010 = (
+            gdf[gdf[year_col] <= year_val][["iso_3", "STATUS_YR", "geometry"]]
+            .dissolve(by=["iso_3"])
+            .assign(year=2010)
+            .reset_index()
+        )
+        after_2010 = (
+            gdf[gdf[year_col] > year_val][["iso_3", "STATUS_YR", "geometry"]]
+            .rename(columns={"STATUS_YR": "year"})
+        )
+    else:
+        raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+
     return [prior_2010, after_2010]
 
 
@@ -510,6 +538,68 @@ def transform_points(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     else:
         return gdf
 
+### Grid for more efficient processing (applied in terrestrial only)
+
+def create_grid(bounds: Tuple[float, float, float, float], cell_size: int = 1) -> gpd.GeoDataFrame:
+    """Create a grid of cells for a given GeoDataFrame"""
+    minx, miny, maxx, maxy = bounds
+    x = np.arange(minx, maxx, cell_size)
+    y = np.arange(miny, maxy, cell_size)
+    polygons = [
+        {
+            "geometry": box(i, j, i + cell_size, j + cell_size),
+            "cell_id": f"{i}_{j}",
+        }
+        for i, j in product(x, y)
+    ]
+    return gpd.GeoDataFrame(polygons)
+
+def subdivide_grid(
+    grid_gdf: gpd.GeoDataFrame, gdf: gpd.GeoDataFrame, max_cellsize: float, max_complexity: int
+) -> List:
+    subdivided_elements = []
+    for grid_element in grid_gdf.geometry:
+        candidates = get_matches(grid_element, gdf)
+        density = len(candidates)
+        if density > max_complexity:
+            
+            subdivision_cellsize = max_cellsize / 2
+            # Subdivide the grid element recursively
+            subgrid = create_grid(grid_element.bounds, subdivision_cellsize)
+            subdivided_elements.extend(
+                subdivide_grid(subgrid, gdf, subdivision_cellsize, max_complexity)
+            )
+        elif density > 0:
+            subdivided_elements.append(grid_element)
+
+    return subdivided_elements
+
+
+def create_density_based_grid(
+    gdf: gpd.GeoDataFrame, max_cellsize: int = 10, max_complexity: int = 10000
+) -> gpd.GeoDataFrame:
+    # Get the bounds of the GeoDataFrame
+    minx, miny, maxx, maxy = gdf.total_bounds
+
+    # Create an initial grid
+    grid_gdf = create_grid((minx, miny, maxx, maxy), max_cellsize)
+
+    # Subdivide grid elements based on density and complexity
+    subdivided_elements = subdivide_grid(grid_gdf, gdf, max_cellsize, max_complexity)
+
+    return gpd.GeoDataFrame(geometry=subdivided_elements)
+    
+
+def split_gdf_by_grid(gdf: gpd.GeoDataFrame, grid_gdf: gpd.GeoDataFrame):
+    result = []
+    gdf["already_processed"] = False
+    for geometry in grid_gdf.geometry:
+        candidates = get_matches(geometry, gdf)
+        subset = gdf.loc[candidates.index][~gdf["already_processed"]]
+        gdf.loc[subset.index, "already_processed"] = True
+        if not subset.empty:
+            result.append(subset.drop(columns=["already_processed"]).reset_index(drop=True).copy())
+    return result
 
 ### Spatial joins and dissolves
 
@@ -536,33 +626,91 @@ def arrange_dimensions(
 ## TODO properly type this
 ## TODO: generalize the next operations to make them more reusable
 @background
-def spatial_join_chunk(row_small, df_large, pbar):
-    test_row = gpd.GeoDataFrame([row_small], crs=df_large.crs)
-    candidates = get_matches(row_small.geometry, df_large.geometry)
-    if len(candidates) > 0:
-        subset = df_large.loc[candidates.index]
-
-        result = subset.sjoin(test_row, how="inner").clip(test_row.geometry).reset_index(drop=True)
-        result.geometry = result.geometry.apply(repair_geometry)
-    else:
-        result = gpd.GeoDataFrame(columns=test_row.columns)
-    pbar.update(1)
-    return result
+def spatial_join_chunk(
+    param: Union[int, gpd.GeoSeries],
+    gdf: gpd.GeoDataFrame,
+    pbar,
+    environment: Literal['marine', 'terrestrial']
+) -> gpd.GeoDataFrame:
+    """
+    Perform a spatial join chunk based on the environment.
+    """
+    try:
+        if environment == 'marine':
+            test_row = gpd.GeoDataFrame([param], crs=gdf.crs)
+            candidates = get_matches(param.geometry, gdf.geometry)
+            if len(candidates) > 0:
+                subset = gdf.loc[candidates.index]
+                result = (
+                    gpd.overlay(test_row, subset, how="intersection")
+                    .reset_index(drop=True)
+                    .clip(test_row.geometry)
+                    .reset_index(drop=True)
+                )
+                result.geometry = result.geometry.apply(repair_geometry)
+            else:
+                result = gpd.GeoDataFrame(columns=test_row.columns)
+        elif environment == 'terrestrial':
+            bbox = param.total_bounds
+            candidates = get_matches(box(*bbox), gdf.geometry)
+            if len(candidates) > 0:
+                subset = gdf.loc[candidates.index].clip(box(*bbox))
+                result = (
+                    gpd.overlay(param, subset, how="intersection")
+                    .reset_index(drop=True)
+                    .clip(subset.geometry)
+                    .reset_index(drop=True)
+                )
+                result.geometry = result.geometry.apply(repair_geometry)
+            else:
+                result = gpd.GeoDataFrame(columns=param.columns)
+        else:
+            raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+        return result
+    except Exception as e:
+        logging.error(e)
+        return gpd.GeoDataFrame()
+    finally:
+        pbar.update(1)
 
 
 async def spatial_join(
-    geodataframe_a: gpd.GeoDataFrame, geodataframe_b: gpd.GeoDataFrame
+    geodataframe_a: gpd.GeoDataFrame,
+    geodataframe_b: gpd.GeoDataFrame,
+    environment: Literal['marine', 'terrestrial']
 ) -> gpd.GeoDataFrame:
-    """Create spatial join between two GeoDataFrames."""
-    # we build the spatial index for the larger GeoDataFrame
+    """
+    Create spatial join between two GeoDataFrames.
+    """
+    # Build the spatial index for the larger GeoDataFrame
     smaller_dim, larger_dim = arrange_dimensions(geodataframe_a, geodataframe_b)
-    with tqdm(total=smaller_dim.shape[0]) as pbar:  # we create a progress bar
-        new_df = await asyncio.gather(
-            *(
-                spatial_join_chunk(row, larger_dim, pbar)
-                for row in smaller_dim.itertuples(index=False)
+
+    if environment == 'marine':
+        with tqdm(total=smaller_dim.shape[0]) as pbar:  # Create a progress bar
+            new_df = await asyncio.gather(
+                *(
+                    spatial_join_chunk(row, larger_dim, pbar, environment)
+                    for row in smaller_dim.itertuples(index=False)
+                )
             )
-        )
+    elif environment == 'terrestrial':
+        logger.info(f"Processing {len(larger_dim)} elements")
+
+        grid = create_density_based_grid(larger_dim, max_cellsize=10, max_complexity=5000)
+
+        logger.info(f"Grid created with {len(grid)} cells")
+
+        list_of_chunks = split_gdf_by_grid(larger_dim, grid)
+
+        logger.info(f"Grid split into {len(list_of_chunks)} chunks")
+
+        with tqdm(total=len(list_of_chunks)) as pbar:  # Create a progress bar
+            new_df = await asyncio.gather(
+                *(spatial_join_chunk(chunk, smaller_dim, pbar, environment) for chunk in list_of_chunks)
+            )
+    else:
+        raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+
     return gpd.GeoDataFrame(pd.concat(new_df, ignore_index=True), crs=smaller_dim.crs)
 
 
@@ -592,17 +740,62 @@ async def create_difference(geodataframe1, geodataframe2):
 
 
 @background
-def spatial_dissolve_chunk(i, gdf, pbar, _by, _aggfunc):
-    result = (
-        gdf[gdf["year"] <= i]
-        .dissolve(by=_by, aggfunc=_aggfunc)
-        .assign(year=i)
-        .reset_index()
-        .pipe(calculate_area, "area", None)
-        .drop(columns=["geometry"])
-    )
-    pbar.update(1)
-    return result
+def spatial_dissolve_chunk(
+    param: Union[int, gpd.GeoSeries],
+    gdf: gpd.GeoDataFrame,
+    pbar,
+    environment: Literal['marine', 'terrestrial'],
+    _by: list[str] = None,
+    _aggfunc: dict = None,
+) -> pd.DataFrame:
+    """
+    Perform a spatial dissolve chunk based on the environment.
+    """
+    try:
+        if environment == 'marine':
+            result = (
+                gdf[gdf["year"] <= param]
+                .dissolve(by=_by, aggfunc=_aggfunc)
+                .assign(year=param)
+                .reset_index()
+                .pipe(calculate_area, "area", None)
+                .drop(columns=["geometry"])
+            )
+        elif environment == 'terrestrial':
+            candidates = get_matches(param, gdf.geometry)
+            subset = gdf.loc[candidates.index]
+
+            result = pd.concat(
+                subset.clip(param).pipe(split_by_year, year_col="STATUS_YR"), ignore_index=True
+            ).copy()
+
+            data_chunk = [
+                (
+                    result[result["year"] <= 2010]
+                    .reset_index()
+                    .pipe(calculate_area, "area", None)
+                    .drop(columns=["geometry"])
+                )
+            ]
+            for year in range(2011, 2025):
+                data_chunk.append(
+                    result[result["year"] <= year]
+                    .dissolve(by=["iso_3"])
+                    .assign(year=year)
+                    .reset_index()
+                    .pipe(calculate_area, "area", None)
+                    .drop(columns=["geometry"])
+                )
+
+            result = pd.concat(data_chunk, ignore_index=True)
+        else:
+            raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+        return result
+    except Exception as e:
+        logging.error(e)
+        return gpd.GeoDataFrame()
+    finally:
+        pbar.update(1)
 
 
 @background
@@ -878,22 +1071,39 @@ def aggregate_area(df: pd.DataFrame) -> pd.DataFrame:
 
 
 async def process_mpa_data(
-    gdf: gpd.GeoDataFrame, loop: list[int], by: list[str], aggfunc: dict
+    gdf: gpd.GeoDataFrame,
+    loop: List[int],
+    by: List[str],
+    aggfunc: Dict,
+    environment: str = 'marine'
 ) -> pd.DataFrame:
-    """process protected planet data. relevant for acc coverage extent by year indicator."""
-    # we split the data by =< year so we can acumulate the coverage
-    base = split_by_year(gdf)
+    """
+    Process protected planet data. Relevant for acc coverage extent by year indicator.
+    """
+    # Split the data by year based on the environment
+    base = split_by_year(gdf, environment=environment)
 
     result_to_iter = pd.concat(base, ignore_index=True).copy()
 
-    with tqdm(total=len(loop)) as pbar:  # we create a progress bar
+    with tqdm(total=len(loop)) as pbar:  # Create a progress bar
         new_df = await asyncio.gather(
-            *(spatial_dissolve_chunk(year, result_to_iter, pbar, by, aggfunc) for year in loop)
+            *(spatial_dissolve_chunk(year, result_to_iter, pbar, by, aggfunc, environment) for year in loop)
         )
     return pd.concat(
         [base[0].pipe(calculate_area, "area", None).drop(columns=["geometry"]), *new_df],
         ignore_index=True,
     )
+
+
+async def process_grid(gdf: gpd.GeoDataFrame, environment: Literal['marine', 'terrestrial']) -> pd.DataFrame:
+    grid_gdf = create_density_based_grid(gdf, max_cellsize=10, max_complexity=5000)
+    logger.info(f"grid created with {grid_gdf.shape[0]} cells")
+
+    with tqdm(total=grid_gdf.shape[0], desc="Processing grid elements") as pbar:
+        jobs = [spatial_dissolve_chunk(geometry, gdf, pbar, environment) for geometry in grid_gdf.geometry.values]
+        result = await asyncio.gather(*jobs)
+    return result
+
 
 
 def process_mpaatlas_data(gdf: gpd.GeoDataFrame) -> pd.DataFrame:
