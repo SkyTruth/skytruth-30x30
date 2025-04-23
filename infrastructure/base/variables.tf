@@ -8,6 +8,11 @@ variable "github_project" {
   description = "Github project name"
 }
 
+variable "test_project_name" {
+  type        = string
+  description = "Name of the test project"
+}
+
 variable "staging_project_name" {
   type        = string
   description = "Name of the staging project"
@@ -39,6 +44,11 @@ variable "gcp_project_id" {
 variable "domain" {
   type        = string
   description = "Base domain for the DNS zone"
+}
+
+variable "test_subdomain" {
+  type        = string
+  description = "Subdomain for the test environment"
 }
 
 variable "staging_subdomain" {
