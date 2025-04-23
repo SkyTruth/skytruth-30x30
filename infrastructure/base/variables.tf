@@ -46,11 +46,6 @@ variable "domain" {
   description = "Base domain for the DNS zone"
 }
 
-variable "test_subdomain" {
-  type        = string
-  description = "Subdomain for the test environment"
-}
-
 variable "staging_subdomain" {
   type        = string
   description = "Subdomain for the staging environment"

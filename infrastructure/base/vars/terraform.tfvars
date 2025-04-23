@@ -10,7 +10,6 @@ staging_project_name    = "x30-dev"
 production_project_name = "x30-prod"
 
 domain               = "skytruth.org"
-test_subdomain       = "30x30-test"
 staging_subdomain    = "30x30-dev"
 production_subdomain = "30x30"
 
