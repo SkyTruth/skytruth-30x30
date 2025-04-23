@@ -32,3 +32,10 @@ def load_regions():
 def load_locations_code():
     base = os.path.dirname(os.path.abspath(__file__))
     return pd.read_csv(f"{base}/data/locations_code.csv", keep_default_na=False)
+
+
+@lru_cache()
+def load_locations_data() -> dict:
+    base = os.path.dirname(os.path.abspath(__file__))
+    with open(f"{base}/data/locations.json", 'r') as f:
+        return json.load(f)
