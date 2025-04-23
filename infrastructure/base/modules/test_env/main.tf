@@ -21,5 +21,4 @@ module "test_cloud_function" {
   available_cpu                    = var.test_function_available_cpu
   max_instance_count               = var.test_function_max_instance_count
   max_instance_request_concurrency = var.test_function_max_instance_request_concurrency
-  tag                              = var.environment
 }
