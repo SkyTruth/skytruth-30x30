@@ -9,6 +9,11 @@ variable "gcp_project_id" {
   description = "GCP project id"
 }
 
+variable "project_name" {
+  type        = string
+  description = "Name of the project"
+}
+
 variable "test_function_timeout_seconds" {
   type        = number
   default     = 180

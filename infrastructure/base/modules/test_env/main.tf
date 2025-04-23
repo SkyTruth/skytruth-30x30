@@ -5,6 +5,14 @@ locals {
   }
 }
 
+
+module "network" {
+  source     = "../network"
+  project_id = var.gcp_project_id
+  region     = var.gcp_region
+  name       = var.project_name
+}
+
 module "test_cloud_function" {
   source                           = "../cloudfunction"
   region                           = var.gcp_region
