@@ -20,15 +20,11 @@ class LocationSchema(pa.DataFrameModel):
 class ProtectedAreaExtentSchema(pa.DataFrameModel):
     id: Index[int] = pa.Field(gt=0, coerce=True)
     location: Series[int] = pa.Field(gt=0, coerce=True)
-    protected_area: Series[float] = pa.Field(ge=0, coerce=True)
-    protected_areas_count: Series[int] = pa.Field(ge=0, coerce=True)
-    oecms: Series[float] = pa.Field(ge=0, le=100, coerce=True)
-    pas: Series[float] = pa.Field(ge=0, le=100, coerce=True)
-    coverage: Series[float] = pa.Field(ge=0, le=100, coerce=True)
-    global_contribution: Series[float] = pa.Field(ge=0, le=100, coerce=True)
+    protection_status: Series[int] = pa.Field(gt=0, coerce=True)
+    cumSumProtectedArea: Series[float] = pa.Field(ge=0, coerce=True)  # noqa: N815
+    protectedArea: Series[float] = pa.Field(ge=0, coerce=True)  # noqa: N815
+    protectedAreasCount: Series[int] = pa.Field(ge=0, coerce=True)  # noqa: N815
     year: Series[int] = pa.Field(ge=2000, coerce=True)
-    is_last_year: Series[int] = pa.Field(isin=[0, 1], coerce=True)
-    environment: Series[int] = pa.Field(isin=[1, 2], coerce=True)
 
 
 class ProtectionLevelSchema(pa.DataFrameModel):
@@ -37,7 +33,6 @@ class ProtectionLevelSchema(pa.DataFrameModel):
     mpaa_protection_level: Series[int] = pa.Field(ge=0, coerce=True)
     year: Series[int] = pa.Field(gt=1900, coerce=True)
     area: Series[float] = pa.Field(ge=0, coerce=True)
-    percentage: Series[float] = pa.Field(ge=0, le=100, coerce=True)
 
 
 class FPLSchema(pa.DataFrameModel):
@@ -74,51 +69,6 @@ class MPAsSchema(pa.DataFrameModel):
     is_child: Series[bool] = pa.Field(coerce=True)
     children: Series[List[int]] = pa.Field(coerce=True, nullable=True)
     data_source: Series[int] = pa.Field(coerce=True)
-
-
-class PAsSchema(pa.DataFrameModel):
-    id: Index[int] = pa.Field(gt=0, coerce=True)
-    wdpaid: Series[pd.Int64Dtype] = pa.Field(coerce=True, nullable=True)
-    # child_id: Series[str] = pa.Field(coerce=True)
-    name: Series[str] = pa.Field(coerce=True)
-    year: Series[pd.Int32Dtype] = pa.Field(gt=1700, nullable=True)
-    area: Series[float] = pa.Field(ge=0, coerce=True)
-    bbox: Series[List[float]] = pa.Field(coerce=True)
-    location: Series[int] = pa.Field(ge=0, coerce=True)
-    protection_status: Series[int] = pa.Field(ge=0, nullable=True)
-    mpaa_establishment_stage: Series[pd.Int32Dtype] = pa.Field(ge=0, nullable=True, coerce=True)
-    mpaa_protection_level: Series[pd.Int32Dtype] = pa.Field(ge=0, nullable=True, coerce=True)
-    iucn_category: Series[pd.Int32Dtype] = pa.Field(coerce=True, nullable=True)
-    designation: Series[str] = pa.Field(coerce=True, nullable=True)
-    parent: Series[pd.Int64Dtype] = pa.Field(coerce=True, nullable=True)
-    children: Series[List[int]] = pa.Field(coerce=True, nullable=True)
-    data_source: Series[int] = pa.Field(coerce=True)
-    coverage: Series[float] = pa.Field(ge=0, le=100, nullable=True)
-    environment: Series[int] = pa.Field(isin=[1, 2], coerce=True)
-
-
-class PAsSchemaChunk1(pa.DataFrameModel):
-    id: Index[int] = pa.Field(gt=0, coerce=True)
-    wdpaid: Series[pd.Int64Dtype] = pa.Field(coerce=True, nullable=True)
-    # child_id: Series[str] = pa.Field(coerce=True)
-    name: Series[str] = pa.Field(coerce=True)
-    year: Series[pd.Int32Dtype] = pa.Field(gt=1700, nullable=True)
-    area: Series[float] = pa.Field(ge=0, coerce=True)
-    bbox: Series[List[float]] = pa.Field(coerce=True)
-    location: Series[int] = pa.Field(ge=0, coerce=True)
-    protection_status: Series[int] = pa.Field(ge=0, nullable=True)
-    mpaa_establishment_stage: Series[pd.Int32Dtype] = pa.Field(ge=0, nullable=True, coerce=True)
-    mpaa_protection_level: Series[pd.Int32Dtype] = pa.Field(ge=0, nullable=True, coerce=True)
-    iucn_category: Series[pd.Int32Dtype] = pa.Field(coerce=True, nullable=True)
-    designation: Series[str] = pa.Field(coerce=True, nullable=True)
-    children: Series[List[int]] = pa.Field(coerce=True, nullable=True)
-    data_source: Series[int] = pa.Field(coerce=True)
-    coverage: Series[float] = pa.Field(ge=0, le=100, nullable=True)
-    environment: Series[int] = pa.Field(isin=[1, 2], coerce=True)
-
-class PAsSchemaChunk2(pa.DataFrameModel):
-    id: Index[int] = pa.Field(gt=0, coerce=True)
-    parent: Series[pd.Int64Dtype] = pa.Field(coerce=True, nullable=True)
 
 
 class MPAsTableOTFSchema(pa.DataFrameModel):
