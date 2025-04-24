@@ -1,28 +1,44 @@
 from pathlib import Path
-from typing import Callable, List, Union, Dict
+from typing import Callable, List, Union, Dict, Tuple, Literal
 import pandas as pd
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
+from shapely.validation import make_valid
 import json
 
 import asyncio
 from tqdm.asyncio import tqdm
+from itertools import product
+from shapely.geometry import box
+
 
 from data_commons.loader import (
     load_regions,
     load_locations_code,
     load_iso_mapping,
     load_country_mapping,
+    load_locations_data,
 )
 from pipelines.utils import background
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("fiona").setLevel(logging.WARNING)
+logger = logging.getLogger("notebook")
 
 
 ## DATAFRAME PROCESSORS
 def filter_by_methodology(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     mask = (df["STATUS"] != "Not Reported") & ~(df["DESIG_ENG"].str.contains("MAB", case=False))
     return df[mask].reset_index(drop=True)
+
+
+def filter_by_terrestrial(gdf):
+    return gdf[gdf["MARINE"].astype(int) != 2].reset_index(drop=True)
 
 
 def filter_by_exluding_propossed_mpas(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -85,7 +101,9 @@ def create_year(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.GeoDa
         .astype(int)
     )
     year = np.where(
-        year == 0, np.nan, year  # type: ignore
+        year == 0,
+        np.nan,
+        year,  # type: ignore
     )  # Use numpy.where to conditionally replace 0 with pd.NaT
     return df.assign(year=year)
 
@@ -104,27 +122,51 @@ def create_year(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.GeoDa
 
 
 def split_by_year(
-    gdf: gpd.GeoDataFrame, year_col: str = "STATUS_YR", year_val: int = 2010
+    gdf: gpd.GeoDataFrame,
+    year_col: str = "STATUS_YR",
+    year_val: int = 2010,
+    environment: Literal['marine', 'terrestrial'] = 'marine'
 ) -> List[gpd.GeoDataFrame]:
-    """Split data by year. relevant for MPA data.(coverage indicator)"""
-    prior_2010 = (
-        gdf[gdf[year_col] <= year_val]
-        .dissolve(
-            by=["PA_DEF", "iso_3"],
-            aggfunc={
-                "PA_DEF": "count",
-            },
+    """
+    Split data by year. Relevant for MPA and terrestrial data (coverage indicator).
+    """
+    if environment == 'marine':
+        prior_2010 = (
+            gdf[gdf[year_col] <= year_val]
+            .dissolve(
+                by=["PA_DEF", "iso_3"],
+                aggfunc={"PA_DEF": "count"},
+            )
+            .assign(year=2010)
+            .rename(columns={"PA_DEF": "protectedAreasCount"})
+            .reset_index()
         )
-        .assign(year=2010)
-        .rename(columns={"PA_DEF": "protectedAreasCount"})
-        .reset_index()
-    )
-    after_2010 = (
-        gdf[gdf["STATUS_YR"] > 2010][["iso_3", "STATUS_YR", "PA_DEF", "geometry"]]
-        .assign(protectedAreasCount=1)
-        .rename(columns={"STATUS_YR": "year"})
-    )
+        after_2010 = (
+            gdf[gdf[year_col] > year_val][["iso_3", "STATUS_YR", "PA_DEF", "geometry"]]
+            .assign(protectedAreasCount=1)
+            .rename(columns={"STATUS_YR": "year"})
+        )
+    elif environment == 'terrestrial':
+        prior_2010 = (
+            gdf[gdf[year_col] <= year_val][["iso_3", "STATUS_YR", "geometry"]]
+            .dissolve(by=["iso_3"])
+            .assign(year=2010)
+            .reset_index()
+        )
+        after_2010 = (
+            gdf[gdf[year_col] > year_val][["iso_3", "STATUS_YR", "geometry"]]
+            .rename(columns={"STATUS_YR": "year"})
+        )
+    else:
+        raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+
     return [prior_2010, after_2010]
+
+
+def split_n_parts(gdf: gpd.GeoDataFrame, folder: Path, n: int) -> None:
+    for i in range(n):
+        path = folder.joinpath(f"part{i}.shp")
+        gdf.iloc[i * len(gdf) // n : (i + 1) * len(gdf) // n].to_file(path, driver="ESRI Shapefile")
 
 
 def get_mpas(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.GeoDataFrame:
@@ -139,6 +181,174 @@ def set_fps_classes(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.G
         FPS_cat=df["removal_of_marine_life_is_prohibited"].map(fps_classes),
         expand=False,
     )
+
+
+def add_total_area(df: pd.DataFrame, area_type: Literal["marine", "terrestrial"]) -> pd.DataFrame:
+    """
+    Add total marine or terrestrial area to the DataFrame.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame.
+    - area_type (Literal['marine', 'terrestrial']): The type of area to add ('marine' or 'terrestrial').
+
+    Returns:
+    - pd.DataFrame: The DataFrame with the added area column.
+    """
+    # Load the locations data
+    locations_data = load_locations_data()
+
+    # Access the nested dictionary
+    locations_dict = locations_data.get("data", {}).get("api::location.location", {})
+
+    # Create a lookup dictionary from the nested dictionary
+    if area_type == "marine":
+        area_lookup = {item["code"]: item["total_marine_area"] for item in locations_dict.values()}
+        area_column = "total_marine_area"
+    elif area_type == "terrestrial":
+        area_lookup = {
+            item["code"]: item["total_terrestrial_area"] for item in locations_dict.values()
+        }
+        area_column = "total_terrestrial_area"
+    else:
+        raise ValueError("Invalid area_type. Must be 'marine' or 'terrestrial'.")
+
+    # Identify the column that contains the word 'iso'
+    iso_column = [col for col in df.columns if "iso" in col][0]
+
+    # Perform the mapping using the identified column
+    df[area_column] = df[iso_column].map(area_lookup)
+
+    return df
+
+
+def change_ata_to_abnj(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.GeoDataFrame:
+    """
+    Changes values in the parent_iso column from 'ATA' to 'ABNJ' as there is no 'ATA' stats in Protected Planet.
+    """
+    # Count the occurrences of 'ATA'
+    count_changes = df["parent_iso"].value_counts().get("ATA", 0)
+
+    # Replace 'ATA' with 'ABNJ'
+    df["parent_iso"] = df["parent_iso"].replace("ATA", "ABNJ")
+
+    return df
+
+
+def calculate_padef_percentages(
+    df: pd.DataFrame, environment: Literal["marine", "terrestrial"], iso_col: str = "iso_3"
+) -> pd.DataFrame:
+    """
+    Calculate the percentages for each PA_DEF value based on the area type.
+    """
+    if environment == "marine":
+        # Calculate the total protectedAreasCount for each year and iso_3
+        total_counts = df.groupby(["year", iso_col])["protectedAreasCount"].transform("sum")
+
+        # Calculate the counts for PA_DEF == 0 and PA_DEF == 1
+        df["oecm_count"] = df["protectedAreasCount"].where(df["PA_DEF"] == 0, 0)
+        df["pa_count"] = df["protectedAreasCount"].where(df["PA_DEF"] == 1, 0)
+
+        # Calculate the percentages
+        df["oecms"] = (
+            df.groupby(["year", iso_col])["oecm_count"].transform("sum") / total_counts * 100
+        )
+        df["pas"] = df.groupby(["year", iso_col])["pa_count"].transform("sum") / total_counts * 100
+
+        # Aggregate the results and fill NaN values with 0
+        final_df = (
+            df.groupby(["year", iso_col])
+            .agg(
+                area=("area", "sum"),
+                protected_areas_count=("protectedAreasCount", "sum"),
+                oecms=("oecms", "first"),
+                pas=("pas", "first"),
+            )
+            .reset_index()
+            .fillna(0)
+        )
+
+    elif environment == "terrestrial":
+        # Calculate the total protected_areas_count as the sum of '0' and '1'
+        df["protected_areas_count"] = df["0"] + df["1"]
+
+        # Calculate the percentages
+        df["oecms"] = (df["0"] / df["protected_areas_count"]) * 100
+        df["pas"] = (df["1"] / df["protected_areas_count"]) * 100
+
+        # Drop the columns '0' and '1'
+        df = df.drop(columns=["0", "1"], errors="ignore")
+
+        # Fill NaN values with 0
+        df = df.fillna(0)
+
+        final_df = df
+
+    else:
+        raise ValueError("Invalid area_type. Must be 'marine' or 'terrestrial'.")
+
+    return final_df
+
+
+def calculate_coverage_percentage(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate the coverage percentage for protected areas.
+    """
+    if "total_marine_area" in df.columns:
+        df["coverage"] = (df["protected_area"] / df["total_marine_area"]) * 100
+    elif "total_terrestrial_area" in df.columns:
+        df["coverage"] = (df["protected_area"] / df["total_terrestrial_area"]) * 100
+    else:
+        df["coverage"] = np.nan
+
+    return df
+
+
+def calculate_coverage_percentage_mpatlas(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate the coverage percentage for MPAtlas.
+    """
+    df["percentage"] = (df["area_km2"] / df["total_marine_area"]) * 100
+    return df
+
+
+def calculate_global_contribution(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate the global contribution for protected areas.
+    """
+    if "total_marine_area" in df.columns:
+        df["global_contribution"] = (df["protected_area"] / 361000000) * 100
+    elif "total_terrestrial_area" in df.columns:
+        df["global_contribution"] = (df["protected_area"] / 134954835) * 100
+    else:
+        df["global_contribution"] = np.nan
+    return df
+
+
+def add_is_last_year(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add a column indicating if the row corresponds to the latest year for each iso_3.
+    """
+    # Find the latest year for each iso_3
+    latest_years = df.groupby("iso_3")["year"].transform("max")
+
+    # Create the is_last_year column
+    df["is_last_year"] = (df["year"] == latest_years).astype(int)
+
+    return df
+
+
+def add_environment(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add a column 'environment' based on the presence of 'total_marine_area' or 'total_terrestrial_area'.
+    """
+    if "total_marine_area" in df.columns:
+        df["environment"] = 1
+    elif "total_terrestrial_area" in df.columns:
+        df["environment"] = 2
+    else:
+        df["environment"] = 0
+
+    return df
 
 
 ### Iso processors
@@ -157,10 +367,12 @@ def set_location_iso(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.
     return df.assign(iso=df.country.apply(get_parent_iso))
 
 
-def assign_iso3(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.GeoDataFrame:
+def assign_iso3(
+    df: pd.DataFrame | gpd.GeoDataFrame, marine: bool = True
+) -> pd.DataFrame | gpd.GeoDataFrame:
     """Assign ISO3 code. specific for Mpa data"""
 
-    def set_iso3(row):
+    def set_iso3_marine(row):
         """relevant for MPA data."""
         return (
             row["PARENT_ISO"]
@@ -172,7 +384,13 @@ def assign_iso3(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.GeoDa
             else row["iso"]
         )
 
-    return df.assign(iso_3=df.apply(lambda row: set_iso3(row), axis=1))
+    def set_iso3_terrestrial(row):
+        """relevant for MPA data."""
+        return row["GID_0"]
+
+    assign_func = set_iso3_marine if marine else set_iso3_terrestrial
+
+    return df.assign(iso_3=df.apply(lambda row: assign_func(row), axis=1))
 
 
 def add_location_iso(
@@ -209,15 +427,50 @@ def add_location_name(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd
     return df.assign(name=df.iso.apply(get_name))
 
 
-def add_groups_and_members(df: pd.DataFrame | gpd.GeoDataFrame) -> pd.DataFrame | gpd.GeoDataFrame:
+def add_groups_and_members(
+    df: pd.DataFrame | gpd.GeoDataFrame, location_type: str
+) -> pd.DataFrame | gpd.GeoDataFrame:
+    increment = 2 if location_type == "land" else 1
     return df.assign(
         groups=lambda row: row[["region", "location_type"]].apply(
-            lambda x: (np.where(df.iso == x["region"])[0] + 1).tolist()
+            lambda x: (np.where(df.iso == x["region"])[0] + increment).tolist()
             if x["location_type"] == "country"
             else [],
             axis=1,
         )
     )
+
+
+def add_names_and_translations_to_regions(gdf, scripts_dir):
+    # Load the locations code CSV
+    locations_code = pd.read_csv(
+        scripts_dir.joinpath("data_commons/data/locations_code.csv"),
+        na_values=["", "NULL", "N/A", "NaN"],  # Exclude "NA" from being treated as NaN
+        keep_default_na=False,  # Prevent pandas from treating "NA" as NaN
+    )
+
+    # Load the regions translation JSON
+    with open(scripts_dir.joinpath("data_commons/data/regions_translations.json"), "r") as f:
+        regions_translations = json.load(f)
+
+    # Convert the JSON data into a DataFrame
+    translations_df = pd.DataFrame.from_dict(regions_translations, orient="index").reset_index()
+    translations_df.columns = ["name", "name_es", "name_fr", "location"]
+
+    # Merge the regions data with the locations code to add the 'location' field
+    regions_df = gdf.merge(locations_code, how="left", left_on="region_id", right_on="code").drop(
+        columns=["code"]
+    )
+
+    # Merge the regions data with the translations
+    regions_df = regions_df.merge(
+        translations_df[["location", "name", "name_es", "name_fr"]], on="location", how="left"
+    )
+
+    # Drop rows where 'location' is NaN
+    regions_df = regions_df.dropna(subset=["location"])
+
+    return regions_df
 
 
 ## Geometry processors
@@ -230,11 +483,8 @@ def clean_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 def collection_to_multipolygon(geometry_collection):
     """Convert collection of polygons to multipolygon."""
-    print(type(geometry_collection.geoms))
     geom_list = [
-        geom
-        for geom in geometry_collection.geoms
-        if geom.geom_type == "Polygon" or geom.geom_type == "MultiPolygon"
+        geom for geom in geometry_collection.geoms if geom.geom_type in ("Polygon", "MultiPolygon")
     ]
     return unary_union(geom_list)
 
@@ -243,7 +493,7 @@ def repair_geometry(geom):
     if not geom:
         return Polygon()
     elif not geom.is_valid:
-        geom = collection_to_multipolygon(geom.buffer(0.0).make_valid())
+        geom = collection_to_multipolygon(make_valid(geom.buffer(0.0)))
     elif geom.geom_type == "GeometryCollection":
         geom = collection_to_multipolygon(geom)
     return geom
@@ -253,8 +503,12 @@ def add_envelope(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return df.assign(geometry=lambda row: row["geometry"].envelope)
 
 
+def round_to_list(bounds):
+    return list(np.round(bounds, decimals=5))
+
+
 def add_bbox(df: gpd.GeoDataFrame, col_name: str = "bounds") -> gpd.GeoDataFrame:
-    return df.assign(**{col_name: df.geometry.bounds.apply(list, axis=1)})
+    return df.assign(**{col_name: df.geometry.bounds.apply(round_to_list, axis=1)})
 
 
 def calculate_area(
@@ -284,8 +538,71 @@ def transform_points(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     else:
         return gdf
 
+### Grid for more efficient processing (applied in terrestrial only)
+
+def create_grid(bounds: Tuple[float, float, float, float], cell_size: int = 1) -> gpd.GeoDataFrame:
+    """Create a grid of cells for a given GeoDataFrame"""
+    minx, miny, maxx, maxy = bounds
+    x = np.arange(minx, maxx, cell_size)
+    y = np.arange(miny, maxy, cell_size)
+    polygons = [
+        {
+            "geometry": box(i, j, i + cell_size, j + cell_size),
+            "cell_id": f"{i}_{j}",
+        }
+        for i, j in product(x, y)
+    ]
+    return gpd.GeoDataFrame(polygons)
+
+def subdivide_grid(
+    grid_gdf: gpd.GeoDataFrame, gdf: gpd.GeoDataFrame, max_cellsize: float, max_complexity: int
+) -> List:
+    subdivided_elements = []
+    for grid_element in grid_gdf.geometry:
+        candidates = get_matches(grid_element, gdf)
+        density = len(candidates)
+        if density > max_complexity:
+            
+            subdivision_cellsize = max_cellsize / 2
+            # Subdivide the grid element recursively
+            subgrid = create_grid(grid_element.bounds, subdivision_cellsize)
+            subdivided_elements.extend(
+                subdivide_grid(subgrid, gdf, subdivision_cellsize, max_complexity)
+            )
+        elif density > 0:
+            subdivided_elements.append(grid_element)
+
+    return subdivided_elements
+
+
+def create_density_based_grid(
+    gdf: gpd.GeoDataFrame, max_cellsize: int = 10, max_complexity: int = 10000
+) -> gpd.GeoDataFrame:
+    # Get the bounds of the GeoDataFrame
+    minx, miny, maxx, maxy = gdf.total_bounds
+
+    # Create an initial grid
+    grid_gdf = create_grid((minx, miny, maxx, maxy), max_cellsize)
+
+    # Subdivide grid elements based on density and complexity
+    subdivided_elements = subdivide_grid(grid_gdf, gdf, max_cellsize, max_complexity)
+
+    return gpd.GeoDataFrame(geometry=subdivided_elements)
+    
+
+def split_gdf_by_grid(gdf: gpd.GeoDataFrame, grid_gdf: gpd.GeoDataFrame):
+    result = []
+    gdf["already_processed"] = False
+    for geometry in grid_gdf.geometry:
+        candidates = get_matches(geometry, gdf)
+        subset = gdf.loc[candidates.index][~gdf["already_processed"]]
+        gdf.loc[subset.index, "already_processed"] = True
+        if not subset.empty:
+            result.append(subset.drop(columns=["already_processed"]).reset_index(drop=True).copy())
+    return result
 
 ### Spatial joins and dissolves
+
 
 def get_matches(geom: Polygon, df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Get matches."""
@@ -309,33 +626,91 @@ def arrange_dimensions(
 ## TODO properly type this
 ## TODO: generalize the next operations to make them more reusable
 @background
-def spatial_join_chunk(row_small, df_large, pbar):
-    test_row = gpd.GeoDataFrame([row_small], crs=df_large.crs)
-    candidates = get_matches(row_small.geometry, df_large.geometry)
-    if len(candidates) > 0:
-        subset = df_large.loc[candidates.index]
-
-        result = subset.sjoin(test_row, how="inner").clip(test_row.geometry).reset_index(drop=True)
-        result.geometry = result.geometry.apply(repair_geometry)
-    else:
-        result = gpd.GeoDataFrame(columns=test_row.columns)
-    pbar.update(1)
-    return result
+def spatial_join_chunk(
+    param: Union[int, gpd.GeoSeries],
+    gdf: gpd.GeoDataFrame,
+    pbar,
+    environment: Literal['marine', 'terrestrial']
+) -> gpd.GeoDataFrame:
+    """
+    Perform a spatial join chunk based on the environment.
+    """
+    try:
+        if environment == 'marine':
+            test_row = gpd.GeoDataFrame([param], crs=gdf.crs)
+            candidates = get_matches(param.geometry, gdf.geometry)
+            if len(candidates) > 0:
+                subset = gdf.loc[candidates.index]
+                result = (
+                    gpd.overlay(test_row, subset, how="intersection")
+                    .reset_index(drop=True)
+                    .clip(test_row.geometry)
+                    .reset_index(drop=True)
+                )
+                result.geometry = result.geometry.apply(repair_geometry)
+            else:
+                result = gpd.GeoDataFrame(columns=test_row.columns)
+        elif environment == 'terrestrial':
+            bbox = param.total_bounds
+            candidates = get_matches(box(*bbox), gdf.geometry)
+            if len(candidates) > 0:
+                subset = gdf.loc[candidates.index].clip(box(*bbox))
+                result = (
+                    gpd.overlay(param, subset, how="intersection")
+                    .reset_index(drop=True)
+                    .clip(subset.geometry)
+                    .reset_index(drop=True)
+                )
+                result.geometry = result.geometry.apply(repair_geometry)
+            else:
+                result = gpd.GeoDataFrame(columns=param.columns)
+        else:
+            raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+        return result
+    except Exception as e:
+        logging.error(e)
+        return gpd.GeoDataFrame()
+    finally:
+        pbar.update(1)
 
 
 async def spatial_join(
-    geodataframe_a: gpd.GeoDataFrame, geodataframe_b: gpd.GeoDataFrame
+    geodataframe_a: gpd.GeoDataFrame,
+    geodataframe_b: gpd.GeoDataFrame,
+    environment: Literal['marine', 'terrestrial']
 ) -> gpd.GeoDataFrame:
-    """Create spatial join between two GeoDataFrames."""
-    # we build the spatial index for the larger GeoDataFrame
+    """
+    Create spatial join between two GeoDataFrames.
+    """
+    # Build the spatial index for the larger GeoDataFrame
     smaller_dim, larger_dim = arrange_dimensions(geodataframe_a, geodataframe_b)
-    with tqdm(total=smaller_dim.shape[0]) as pbar:  # we create a progress bar
-        new_df = await asyncio.gather(
-            *(
-                spatial_join_chunk(row, larger_dim, pbar)
-                for row in smaller_dim.itertuples(index=False)
+
+    if environment == 'marine':
+        with tqdm(total=smaller_dim.shape[0]) as pbar:  # Create a progress bar
+            new_df = await asyncio.gather(
+                *(
+                    spatial_join_chunk(row, larger_dim, pbar, environment)
+                    for row in smaller_dim.itertuples(index=False)
+                )
             )
-        )
+    elif environment == 'terrestrial':
+        logger.info(f"Processing {len(larger_dim)} elements")
+
+        grid = create_density_based_grid(larger_dim, max_cellsize=10, max_complexity=5000)
+
+        logger.info(f"Grid created with {len(grid)} cells")
+
+        list_of_chunks = split_gdf_by_grid(larger_dim, grid)
+
+        logger.info(f"Grid split into {len(list_of_chunks)} chunks")
+
+        with tqdm(total=len(list_of_chunks)) as pbar:  # Create a progress bar
+            new_df = await asyncio.gather(
+                *(spatial_join_chunk(chunk, smaller_dim, pbar, environment) for chunk in list_of_chunks)
+            )
+    else:
+        raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+
     return gpd.GeoDataFrame(pd.concat(new_df, ignore_index=True), crs=smaller_dim.crs)
 
 
@@ -365,17 +740,79 @@ async def create_difference(geodataframe1, geodataframe2):
 
 
 @background
-def spatial_dissolve_chunk(i, gdf, pbar, _by, _aggfunc):
-    result = (
-        gdf[gdf["year"] <= i]
-        .dissolve(by=_by, aggfunc=_aggfunc)
-        .assign(year=i)
-        .reset_index()
-        .pipe(calculate_area, "area", None)
-        .drop(columns=["geometry"])
-    )
-    pbar.update(1)
-    return result
+def spatial_dissolve_chunk(
+    param: Union[int, gpd.GeoSeries],
+    gdf: gpd.GeoDataFrame,
+    pbar,
+    environment: Literal['marine', 'terrestrial'],
+    _by: list[str] = None,
+    _aggfunc: dict = None,
+) -> pd.DataFrame:
+    """
+    Perform a spatial dissolve chunk based on the environment.
+    """
+    try:
+        if environment == 'marine':
+            result = (
+                gdf[gdf["year"] <= param]
+                .dissolve(by=_by, aggfunc=_aggfunc)
+                .assign(year=param)
+                .reset_index()
+                .pipe(calculate_area, "area", None)
+                .drop(columns=["geometry"])
+            )
+        elif environment == 'terrestrial':
+            candidates = get_matches(param, gdf.geometry)
+            subset = gdf.loc[candidates.index]
+
+            result = pd.concat(
+                subset.clip(param).pipe(split_by_year, year_col="STATUS_YR"), ignore_index=True
+            ).copy()
+
+            data_chunk = [
+                (
+                    result[result["year"] <= 2010]
+                    .reset_index()
+                    .pipe(calculate_area, "area", None)
+                    .drop(columns=["geometry"])
+                )
+            ]
+            for year in range(2011, 2025):
+                data_chunk.append(
+                    result[result["year"] <= year]
+                    .dissolve(by=["iso_3"])
+                    .assign(year=year)
+                    .reset_index()
+                    .pipe(calculate_area, "area", None)
+                    .drop(columns=["geometry"])
+                )
+
+            result = pd.concat(data_chunk, ignore_index=True)
+        else:
+            raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+        return result
+    except Exception as e:
+        logging.error(e)
+        return gpd.GeoDataFrame()
+    finally:
+        pbar.update(1)
+
+
+@background
+def simplify(geometry, pbar, tlrc=0.0001) -> gpd.GeoDataFrame:
+    try:
+        return repair_geometry(geometry.simplify(tlrc))
+    except Exception as e:
+        print(e)
+        return geometry
+    finally:
+        pbar.update(1)
+
+
+async def simplify_async(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    with tqdm(total=gdf.shape[0]) as pbar:
+        gdf["geometry"] = await asyncio.gather(*(simplify(val, pbar) for val in gdf["geometry"]))
+    return gdf
 
 
 ## Calculations
@@ -383,11 +820,33 @@ def spatial_dissolve_chunk(i, gdf, pbar, _by, _aggfunc):
 
 def calculate_global_area(
     df: pd.DataFrame,
-    gby_col: list,
-    agg_ops: Dict[str, str] = {"area_km2": "sum"},
-    iso_column="location_i",
+    gby_col: List[str],
+    environment: Literal["marine", "terrestrial"],
+    agg_ops: Union[Dict[str, str], None] = None,
+    iso_column: Union[str, None] = None,
 ) -> pd.DataFrame:
-    global_area = df.groupby([*gby_col]).agg(agg_ops).reset_index().assign(**{iso_column: "GLOB"})
+    """
+    Calculate the global area for marine or terrestrial areas.
+    """
+    if environment == "marine":
+        if agg_ops is None:
+            agg_ops = {"area_km2": "sum"}
+        if iso_column is None:
+            iso_column = "location_i"
+    elif environment == "terrestrial":
+        if agg_ops is None:
+            agg_ops = {
+                "protected_area": "sum",
+                "1": "sum",
+                "0": "sum",
+                "protected_areas_count": "sum",
+            }
+        if iso_column is None:
+            iso_column = "iso_3"
+    else:
+        raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+
+    global_area = df.groupby(gby_col).agg(agg_ops).reset_index().assign(**{iso_column: "GLOB"})
     return pd.concat([global_area, df], ignore_index=True)
 
 
@@ -437,6 +896,50 @@ def calculate_eez_area(df: pd.DataFrame) -> pd.DataFrame:
     )
     result.index = result.index + 1
     result.index.name = "id"
+
+    return result.assign(id=result.index)
+
+
+def calculate_gadm_area(df: pd.DataFrame) -> pd.DataFrame:
+    glob = gpd.GeoDataFrame(
+        {
+            "iso": "GLOB",
+            "AREA_KM2": 134954835,
+            "location_type": "worldwide",
+            "region": np.nan,
+            "geometry": gpd.GeoSeries([gpd.GeoSeries(df["geometry"]).unary_union]),
+        },
+        crs="EPSG:4326",
+    )
+
+    terrestrial_areas = (
+        df.dissolve(by=["iso", "region"], aggfunc={"AREA_KM2": "sum"})
+        .reset_index()
+        .assign(location_type="country")
+    )
+    regions_areas = (
+        df.dissolve(by=["region"], aggfunc={"AREA_KM2": "sum"})
+        .reset_index()
+        .rename(columns={"region": "iso"})
+        .assign(location_type="region")
+    )
+    result = (
+        pd.concat(
+            [
+                glob,
+                regions_areas,
+                terrestrial_areas,
+            ],
+            ignore_index=True,
+        )
+        .dropna(subset=["iso"])
+        .reset_index(drop=True)
+    )
+    result.index = result.index + 1
+    result.index.name = "id"
+
+    # Round AREA_KM2 to integers
+    result["AREA_KM2"] = result["AREA_KM2"].round().astype(int)
 
     return result.assign(id=result.index)
 
@@ -496,19 +999,33 @@ def calculate_stats(
     )
 
 
-def calculate_stats_cov(df: pd.DataFrame, gby_col: list, iso_column: str):
-    return calculate_stats(df, gby_col, iso_column, {"area": "sum", "protectedAreasCount": "sum"})
+def calculate_stats_cov(
+    df: pd.DataFrame,
+    gby_col: List[str],
+    iso_column: str,
+    environment: Literal["marine", "terrestrial"],
+) -> pd.DataFrame:
+    """
+    Calculate the statistics for coverage based on the environment.
+    """
+    if environment == "marine":
+        agg_ops = {"area": "sum", "protectedAreasCount": "sum"}
+        return calculate_stats(df, gby_col, iso_column, agg_ops)
+    elif environment == "terrestrial":
+        agg_ops = {"protected_area": "sum", "protected_areas_count": "sum", "1": "sum", "0": "sum"}
+        return calculate_stats(df, gby_col, iso_column, agg_ops)
+    else:
+        raise ValueError("Invalid area_type. Must be 'marine' or 'terrestrial'.")
 
 
 def coverage_stats(
     df: pd.DataFrame,
     area_col: str = "area",
-    sort_vals: List[str] = ["iso_3", "year", "PA_DEF"],
+    sort_vals: List[str] = ["iso_3", "year"],
 ) -> pd.DataFrame:
     """only relevant to get the coverage numbers for mpa"""
     return df.assign(
-        cumSumProtectedArea=df[area_col].round(2),
-        protectedArea=(
+        protected_area=(
             df.sort_values(by=sort_vals)[area_col]
             - df.sort_values(by=sort_vals)
             .groupby(sort_vals)[area_col]
@@ -516,6 +1033,18 @@ def coverage_stats(
             .reset_index(drop=True)
         ).round(2),
     )
+
+
+def process_final_coverage(input_path_tpas: str, input_path_mpas: str) -> pd.DataFrame:
+    """
+    Read TPAs and MPAs from CSV files, concatenate them, and add an 'id' column.
+    """
+    tpa = pd.read_csv(input_path_tpas)
+    mpa = pd.read_csv(input_path_mpas)
+    final_data = pd.concat([tpa, mpa], ignore_index=True)
+    final_data.index = range(1, len(final_data) + 1)
+    final_data["id"] = final_data.index
+    return final_data
 
 
 # # TODO: check if this is still needed as we also have calculate_stats
@@ -542,17 +1071,23 @@ def aggregate_area(df: pd.DataFrame) -> pd.DataFrame:
 
 
 async def process_mpa_data(
-    gdf: gpd.GeoDataFrame, loop: list[int], by: list[str], aggfunc: dict
+    gdf: gpd.GeoDataFrame,
+    loop: List[int],
+    by: List[str],
+    aggfunc: Dict,
+    environment: str = 'marine'
 ) -> pd.DataFrame:
-    """process protected planet data. relevant for acc coverage extent by year indicator."""
-    # we split the data by =< year so we can acumulate the coverage
-    base = split_by_year(gdf)
+    """
+    Process protected planet data. Relevant for acc coverage extent by year indicator.
+    """
+    # Split the data by year based on the environment
+    base = split_by_year(gdf, environment=environment)
 
     result_to_iter = pd.concat(base, ignore_index=True).copy()
 
-    with tqdm(total=len(loop)) as pbar:  # we create a progress bar
+    with tqdm(total=len(loop)) as pbar:  # Create a progress bar
         new_df = await asyncio.gather(
-            *(spatial_dissolve_chunk(year, result_to_iter, pbar, by, aggfunc) for year in loop)
+            *(spatial_dissolve_chunk(year, result_to_iter, pbar, by, aggfunc, environment) for year in loop)
         )
     return pd.concat(
         [base[0].pipe(calculate_area, "area", None).drop(columns=["geometry"]), *new_df],
@@ -560,13 +1095,55 @@ async def process_mpa_data(
     )
 
 
+async def process_grid(gdf: gpd.GeoDataFrame, environment: Literal['marine', 'terrestrial']) -> pd.DataFrame:
+    grid_gdf = create_density_based_grid(gdf, max_cellsize=10, max_complexity=5000)
+    logger.info(f"grid created with {grid_gdf.shape[0]} cells")
+
+    with tqdm(total=grid_gdf.shape[0], desc="Processing grid elements") as pbar:
+        jobs = [spatial_dissolve_chunk(geometry, gdf, pbar, environment) for geometry in grid_gdf.geometry.values]
+        result = await asyncio.gather(*jobs)
+    return result
+
+
+
 def process_mpaatlas_data(gdf: gpd.GeoDataFrame) -> pd.DataFrame:
     return (
-        gdf.dissolve(by=["protecti_1", "location_i"], aggfunc={"name": "count"})
+        gdf.dissolve(by=["protecti_1", "iso_3"], aggfunc={"name": "count"})
         .reset_index()
         .pipe(calculate_area, "area_km2", None)
         .drop(columns=["geometry"])
     )
+
+
+def cumulative_pa_def_counts(
+    df: pd.DataFrame,
+    year_col: str = "STATUS_YR",
+    pa_def_col: str = "PA_DEF",
+    iso_col: str = "iso_3",
+    start_year: int = 2010,
+) -> pd.DataFrame:
+    """
+    Calculate the cumulative number of PA_DEF values for each iso_3 and each year starting from a given year.
+    """
+
+    results = []
+    years = sorted(df[year_col].unique())
+
+    for year in years:
+        if year < start_year:
+            continue
+        cumulative_data = df[df[year_col] <= year]
+        pa_def_counts = cumulative_data.groupby([iso_col, pa_def_col]).size().unstack(fill_value=0)
+        pa_def_counts["year"] = year
+        results.append(pa_def_counts.reset_index())
+
+    final_results = pd.concat(results, ignore_index=True)
+    final_results = final_results.fillna(0)
+    final_results = final_results.groupby([iso_col, "year"]).sum().reset_index()
+
+    final_results["protected_areas_count"] = final_results["0"] + final_results["1"]
+
+    return final_results
 
 
 ## MISC
@@ -629,7 +1206,6 @@ def define_is_child(
 
 
 def define_childs_ids(group) -> tuple:
-
     if len(group) > 1:
         return (
             group[group.is_child.eq(False)].index.values[0],
@@ -644,20 +1220,200 @@ def add_child_parent_relationship(
     gby: str = "wdpaid",
     cols: list = ["wdpaid", "wdpa_pid", "is_child", "data_source"],
 ) -> pd.DataFrame | gpd.GeoDataFrame:
-    groups: pd.Series = df.groupby(gby)[cols].apply(define_childs_ids)
-    df["children"] = (
+    # Get parent and children IDs for each group
+    groups = df.groupby(gby)[cols].apply(define_childs_ids)
+
+    # Extract parent and children information
+    relationship_df = (
         pd.DataFrame([[a, b] for a, b in groups.values], columns=["parent", "children"])
         .dropna(subset=["parent"])
         .set_index("parent")
     )
 
+    # Assign children IDs to the 'children' column
+    df["children"] = pd.Series(relationship_df["children"], index=relationship_df.index).reindex(
+        df.index
+    )
+
+    # Assign parent IDs to the 'parent' column for the children
+    df["parent"] = pd.NA
+    for parent, children in relationship_df.itertuples(index=True):
+        df.loc[children, "parent"] = parent
+
     return df
 
 
 def set_child_id(
-    df: pd.DataFrame | gpd.GeoDataFrame, columns: list[str] = ["wdpa_pid", "mpa_zone_i"]
-) -> pd.DataFrame | gpd.GeoDataFrame:
+    df: Union[pd.DataFrame, gpd.GeoDataFrame],
+    environment: Literal["marine", "terrestrial"],
+    marine_columns: List[str] = ["wdpa_pid", "mpa_zone_i"],
+    terrestrial_columns: List[str] = ["wdpa_pid"],
+) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
+    """
+    Set the child_id column based on the environment.
+    """
+    if environment == "marine":
+        columns = marine_columns
+    elif environment == "terrestrial":
+        columns = terrestrial_columns
+    else:
+        raise ValueError("Invalid environment. Must be 'marine' or 'terrestrial'.")
+
     return df.assign(child_id=df[columns].bfill(axis=1)[columns[0]])
+
+
+def add_translations(df: pd.DataFrame, translations_csv_path: str) -> pd.DataFrame:
+    translations_df = pd.read_csv(translations_csv_path, keep_default_na=False, na_values=[])
+    df = df.merge(
+        translations_df[["code", "name_es", "name_fr"]], left_on="iso", right_on="code", how="left"
+    )
+    return df
+
+
+def map_and_generate_ids(
+    locations_land: pd.DataFrame, locations_marine: pd.DataFrame
+) -> pd.DataFrame:
+    # Create a lookup dictionary for IDs from EEZ data
+    id_lookup = locations_marine.set_index("code")["id"].to_dict()
+
+    # Apply the EEZ IDs to the GADM dataset
+    locations_land["id"] = locations_land["code"].map(id_lookup)
+
+    # Identify the NaN values in the id column
+    nan_mask = locations_land["id"].isna()
+
+    # Generate new IDs for any GADM rows without an EEZ match
+    new_ids = pd.Series(
+        range(max(id_lookup.values()) + 1, max(id_lookup.values()) + 1 + nan_mask.sum()),
+        index=locations_land[nan_mask].index,
+    )
+
+    # Assign the new IDs to the NaN values in the id column
+    locations_land["id"] = locations_land["id"].fillna(new_ids).astype(int)
+
+    return locations_land
+
+
+def drop_unnecessary_columns(df: pd.DataFrame, columns_to_keep: List[str]) -> pd.DataFrame:
+    return df.drop(columns=[col for col in df.columns if col not in columns_to_keep])
+
+
+def combine_and_clean_columns(df: pd.DataFrame) -> pd.DataFrame:
+    # Combine data from land and marine for each base column
+    base_columns = ["type", "groups", "name", "name_es", "name_fr"]
+    for base_col in base_columns:
+        marine_col = f"{base_col}_marine"
+        land_col = f"{base_col}_land"
+        df[base_col] = df[marine_col].combine_first(df[land_col])
+
+    # Fill NaN values with 0 for each column
+    columns_to_fill = ["total_marine_area", "total_terrestrial_area"]
+    for col in columns_to_fill:
+        df[col] = df[col].fillna(0).astype(int)
+
+    # Force the id column to be an integer
+    df["id"] = df["id"].astype(int)
+
+    # Drop unnecessary columns
+    df = df.drop(
+        columns=[col for col in df.columns if col.endswith("_marine") or col.endswith("_land")]
+    )
+
+    return df
+
+
+def process_and_merge_commitments(df: pd.DataFrame, commit: pd.DataFrame) -> pd.DataFrame:
+    # Filter and process the commitments
+    commit = commit.iloc[:, :6][commit["30% National Target"] == "Y"]
+    commit.drop(columns=["% Fully/Highly*"], inplace=True)
+    commit["% National Target"] = commit["% National Target"].str.replace("%", "").astype(int)
+
+    # When % National Target is 30, fill By Year with 2030
+    commit["By Year"] = commit["By Year"].fillna(
+        commit["% National Target"].apply(lambda x: "2030" if x == 30 else None)
+    )
+
+    # Merge the commitments into the combined_locations table
+    df = df.merge(
+        commit[["Iso Code", "% National Target", "By Year"]],
+        left_on="code",
+        right_on="Iso Code",
+        how="left",
+    )
+
+    df.rename(
+        columns={"% National Target": "marine_target", "By Year": "marine_target_year"},
+        inplace=True,
+    )
+    df.drop(columns=["Iso Code"], inplace=True)
+
+    df["marine_target"] = df["marine_target"].astype(pd.Int64Dtype())
+    df["marine_target_year"] = df["marine_target_year"].astype(pd.Int64Dtype())
+
+    # Add marine_target and marine_target_year to the combined_locations table for code 'GLOB'
+    df.loc[df["code"] == "GLOB", "marine_target"] = 30
+    df.loc[df["code"] == "GLOB", "marine_target_year"] = 2030
+
+    return df
+
+
+def set_index_and_sort(df: pd.DataFrame) -> pd.DataFrame:
+    # Force the index to have the values in id column and sort by index
+    df["index"] = df["id"]
+    df.set_index("index", inplace=True)
+    df.sort_index(inplace=True)
+    return df
+
+
+## RASTER VISUALIZATION
+
+
+# Function to convert hex color codes to RGB tuples
+def hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
+    """
+    Convert a hex color code to an RGB tuple.
+
+    Parameters:
+    - hex_color (str): Hex color code (e.g., "#FFFFFF").
+
+    Returns:
+    - Tuple[int, int, int]: RGB tuple.
+    """
+    hex_color = hex_color.lstrip("#")  # Remove the '#' symbol
+    if len(hex_color) != 6:
+        raise ValueError(f"Invalid hex color code: {hex_color}")
+    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+
+
+def create_color_map(
+    class_color_dict: Dict[int, str],
+    num_values: int = 256,
+    value_to_rgb_func: Callable[[str], Tuple[int, int, int]] = hex_to_rgb,
+) -> np.ndarray:
+    """
+    Create a color map from a dictionary mapping class values to colors.
+
+    Parameters:
+    - class_color_dict (Dict[int, str]): Dictionary mapping class values to colors.
+    - num_values (int): Number of possible values (default is 256).
+    - value_to_rgb_func (Callable[[str], Tuple[int, int, int]]): Function to convert dictionary values to RGB.
+
+    Returns:
+    - np.ndarray: Color map array.
+    """
+    if value_to_rgb_func is None:
+        raise ValueError("A function to convert values to RGB must be provided.")
+
+    color_map = np.zeros(
+        (num_values, 3), dtype=np.uint8
+    )  # num_values possible values (0 to num_values-1)
+
+    for class_value, color_value in class_color_dict.items():
+        if not (0 <= class_value < num_values):
+            raise ValueError(f"Class value {class_value} is out of range (0 to {num_values - 1}).")
+        color_map[class_value] = value_to_rgb_func(color_value)  # Convert value to RGB
+
+    return color_map
 
 
 ## OUTPUT FUNCTIONS
@@ -705,7 +1461,7 @@ def batch_export(
     prev = 0
     if format == "csv":
         for idx, size in enumerate(range(batch_size, len(df.index) + batch_size, batch_size)):
-            schema(df[(df.index > prev) & (df.index < size)]).to_csv(
+            schema(df[(df.index >= prev) & (df.index < size)]).to_csv(
                 folder.joinpath(f"{filename}_{idx}.csv"),
                 index=True,
                 encoding="utf-8",
@@ -718,7 +1474,7 @@ def batch_export(
                 "version": 2,
                 "data": {
                     f"api::{strapi_colection}.{strapi_colection}": schema(
-                        df[(df.index > prev) & (df.index < size)]
+                        df[(df.index >= prev) & (df.index < size)]
                     ).to_dict(orient="index", index=True)
                 },
             }
