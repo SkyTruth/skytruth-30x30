@@ -222,12 +222,6 @@
       }
     },
     "layouts": {
-      "list": [
-        "id",
-        "title",
-        "type",
-        "metadata"
-      ],
       "edit": [
         [
           {
@@ -284,13 +278,13 @@
             "name": "metadata",
             "size": 12
           }
-        ],
-        [
-          {
-            "name": "environment",
-            "size": 6
-          }
         ]
+      ],
+      "list": [
+        "id",
+        "title",
+        "type",
+        "metadata"
       ]
     }
   },
