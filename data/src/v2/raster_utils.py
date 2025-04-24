@@ -5,8 +5,9 @@ import math
 from itertools import product
 from os import cpu_count
 from typing import List, Iterator
-from interfaces import BoundingBox, WindowWH
 import rasterio
+
+from v2.interfaces import BoundingBox, WindowWH
 
 
 def get_raster_info(raster_file):

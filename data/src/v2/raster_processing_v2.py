@@ -1,12 +1,9 @@
 # from rasterstats import zonal_stats
-
 # from exactextract import exact_extract  # in the future i need to explore this further
 import numpy as np
 import rasterio as rio
 from rasterio.windows import Window
-
 # from shapely.geometry import box
-
 from pathlib import Path
 from typing import List, Iterable
 from logging import getLogger
@@ -14,7 +11,7 @@ from itertools import product
 from dask.distributed import wait, Lock
 import dask.delayed
 
-from datasets import RasterDataset
+from v2.datasets import RasterDataset
 
 logger = getLogger(__name__)
 

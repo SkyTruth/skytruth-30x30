@@ -39,6 +39,8 @@ dependencies:
   - libgdal-arrow-parquet=>0.1.0
   - openpyxl=>3.1.0
   - pyarrow
+  - dask
+  - exactextract
   - pip:
       - jupyterlab-code-formatter==2.2.1
       - jupyter_collaboration

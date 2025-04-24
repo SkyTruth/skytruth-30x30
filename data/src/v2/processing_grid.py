@@ -6,9 +6,9 @@ import numpy as np
 from shapely.geometry import box
 from pyproj import CRS, Transformer
 
-from vector_utils import get_matches, check_crs_area_of_use_contains_bbox
-from raster_utils import check_chunk_size, chunks
-from interfaces import BoundingBox
+from v2.vector_utils import get_matches, check_crs_area_of_use_contains_bbox
+from v2.raster_utils import check_chunk_size, chunks
+from v2.interfaces import BoundingBox
 
 
 class ComputationGrid:

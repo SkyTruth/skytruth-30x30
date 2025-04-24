@@ -7,9 +7,9 @@ import pandas as pd
 from shapely.geometry import box
 from shapely import remove_repeated_points
 
-from vector_utils import get_matches, repair_geometry, arrange_dimensions
-from processing_grid import ComputationGrid
-from utils import background
+from v2.vector_utils import get_matches, repair_geometry, arrange_dimensions
+from v2.processing_grid import ComputationGrid
+from v2.utils import background
 
 
 logger = logging.getLogger(__name__)
