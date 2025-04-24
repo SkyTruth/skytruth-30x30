@@ -42,6 +42,7 @@ def collection_to_multipolygon(geometry_collection):
 
 
 def repair_geometry(geom, tol=0.0001, remove_slivers=False):
+    """Repair geometry by removing slivers and making it valid."""
     if not geom:
         return Polygon()
     elif not geom.is_valid:
