@@ -46,5 +46,5 @@ export const modellingAtom = atomWithReset<{
  */
 export const terrestrialDataDisclaimerDialogAtom = atomWithStorage(
   'terrestrial-data-disclaimer-dialog',
-  true
+  false
 );

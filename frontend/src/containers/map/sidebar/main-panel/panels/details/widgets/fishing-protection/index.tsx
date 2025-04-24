@@ -85,7 +85,6 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
     if (!protectionLevelsData.length) return [];
 
     const parsedProtectionLevel = (label: string, protectionLevel, stats) => {
-
       return {
         title: label,
         slug: protectionLevel.slug,
@@ -94,7 +93,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
         protectedArea: stats?.area,
         info: metadata?.info,
         sources: metadata?.sources,
-        updatedAt: stats?.updatedAt
+        updatedAt: stats?.updatedAt,
       };
     };
 
@@ -103,7 +102,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
 
     const parsedFishingProtectionLevelData = fishingProtectionLevelStats?.map((stats) => {
       const data = stats?.attributes;
-      data.totalArea = protectionLevelsData[0]?.attributes?.total_marine_area
+      data.totalArea = protectionLevelsData[0]?.attributes?.total_marine_area;
       const protectionLevel = data?.fishing_protection_level?.data.attributes;
       return parsedProtectionLevel(t('highly-protected-from-fishing'), protectionLevel, data);
     });
