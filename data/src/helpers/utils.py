@@ -119,10 +119,10 @@ def make_archive(source: Path, destination: Path) -> None:
 
 
 def download_and_unzip_if_needed(
-    file_handler: FileConventionHandler, prev_step: STEPS, mysettings: Settings, fmt: str = "zip"
+    file_handler: FileConventionHandler, prev_step: STEPS, mysettings: Settings
 ):
 
-    zip_path = file_handler.get_step_fmt_file_path(prev_step, fmt, parent=True)
+    zip_path = file_handler.get_step_fmt_file_path(prev_step, "zip", parent=True)
 
     unzzipped_path = file_handler.get_processed_step_path(prev_step)
 
