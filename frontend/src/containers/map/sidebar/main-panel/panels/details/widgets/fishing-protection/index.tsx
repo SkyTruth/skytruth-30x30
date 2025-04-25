@@ -85,20 +85,15 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
     if (!protectionLevelsData.length) return [];
 
     const parsedProtectionLevel = (label: string, protectionLevel, stats) => {
-      const totalAreaPercentage = (stats?.area / stats?.pct) * 100;
-
-      // There are circumstances in which pct is 0, which will cause the percentage calculation to be NaN.
-      // This is a safeguard so that if the data is unexpected, we don't display NaN on the screen.
-      if (isNaN(totalAreaPercentage)) return null;
-
       return {
         title: label,
         slug: protectionLevel.slug,
         background: FISHING_PROTECTION_CHART_COLORS[protectionLevel.slug],
-        totalArea: totalAreaPercentage,
+        totalArea: stats?.totalArea,
         protectedArea: stats?.area,
         info: metadata?.info,
         sources: metadata?.sources,
+        updatedAt: stats?.updatedAt,
       };
     };
 
@@ -107,6 +102,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
 
     const parsedFishingProtectionLevelData = fishingProtectionLevelStats?.map((stats) => {
       const data = stats?.attributes;
+      data.totalArea = protectionLevelsData[0]?.attributes?.total_marine_area;
       const protectionLevel = data?.fishing_protection_level?.data.attributes;
       return parsedProtectionLevel(t('highly-protected-from-fishing'), protectionLevel, data);
     });
@@ -130,7 +126,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
   return (
     <Widget
       title={t('level-of-fishing-protection')}
-      lastUpdated={protectionLevelsData[0]?.attributes?.updatedAt}
+      lastUpdated={widgetChartData[0]?.updatedAt}
       noData={noData}
       loading={isFetchingProtectionLevelsData}
     >

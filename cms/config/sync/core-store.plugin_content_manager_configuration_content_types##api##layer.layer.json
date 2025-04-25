@@ -236,6 +236,12 @@
       }
     },
     "layouts": {
+      "list": [
+        "id",
+        "title",
+        "type",
+        "metadata"
+      ],
       "edit": [
         [
           {
@@ -261,10 +267,6 @@
           {
             "name": "default",
             "size": 4
-          },
-          {
-            "name": "slug",
-            "size": 6
           }
         ],
         [
@@ -296,13 +298,13 @@
             "name": "metadata",
             "size": 12
           }
+        ],
+        [
+          {
+            "name": "slug",
+            "size": 6
+          }
         ]
-      ],
-      "list": [
-        "id",
-        "title",
-        "type",
-        "metadata"
       ]
     }
   },
