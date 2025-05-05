@@ -17,6 +17,7 @@ module "test" {
   test_function_max_instance_count                   = 2
   test_function_max_instance_request_concurrency     = 10
   test_function_available_memory                     = "256M"
+  count                                              = var.enable_test ? 1 : 0
 }
 
 module "staging" {

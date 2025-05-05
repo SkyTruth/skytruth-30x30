@@ -60,3 +60,8 @@ variable "uptime_alert_email" {
   type        = string
   description = "Email address to which uptime alerts should be sent"
 }
+
+variable "enable_test" {
+  type    = bool
+  default = false
+}
