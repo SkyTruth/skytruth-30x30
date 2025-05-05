@@ -37,9 +37,7 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
   const [popup, setPopup] = useAtom(popupAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
 
-  const {
-    data: { source, environment },
-  } = useGetLayers<{
+  const { data, isFetching: isPending } = useGetLayers<{
     source: LayerTyped['config']['source'];
     environment: string;
   }>(
@@ -63,7 +61,6 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     },
     {
       query: {
-        placeholderData: { data: {} },
         select: ({ data }) => ({
           source: (data[0].attributes as LayerTyped)?.config?.source,
           environment: data[0].attributes?.environment?.data?.attributes.slug,
@@ -71,6 +68,13 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
       },
     }
   );
+
+  let source = undefined;
+  let environment = undefined;
+  if (!isPending) {
+    source = data?.source;
+    environment = data?.environment;
+  }
 
   const geometryData = useMemo(() => {
     if (source?.type === 'vector' && rendered && popup && map) {

@@ -16,7 +16,7 @@ export interface PopupItemProps {
 const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
   const locale = useLocale();
 
-  const { data: layer } = useGetLayers(
+  const { data: layer, isFetching } = useGetLayers(
     {
       //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       //   // @ts-ignore
@@ -36,30 +36,12 @@ const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
     }
   );
 
-  // const { data: layer } = useGetLayers(
-  //   {
-  //     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  //     // @ts-ignore
-  //     filters: {
-  //       slug: {
-  //         $eq: slug,
-  //       },
-  //     },
-  //     sort: 'interaction_config',
-  //     locale,
-  //     populate: 'metadata',
-  //   },
-  //   {
-  //     query: {
-  //       select: ({ data }) => data[0]?.attributes,
-  //     },
-  //   }
-  // );
-  console.log('DATA', layer);
-
-  const attributes = layer as LayerTyped;
-
-  const { interaction_config, params_config } = attributes;
+  let interaction_config = {};
+  let params_config = null;
+  if (!isFetching) {
+    interaction_config = (layer as LayerTyped)?.interaction_config;
+    params_config = (layer as LayerTyped)?.params_config;
+  }
 
   const configParams = useMemo(
     () => ({

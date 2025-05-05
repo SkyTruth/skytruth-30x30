@@ -63,9 +63,6 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
 
   const handleAddMapboxLayer = useCallback(
     ({ styles }: Config) => {
-      console.log('STYLES', styles, 'slug', slug);
-      console.log('LAYER', layer);
-
       const { interaction_config } = layer as LayerTyped;
 
       if (interaction_config?.enabled) {
