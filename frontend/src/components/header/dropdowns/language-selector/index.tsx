@@ -9,11 +9,12 @@ const LanguageSelector: FCWithMessages = () => {
   const t = useTranslations('components.language-selector');
   const locale = useLocale();
 
-  const { push, asPath } = useRouter();
+  const { push, asPath, pathname, query } = useRouter();
+
   return (
     <Select
       value={locale}
-      onValueChange={(newLocale) => push(asPath, undefined, { locale: newLocale })}
+      onValueChange={(newLocale) => push({ pathname, query }, asPath, { locale: newLocale })}
     >
       <SelectTrigger variant="alternative">
         <span className="sr-only">

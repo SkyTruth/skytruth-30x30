@@ -69,7 +69,6 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
         const ids = styles.map((l) => l.id);
 
         setLayersInteractive((prev) => {
-          console.log('New ids: ', Array.from(new Set([...prev, slug])));
           return Array.from(new Set([...prev, slug]));
         });
         setLayersInteractiveIds((prev) => Array.from(new Set([...prev, ...ids])));
