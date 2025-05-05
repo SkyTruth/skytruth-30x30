@@ -36,24 +36,18 @@ const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
     }
   );
 
-  let interaction_config = {};
-  let params_config = null;
-  if (!isFetching) {
-    interaction_config = (layer as LayerTyped)?.interaction_config;
-    params_config = (layer as LayerTyped)?.params_config;
-  }
+  const configParams = useMemo(() => {
+    const interaction_config = !isFetching ? (layer as LayerTyped)?.interaction_config : {};
 
-  const configParams = useMemo(
-    () => ({
+    return {
       config: {
         ...interaction_config,
         layerSlug: slug,
       },
-      params_config,
+      params_config: !isFetching ? (layer as LayerTyped)?.params_config : null,
       settings: {},
-    }),
-    [slug, interaction_config, params_config]
-  );
+    };
+  }, [slug, isFetching, layer]);
 
   const parsedConfig = useResolvedConfig<InteractionConfig | ReactElement>(configParams);
 
