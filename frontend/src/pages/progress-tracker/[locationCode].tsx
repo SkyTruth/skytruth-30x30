@@ -41,6 +41,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const { query } = context;
   const { locationCode = 'GLOB', location, mapParams = null } = query;
 
+  console.log("MAP PARAMS", mapParams);
   if (mapParams) {
     const searchParams = mapParamsToSearchParams(mapParams);
     const target = `/${context.locale}/${PAGES.progressTracker}/${location}?${searchParams}`;
