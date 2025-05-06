@@ -292,20 +292,11 @@ module "analysis_cloud_function" {
   depends_on = [module.postgres_application_user_password]
 }
 
-
-resource "google_vpc_access_connector" "connector" {
-  name          = "data-function-connector"
-  region        = var.gcp_region
-  network       = var.network_name
-  ip_cidr_range = "10.8.0.0/28"
-}
-
-
 module "data_pipes_cloud_function" {
   source                           = "../cloudfunction"
   region                           = var.gcp_region
   project                          = var.gcp_project_id
-  vpc_connector_name               = google_vpc_access_connector.connector.name
+  vpc_connector_name               = module.network.vpc_access_connector_name
   function_name                    = "${var.project_name}-data"
   description                      = "Data Pipeline Cloud Function"
   source_dir                       = "${path.root}/../../cloud_functions/test"
@@ -319,18 +310,31 @@ module "data_pipes_cloud_function" {
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
 }
 
+resource "google_service_account" "scheduler_invoker" {
+  account_id   = "${var.project_name}-scheduler-sa"
+  display_name = "${var.project_name} Cloud Scheduler Invoker"
+}
+
+resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
+  project        = var.gcp_project_id
+  location       = var.gcp_region
+  cloud_function = module.data_pipes_cloud_function.function_name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "serviceAccount:${google_service_account.scheduler_invoker.email}"
+}
+
 module "download_mpatlas_scheduler" {
   source                   = "../cloud_scheduler"
   name                     = "trigger-mpatlas-download-method"
-  schedule                 = "0 9 1 * *"
+  schedule                 = "0 * * * *" #"0 9 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
-  invoker_service_account  = var.scheduler_invoker_sa
+  invoker_service_account  = google_service_account.scheduler_invoker.email
 
   headers = {
     "Content-Type" = "application/json"
   }
 
   body = jsonencode({
-    method = "download_mpatlas"
+    METHOD = "download_mpatlas"
   })
 }

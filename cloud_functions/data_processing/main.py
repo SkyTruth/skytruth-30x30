@@ -244,3 +244,5 @@ def main(request):
         calculate_insights_table()
     else:
         print(f"METHOD: {method} not a valid option")
+
+    return "OK", 200
