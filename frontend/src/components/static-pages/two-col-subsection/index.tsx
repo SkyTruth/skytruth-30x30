@@ -54,7 +54,7 @@ const TwoColSubSection: React.FC<TwoColSubSection> = ({
         {isNumbered && (
           <span className="mb-2 font-mono text-xl md:mb-6">
             <span className="text-black">{minTwoDigits(itemNum)}</span>
-            <span className="opacity-20">-{minTwoDigits(itemTotal)}</span>
+            <span className="opacity-60">-{minTwoDigits(itemTotal)}</span>
           </span>
         )}
         <div className="border-t border-black md:pt-3.5">
