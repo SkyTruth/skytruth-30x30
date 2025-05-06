@@ -48,11 +48,10 @@ const MainMap: FCWithMessages = () => {
   const [popup, setPopup] = useAtom(popupAtom);
 
   const [cursor, setCursor] = useState<'grab' | 'crosshair' | 'pointer'>('grab');
-  
+
   const hoveredPolygonId = useRef<Parameters<typeof map.setFeatureState>[0] | null>(null);
   const mountedRef = useRef(false);
   const previousDefaultLayersRef = useRef(null);
-
 
   const { data: layersInteractiveData } = useGetLayers(
     {
@@ -101,7 +100,6 @@ const MainMap: FCWithMessages = () => {
     }
 
     previousDefaultLayersRef.current = defaultLayers;
-
   }, [mapLayers, setMapLayers, defaultLayers]);
 
   const safelyResetFeatureState = useCallback(() => {
