@@ -18,7 +18,7 @@ const LabelsManager = () => {
     const map = mapRef.getMap();
 
     map.setLayoutProperty(LABELS_LAYER_ID, 'visibility', labels ? 'visible' : 'none');
-    map.setLayoutProperty(LABELS_LAYER_ID, 'text-field', ['get', `name_${locale}`])
+    map.setLayoutProperty(LABELS_LAYER_ID, 'text-field', ['get', `name_${locale}`]);
   }, [mapRef, labels, locale]);
 
   const handleStyleLoad = useCallback(() => {
