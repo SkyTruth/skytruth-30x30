@@ -14,15 +14,16 @@ export default function useMapDefaultLayers() {
 
   const [datasets] = useDatasetsByEnvironment();
 
-  const defaultLayersIds = useMemo(() => {
+  const defaultLayerSlugs = useMemo(() => {
     const datasetsDefaultLayerIds = (datasets = []) => {
       return datasets.reduce((acc, { attributes }) => {
         const layersData = attributes?.layers?.data;
-        const defaultLayersIds = layersData.reduce(
-          (acc, { id, attributes }) => (attributes?.default ? [...acc, id] : acc),
+
+        const defaultLayerSlugs = layersData.reduce(
+          (acc, { attributes }) => (attributes?.default ? [...acc, attributes.slug] : acc),
           []
         );
-        return [...acc, ...defaultLayersIds];
+        return [...acc, ...defaultLayerSlugs];
       }, []);
     };
 
@@ -39,18 +40,18 @@ export default function useMapDefaultLayers() {
       switch (tab) {
         case 'summary':
           mapLayers = ['terrestrial', 'marine', 'basemap']?.reduce(
-            (ids, dataset) => [...ids, ...defaultLayersIds[dataset]],
+            (slugs, dataset) => [...slugs, ...defaultLayerSlugs[dataset]],
             []
           );
           break;
         case 'terrestrial':
-          mapLayers = defaultLayersIds.terrestrial;
+          mapLayers = defaultLayerSlugs.terrestrial;
           break;
         case 'marine':
-          mapLayers = defaultLayersIds.marine;
+          mapLayers = defaultLayerSlugs.marine;
           break;
       }
       setMapLayers(mapLayers);
     }
-  }, [defaultLayersIds, setMapLayers, tab, previousTab]);
+  }, [defaultLayerSlugs, setMapLayers, tab, previousTab]);
 }

@@ -962,7 +962,8 @@
           "legend_config.items.value",
           "legend_config.items.description",
           "default",
-          "environment"
+          "environment",
+          "slug"
         ],
         "locales": [
           "en",
@@ -1013,7 +1014,8 @@
           "legend_config.items.value",
           "legend_config.items.description",
           "default",
-          "environment"
+          "environment",
+          "slug"
         ],
         "locales": [
           "en",
@@ -1049,7 +1051,8 @@
           "legend_config.items.value",
           "legend_config.items.description",
           "default",
-          "environment"
+          "environment",
+          "slug"
         ],
         "locales": [
           "en",

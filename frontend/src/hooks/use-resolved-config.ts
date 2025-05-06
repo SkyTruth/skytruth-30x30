@@ -8,6 +8,10 @@ export default function useResolvedConfig<Config>(
   const [config, setConfig] = useState<Config | null>(null);
 
   useEffect(() => {
+    if (!params) {
+      setConfig(null);
+      return;
+    }
     const updateConfig = async () => {
       setConfig(await parseConfig(params));
     };
