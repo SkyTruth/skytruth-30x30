@@ -293,15 +293,8 @@ module "analysis_cloud_function" {
 }
 
 
-locals {
-  test_cloud_function_env = {
-    TEST_ENV_VAR      = true
-  }
-}
-
-
 resource "google_vpc_access_connector" "connector" {
-  name          = "test-function-connector"
+  name          = "data-function-connector"
   region        = var.gcp_region
   network       = var.network_name
   ip_cidr_range = "10.8.0.0/28"
@@ -326,27 +319,11 @@ module "data_pipes_cloud_function" {
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
 }
 
-module "download_marine_regions_scheduler" {
-  source                   = "../cloud_scheduler"
-  name                     = "trigger-cloudrun-method"
-  schedule                 = "0 8 1 * *"
-  target_url               = module.cloud_run.url
-  invoker_service_account = "scheduler-invoker@your-project.iam.gserviceaccount.com"
-
-  headers = {
-    "Content-Type" = "application/json"
-  }
-
-  body = jsonencode({
-    method = "download_marine_regions"
-  })
-}
-
 module "download_mpatlas_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "trigger-cloudrun-method"
+  name                     = "trigger-mpatlas-download-method"
   schedule                 = "0 9 1 * *"
-  target_url               = module.cloud_run.url
+  target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account = "scheduler-invoker@your-project.iam.gserviceaccount.com"
 
   headers = {
