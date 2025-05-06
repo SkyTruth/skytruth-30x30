@@ -327,7 +327,7 @@ module "data_pipes_cloud_function" {
 }
 
 module "download_marine_regions_scheduler" {
-  source                   = "../modules/cloud_scheduler"
+  source                   = "../cloud_scheduler"
   name                     = "trigger-cloudrun-method"
   schedule                 = "0 8 1 * *"
   target_url               = module.cloud_run.url
@@ -343,7 +343,7 @@ module "download_marine_regions_scheduler" {
 }
 
 module "download_mpatlas_scheduler" {
-  source                   = "../modules/cloud_scheduler"
+  source                   = "../cloud_scheduler"
   name                     = "trigger-cloudrun-method"
   schedule                 = "0 9 1 * *"
   target_url               = module.cloud_run.url
