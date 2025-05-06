@@ -9,7 +9,7 @@ const LanguageSelector: FCWithMessages = () => {
   const t = useTranslations('components.language-selector');
   const locale = useLocale();
 
-  const { pathname, asPath, query, push } = useRouter();
+  const { push, asPath, pathname, query } = useRouter();
 
   return (
     <Select

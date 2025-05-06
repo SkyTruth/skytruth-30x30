@@ -14,7 +14,11 @@ import {
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
-import { DatasetUpdatedByData, LayerResponseDataObject } from '@/types/generated/strapi.schemas';
+import {
+  DatasetUpdatedByData,
+  Layer,
+  LayerResponseDataObject,
+} from '@/types/generated/strapi.schemas';
 
 export const SWITCH_LABEL_CLASSES = '-mb-px cursor-pointer pt-px font-mono text-xs font-normal';
 const COLLAPSIBLE_TRIGGER_ICONS_CLASSES = 'w-5 h-5 hidden';
@@ -65,11 +69,11 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
   }, [datasetsLayersIds, activeLayers, extraActiveLayers]);
 
   const onToggleLayer = useCallback(
-    (layerId: LayerResponseDataObject['id'], isActive: boolean) => {
+    (layerSlug: Layer['slug'], isActive: boolean) => {
       setMapLayers(
         isActive
-          ? [...activeLayers, Number(layerId)]
-          : activeLayers.filter((_layerId) => _layerId !== Number(layerId))
+          ? [...activeLayers, layerSlug]
+          : activeLayers.filter((activeSlug) => activeSlug !== layerSlug)
       );
 
       // If we don't have layerSettings entries, the view is in its default state; we wish to
@@ -79,15 +83,15 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
         if (layerSettingsKeys.length) return {};
         return Object.assign(
           {},
-          ...activeLayers.map((layerId) => ({ [layerId]: { expanded: true } }))
+          ...activeLayers.map((layerSlug) => ({ [layerSlug]: { expanded: true } }))
         );
       })();
 
       setLayerSettings((prev) => ({
         ...initialSettings,
         ...prev,
-        [layerId]: {
-          ...prev[layerId],
+        [layerSlug]: {
+          ...prev[layerSlug],
           expanded: true,
         },
       }));
@@ -133,10 +137,9 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
               <div key={dataset.id} className="[&:not(:first-child)]:pt-3">
                 {showDatasetsNames && <h4 className="font-mono">{dataset?.attributes?.name}</h4>}
                 <ul className={cn('my-3 flex flex-col space-y-3', { '-my-0': !showDatasetsNames })}>
-                  {dataset.attributes?.layers?.data?.map((layer) => {
-                    const isActive =
-                      activeLayers.findIndex((layerId) => layerId === layer.id) !== -1;
-                    const onCheckedChange = onToggleLayer.bind(null, layer.id) as (
+                  {dataset.attributes?.layers?.data?.map((layer: LayerResponseDataObject) => {
+                    const isActive = activeLayers?.includes(layer?.attributes?.slug);
+                    const onCheckedChange = onToggleLayer.bind(null, layer?.attributes?.slug) as (
                       isActive: boolean
                     ) => void;
                     const metadata = layer?.attributes?.metadata;

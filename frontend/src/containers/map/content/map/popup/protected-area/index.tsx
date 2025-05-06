@@ -10,13 +10,13 @@ import { layersInteractiveIdsAtom, popupAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { format } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
-import { useGetLayersId } from '@/types/generated/layer';
+import { useGetLayers } from '@/types/generated/layer';
 import { useGetLocations } from '@/types/generated/location';
 import { LayerTyped } from '@/types/layers';
 
 const TERMS_CLASSES = 'font-mono uppercase';
 
-const ProtectedAreaPopup: FCWithMessages<{ layerId: number }> = ({ layerId }) => {
+const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) => {
   const t = useTranslations('containers.map');
 
   const locale = useLocale();
@@ -27,22 +27,26 @@ const ProtectedAreaPopup: FCWithMessages<{ layerId: number }> = ({ layerId }) =>
   const popup = useAtomValue(popupAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
 
-  const layerQuery = useGetLayersId<{
+  const layerQuery = useGetLayers<{
     source: LayerTyped['config']['source'];
     click: LayerTyped['interaction_config']['events'][0];
   }>(
-    layerId,
     {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       locale,
+      filters: {
+        slug: {
+          $eq: layerSlug,
+        },
+      },
       populate: 'metadata',
     },
     {
       query: {
         select: ({ data }) => ({
-          source: (data.attributes as LayerTyped).config?.source,
-          click: (data.attributes as LayerTyped)?.interaction_config?.events.find(
+          source: (data[0].attributes as LayerTyped).config?.source,
+          click: (data[0].attributes as LayerTyped)?.interaction_config?.events.find(
             (ev) => ev.type === 'click'
           ),
         }),

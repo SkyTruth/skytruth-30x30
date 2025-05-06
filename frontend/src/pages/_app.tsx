@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 
 import { QueryClient, QueryClientProvider, Hydrate } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
+import { NuqsAdapter } from 'nuqs/adapters/next/pages';
 
 import 'styles/globals.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -55,16 +56,18 @@ const App: React.FC<AppProps> = ({ Component, pageProps }: Props) => {
         }
       `}</style>
       <NextIntlClientProvider locale={router.locale} messages={pageProps.messages}>
-        <QueryClientProvider client={queryClient}>
-          <Hydrate state={pageProps.dehydratedState}>
-            <MapProvider>
-              <Analytics />
-              <Layout {...layoutProps}>
-                <Component {...pageProps} />
-              </Layout>
-            </MapProvider>
-          </Hydrate>
-        </QueryClientProvider>
+        <NuqsAdapter>
+          <QueryClientProvider client={queryClient}>
+            <Hydrate state={pageProps.dehydratedState}>
+              <MapProvider>
+                <Analytics />
+                <Layout {...layoutProps}>
+                  <Component {...pageProps} />
+                </Layout>
+              </MapProvider>
+            </Hydrate>
+          </QueryClientProvider>
+        </NuqsAdapter>
       </NextIntlClientProvider>
     </>
   );
