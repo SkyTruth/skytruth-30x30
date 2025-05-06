@@ -185,6 +185,10 @@ locals {
   }]
 
   depends_on = [module.postgres_application_user_password]
+
+  data_processing_cloud_function_env = {
+    PP_API_KEY      = false
+  }
 }
 
 locals {
@@ -286,4 +290,70 @@ module "analysis_cloud_function" {
   max_instance_request_concurrency = var.analysis_function_max_instance_request_concurrency
 
   depends_on = [module.postgres_application_user_password]
+}
+
+
+locals {
+  test_cloud_function_env = {
+    TEST_ENV_VAR      = true
+  }
+}
+
+
+resource "google_vpc_access_connector" "connector" {
+  name          = "test-function-connector"
+  region        = var.gcp_region
+  network       = var.network_name
+  ip_cidr_range = "10.8.0.0/28"
+}
+
+
+module "data_pipes_cloud_function" {
+  source                           = "../cloudfunction"
+  region                           = var.gcp_region
+  project                          = var.gcp_project_id
+  vpc_connector_name               = google_vpc_access_connector.connector.name
+  function_name                    = "${var.project_name}-data"
+  description                      = "Data Pipeline Cloud Function"
+  source_dir                       = "${path.root}/../../cloud_functions/data_processing"
+  runtime                          = "python312"
+  entry_point                      = "main"
+  runtime_environment_variables    = local.data_processing_cloud_function_env
+  timeout_seconds                  = var.data_processing_timeout_seconds
+  available_memory                 = var.data_processing_available_memory
+  available_cpu                    = var.data_processing_available_cpu
+  max_instance_count               = var.data_processing_max_instance_count
+  max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
+}
+
+module "download_marine_regions_scheduler" {
+  source                   = "../modules/cloud_scheduler"
+  name                     = "trigger-cloudrun-method"
+  schedule                 = "0 8 1 * *"
+  target_url               = module.cloud_run.url
+  invoker_service_account = "scheduler-invoker@your-project.iam.gserviceaccount.com"
+
+  headers = {
+    "Content-Type" = "application/json"
+  }
+
+  body = jsonencode({
+    method = "download_marine_regions"
+  })
+}
+
+module "download_mpatlas_scheduler" {
+  source                   = "../modules/cloud_scheduler"
+  name                     = "trigger-cloudrun-method"
+  schedule                 = "0 9 1 * *"
+  target_url               = module.cloud_run.url
+  invoker_service_account = "scheduler-invoker@your-project.iam.gserviceaccount.com"
+
+  headers = {
+    "Content-Type" = "application/json"
+  }
+
+  body = jsonencode({
+    method = "download_mpatlas"
+  })
 }
