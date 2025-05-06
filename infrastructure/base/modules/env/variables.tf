@@ -183,3 +183,9 @@ variable "data_processing_max_instance_request_concurrency" {
   default     = 80
   description = "Max instance request concurrency for the test function"
 }
+
+variable "scheduler_invoker_sa" {
+  type        = string
+  description = "Service account used by Cloud Scheduler"
+  default     = null
+}

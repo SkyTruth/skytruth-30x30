@@ -308,7 +308,7 @@ module "data_pipes_cloud_function" {
   vpc_connector_name               = google_vpc_access_connector.connector.name
   function_name                    = "${var.project_name}-data"
   description                      = "Data Pipeline Cloud Function"
-  source_dir                       = "${path.root}/../../cloud_functions/data_processing"
+  source_dir                       = "${path.root}/../../cloud_functions/test"
   runtime                          = "python312"
   entry_point                      = "main"
   runtime_environment_variables    = local.data_processing_cloud_function_env
@@ -324,7 +324,7 @@ module "download_mpatlas_scheduler" {
   name                     = "trigger-mpatlas-download-method"
   schedule                 = "0 9 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
-  invoker_service_account = "scheduler-invoker@your-project.iam.gserviceaccount.com"
+  invoker_service_account  = var.scheduler_invoker_sa
 
   headers = {
     "Content-Type" = "application/json"
