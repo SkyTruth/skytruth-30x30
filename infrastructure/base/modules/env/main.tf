@@ -287,3 +287,94 @@ module "analysis_cloud_function" {
 
   depends_on = [module.postgres_application_user_password]
 }
+
+resource "google_storage_bucket" "data_bucket" {
+  name     = "${var.project_name}-data-processing"
+  location = var.gcp_region
+  project  = var.gcp_project_id
+  force_destroy = false
+  uniform_bucket_level_access = true
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+locals {
+  data_processing_cloud_function_env = {
+    BUCKET = google_storage_bucket.data_bucket.name
+    PROJECT = var.gcp_project_id
+  }
+  data_processing_cloud_function_secrets = [{
+    key        = "PP_API_KEY"
+    project_id = var.gcp_project_id
+    secret     = "protected-planet-api-key"
+    version    = "latest"
+  }]
+}
+
+module "data_pipes_cloud_function" {
+  source                           = "../cloudfunction"
+  region                           = var.gcp_region
+  project                          = var.gcp_project_id
+  vpc_connector_name               = module.network.vpc_access_connector_name
+  function_name                    = "${var.project_name}-data"
+  description                      = "Data Pipeline Cloud Function"
+  source_dir                       = "${path.root}/../../cloud_functions/data_processing"
+  runtime                          = "python312"
+  entry_point                      = "main"
+  runtime_environment_variables    = local.data_processing_cloud_function_env
+  secrets                          = local.data_processing_cloud_function_secrets
+  timeout_seconds                  = var.data_processing_timeout_seconds
+  available_memory                 = var.data_processing_available_memory
+  available_cpu                    = var.data_processing_available_cpu
+  max_instance_count               = var.data_processing_max_instance_count
+  max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
+}
+
+resource "google_storage_bucket_iam_member" "function_writer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
+}
+
+resource "google_service_account" "scheduler_invoker" {
+  account_id   = "${var.project_name}-scheduler-sa"
+  display_name = "${var.project_name} Cloud Scheduler Invoker"
+}
+
+resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
+  project        = var.gcp_project_id
+  location       = var.gcp_region
+  cloud_function = module.data_pipes_cloud_function.function_name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "serviceAccount:${google_service_account.scheduler_invoker.email}"
+}
+
+module "download_mpatlas_scheduler" {
+  source                   = "../cloud_scheduler"
+  name                     = "trigger-mpatlas-download-method"
+  schedule                 = "0 8 1 * *"
+  target_url               = module.data_pipes_cloud_function.function_uri
+  invoker_service_account  = google_service_account.scheduler_invoker.email
+  headers = {
+    "Content-Type" = "application/json"
+  }
+  body = jsonencode({
+    METHOD = "download_mpatlas"
+  })
+}
+
+module "download_protected_planet_wdpa_scheduler" {
+  source                   = "../cloud_scheduler"
+  name                     = "trigger-wdpa-download-method"
+  schedule                 = "0 9 1 * *"
+  target_url               = module.data_pipes_cloud_function.function_uri
+  invoker_service_account  = google_service_account.scheduler_invoker.email
+  headers = {
+    "Content-Type" = "application/json"
+  }
+  body = jsonencode({
+    METHOD = "download_protected_planet_wdpa"
+  })
+}
