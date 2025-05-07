@@ -26,7 +26,7 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
   const popup = useAtomValue(popupAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
 
-  const layerQuery = useGetLayers<{
+  const {data: layerQuery, isFetching} = useGetLayers<{
     source: LayerTyped['config']['source'];
     click: LayerTyped['interaction_config']['events'][0];
   }>(
@@ -53,7 +53,12 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
     }
   );
 
-  const { source } = layerQuery.data;
+  let source = undefined;
+
+  if (!isFetching) {
+    source = layerQuery?.source;
+
+  }
 
   const DATA = useMemo(() => {
     if (source?.type === 'vector' && rendered && popup && map) {
