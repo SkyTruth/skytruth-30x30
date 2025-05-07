@@ -185,10 +185,6 @@ locals {
   }]
 
   depends_on = [module.postgres_application_user_password]
-
-  data_processing_cloud_function_env = {
-    PP_API_KEY      = false
-  }
 }
 
 locals {
@@ -292,6 +288,25 @@ module "analysis_cloud_function" {
   depends_on = [module.postgres_application_user_password]
 }
 
+resource "google_storage_bucket" "data_bucket" {
+  name     = "${var.project_name}-data-processing"
+  location = var.gcp_region
+  project  = var.gcp_project_id
+  force_destroy = false
+  uniform_bucket_level_access = true
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+locals {
+  data_processing_cloud_function_env = {
+    PP_API_KEY      = false,
+    BUCKET = google_storage_bucket.data_bucket.name
+  }
+}
+
 module "data_pipes_cloud_function" {
   source                           = "../cloudfunction"
   region                           = var.gcp_region
@@ -299,7 +314,7 @@ module "data_pipes_cloud_function" {
   vpc_connector_name               = module.network.vpc_access_connector_name
   function_name                    = "${var.project_name}-data"
   description                      = "Data Pipeline Cloud Function"
-  source_dir                       = "${path.root}/../../cloud_functions/test"
+  source_dir                       = "${path.root}/../../cloud_functions/data_processing"
   runtime                          = "python312"
   entry_point                      = "main"
   runtime_environment_variables    = local.data_processing_cloud_function_env
@@ -308,6 +323,12 @@ module "data_pipes_cloud_function" {
   available_cpu                    = var.data_processing_available_cpu
   max_instance_count               = var.data_processing_max_instance_count
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
+}
+
+resource "google_storage_bucket_iam_member" "function_writer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
 resource "google_service_account" "scheduler_invoker" {
@@ -326,7 +347,7 @@ resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
 module "download_mpatlas_scheduler" {
   source                   = "../cloud_scheduler"
   name                     = "trigger-mpatlas-download-method"
-  schedule                 = "0 * * * *" #"0 9 1 * *"
+  schedule                 = "0 8 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
 
@@ -335,6 +356,6 @@ module "download_mpatlas_scheduler" {
   }
 
   body = jsonencode({
-    METHOD = "download_mpatlas"
+    METHOD = "dry_run"
   })
 }

@@ -191,7 +191,9 @@ def main(request):
     data = request.get_json(silent=True) or {}
     method = data.get("METHOD", "default")
 
-    if method == "download_marine_regions":
+    if method == "dry_run":
+        print("Dry Run Complete!")
+    elif method == "download_marine_regions":
         download_marine_regions(
             eez_zipfile_name=EEZ_ZIPFILE_NAME,
             high_seas_zipfile_name=HIGH_SEAS_ZIPFILE_NAME,

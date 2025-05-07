@@ -162,7 +162,7 @@ variable "data_processing_timeout_seconds" {
 
 variable "data_processing_available_memory" {
   type        = string
-  default     = "128Mi"
+  default     = "256Mi"
   description = "Available memory for the data processing function"
 }
 

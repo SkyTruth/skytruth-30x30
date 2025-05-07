@@ -13,3 +13,7 @@ locals {
 output "function_service_name" {
   value = element(local.service_name_split, length(local.service_name_split) - 1)
 }
+
+output "service_account_email" {
+  value = google_cloudfunctions2_function.function.service_config[0].service_account_email
+}
