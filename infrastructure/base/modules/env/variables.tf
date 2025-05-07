@@ -180,6 +180,6 @@ variable "data_processing_max_instance_request_concurrency" {
 
 variable "scheduler_invoker_sa" {
   type        = string
-  description = "Service account used by Cloud Scheduler"
   default     = null
+  description = "Service account used by Cloud Scheduler"
 }
