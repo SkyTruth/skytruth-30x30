@@ -365,10 +365,24 @@ module "download_mpatlas_scheduler" {
   })
 }
 
+module "download_protected_seas_scheduler" {
+  source                   = "../cloud_scheduler"
+  name                     = "trigger-protected-seas-download-method"
+  schedule                 = "0 9 1 * *"
+  target_url               = module.data_pipes_cloud_function.function_uri
+  invoker_service_account  = google_service_account.scheduler_invoker.email
+  headers = {
+    "Content-Type" = "application/json"
+  }
+  body = jsonencode({
+    METHOD = "download_protected_seas"
+  })
+}
+
 module "download_protected_planet_wdpa_scheduler" {
   source                   = "../cloud_scheduler"
   name                     = "trigger-wdpa-download-method"
-  schedule                 = "0 9 1 * *"
+  schedule                 = "0 10 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
   headers = {

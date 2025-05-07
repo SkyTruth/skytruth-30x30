@@ -194,6 +194,8 @@ def main(request):
     if method == "dry_run":
         print("Dry Run Complete!")
     elif method == "download_marine_regions":
+        # TODO: currently no infra for this because they are essentially static
+        # May keep this as a manual process
         download_marine_regions(
             eez_zipfile_name=EEZ_ZIPFILE_NAME,
             high_seas_zipfile_name=HIGH_SEAS_ZIPFILE_NAME,
