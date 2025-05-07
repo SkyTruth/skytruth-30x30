@@ -4,8 +4,6 @@ import requests
 import time
 
 from params import (
-    BUCKET,
-    PROJECT,
     MARINE_REGIONS_url,
     MARINE_REGIONS_body,
     MARINE_REGIONS_headers,
@@ -33,7 +31,9 @@ from utils import (
 )
 
 verbose = True
-PP_API_KEY = os.getenv("PP_API_KEY", None)
+PP_API_KEY = os.getenv("PP_API_KEY", "")
+BUCKET = os.getenv("BUCKET", "")
+PROJECT = os.getenv("PROJECT", "")
 
 
 def download_eezs(blob_name=EEZ_ZIPFILE_NAME, verbose=True):

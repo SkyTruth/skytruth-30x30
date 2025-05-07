@@ -2,9 +2,6 @@ import datetime
 
 today_formatted = datetime.datetime.today().strftime("%b%Y")
 
-BUCKET = "skytruth-30x30-data"
-PROJECT = "30x30"
-
 # Marine region data versions: https://www.marineregions.org/stats_downloads.php
 MARINE_REGIONS_url = "https://www.marineregions.org/download_file.php"
 MARINE_REGIONS_headers = {

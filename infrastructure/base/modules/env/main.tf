@@ -302,9 +302,15 @@ resource "google_storage_bucket" "data_bucket" {
 
 locals {
   data_processing_cloud_function_env = {
-    PP_API_KEY      = false,
     BUCKET = google_storage_bucket.data_bucket.name
+    PROJECT = var.gcp_project_id
   }
+  data_processing_cloud_function_secrets = [{
+    key        = "PP_API_KEY"
+    project_id = var.gcp_project_id
+    secret     = "protected-planet-api-key"
+    version    = "latest"
+  }]
 }
 
 module "data_pipes_cloud_function" {
@@ -318,6 +324,7 @@ module "data_pipes_cloud_function" {
   runtime                          = "python312"
   entry_point                      = "main"
   runtime_environment_variables    = local.data_processing_cloud_function_env
+  secrets                          = local.data_processing_cloud_function_secrets
   timeout_seconds                  = var.data_processing_timeout_seconds
   available_memory                 = var.data_processing_available_memory
   available_cpu                    = var.data_processing_available_cpu
@@ -350,12 +357,24 @@ module "download_mpatlas_scheduler" {
   schedule                 = "0 8 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
-
   headers = {
     "Content-Type" = "application/json"
   }
-
   body = jsonencode({
-    METHOD = "dry_run"
+    METHOD = "download_mpatlas"
+  })
+}
+
+module "download_protected_planet_wdpa_scheduler" {
+  source                   = "../cloud_scheduler"
+  name                     = "trigger-wdpa-download-method"
+  schedule                 = "0 9 1 * *"
+  target_url               = module.data_pipes_cloud_function.function_uri
+  invoker_service_account  = google_service_account.scheduler_invoker.email
+  headers = {
+    "Content-Type" = "application/json"
+  }
+  body = jsonencode({
+    METHOD = "download_protected_planet_wdpa"
   })
 }

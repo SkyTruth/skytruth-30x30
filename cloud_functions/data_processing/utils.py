@@ -13,7 +13,7 @@ import geopandas as gpd
 import fsspec
 from google.api_core.retry import Retry
 
-from params import PROJECT
+PROJECT = os.getenv("PROJECT", "")
 
 
 class TqdmBytesIO(BytesIO):

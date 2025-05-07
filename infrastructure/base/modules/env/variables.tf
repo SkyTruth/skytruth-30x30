@@ -156,19 +156,19 @@ variable "use_hello_world_image" {
 
 variable "data_processing_timeout_seconds" {
   type        = number
-  default     = 10
+  default     = 600
   description = "Timeout for the data processing function"
 }
 
 variable "data_processing_available_memory" {
   type        = string
-  default     = "256Mi"
+  default     = "8G"
   description = "Available memory for the data processing function"
 }
 
 variable "data_processing_available_cpu" {
   type        = number
-  default     = 1
+  default     = 2
   description = "Available cpu for the data processing function"
 }
 
