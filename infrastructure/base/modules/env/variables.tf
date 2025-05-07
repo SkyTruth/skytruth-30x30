@@ -31,12 +31,6 @@ variable "tf_state_prefix" {
   description = "The prefix for the TF state in the Google Storage Bucket"
 }
 
-variable "network_name" {
-  description = "Name of the VPC network to connect to"
-  type        = string
-  default     = "default"
-}
-
 variable "dns_zone_name" {
   type        = string
   description = "Name for the GCP DNS Zone"
