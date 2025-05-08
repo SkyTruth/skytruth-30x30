@@ -76,3 +76,9 @@ variable "tag" {
   type        = string
   description = "Tag name to use for docker image tagging and deployment"
 }
+
+variable "cloudrun_memory_limit" {
+  type        = string
+  description = "Memory limit for the Cloud Run service"
+  default     = "512Mi"
+}

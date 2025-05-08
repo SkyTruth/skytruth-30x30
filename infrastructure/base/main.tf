@@ -33,6 +33,7 @@ module "staging" {
   database_name                                      = "strapi"
   database_user                                      = "strapi"
   use_hello_world_image                              = false
+  cloudrun_memory_limit                              = "1Gi"
 }
 
 module "production" {

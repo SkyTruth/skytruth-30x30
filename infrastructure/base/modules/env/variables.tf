@@ -147,3 +147,9 @@ variable "use_hello_world_image" {
   default     = false
   description = "Use the hello-world image for the cloud run service"
 }
+
+variable "cloudrun_memory_limit" {
+  type        = string
+  default     = "512Mi"
+  description = "Memory limit for the cloud run service"
+}
