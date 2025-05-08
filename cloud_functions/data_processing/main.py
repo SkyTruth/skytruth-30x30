@@ -1,3 +1,4 @@
+from io import BytesIO
 import os
 import pandas as pd
 import requests
@@ -21,6 +22,9 @@ from params import (
     WDPA_FILE_NAME,
     ARCHIVE_WDPA_FILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
+    WDPA_GLOBAL_LEVEL_URL,
+    WDPA_GLOBAL_LEVEL_FILE_NAME,
+    ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
 )
 from utils.gcp import (
@@ -37,6 +41,9 @@ PROJECT = os.getenv("PROJECT", "")
 
 
 def download_eezs(blob_name=EEZ_ZIPFILE_NAME, verbose=True):
+    """
+    Downloads eez polygon zipfile from Marine Regions
+    """
     download_zip_to_gcs(
         MARINE_REGIONS_url,
         BUCKET,
@@ -50,6 +57,9 @@ def download_eezs(blob_name=EEZ_ZIPFILE_NAME, verbose=True):
 
 
 def download_high_seas(blob_name=HIGH_SEAS_ZIPFILE_NAME, verbose=True):
+    """
+    Downloads High Seas polygon zipfile from Marine Regions
+    """
     download_zip_to_gcs(
         MARINE_REGIONS_url,
         BUCKET,
@@ -60,13 +70,6 @@ def download_high_seas(blob_name=HIGH_SEAS_ZIPFILE_NAME, verbose=True):
         chunk_size=8192,
         verbose=verbose,
     )
-
-
-def download_marine_regions(
-    eez_zipfile_name=EEZ_ZIPFILE_NAME, high_seas_zipfile_name=HIGH_SEAS_ZIPFILE_NAME, verbose=True
-):
-    download_eezs(blob_name=eez_zipfile_name, verbose=verbose)
-    download_high_seas(blob_name=high_seas_zipfile_name, verbose=verbose)
 
 
 def download_mpatlas(
@@ -99,6 +102,10 @@ def download_protected_seas(
     project=PROJECT,
     verbose=True,
 ):
+    """
+    Download Protected Seas data from website and saves zipfile to a current
+    file for calculations as well as an archive file
+    """
     r = requests.get(url)
     r.raise_for_status()
 
@@ -120,6 +127,10 @@ def download_protected_planet_wdpa(
     chunk_size=8192,
     verbose=True,
 ):
+    """
+    Download WDPA polygons from Protected Planet API and saves zipfile to a current
+    file for calculations as well as an archive file
+    """
     filename = archive_blob_name.split("/")[-1]
     url = f"https://d1gam3xoknrgr2.cloudfront.net/current/{filename}"
 
@@ -129,17 +140,32 @@ def download_protected_planet_wdpa(
     duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
 
 
+def download_protected_planet_global(
+    current_filename, archive_filename, project_id=PROJECT, url=WDPA_GLOBAL_LEVEL_URL, bucket=BUCKET
+):
+    response = requests.get(url)
+    response.raise_for_status()
+    data = pd.read_csv(BytesIO(response.content))
+
+    upload_dataframe(bucket, data, current_filename, project_id=project_id, verbose=True)
+    duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+
+
 def download_protected_planet_country(
     current_filename,
     archive_filename,
     pp_api_key,
-    val,
+    val="countries",
     bucket=BUCKET,
     project=PROJECT,
     url=WDPA_API_URL,
     per_page=50,
     verbose=True,
 ):
+    """
+    Download country level stats from Protected Planet API and saves to a current
+    file for calculations as well as an archive file
+    """
     page = 1
     all_areas = []
     while True:
@@ -171,6 +197,39 @@ def download_protected_planet_country(
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
 
 
+def download_protected_planet_aggregates(
+    protected_planet_global_filename,
+    protected_planet_global_archive_filename,
+    protected_planet_country_filename,
+    protected_planet_country_archive_filename,
+    pp_api_key=PP_API_KEY,
+    project_id=PROJECT,
+    url=WDPA_GLOBAL_LEVEL_URL,
+    api_url=WDPA_API_URL,
+    bucket=BUCKET,
+    per_page=50,
+    verbose=True,
+):
+    download_protected_planet_global(
+        protected_planet_global_filename,
+        protected_planet_global_archive_filename,
+        project_id=project_id,
+        url=url,
+        bucket=bucket,
+    )
+    download_protected_planet_country(
+        protected_planet_country_filename,
+        protected_planet_country_archive_filename,
+        pp_api_key,
+        val="countries",
+        bucket=bucket,
+        project=project_id,
+        url=api_url,
+        per_page=per_page,
+        verbose=verbose,
+    )
+
+
 def calculate_global_stats():
     return
 
@@ -193,14 +252,14 @@ def main(request):
 
     if method == "dry_run":
         print("Dry Run Complete!")
-    elif method == "download_marine_regions":
+    elif method == "download_eezs":
         # TODO: currently no infra for this because they are essentially static
         # May keep this as a manual process
-        download_marine_regions(
-            eez_zipfile_name=EEZ_ZIPFILE_NAME,
-            high_seas_zipfile_name=HIGH_SEAS_ZIPFILE_NAME,
-            verbose=verbose,
-        )
+        download_eezs(blob_name=EEZ_ZIPFILE_NAME, verbose=verbose)
+    elif method == "download_high_seas":
+        # TODO: currently no infra for this because they are essentially static
+        # May keep this as a manual process
+        download_high_seas(blob_name=HIGH_SEAS_ZIPFILE_NAME, verbose=verbose)
     elif method == "download_mpatlas":
         download_mpatlas(
             url=MPATLAS_URL,
@@ -226,17 +285,19 @@ def main(request):
             chunk_size=8192,
             verbose=verbose,
         )
-    elif method == "download_protected_planet_country":
-        download_protected_planet_country(
+    elif method == "download_protected_planet_aggregates":
+        download_protected_planet_aggregates(
+            WDPA_GLOBAL_LEVEL_FILE_NAME,
+            ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
             WDPA_COUNTRY_LEVEL_FILE_NAME,
             ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
-            PP_API_KEY,
-            "countries",
+            pp_api_key=PP_API_KEY,
+            project_id=PROJECT,
+            url=WDPA_GLOBAL_LEVEL_URL,
+            api_url=WDPA_API_URL,
             bucket=BUCKET,
-            project=PROJECT,
-            url=WDPA_API_URL,
             per_page=50,
-            verbose=verbose,
+            verbose=True,
         )
     elif method == "calculate_global_stats":
         calculate_global_stats()

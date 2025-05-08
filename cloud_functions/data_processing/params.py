@@ -65,10 +65,13 @@ ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted
 #                 Protected Planet (WDPA)
 # ------------------------------------------------------------
 WDPA_API_URL = "http://api.protectedplanet.net/v3/"
-ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
-ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_country_level.csv"
 WDPA_FILE_NAME = "raw/WDPA_Public.zip"
+ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
 WDPA_COUNTRY_LEVEL_FILE_NAME = "raw/WDPA_country_level.csv"
+ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_country_level.csv"
+WDPA_GLOBAL_LEVEL_FILE_NAME = "raw/WDPA_global_level.csv"
+ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_global_level.csv"
+WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_download"
 
 
 FISHING_PROTECTION_FILENAME = "intermediate/fishing_protection.csv"
