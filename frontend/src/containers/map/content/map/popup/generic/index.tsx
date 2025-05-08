@@ -26,7 +26,7 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
   const popup = useAtomValue(popupAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
 
-  const {data: layerQuery, isFetching} = useGetLayers<{
+  const { data: layerQuery, isFetching } = useGetLayers<{
     source: LayerTyped['config']['source'];
     click: LayerTyped['interaction_config']['events'][0];
   }>(
@@ -57,7 +57,6 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
 
   if (!isFetching) {
     source = layerQuery?.source;
-
   }
 
   const DATA = useMemo(() => {
