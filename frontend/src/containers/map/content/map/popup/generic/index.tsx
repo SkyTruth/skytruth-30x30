@@ -9,11 +9,11 @@ import { useLocale } from 'next-intl';
 import { layersInteractiveIdsAtom, popupAtom } from '@/containers/map/store';
 import { format } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
-import { useGetLayersId } from '@/types/generated/layer';
+import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped, InteractionConfig } from '@/types/layers';
 
-const GenericPopup: FCWithMessages<InteractionConfig & { layerId: number }> = ({
-  layerId,
+const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = ({
+  layerSlug,
   ...restConfig
 }) => {
   const [rendered, setRendered] = useState(false);
@@ -26,22 +26,26 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerId: number }> = ({
   const popup = useAtomValue(popupAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
 
-  const layerQuery = useGetLayersId<{
+  const { data: layerQuery, isFetching } = useGetLayers<{
     source: LayerTyped['config']['source'];
     click: LayerTyped['interaction_config']['events'][0];
   }>(
-    layerId,
     {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       locale,
+      filters: {
+        slug: {
+          $eq: layerSlug,
+        },
+      },
       populate: 'metadata',
     },
     {
       query: {
         select: ({ data }) => ({
-          source: (data.attributes as LayerTyped).config?.source,
-          click: (data.attributes as LayerTyped)?.interaction_config?.events.find(
+          source: (data[0].attributes as LayerTyped).config?.source,
+          click: (data[0].attributes as LayerTyped)?.interaction_config?.events.find(
             (ev) => ev.type === 'click'
           ),
         }),
@@ -49,7 +53,11 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerId: number }> = ({
     }
   );
 
-  const { source } = layerQuery.data;
+  let source = undefined;
+
+  if (!isFetching) {
+    source = layerQuery?.source;
+  }
 
   const DATA = useMemo(() => {
     if (source?.type === 'vector' && rendered && popup && map) {

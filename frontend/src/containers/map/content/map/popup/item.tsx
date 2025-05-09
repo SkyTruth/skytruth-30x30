@@ -7,37 +7,47 @@ import GenericPopup from '@/containers/map/content/map/popup/generic';
 import ProtectedAreaPopup from '@/containers/map/content/map/popup/protected-area';
 import useResolvedConfig from '@/hooks/use-resolved-config';
 import { FCWithMessages } from '@/types';
-import { useGetLayersId } from '@/types/generated/layer';
+import { useGetLayers } from '@/types/generated/layer';
 import { InteractionConfig, LayerTyped } from '@/types/layers';
 
 export interface PopupItemProps {
-  id: number;
+  slug: string;
 }
-const PopupItem: FCWithMessages<PopupItemProps> = ({ id }) => {
+const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
   const locale = useLocale();
 
-  const { data } = useGetLayersId(id, {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    locale,
-    populate: 'metadata',
-  });
+  const { data: layer, isFetching } = useGetLayers(
+    {
+      //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      //   // @ts-ignore
+      filters: {
+        slug: {
+          $eq: slug,
+        },
+      },
+      locale,
+      sort: 'interaction_config',
+      populate: 'metadata',
+    },
+    {
+      query: {
+        select: ({ data }) => data[0]?.attributes,
+      },
+    }
+  );
 
-  const attributes = data?.data?.attributes as LayerTyped;
+  const configParams = useMemo(() => {
+    const interaction_config = !isFetching ? (layer as LayerTyped)?.interaction_config : {};
 
-  const { interaction_config, params_config } = attributes;
-
-  const configParams = useMemo(
-    () => ({
+    return {
       config: {
         ...interaction_config,
-        layerId: id,
+        layerSlug: slug,
       },
-      params_config,
+      params_config: !isFetching ? (layer as LayerTyped)?.params_config : null,
       settings: {},
-    }),
-    [id, interaction_config, params_config]
-  );
+    };
+  }, [slug, isFetching, layer]);
 
   const parsedConfig = useResolvedConfig<InteractionConfig | ReactElement>(configParams);
 

@@ -15,7 +15,7 @@ const Attributions: FC = () => {
     {
       locale,
       filters: {
-        id: {
+        slug: {
           $in: activeLayers,
         },
       },

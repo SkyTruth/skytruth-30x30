@@ -38,23 +38,26 @@ const MainMap: FCWithMessages = () => {
 
   const [{ bbox: URLBbox }, setMapSettings] = useSyncMapSettings();
   const [mapLayers, setMapLayers] = useSyncMapLayers();
+  const bounds = useMapBounds();
   const { default: map } = useMap();
-  const drawState = useAtomValue(drawStateAtom);
-  const [popup, setPopup] = useAtom(popupAtom);
-  const hoveredPolygonId = useRef<Parameters<typeof map.setFeatureState>[0] | null>(null);
-  const [cursor, setCursor] = useState<'grab' | 'crosshair' | 'pointer'>('grab');
-  const mountedRef = useRef(false);
 
+  const drawState = useAtomValue(drawStateAtom);
   const layersInteractive = useAtomValue(layersInteractiveAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
 
-  const bounds = useMapBounds();
+  const [popup, setPopup] = useAtom(popupAtom);
+
+  const [cursor, setCursor] = useState<'grab' | 'crosshair' | 'pointer'>('grab');
+
+  const hoveredPolygonId = useRef<Parameters<typeof map.setFeatureState>[0] | null>(null);
+  const mountedRef = useRef(false);
+  const previousDefaultLayersRef = useRef(null);
 
   const { data: layersInteractiveData } = useGetLayers(
     {
       locale,
       filters: {
-        id: {
+        slug: {
           $in: layersInteractive,
         },
       },
@@ -70,7 +73,7 @@ const MainMap: FCWithMessages = () => {
   const { data: defaultLayers } = useGetLayers(
     {
       locale,
-      fields: 'id',
+      fields: 'slug',
       filters: {
         default: {
           $eq: true,
@@ -82,12 +85,10 @@ const MainMap: FCWithMessages = () => {
     },
     {
       query: {
-        select: ({ data }) => data.map(({ id }) => id),
+        select: ({ data }) => data.map(({ attributes }) => attributes?.slug),
       },
     }
   );
-
-  const previousDefaultLayersRef = useRef(defaultLayers);
 
   // Once we have fetched from the CMS which layers are active by default, we set toggle them on, if
   // there are already no layers in the URL and we've just fetched

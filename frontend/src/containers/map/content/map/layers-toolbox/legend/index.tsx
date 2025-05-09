@@ -43,7 +43,7 @@ const Legend: FCWithMessages = () => {
       sort: 'title:asc',
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      fields: ['title', 'params_config'],
+      fields: ['title', 'params_config', 'slug'],
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
@@ -72,33 +72,33 @@ const Legend: FCWithMessages = () => {
       query: {
         select: ({ data }) =>
           data
-            .filter(({ id }) => activeLayers.includes(id))
+            .filter(({ attributes: { slug } }) => activeLayers.includes(slug))
             .sort((a, b) => {
-              const indexA = activeLayers.indexOf(a.id);
-              const indexB = activeLayers.indexOf(b.id);
+              const indexA = activeLayers.indexOf(a.attributes.slug);
+              const indexB = activeLayers.indexOf(b.attributes.slug);
               return indexA - indexB;
             }),
         placeholderData: { data: [] },
-        queryKey: ['layers', activeLayers],
+        queryKey: ['layers', locale, activeLayers],
         keepPreviousData: true,
       },
     }
   );
 
   const onRemoveLayer = useCallback(
-    (layerId: LayerResponseDataObject['id']) =>
+    (layerSlug: LayerResponseDataObject['attributes']['slug']) =>
       setMapLayers((currentLayers) => {
-        return currentLayers.filter((_layerId) => _layerId !== layerId);
+        return currentLayers.filter((slug) => slug !== layerSlug);
       }),
     [setMapLayers]
   );
 
   const onToggleLayerVisibility = useCallback(
-    (layerId: LayerResponseDataObject['id'], isVisible: boolean) => {
+    (layerSlug: LayerResponseDataObject['attributes']['slug'], isVisible: boolean) => {
       setLayerSettings((prev) => ({
         ...prev,
-        [layerId]: {
-          ...prev[layerId],
+        [layerSlug]: {
+          ...prev[layerSlug],
           visibility: isVisible,
         },
       }));
@@ -107,11 +107,11 @@ const Legend: FCWithMessages = () => {
   );
 
   const onChangeLayerOpacity = useCallback(
-    (layerId: LayerResponseDataObject['id'], opacity: number) => {
+    (layerSlug: LayerResponseDataObject['attributes']['slug'], opacity: number) => {
       setLayerSettings((prev) => ({
         ...prev,
-        [layerId]: {
-          ...prev[layerId],
+        [layerSlug]: {
+          ...prev[layerSlug],
           opacity,
         },
       }));
@@ -120,28 +120,28 @@ const Legend: FCWithMessages = () => {
   );
 
   const onMoveLayerDown = useCallback(
-    (layerId: LayerResponseDataObject['id']) => {
-      const layerIndex = activeLayers.findIndex((_layerId) => _layerId === layerId);
+    (layerSlug: LayerResponseDataObject['attributes']['slug']) => {
+      const layerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
       if (layerIndex === -1) {
         return;
       }
 
       setMapLayers((prev) => {
-        return prev.toSpliced(layerIndex, 1).toSpliced(layerIndex + 1, 0, layerId);
+        return prev.toSpliced(layerIndex, 1).toSpliced(layerIndex + 1, 0, layerSlug);
       });
     },
     [activeLayers, setMapLayers]
   );
 
   const onMoveLayerUp = useCallback(
-    (layerId: LayerResponseDataObject['id']) => {
-      const layerIndex = activeLayers.findIndex((_layerId) => _layerId === layerId);
+    (layerSlug: LayerResponseDataObject['attributes']['slug']) => {
+      const layerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
       if (layerIndex === -1) {
         return;
       }
 
       setMapLayers((prev) => {
-        return prev.toSpliced(layerIndex, 1).toSpliced(layerIndex - 1, 0, layerId);
+        return prev.toSpliced(layerIndex, 1).toSpliced(layerIndex - 1, 0, layerSlug);
       });
     },
     [activeLayers, setMapLayers]
@@ -155,16 +155,16 @@ const Legend: FCWithMessages = () => {
     return (
       <div>
         {layersQuery.data?.map(
-          ({ id, attributes: { title, legend_config, params_config } }, index) => {
+          ({ attributes: { title, legend_config, params_config, slug } }, index) => {
             const isFirst = index === 0;
             const isLast = index + 1 === layersQuery.data.length;
 
-            const isVisible = layerSettings[id]?.visibility !== false;
-            const opacity = layerSettings[id]?.opacity ?? 1;
+            const isVisible = layerSettings[slug]?.visibility !== false;
+            const opacity = layerSettings[slug]?.opacity ?? 1;
 
             return (
               <div
-                key={id}
+                key={slug}
                 className={cn({
                   'pb-3': index + 1 < activeLayers.length,
                   'pt-2': index > 0,
@@ -190,7 +190,7 @@ const Legend: FCWithMessages = () => {
                             variant="ghost"
                             size="icon-sm"
                             disabled={isFirst}
-                            onClick={() => onMoveLayerUp(id)}
+                            onClick={() => onMoveLayerUp(slug)}
                           >
                             <span className="sr-only">{t('move-up')}</span>
                             <Icon icon={ArrowTopIcon} className="h-3 w-3" />
@@ -205,7 +205,7 @@ const Legend: FCWithMessages = () => {
                             variant="ghost"
                             size="icon-sm"
                             disabled={isLast}
-                            onClick={() => onMoveLayerDown(id)}
+                            onClick={() => onMoveLayerDown(slug)}
                           >
                             <span className="sr-only">{t('move-down')}</span>
                             <Icon icon={ArrowDownIcon} className="h-3 w-3" />
@@ -231,7 +231,7 @@ const Legend: FCWithMessages = () => {
                               defaultValue={[opacity]}
                               max={1}
                               step={0.1}
-                              onValueCommit={([value]) => onChangeLayerOpacity(id, value)}
+                              onValueCommit={([value]) => onChangeLayerOpacity(slug, value)}
                             />
                           </PopoverContent>
                         </Popover>
@@ -242,7 +242,7 @@ const Legend: FCWithMessages = () => {
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            onClick={() => onToggleLayerVisibility(id, !isVisible)}
+                            onClick={() => onToggleLayerVisibility(slug, !isVisible)}
                           >
                             <span className="sr-only">{isVisible ? t('hide') : t('show')}</span>
                             {isVisible && <HiEye className="h-4 w-4" aria-hidden />}
@@ -258,7 +258,7 @@ const Legend: FCWithMessages = () => {
                             variant="ghost"
                             size="icon-sm"
                             onClick={() => {
-                              onRemoveLayer(id);
+                              onRemoveLayer(slug);
                             }}
                           >
                             <span className="sr-only">{t('remove')}</span>
