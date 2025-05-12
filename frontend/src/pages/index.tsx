@@ -9,10 +9,11 @@ import Section, {
   SectionDescription,
   SectionContent,
 } from '@/components/static-pages/section';
-import SubSection, { SubSectionContent, SubSectionDescription, SubSectionTitle} from '@/components/static-pages/sub-section';
-import TwoColSubsection from '@/components/static-pages/two-col-subsection';
-import EarthSurfaceCoverage from '@/containers/homepage/earth-surface-coverage';
-import InteractiveMap from '@/containers/homepage/interactive-map';
+import SubSection, {
+  SubSectionContent,
+  SubSectionDescription,
+  SubSectionTitle,
+} from '@/components/static-pages/sub-section';
 import Intro from '@/containers/homepage/intro';
 import LinkCards from '@/containers/homepage/link-cards';
 import useScrollSpy from '@/hooks/use-scroll-spy';
@@ -33,7 +34,6 @@ import {
   StaticIndicatorListResponse,
   ProtectionCoverageStatListResponse,
 } from '@/types/generated/strapi.schemas';
-import { Sub } from '@radix-ui/react-navigation-menu';
 
 const STATIC_INDICATOR_MAPPING = {
   biodiversity: 'species-threatened-with-extinction',
@@ -63,11 +63,6 @@ const Home: FCWithMessages = ({
     impact: {
       id: 'impact',
       name: t('impact'),
-      ref: useRef<HTMLDivElement>(null),
-    },
-    context: {
-      id: 'context',
-      name: t('context'),
       ref: useRef<HTMLDivElement>(null),
     },
   };
@@ -109,9 +104,7 @@ const Home: FCWithMessages = ({
       <Content>
         <Section ref={sections.services.ref}>
           <SectionTitle>{t('section-services-title')}</SectionTitle>
-          <SectionDescription>
-            {t.rich('section-services-description')}
-          </SectionDescription>
+          <SectionDescription>{t.rich('section-services-description')}</SectionDescription>
           <SectionContent>
             <LinkCards />
           </SectionContent>
@@ -119,10 +112,10 @@ const Home: FCWithMessages = ({
 
         <Section ref={sections.impact.ref}>
           <SectionTitle>{t('section-impact-title')}</SectionTitle>
-        <SubSection borderTop={true}>
+          <SubSection>
             <SubSectionTitle>{t('section-impact-subsection-1-title')}</SubSectionTitle>
             <SubSectionDescription>
-            <>
+              <>
                 <p>
                   {t.rich('section-impact-subsection-1-description-1', {
                     a1: (chunks) => (
@@ -150,7 +143,6 @@ const Home: FCWithMessages = ({
                     threatenedSpeciesPercentage: indicators?.biodiversity?.value,
                   })}
                 </p>
-                {/* <p className="mt-4 font-bold">{t('section-impact-subsection-1-description-2')}</p> */}
               </>
             </SubSectionDescription>
             <SubSectionContent>
@@ -159,9 +151,9 @@ const Home: FCWithMessages = ({
           </SubSection>
 
           <SubSection borderTop={true}>
-           <SubSectionTitle>{t('section-impact-subsection-2-title')}</SubSectionTitle>
+            <SubSectionTitle>{t('section-impact-subsection-2-title')}</SubSectionTitle>
             <SubSectionDescription>
-            <>
+              <>
                 <p>
                   {t.rich('section-impact-subsection-2-description-1', {
                     a1: (chunks) => (
@@ -194,12 +186,12 @@ const Home: FCWithMessages = ({
                 <p className="mt-4 font-bold">{t('section-impact-subsection-2-description-2')}</p>
               </SubSectionContent>
             </SubSectionDescription>
-            </SubSection>
+          </SubSection>
 
-            <SubSection borderTop={true}>
+          <SubSection borderTop={true}>
             <SubSectionTitle>{t('section-impact-subsection-3-title')}</SubSectionTitle>
             <SubSectionDescription>
-            <>
+              <>
                 <p>
                   {t.rich('section-impact-subsection-3-description-1', {
                     a1: (chunks) => (
@@ -235,27 +227,6 @@ const Home: FCWithMessages = ({
             </SubSectionContent>
           </SubSection>
         </Section>
-
-        <Section ref={sections.context.ref}>
-          <SectionTitle>{t('section-context-title')}</SectionTitle>
-          <SectionContent>
-            <TwoColSubsection
-              title={t('section-context-subsection-1-title')}
-              description={t('section-context-subsection-1-description')}
-            >
-              <EarthSurfaceCoverage />
-            </TwoColSubsection>
-          </SectionContent>
-
-          <TwoColSubsection
-            title={t('section-context-subsection-2-title')}
-            description={t('section-context-subsection-2-description')}
-          />
-
-          <SectionContent className="mt-10">
-            <InteractiveMap />
-          </SectionContent>
-        </Section>
       </Content>
     </Layout>
   );
@@ -266,7 +237,6 @@ Home.messages = [
   ...Layout.messages,
   ...Intro.messages,
   ...LinkCards.messages,
-  ...EarthSurfaceCoverage.messages,
 ];
 
 export const getServerSideProps: GetServerSideProps = async (context) => {

@@ -71,12 +71,7 @@
       "section-impact-subsection-2-description-2": "Protecting 30 percent of Earths’ biodiversity will not only preserve vital ecosystems, it will keep massive amounts of carbon out of the atmosphere and give us a fighting chance to prevent and adapt to the worst effects of climate change.",
       "section-impact-subsection-3-title": "Lives & livelihoods",
       "section-impact-subsection-3-description-1": "From fisheries, to forests, to agriculture, to tourism, 30x30 envisions a world where critical habitats are sustained and protected, continuing to provide flood protection, pollinators for crops, and fish and other food resources for billions of people.",
-      "section-impact-subsection-3-description-2": "Protecting 30 percent of Earth’s lands and waters will help safeguard the resources we need for future generations to survive and flourish in a better world.",
-      "section-context-title": "The path to protecting 30% of the ocean",
-      "section-context-subsection-1-title": "How big is the ocean?",
-      "section-context-subsection-1-description": "Covering 71 percent of the Earth’s surface, the ocean and its biodiversity stabilizes our climate, provides 51% of the oxygen we need to survive, and provides food and livelihoods for billions of people.",
-      "section-context-subsection-2-title": "How big is 30% of the ocean?",
-      "section-context-subsection-2-description": "Thirty percent (30%) of the ocean is the equivalent of South America, North America, Europe and Russia combined. This means 70 million square kilometres."
+      "section-impact-subsection-3-description-2": "Protecting 30 percent of Earth’s lands and waters will help safeguard the resources we need for future generations to survive and flourish in a better world."
     },
     "knowledge-hub": {
       "page-title": "Knowledge hub",
@@ -121,9 +116,6 @@
       "card-3-subtitle": "A navigation hub guiding users toward other helpful 30x30 resources.",
       "card-3-description": "The Knowledge Hub will link users to other 30x30-focused organizations and efforts, making it easier for stakeholders at all levels to discover and make use of advanced resources for monitoring, planning, and decision making.",
       "card-3-link": "Go to the Knowledge Hub"
-    },
-    "homepage-earth-surface-coverage": {
-      "percent-earth-surface-coverage": "<b>{percent}</b> Earth surface covered by oceans"
     },
     "knowledge-hub-card-filters": {
       "name": "Name",

@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, forwardRef } from 'react';
 
 import { cn } from '@/lib/classnames';
 
@@ -7,7 +7,8 @@ export type SubSectionProps = PropsWithChildren<{
 }>;
 
 const SubSection: React.FC<SubSectionProps> = ({ children, borderTop}) => (
-  <div className={cn('w-full border-black-65 px-8 py-3 md:mx-auto md:mb-10 md:max-w-7xl md:px-0', {
+  <div
+  className={cn('w-full border-black-65 px-8 py-3 md:mx-auto md:mb-10 md:max-w-7xl md:px-0', {
     'border-t': borderTop,
   })}>
     {children}
