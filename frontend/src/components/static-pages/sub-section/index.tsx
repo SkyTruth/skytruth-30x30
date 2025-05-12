@@ -30,12 +30,14 @@ const SubSectionDescription: React.FC<SubSectionDescriptionProps> = ({ children 
 
 export type SubSectionContentProps = PropsWithChildren<{
   isNumbered?: boolean;
+  className?: string;
 }>;
 
-const SubSectionContent: React.FC<SubSectionContentProps> = ({ isNumbered = false, children }) => (
+const SubSectionContent: React.FC<SubSectionContentProps> = ({ isNumbered = false, children, className }) => (
   <div
-    className={cn('flex max-h-[280px] w-full justify-center md:max-h-full', {
+    className={cn('flex max-h-[280px] w-full md:max-h-full', {
       'md:mt-16': isNumbered,
+      [className]: true,
     })}
   >
     {children}

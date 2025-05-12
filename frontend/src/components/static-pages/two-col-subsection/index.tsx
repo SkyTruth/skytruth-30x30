@@ -40,7 +40,7 @@ const TwoColSubSection: React.FC<TwoColSubSection> = ({
           {description && <SubSectionDescription>{description}</SubSectionDescription>}
         </div>
       </div>
-      <SubSectionContent isNumbered={isNumbered}>{children}</SubSectionContent>
+      <SubSectionContent isNumbered={isNumbered} className='md:w-[50%] justify-center'>{children}</SubSectionContent>
     </div>
   );
 };
