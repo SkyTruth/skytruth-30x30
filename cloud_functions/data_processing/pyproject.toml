@@ -1,0 +1,22 @@
+[project]
+name = "data-processing"
+version = "0.1.0"
+description = "Cloud function for agregating, processing, and updating data for the 30x30 Progress Tracker"
+authors = [
+    {name = "SkyTruth"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "requests (>=2.32.3,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.3.7"
+black = "^25.1.0"
+
