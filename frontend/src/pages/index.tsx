@@ -232,12 +232,7 @@ const Home: FCWithMessages = ({
   );
 };
 
-Home.messages = [
-  'pages.home',
-  ...Layout.messages,
-  ...Intro.messages,
-  ...LinkCards.messages,
-];
+Home.messages = ['pages.home', ...Layout.messages, ...Intro.messages, ...LinkCards.messages];
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const queryClient = new QueryClient();
