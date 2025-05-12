@@ -9,7 +9,7 @@ import Section, {
   SectionDescription,
   SectionContent,
 } from '@/components/static-pages/section';
-import StatsImage from '@/components/static-pages/stats-image';
+import SubSection, { SubSectionContent, SubSectionDescription, SubSectionTitle} from '@/components/static-pages/sub-section';
 import TwoColSubsection from '@/components/static-pages/two-col-subsection';
 import EarthSurfaceCoverage from '@/containers/homepage/earth-surface-coverage';
 import InteractiveMap from '@/containers/homepage/interactive-map';
@@ -33,6 +33,7 @@ import {
   StaticIndicatorListResponse,
   ProtectionCoverageStatListResponse,
 } from '@/types/generated/strapi.schemas';
+import { Sub } from '@radix-ui/react-navigation-menu';
 
 const STATIC_INDICATOR_MAPPING = {
   biodiversity: 'species-threatened-with-extinction',
@@ -109,10 +110,7 @@ const Home: FCWithMessages = ({
         <Section ref={sections.services.ref}>
           <SectionTitle>{t('section-services-title')}</SectionTitle>
           <SectionDescription>
-            {t.rich('section-services-description', {
-              b: (chunks) => <b>{chunks}</b>,
-              i: (chunks) => <i>{chunks}</i>,
-            })}
+            {t.rich('section-services-description')}
           </SectionDescription>
           <SectionContent>
             <LinkCards />
@@ -121,19 +119,16 @@ const Home: FCWithMessages = ({
 
         <Section ref={sections.impact.ref}>
           <SectionTitle>{t('section-impact-title')}</SectionTitle>
-
-          <TwoColSubsection
-            title={t('section-impact-subsection-1-title')}
-            itemNum={1}
-            itemTotal={3}
-            description={
-              <>
+        <SubSection borderTop={true}>
+            <SubSectionTitle>{t('section-impact-subsection-1-title')}</SubSectionTitle>
+            <SubSectionDescription>
+            <>
                 <p>
                   {t.rich('section-impact-subsection-1-description-1', {
                     a1: (chunks) => (
                       <a
                         className="underline"
-                        href={indicators?.biodiversityTextLand?.source}
+                        href={indicators?.biodiversity?.source}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -143,7 +138,7 @@ const Home: FCWithMessages = ({
                     a2: (chunks) => (
                       <a
                         className="underline"
-                        href={indicators?.biodiversity?.source}
+                        href={indicators?.biodiversityTextLand?.source}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -155,56 +150,90 @@ const Home: FCWithMessages = ({
                     threatenedSpeciesPercentage: indicators?.biodiversity?.value,
                   })}
                 </p>
-                <p className="mt-4 font-bold">{t('section-impact-subsection-1-description-2')}</p>
+                {/* <p className="mt-4 font-bold">{t('section-impact-subsection-1-description-2')}</p> */}
               </>
-            }
-          />
+            </SubSectionDescription>
+            <SubSectionContent>
+              <p className="mt-4 font-bold">{t('section-impact-subsection-1-description-2')}</p>
+            </SubSectionContent>
+          </SubSection>
 
-          <StatsImage
-            value={indicators?.biodiversity?.value}
-            description={indicators?.biodiversity?.description}
-            sourceLink={indicators?.biodiversity?.source}
-            image="stats1"
-            valueSize="small"
-          />
-
-          <TwoColSubsection
-            title={t('section-impact-subsection-2-title')}
-            itemNum={2}
-            itemTotal={3}
-            description={
-              <>
-                <p>{t('section-impact-subsection-2-description-1')}</p>
+          <SubSection borderTop={true}>
+           <SubSectionTitle>{t('section-impact-subsection-2-title')}</SubSectionTitle>
+            <SubSectionDescription>
+            <>
+                <p>
+                  {t.rich('section-impact-subsection-2-description-1', {
+                    a1: (chunks) => (
+                      <a
+                        className="underline"
+                        href={indicators?.biodiversity?.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                    a2: (chunks) => (
+                      <a
+                        className="underline"
+                        href={indicators?.biodiversityTextLand?.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                    protectedOceanPercentage,
+                    protectedLandPercentage: indicators?.biodiversityTextLand?.value,
+                    threatenedSpeciesPercentage: indicators?.biodiversity?.value,
+                  })}
+                </p>
+              </>
+              <SubSectionContent>
                 <p className="mt-4 font-bold">{t('section-impact-subsection-2-description-2')}</p>
-              </>
-            }
-          />
+              </SubSectionContent>
+            </SubSectionDescription>
+            </SubSection>
 
-          <StatsImage
-            value={indicators?.climate?.value}
-            description={indicators?.climate?.description}
-            sourceLink={indicators?.climate?.source}
-            image="stats2"
-          />
-
-          <TwoColSubsection
-            title={t('section-impact-subsection-3-title')}
-            itemNum={3}
-            itemTotal={3}
-            description={
-              <>
-                <p>{t('section-impact-subsection-3-description-1')}</p>
+            <SubSection borderTop={true}>
+            <SubSectionTitle>{t('section-impact-subsection-3-title')}</SubSectionTitle>
+            <SubSectionDescription>
+            <>
+                <p>
+                  {t.rich('section-impact-subsection-3-description-1', {
+                    a1: (chunks) => (
+                      <a
+                        className="underline"
+                        href={indicators?.biodiversity?.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                    a2: (chunks) => (
+                      <a
+                        className="underline"
+                        href={indicators?.biodiversityTextLand?.source}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                    protectedOceanPercentage,
+                    protectedLandPercentage: indicators?.biodiversityTextLand?.value,
+                    threatenedSpeciesPercentage: indicators?.biodiversity?.value,
+                  })}
+                </p>
                 <p className="mt-4 font-bold">{t('section-impact-subsection-3-description-2')}</p>
               </>
-            }
-          />
-
-          <StatsImage
-            value={indicators?.livesLivelihoods?.value}
-            description={indicators?.livesLivelihoods?.description}
-            sourceLink={indicators?.livesLivelihoods?.source}
-            image="stats3"
-          />
+            </SubSectionDescription>
+            <SubSectionContent>
+              <p className="mt-4 font-bold">{t('section-impact-subsection-3-description-2')}</p>\
+            </SubSectionContent>
+          </SubSection>
         </Section>
 
         <Section ref={sections.context.ref}>

@@ -1,32 +1,10 @@
 import { PropsWithChildren, ReactNode } from 'react';
 
-import { cn } from '@/lib/classnames';
-
-export type SubSectionTitleProps = PropsWithChildren;
-
-const SubSectionTitle: React.FC<SubSectionTitleProps> = ({ children }) => (
-  <h3 className="my-6 mb-8 mt-3 text-3xl font-extrabold md:mt-2">{children}</h3>
-);
-
-export type SubSectionDescriptionProps = PropsWithChildren;
-
-const SubSectionDescription: React.FC<SubSectionDescriptionProps> = ({ children }) => (
-  <div>{children}</div>
-);
-
-export type SubSectionContentProps = PropsWithChildren<{
-  isNumbered?: boolean;
-}>;
-
-const SubSectionContent: React.FC<SubSectionContentProps> = ({ isNumbered = false, children }) => (
-  <div
-    className={cn('flex max-h-[280px] w-full justify-center md:max-h-full md:w-[50%]', {
-      'md:mt-16': isNumbered,
-    })}
-  >
-    {children}
-  </div>
-);
+import {
+  SubSectionTitle,
+  SubSectionDescription,
+  SubSectionContent,
+} from '@/components/static-pages/sub-section';
 
 export type TwoColSubSection = PropsWithChildren<{
   title: string;
@@ -68,4 +46,3 @@ const TwoColSubSection: React.FC<TwoColSubSection> = ({
 };
 
 export default TwoColSubSection;
-export { SubSectionTitle, SubSectionDescription, SubSectionContent };
