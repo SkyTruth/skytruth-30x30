@@ -8,6 +8,11 @@ variable "github_project" {
   description = "Github project name"
 }
 
+variable "test_project_name" {
+  type        = string
+  description = "Name of the test project"
+}
+
 variable "staging_project_name" {
   type        = string
   description = "Name of the staging project"
@@ -54,4 +59,9 @@ variable "production_subdomain" {
 variable "uptime_alert_email" {
   type        = string
   description = "Email address to which uptime alerts should be sent"
+}
+
+variable "enable_test" {
+  type    = bool
+  default = false
 }

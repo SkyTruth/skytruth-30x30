@@ -5,6 +5,7 @@ gcp_project_id = "x30-399415"
 github_org     = "Vizzuality"
 github_project = "skytruth-30x30"
 
+test_project_name       = "x30-test"
 staging_project_name    = "x30-dev"
 production_project_name = "x30-prod"
 
