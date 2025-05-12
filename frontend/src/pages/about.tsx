@@ -11,8 +11,11 @@ import Section, {
   SectionContent,
 } from '@/components/static-pages/section';
 import StatsImage from '@/components/static-pages/stats-image';
+import SubSection, {
+  SubSectionContent,
+  SubSectionTitle,
+} from '@/components/static-pages/sub-section';
 import TwoColSubsection from '@/components/static-pages/two-col-subsection';
-import SubSection, {SubSectionContent, SubSectionTitle} from '@/components/static-pages/sub-section';
 import HighlightedText from '@/containers/about/highlighted-text';
 import Logo from '@/containers/about/logo';
 import LogosGrid from '@/containers/about/logos-grid';
@@ -228,19 +231,19 @@ const About: FCWithMessages = ({
           <SectionTitle>{t('section-team-and-funders-title')}</SectionTitle>
           <SectionDescription>{t('section-team-and-funders-description')}</SectionDescription>
 
-            <SubSection borderTop={true}>
-              <SubSectionTitle>{t('section-team-title')}</SubSectionTitle>
-              <SubSectionContent className='justify-left'>
+          <SubSection borderTop={true}>
+            <SubSectionTitle>{t('section-team-title')}</SubSectionTitle>
+            <SubSectionContent className="justify-left">
               <LogosGrid className="md:mt-8" type="team" columns={4} />
-              </SubSectionContent>
-            </SubSection>
+            </SubSectionContent>
+          </SubSection>
 
-            <SubSection borderTop={true}>
-              <SubSectionTitle>{t('section-funders-title')}</SubSectionTitle>
-              <SubSectionContent className='justify-left'>
-              <LogosGrid className="md:mt-8 justify-left" type="funders" columns={2} />
-              </SubSectionContent>
-            </SubSection>
+          <SubSection borderTop={true}>
+            <SubSectionTitle>{t('section-funders-title')}</SubSectionTitle>
+            <SubSectionContent className="justify-left">
+              <LogosGrid className="justify-left md:mt-8" type="funders" columns={2} />
+            </SubSectionContent>
+          </SubSection>
         </Section>
       </Content>
     </Layout>

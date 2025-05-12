@@ -1,4 +1,4 @@
-import { PropsWithChildren, forwardRef } from 'react';
+import { PropsWithChildren } from 'react';
 
 import { cn } from '@/lib/classnames';
 
@@ -33,7 +33,11 @@ export type SubSectionContentProps = PropsWithChildren<{
   className?: string;
 }>;
 
-const SubSectionContent: React.FC<SubSectionContentProps> = ({ isNumbered = false, children, className }) => (
+const SubSectionContent: React.FC<SubSectionContentProps> = ({
+  isNumbered = false,
+  children,
+  className,
+}) => (
   <div
     className={cn('flex max-h-[280px] w-full md:max-h-full', {
       'md:mt-16': isNumbered,
