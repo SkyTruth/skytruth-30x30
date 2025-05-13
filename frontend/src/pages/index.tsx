@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 import { GetServerSideProps } from 'next';
@@ -88,15 +88,27 @@ const Home: FCWithMessages = ({
     return indicators;
   }, [staticIndicators]);
 
-  const protectedOceanPercentage = useMemo(() => {
+   const extractCoverateStats = useCallback((env: string) => {
     const protectionCoverageStatsData = protectionCoverageStats?.data;
-
     if (!protectionCoverageStatsData?.length) return null;
+    
+    const stats = protectionCoverageStatsData.find(
+      (item) => item.attributes.environment?.data?.attributes?.slug === env
+    );
+    if (!stats) return null;
 
-    return formatPercentage(locale, protectionCoverageStatsData[0].attributes.coverage, {
+    return formatPercentage(locale, stats?.attributes?.coverage, {
       displayPercentageSign: false,
-    });
-  }, [locale, protectionCoverageStats]);
+      })
+    },[protectionCoverageStats, locale])
+
+  const protectedOceanPercentage = useMemo(() => (
+    extractCoverateStats('marine')
+  ), [extractCoverateStats]);
+
+  const protectedLandPercentage = useMemo(() => (
+    extractCoverateStats('terrestrial')
+  ), [extractCoverateStats]);
 
   return (
     <Layout theme="dark" hideLogo={true} hero={<Intro onScrollClick={handleIntroScrollClick} />}>
@@ -139,7 +151,7 @@ const Home: FCWithMessages = ({
                       </a>
                     ),
                     protectedOceanPercentage,
-                    protectedLandPercentage: indicators?.biodiversityTextLand?.value,
+                    protectedLandPercentage,
                     threatenedSpeciesPercentage: indicators?.biodiversity?.value,
                   })}
                 </p>
@@ -175,10 +187,7 @@ const Home: FCWithMessages = ({
                       >
                         {chunks}
                       </a>
-                    ),
-                    protectedOceanPercentage,
-                    protectedLandPercentage: indicators?.biodiversityTextLand?.value,
-                    threatenedSpeciesPercentage: indicators?.biodiversity?.value,
+                    )
                   })}
                 </p>
               </>
@@ -213,17 +222,13 @@ const Home: FCWithMessages = ({
                       >
                         {chunks}
                       </a>
-                    ),
-                    protectedOceanPercentage,
-                    protectedLandPercentage: indicators?.biodiversityTextLand?.value,
-                    threatenedSpeciesPercentage: indicators?.biodiversity?.value,
+                    )
                   })}
                 </p>
-                <p className="mt-4 font-bold">{t('section-impact-subsection-3-description-2')}</p>
               </>
             </SubSectionDescription>
             <SubSectionContent>
-              <p className="mt-4 font-bold">{t('section-impact-subsection-3-description-2')}</p>\
+              <p className="mt-4 font-bold">{t('section-impact-subsection-3-description-2')}</p>
             </SubSectionContent>
           </SubSection>
         </Section>
@@ -245,11 +250,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
       is_last_year: {
         $eq: true,
-      },
-      environment: {
-        slug: {
-          $eq: 'marine',
-        },
       },
     },
     populate: '*',

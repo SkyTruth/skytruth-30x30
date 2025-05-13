@@ -28,12 +28,19 @@ import {
   getGetStaticIndicatorsQueryKey,
   getGetStaticIndicatorsQueryOptions,
 } from '@/types/generated/static-indicator';
-import { StaticIndicator, StaticIndicatorListResponse } from '@/types/generated/strapi.schemas';
+import { StaticIndicator, StaticIndicatorListResponse, ProtectionCoverageStatListResponse } from '@/types/generated/strapi.schemas';
+import {
+  getGetProtectionCoverageStatsQueryKey,
+  getGetProtectionCoverageStatsQueryOptions,
+  getProtectionCoverageStats,
+} from '@/types/generated/protection-coverage-stat';
 
 const About: FCWithMessages = ({
   staticIndicators,
+  protectionCoverageStats
 }: {
   staticIndicators: StaticIndicatorListResponse;
+  protectionCoverageStats: ProtectionCoverageStatListResponse;
 }) => {
   const t = useTranslations('pages.about');
 
@@ -71,11 +78,19 @@ const About: FCWithMessages = ({
     sections.definition?.ref?.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const protectedWatersIndicator: StaticIndicator = useMemo(() => {
+  const protectedLandIndicator: StaticIndicator = useMemo(() => {
     return staticIndicators?.data?.find(
       ({ attributes }) => attributes.slug === 'terrestrial-inland-areas-protected'
     )?.attributes;
   }, [staticIndicators]);
+
+  const protectedLandPercentage = useMemo(() => {
+    const protectionCoverageStatsData = protectionCoverageStats?.data;
+
+    if (!protectionCoverageStatsData?.length) return null;
+    return protectionCoverageStatsData[0].attributes.coverage
+
+  }, [protectionCoverageStats]);
 
   return (
     <Layout
@@ -220,9 +235,9 @@ const About: FCWithMessages = ({
           </SectionContent>
 
           <StatsImage
-            value={protectedWatersIndicator?.value}
-            description={protectedWatersIndicator?.description}
-            sourceLink={protectedWatersIndicator?.source}
+            value={protectedLandPercentage}
+            description={protectedLandIndicator?.description}
+            sourceLink={protectedLandIndicator?.source}
             image="stats4"
             color="purple"
           />
@@ -255,10 +270,36 @@ About.messages = ['pages.about', ...Layout.messages, ...LogosGrid.messages];
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const queryClient = new QueryClient();
 
+    const protectionCoverageStatsQueryParams = {
+    locale: context.locale,
+    filters: {
+      location: {
+        code: 'GLOB',
+      },
+      is_last_year: {
+        $eq: true,
+      },
+      environment: {
+        slug: {
+          $eq: 'terrestrial',
+        },
+      }
+    },
+    populate: '*',
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    'sort[year]': 'desc',
+    'pagination[limit]': 1,
+  };
+
   await queryClient.prefetchQuery({
     ...getGetStaticIndicatorsQueryOptions({
       locale: context.locale,
     }),
+  });
+
+  await queryClient.prefetchQuery({
+    ...getGetProtectionCoverageStatsQueryOptions(protectionCoverageStatsQueryParams),
   });
 
   const staticIndicatorsData = queryClient.getQueryData<StaticIndicatorListResponse>(
@@ -267,9 +308,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     })
   );
 
+  const protectionCoverageStatsData = queryClient.getQueryData<ProtectionCoverageStatListResponse>(
+      getGetProtectionCoverageStatsQueryKey(protectionCoverageStatsQueryParams)
+    );
+
   return {
     props: {
       staticIndicators: staticIndicatorsData || { data: [] },
+      protectionCoverageStats: protectionCoverageStatsData || { data: [] },
       dehydratedState: dehydrate(queryClient),
       messages: await fetchTranslations(context.locale, About.messages),
     },
