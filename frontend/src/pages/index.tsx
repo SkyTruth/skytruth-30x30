@@ -88,27 +88,32 @@ const Home: FCWithMessages = ({
     return indicators;
   }, [staticIndicators]);
 
-   const extractCoverateStats = useCallback((env: string) => {
-    const protectionCoverageStatsData = protectionCoverageStats?.data;
-    if (!protectionCoverageStatsData?.length) return null;
-    
-    const stats = protectionCoverageStatsData.find(
-      (item) => item.attributes.environment?.data?.attributes?.slug === env
-    );
-    if (!stats) return null;
+  const extractCoverateStats = useCallback(
+    (env: string) => {
+      const protectionCoverageStatsData = protectionCoverageStats?.data;
+      if (!protectionCoverageStatsData?.length) return null;
 
-    return formatPercentage(locale, stats?.attributes?.coverage, {
-      displayPercentageSign: false,
-      })
-    },[protectionCoverageStats, locale])
+      const stats = protectionCoverageStatsData.find(
+        (item) => item.attributes.environment?.data?.attributes?.slug === env
+      );
+      if (!stats) return null;
 
-  const protectedOceanPercentage = useMemo(() => (
-    extractCoverateStats('marine')
-  ), [extractCoverateStats]);
+      return formatPercentage(locale, stats?.attributes?.coverage, {
+        displayPercentageSign: false,
+      });
+    },
+    [protectionCoverageStats, locale]
+  );
 
-  const protectedLandPercentage = useMemo(() => (
-    extractCoverateStats('terrestrial')
-  ), [extractCoverateStats]);
+  const protectedOceanPercentage = useMemo(
+    () => extractCoverateStats('marine'),
+    [extractCoverateStats]
+  );
+
+  const protectedLandPercentage = useMemo(
+    () => extractCoverateStats('terrestrial'),
+    [extractCoverateStats]
+  );
 
   return (
     <Layout theme="dark" hideLogo={true} hero={<Intro onScrollClick={handleIntroScrollClick} />}>
@@ -187,7 +192,7 @@ const Home: FCWithMessages = ({
                       >
                         {chunks}
                       </a>
-                    )
+                    ),
                   })}
                 </p>
               </>
@@ -222,7 +227,7 @@ const Home: FCWithMessages = ({
                       >
                         {chunks}
                       </a>
-                    )
+                    ),
                   })}
                 </p>
               </>

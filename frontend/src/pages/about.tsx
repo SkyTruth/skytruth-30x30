@@ -25,19 +25,22 @@ import Layout, { Sidebar, Content } from '@/layouts/static-page';
 import { fetchTranslations } from '@/lib/i18n';
 import { FCWithMessages } from '@/types';
 import {
+  getGetProtectionCoverageStatsQueryKey,
+  getGetProtectionCoverageStatsQueryOptions,
+  } from '@/types/generated/protection-coverage-stat';
+import {
   getGetStaticIndicatorsQueryKey,
   getGetStaticIndicatorsQueryOptions,
 } from '@/types/generated/static-indicator';
-import { StaticIndicator, StaticIndicatorListResponse, ProtectionCoverageStatListResponse } from '@/types/generated/strapi.schemas';
 import {
-  getGetProtectionCoverageStatsQueryKey,
-  getGetProtectionCoverageStatsQueryOptions,
-  getProtectionCoverageStats,
-} from '@/types/generated/protection-coverage-stat';
+  StaticIndicator,
+  StaticIndicatorListResponse,
+  ProtectionCoverageStatListResponse,
+} from '@/types/generated/strapi.schemas';
 
 const About: FCWithMessages = ({
   staticIndicators,
-  protectionCoverageStats
+  protectionCoverageStats,
 }: {
   staticIndicators: StaticIndicatorListResponse;
   protectionCoverageStats: ProtectionCoverageStatListResponse;
@@ -88,8 +91,7 @@ const About: FCWithMessages = ({
     const protectionCoverageStatsData = protectionCoverageStats?.data;
 
     if (!protectionCoverageStatsData?.length) return null;
-    return protectionCoverageStatsData[0].attributes.coverage
-
+    return protectionCoverageStatsData[0].attributes.coverage;
   }, [protectionCoverageStats]);
 
   return (
@@ -270,7 +272,7 @@ About.messages = ['pages.about', ...Layout.messages, ...LogosGrid.messages];
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const queryClient = new QueryClient();
 
-    const protectionCoverageStatsQueryParams = {
+  const protectionCoverageStatsQueryParams = {
     locale: context.locale,
     filters: {
       location: {
@@ -283,7 +285,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         slug: {
           $eq: 'terrestrial',
         },
-      }
+      },
     },
     populate: '*',
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -309,8 +311,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   );
 
   const protectionCoverageStatsData = queryClient.getQueryData<ProtectionCoverageStatListResponse>(
-      getGetProtectionCoverageStatsQueryKey(protectionCoverageStatsQueryParams)
-    );
+    getGetProtectionCoverageStatsQueryKey(protectionCoverageStatsQueryParams)
+  );
 
   return {
     props: {
