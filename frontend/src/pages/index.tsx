@@ -140,7 +140,6 @@ const Home: FCWithMessages = ({
                         className="underline"
                         href={indicators?.biodiversity?.source}
                         target="_blank"
-                        rel="noopener noreferrer"
                       >
                         {chunks}
                       </a>
@@ -150,7 +149,6 @@ const Home: FCWithMessages = ({
                         className="underline"
                         href={indicators?.biodiversityTextLand?.source}
                         target="_blank"
-                        rel="noopener noreferrer"
                       >
                         {chunks}
                       </a>
@@ -178,7 +176,6 @@ const Home: FCWithMessages = ({
                         className="underline"
                         href={indicators?.biodiversity?.source}
                         target="_blank"
-                        rel="noopener noreferrer"
                       >
                         {chunks}
                       </a>
@@ -188,7 +185,6 @@ const Home: FCWithMessages = ({
                         className="underline"
                         href={indicators?.biodiversityTextLand?.source}
                         target="_blank"
-                        rel="noopener noreferrer"
                       >
                         {chunks}
                       </a>
@@ -213,7 +209,6 @@ const Home: FCWithMessages = ({
                         className="underline"
                         href={indicators?.biodiversity?.source}
                         target="_blank"
-                        rel="noopener noreferrer"
                       >
                         {chunks}
                       </a>
@@ -223,7 +218,6 @@ const Home: FCWithMessages = ({
                         className="underline"
                         href={indicators?.biodiversityTextLand?.source}
                         target="_blank"
-                        rel="noopener noreferrer"
                       >
                         {chunks}
                       </a>
