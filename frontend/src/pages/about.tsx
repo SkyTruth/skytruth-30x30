@@ -27,7 +27,7 @@ import { FCWithMessages } from '@/types';
 import {
   getGetProtectionCoverageStatsQueryKey,
   getGetProtectionCoverageStatsQueryOptions,
-  } from '@/types/generated/protection-coverage-stat';
+} from '@/types/generated/protection-coverage-stat';
 import {
   getGetStaticIndicatorsQueryKey,
   getGetStaticIndicatorsQueryOptions,
