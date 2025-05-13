@@ -11,6 +11,10 @@ import Section, {
   SectionContent,
 } from '@/components/static-pages/section';
 import StatsImage from '@/components/static-pages/stats-image';
+import SubSection, {
+  SubSectionContent,
+  SubSectionTitle,
+} from '@/components/static-pages/sub-section';
 import TwoColSubsection from '@/components/static-pages/two-col-subsection';
 import HighlightedText from '@/containers/about/highlighted-text';
 import Logo from '@/containers/about/logo';
@@ -21,15 +25,25 @@ import Layout, { Sidebar, Content } from '@/layouts/static-page';
 import { fetchTranslations } from '@/lib/i18n';
 import { FCWithMessages } from '@/types';
 import {
+  getGetProtectionCoverageStatsQueryKey,
+  getGetProtectionCoverageStatsQueryOptions,
+} from '@/types/generated/protection-coverage-stat';
+import {
   getGetStaticIndicatorsQueryKey,
   getGetStaticIndicatorsQueryOptions,
 } from '@/types/generated/static-indicator';
-import { StaticIndicator, StaticIndicatorListResponse } from '@/types/generated/strapi.schemas';
+import {
+  StaticIndicator,
+  StaticIndicatorListResponse,
+  ProtectionCoverageStatListResponse,
+} from '@/types/generated/strapi.schemas';
 
 const About: FCWithMessages = ({
   staticIndicators,
+  protectionCoverageStats,
 }: {
   staticIndicators: StaticIndicatorListResponse;
+  protectionCoverageStats: ProtectionCoverageStatListResponse;
 }) => {
   const t = useTranslations('pages.about');
 
@@ -67,11 +81,18 @@ const About: FCWithMessages = ({
     sections.definition?.ref?.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const protectedWatersIndicator: StaticIndicator = useMemo(() => {
+  const protectedLandIndicator: StaticIndicator = useMemo(() => {
     return staticIndicators?.data?.find(
       ({ attributes }) => attributes.slug === 'terrestrial-inland-areas-protected'
     )?.attributes;
   }, [staticIndicators]);
+
+  const protectedLandPercentage = useMemo(() => {
+    const protectionCoverageStatsData = protectionCoverageStats?.data;
+
+    if (!protectionCoverageStatsData?.length) return null;
+    return protectionCoverageStatsData[0].attributes.coverage;
+  }, [protectionCoverageStats]);
 
   return (
     <Layout
@@ -216,9 +237,9 @@ const About: FCWithMessages = ({
           </SectionContent>
 
           <StatsImage
-            value={protectedWatersIndicator?.value}
-            description={protectedWatersIndicator?.description}
-            sourceLink={protectedWatersIndicator?.source}
+            value={protectedLandPercentage}
+            description={protectedLandIndicator?.description}
+            sourceLink={protectedLandIndicator?.source}
             image="stats4"
             color="purple"
           />
@@ -227,15 +248,19 @@ const About: FCWithMessages = ({
           <SectionTitle>{t('section-team-and-funders-title')}</SectionTitle>
           <SectionDescription>{t('section-team-and-funders-description')}</SectionDescription>
 
-          <SectionContent>
-            <TwoColSubsection title={t('section-team-title')} />
-            <LogosGrid className="md:mt-8" type="team" columns={4} />
-          </SectionContent>
+          <SubSection borderTop={true}>
+            <SubSectionTitle>{t('section-team-title')}</SubSectionTitle>
+            <SubSectionContent className="justify-left">
+              <LogosGrid className="md:mt-8" type="team" columns={4} />
+            </SubSectionContent>
+          </SubSection>
 
-          <SectionContent>
-            <TwoColSubsection title={t('section-funders-title')} />
-            <LogosGrid className="md:mt-8" type="funders" columns={2} />
-          </SectionContent>
+          <SubSection borderTop={true}>
+            <SubSectionTitle>{t('section-funders-title')}</SubSectionTitle>
+            <SubSectionContent className="justify-left">
+              <LogosGrid className="justify-left md:mt-8" type="funders" columns={2} />
+            </SubSectionContent>
+          </SubSection>
         </Section>
       </Content>
     </Layout>
@@ -247,10 +272,36 @@ About.messages = ['pages.about', ...Layout.messages, ...LogosGrid.messages];
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const queryClient = new QueryClient();
 
+  const protectionCoverageStatsQueryParams = {
+    locale: context.locale,
+    filters: {
+      location: {
+        code: 'GLOB',
+      },
+      is_last_year: {
+        $eq: true,
+      },
+      environment: {
+        slug: {
+          $eq: 'terrestrial',
+        },
+      },
+    },
+    populate: '*',
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    'sort[year]': 'desc',
+    'pagination[limit]': 1,
+  };
+
   await queryClient.prefetchQuery({
     ...getGetStaticIndicatorsQueryOptions({
       locale: context.locale,
     }),
+  });
+
+  await queryClient.prefetchQuery({
+    ...getGetProtectionCoverageStatsQueryOptions(protectionCoverageStatsQueryParams),
   });
 
   const staticIndicatorsData = queryClient.getQueryData<StaticIndicatorListResponse>(
@@ -259,9 +310,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     })
   );
 
+  const protectionCoverageStatsData = queryClient.getQueryData<ProtectionCoverageStatListResponse>(
+    getGetProtectionCoverageStatsQueryKey(protectionCoverageStatsQueryParams)
+  );
+
   return {
     props: {
       staticIndicators: staticIndicatorsData || { data: [] },
+      protectionCoverageStats: protectionCoverageStatsData || { data: [] },
       dehydratedState: dehydrate(queryClient),
       messages: await fetchTranslations(context.locale, About.messages),
     },
