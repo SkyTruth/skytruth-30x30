@@ -1,11 +1,11 @@
 """Class for managing API credentials and CRUD methods for the intenral strapi API"""
 
 import os
+
 import requests
 
 
 class Strapi:
-
     def __init__(self):
         self.ENV = "local"  # local | dev | prod
         self.PROJECT_ID = "x30-399415"
@@ -36,12 +36,16 @@ class Strapi:
             response_data = response.json()
             return response_data.get("jwt")
         except Exception as excep:
-            print(f"Failed to authenticate with 30x30 API ", excep)
+            print("Failed to authenticate with 30x30 API ", excep)
 
     def fishing_protection_stats(self, location: str) -> dict[str:any]:
         """"""
         try:
-            path = f"locations?filters[code]={location}&populate[fishing_protection_level_stats][populate][fishing_protection_level]=*&fields=code"
+            path = (
+                f"locations?filters[code]={location}"
+                "&populate[fishing_protection_level_stats][populate][fishing_protection_level]"
+                "=*&fields=code"
+            )
             response = requests.get(
                 f"{self.BASE_URLS.get(self.ENV)}{path}",
             )

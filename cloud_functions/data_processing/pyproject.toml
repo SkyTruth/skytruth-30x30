@@ -17,6 +17,10 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-pylint = "^3.3.7"
-black = "^25.1.0"
+ruff = "^0.11.9"
 
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM", "I"]
+
+[tool.ruff]
+line-length = 100
