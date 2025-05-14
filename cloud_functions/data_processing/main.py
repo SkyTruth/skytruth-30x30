@@ -489,41 +489,17 @@ def main(request: Request) -> Tuple[str, int]:
                     verbose=verbose,
                 )
 
+            case "download_habitats":
+                download_habitats(verbose=verbose)
+
             case "download_mpatlas":
-                download_mpatlas(
-                    url=MPATLAS_URL,
-                    bucket=BUCKET,
-                    filename=MPATLAS_FILE_NAME,
-                    archive_filename=ARCHIVE_MPATLAS_FILE_NAME,
-                    verbose=verbose,
-                )
+                download_mpatlas(verbose=verbose)
 
             case "download_protected_seas":
-                download_protected_seas(
-                    url=PROTECTED_SEAS_URL,
-                    bucket=BUCKET,
-                    filename=PROTECTED_SEAS_FILE_NAME,
-                    archive_filename=ARCHIVE_PROTECTED_SEAS_FILE_NAME,
-                    project=PROJECT,
-                    verbose=verbose,
-                )
+                download_protected_seas(verbose=verbose)
 
             case "download_protected_planet_wdpa":
-                download_protected_planet(
-                    wdpa_global_level_file_name=WDPA_GLOBAL_LEVEL_FILE_NAME,
-                    archive_wdpa_global_level_file_name=ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
-                    wdpa_country_level_file_name=WDPA_COUNTRY_LEVEL_FILE_NAME,
-                    archive_wdpa_country_level_file_name=ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
-                    pp_api_key=PP_API_KEY,
-                    project_id=PROJECT,
-                    wdpa_global_url=WDPA_GLOBAL_LEVEL_URL,
-                    wdpa_url=WDPA_URL,
-                    api_url=WDPA_API_URL,
-                    wdpa_file_name=WDPA_FILE_NAME,
-                    archive_wdpa_file_name=ARCHIVE_WDPA_FILE_NAME,
-                    bucket=BUCKET,
-                    verbose=verbose,
-                )
+                download_protected_planet(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")
