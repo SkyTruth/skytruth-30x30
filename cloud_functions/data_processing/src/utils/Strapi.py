@@ -16,7 +16,6 @@ class Strapi:
         self.PASSWORD = os.environ.get("STRAPI_PASSWORD", None)
         self.token = self.login()
 
-    
     # Authenitcate with the 30x30 API
     # The API requires passwrod based auth, after which it responds with a JWT
     # which must be included in the auth heaer of subsequent authenticated endpoints
@@ -40,4 +39,3 @@ class Strapi:
                     "exception": str(excep),
                 }
             )
-            
