@@ -447,86 +447,85 @@ def main(request: Request) -> Tuple[str, int]:
     data = request.get_json(silent=True) or {}
     method = data.get("METHOD", "default")
 
-    if method == "dry_run":
-        print("Dry Run Complete!")
-    elif method == "download_eezs":
-        # Run in CLI via:
-        # gcloud functions call x30-dev-data --data '{"METHOD": "download_eezs"}' --region us-east1
-        # TODO: add EEZ_params inputs to this and high seas
-        download_zip_to_gcs(
-            MARINE_REGIONS_URL,
-            BUCKET,
-            EEZ_ZIPFILE_NAME,
-            data=MARINE_REGIONS_BODY,
-            params=EEZ_PARAMS,
-            headers=MARINE_REGIONS_HEADERS,
-            chunk_size=CHUNK_SIZE,
-            verbose=verbose,
-        )
-    elif method == "download_high_seas":
-        # Run in CLI via:
-        # gcloud functions call x30-dev-data --data '{"METHOD": "download_high_seas"}' \
-        # --region us-east1
-        download_zip_to_gcs(
-            MARINE_REGIONS_URL,
-            BUCKET,
-            HIGH_SEAS_ZIPFILE_NAME,
-            data=MARINE_REGIONS_BODY,
-            params=HIGH_SEAS_PARAMS,
-            headers=MARINE_REGIONS_HEADERS,
-            chunk_size=CHUNK_SIZE,
-            verbose=verbose,
-        )
-    elif method == "download_habitats":
-        # Run in CLI via:
-        # gcloud functions call x30-dev-data --data '{"METHOD": "download_habitats"}' \
-        # --region us-east1
-        download_habitats(
-            habitats_url=HABITATS_URL,
-            habitats_file_name=HABITATS_FILE_NAME,
-            archive_habitats_file_name=ARCHIVE_HABITATS_FILE_NAME,
-            seamounts_url=SEAMOUNTS_URL,
-            seamounts_file_name=SEAMOUNTS_FILE_NAME,
-            archive_seamounts_file_name=ARCHIVE_SEAMOUNTS_FILE_NAME,
-            bucket=BUCKET,
-            chunk_size=CHUNK_SIZE,
-            verbose=True,
-        )
-    elif method == "download_mpatlas":
-        download_mpatlas(
-            url=MPATLAS_URL,
-            bucket=BUCKET,
-            filename=MPATLAS_FILE_NAME,
-            archive_filename=ARCHIVE_MPATLAS_FILE_NAME,
-            verbose=verbose,
-        )
-    elif method == "download_protected_seas":
-        download_protected_seas(
-            url=PROTECTED_SEAS_URL,
-            bucket=BUCKET,
-            filename=PROTECTED_SEAS_FILE_NAME,
-            archive_filename=ARCHIVE_PROTECTED_SEAS_FILE_NAME,
-            project=PROJECT,
-            verbose=verbose,
-        )
-    elif method == "download_protected_planet_wdpa":
-        download_protected_planet(
-            wdpa_global_level_file_name=WDPA_GLOBAL_LEVEL_FILE_NAME,
-            archive_wdpa_global_level_file_name=ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
-            wdpa_country_level_file_name=WDPA_COUNTRY_LEVEL_FILE_NAME,
-            archive_wdpa_country_level_file_name=ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
-            pp_api_key=PP_API_KEY,
-            project_id=PROJECT,
-            wdpa_global_url=WDPA_GLOBAL_LEVEL_URL,
-            wdpa_url=WDPA_URL,
-            api_url=WDPA_API_URL,
-            wdpa_file_name=WDPA_FILE_NAME,
-            archive_wdpa_file_name=ARCHIVE_WDPA_FILE_NAME,
-            bucket=BUCKET,
-            verbose=True,
-        )
-    else:
-        print(f"METHOD: {method} not a valid option")
+    match method:
+        case "dry_run":
+            print("Dry Run Complete!")
+
+        case "download_eezs":
+            download_zip_to_gcs(
+                MARINE_REGIONS_URL,
+                BUCKET,
+                EEZ_ZIPFILE_NAME,
+                data=MARINE_REGIONS_BODY,
+                params=EEZ_PARAMS,
+                headers=MARINE_REGIONS_HEADERS,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+
+        case "download_high_seas":
+            download_zip_to_gcs(
+                MARINE_REGIONS_URL,
+                BUCKET,
+                HIGH_SEAS_ZIPFILE_NAME,
+                data=MARINE_REGIONS_BODY,
+                params=HIGH_SEAS_PARAMS,
+                headers=MARINE_REGIONS_HEADERS,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+
+        case "download_habitats":
+            download_habitats(
+                habitats_url=HABITATS_URL,
+                habitats_file_name=HABITATS_FILE_NAME,
+                archive_habitats_file_name=ARCHIVE_HABITATS_FILE_NAME,
+                seamounts_url=SEAMOUNTS_URL,
+                seamounts_file_name=SEAMOUNTS_FILE_NAME,
+                archive_seamounts_file_name=ARCHIVE_SEAMOUNTS_FILE_NAME,
+                bucket=BUCKET,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+
+        case "download_mpatlas":
+            download_mpatlas(
+                url=MPATLAS_URL,
+                bucket=BUCKET,
+                filename=MPATLAS_FILE_NAME,
+                archive_filename=ARCHIVE_MPATLAS_FILE_NAME,
+                verbose=verbose,
+            )
+
+        case "download_protected_seas":
+            download_protected_seas(
+                url=PROTECTED_SEAS_URL,
+                bucket=BUCKET,
+                filename=PROTECTED_SEAS_FILE_NAME,
+                archive_filename=ARCHIVE_PROTECTED_SEAS_FILE_NAME,
+                project=PROJECT,
+                verbose=verbose,
+            )
+
+        case "download_protected_planet_wdpa":
+            download_protected_planet(
+                wdpa_global_level_file_name=WDPA_GLOBAL_LEVEL_FILE_NAME,
+                archive_wdpa_global_level_file_name=ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
+                wdpa_country_level_file_name=WDPA_COUNTRY_LEVEL_FILE_NAME,
+                archive_wdpa_country_level_file_name=ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
+                pp_api_key=PP_API_KEY,
+                project_id=PROJECT,
+                wdpa_global_url=WDPA_GLOBAL_LEVEL_URL,
+                wdpa_url=WDPA_URL,
+                api_url=WDPA_API_URL,
+                wdpa_file_name=WDPA_FILE_NAME,
+                archive_wdpa_file_name=ARCHIVE_WDPA_FILE_NAME,
+                bucket=BUCKET,
+                verbose=verbose,
+            )
+
+        case _:
+            print(f"METHOD: {method} not a valid option")
 
     print("Process complete!")
 
