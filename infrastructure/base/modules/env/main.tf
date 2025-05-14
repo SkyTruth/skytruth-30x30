@@ -338,6 +338,12 @@ resource "google_storage_bucket_iam_member" "function_writer" {
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
+resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
+}
+
 resource "google_service_account" "scheduler_invoker" {
   account_id   = "${var.project_name}-scheduler-sa"
   display_name = "${var.project_name} Cloud Scheduler Invoker"

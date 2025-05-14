@@ -65,6 +65,7 @@ ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted
 #                 Protected Planet (WDPA)
 # ------------------------------------------------------------
 WDPA_API_URL = "http://api.protectedplanet.net/v3/"
+WDPA_URL = f"https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_{today_formatted}_Public.zip"
 WDPA_FILE_NAME = "raw/WDPA_Public.zip"
 ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
 WDPA_COUNTRY_LEVEL_FILE_NAME = "raw/WDPA_country_level.csv"
@@ -72,6 +73,33 @@ ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_coun
 WDPA_GLOBAL_LEVEL_FILE_NAME = "raw/WDPA_global_level.csv"
 ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_global_level.csv"
 WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_download"
+
+
+# ------------------------------------------------------------
+#                         Habitats
+# ------------------------------------------------------------
+HABITATS_URL = "https://habitats.oceanplus.org/downloads/global_statistics.zip"
+HABITATS_FILE_NAME = "habitats/global_statistics.zip"
+ARCHIVE_HABITATS_FILE_NAME = f"archive/habitats/global_statistics_{today_formatted}.zip"
+MANGROVES_API_URL = "https://mangrove-atlas-api.herokuapp.com/admin/widget_protected_areas.csv"
+MANGROVES_REQUEST_HEADERS = {
+    "Cookie": (
+        "_mangrove_atlas_api_session=fJuobvI2fH42WfGfMtRTp%2BksIDdPEpY6DG8uCuITsENtrRGG4AA3nYEeAI7"
+        "dytzpK%2F0dGIHq84O54MRr6eiPgiwCYXp2XP4IzXM40dFt%2FI6hoB0WXC%2Fwrd81XreNnMZiSEE6IVT5R0fqMcm"
+        "sZdPn53u0A1d4CGU3FfliOZuWkckBuA%2F7C4upBGuSS8817LqOh1slG%2BsEOGp3nk7WX4fMoPbsHWtARfFwdfoAH"
+        "z448LO7uWuZdyiu7YOrS0ZxOZEb9JZ8hcUJph4pBFofZLpOvtQQutgZY21T5bhQ7Kwfl56e6Qr0SZ%2B8sIzMfky3h"
+        "%2FjOA6DNTLoy%2BZLiZBAgFHlTYm2JwlwqWgAZU8D7cE7Zn%2Fxgf3LFF9pZ9Fe3QG4c8LIwH%2FxqjEd8GsZAhBMg"
+        "BWbxubigQ9gZssZt6CIO--7qiVsTAT8JAKj1jU--U7TI%2Fz9c151bfD8iZdkBDw%3D%3D"
+    )
+}
+
+MANGROVES_FILE_NAME = "habitats/mangrobes_protected_areas.csv"
+ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{today_formatted}.csv"
+SEAMOUNTS_URL = (
+    "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
+)
+SEAMOUNTS_FILE_NAME = "habitats/seamounts.zip"
+ARCHIVE_SEAMOUNTS_FILE_NAME = SEAMOUNTS_URL.split("/")[-1]
 
 
 FISHING_PROTECTION_FILENAME = "intermediate/fishing_protection.csv"

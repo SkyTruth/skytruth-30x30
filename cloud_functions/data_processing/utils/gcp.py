@@ -1,4 +1,6 @@
 from google.cloud import storage
+import geopandas as gpd
+import fsspec
 from io import BytesIO
 import requests
 from tqdm import tqdm
@@ -141,3 +143,13 @@ def upload_dataframe(bucket_name, df, destination_blob_name, project_id=PROJECT,
     if verbose:
         print(f"Uploading dataframe to {destination_blob_name}.")
     bucket.blob(destination_blob_name).upload_from_string(df.to_csv(index=None), "csv")
+
+
+def load_zipped_shapefile_from_gcs(filename: str, bucket: str) -> gpd.GeoDataFrame:
+    """
+    Loads a zipped shapefile from GCS into a GeoDataFrame.
+    """
+    gcs_zip_path = f"gs://{bucket}/{filename}"
+    with fsspec.open(gcs_zip_path, mode="rb") as f:
+        gdf = gpd.read_file(f)
+    return gdf

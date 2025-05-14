@@ -19,6 +19,7 @@ from params import (
     PROTECTED_SEAS_FILE_NAME,
     ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     WDPA_API_URL,
+    WDPA_URL,
     WDPA_FILE_NAME,
     ARCHIVE_WDPA_FILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
@@ -26,6 +27,12 @@ from params import (
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
+    HABITATS_URL,
+    HABITATS_FILE_NAME,
+    ARCHIVE_HABITATS_FILE_NAME,
+    SEAMOUNTS_URL,
+    SEAMOUNTS_FILE_NAME,
+    ARCHIVE_SEAMOUNTS_FILE_NAME,
 )
 from utils.gcp import (
     save_file_bucket,
@@ -120,20 +127,9 @@ def download_protected_seas(
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
-def download_protected_planet_wdpa(
-    blob_name=WDPA_FILE_NAME,
-    archive_blob_name=ARCHIVE_WDPA_FILE_NAME,
-    bucket=BUCKET,
-    chunk_size=8192,
-    verbose=True,
+def download_and_duplicate_zipfile(
+    url, bucket, blob_name, archive_blob_name, chunk_size=8192, verbose=True
 ):
-    """
-    Download WDPA polygons from Protected Planet API and saves zipfile to a current
-    file for calculations as well as an archive file
-    """
-    filename = archive_blob_name.split("/")[-1]
-    url = f"https://d1gam3xoknrgr2.cloudfront.net/current/{filename}"
-
     if verbose:
         print(f"downloading {url} to gs://{bucket}/{archive_blob_name}")
     download_zip_to_gcs(url, bucket, archive_blob_name, chunk_size=chunk_size, verbose=verbose)
@@ -147,7 +143,7 @@ def download_protected_planet_global(
     response.raise_for_status()
     data = pd.read_csv(BytesIO(response.content))
 
-    upload_dataframe(bucket, data, current_filename, project_id=project_id, verbose=True)
+    upload_dataframe(bucket, data, archive_filename, project_id=project_id, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
 
 
@@ -230,6 +226,75 @@ def download_protected_planet_aggregates(
     )
 
 
+def download_protected_planet(
+    wdpa_global_level_file_name=WDPA_GLOBAL_LEVEL_FILE_NAME,
+    archive_wdpa_global_level_file_name=ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
+    wdpa_country_level_file_name=WDPA_COUNTRY_LEVEL_FILE_NAME,
+    archive_wdpa_country_level_file_name=ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
+    pp_api_key=PP_API_KEY,
+    project_id=PROJECT,
+    wdpa_global_url=WDPA_GLOBAL_LEVEL_URL,
+    wdpa_url=WDPA_URL,
+    api_url=WDPA_API_URL,
+    wdpa_file_name=WDPA_FILE_NAME,
+    archive_wdpa_file_name=ARCHIVE_WDPA_FILE_NAME,
+    bucket=BUCKET,
+    verbose=True,
+):
+    download_and_duplicate_zipfile(
+        wdpa_url, bucket, wdpa_file_name, archive_wdpa_file_name, chunk_size=8192, verbose=verbose
+    )
+
+    download_protected_planet_aggregates(
+        wdpa_global_level_file_name,
+        archive_wdpa_global_level_file_name,
+        wdpa_country_level_file_name,
+        archive_wdpa_country_level_file_name,
+        pp_api_key=pp_api_key,
+        project_id=project_id,
+        url=wdpa_global_url,
+        api_url=api_url,
+        bucket=bucket,
+        per_page=50,
+        verbose=verbose,
+    )
+
+
+def download_habitats(
+    habitats_url=HABITATS_URL,
+    habitats_file_name=HABITATS_FILE_NAME,
+    archive_habitats_file_name=ARCHIVE_HABITATS_FILE_NAME,
+    seamounts_url=SEAMOUNTS_URL,
+    seamounts_file_name=SEAMOUNTS_FILE_NAME,
+    archive_seamounts_file_name=ARCHIVE_SEAMOUNTS_FILE_NAME,
+    bucket=BUCKET,
+    chunk_size=8192,
+    verbose=True,
+):
+    # download habitats
+    download_and_duplicate_zipfile(
+        habitats_url,
+        bucket,
+        habitats_file_name,
+        archive_habitats_file_name,
+        chunk_size=chunk_size,
+        verbose=verbose,
+    )
+
+    # download mangroves
+    # TODO: Add this
+
+    # download seamounts
+    download_and_duplicate_zipfile(
+        seamounts_url,
+        bucket,
+        seamounts_file_name,
+        archive_seamounts_file_name,
+        chunk_size=chunk_size,
+        verbose=verbose,
+    )
+
+
 def calculate_global_stats():
     return
 
@@ -253,13 +318,30 @@ def main(request):
     if method == "dry_run":
         print("Dry Run Complete!")
     elif method == "download_eezs":
-        # TODO: currently no infra for this because they are essentially static
-        # May keep this as a manual process
+        # Run in CLI via:
+        # gcloud functions call x30-dev-data --data '{"METHOD": "download_eezs"}' --region us-east1
+        # TODO: add EEZ_params inputs to this and high seas
         download_eezs(blob_name=EEZ_ZIPFILE_NAME, verbose=verbose)
     elif method == "download_high_seas":
-        # TODO: currently no infra for this because they are essentially static
-        # May keep this as a manual process
+        # Run in CLI via:
+        # gcloud functions call x30-dev-data --data '{"METHOD": "download_high_seas"}' \
+        # --region us-east1
         download_high_seas(blob_name=HIGH_SEAS_ZIPFILE_NAME, verbose=verbose)
+    elif method == "download_habitats":
+        # Run in CLI via:
+        # gcloud functions call x30-dev-data --data '{"METHOD": "download_habitats"}' \
+        # --region us-east1
+        download_habitats(
+            habitats_url=HABITATS_URL,
+            habitats_file_name=HABITATS_FILE_NAME,
+            archive_habitats_file_name=ARCHIVE_HABITATS_FILE_NAME,
+            seamounts_url=SEAMOUNTS_URL,
+            seamounts_file_name=SEAMOUNTS_FILE_NAME,
+            archive_seamounts_file_name=ARCHIVE_SEAMOUNTS_FILE_NAME,
+            bucket=BUCKET,
+            chunk_size=8192,
+            verbose=True,
+        )
     elif method == "download_mpatlas":
         download_mpatlas(
             url=MPATLAS_URL,
@@ -278,25 +360,19 @@ def main(request):
             verbose=verbose,
         )
     elif method == "download_protected_planet_wdpa":
-        download_protected_planet_wdpa(
-            blob_name=WDPA_FILE_NAME,
-            archive_blob_name=ARCHIVE_WDPA_FILE_NAME,
-            bucket=BUCKET,
-            chunk_size=8192,
-            verbose=verbose,
-        )
-    elif method == "download_protected_planet_aggregates":
-        download_protected_planet_aggregates(
-            WDPA_GLOBAL_LEVEL_FILE_NAME,
-            ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
-            WDPA_COUNTRY_LEVEL_FILE_NAME,
-            ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
+        download_protected_planet(
+            wdpa_global_level_file_name=WDPA_GLOBAL_LEVEL_FILE_NAME,
+            archive_wdpa_global_level_file_name=ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
+            wdpa_country_level_file_name=WDPA_COUNTRY_LEVEL_FILE_NAME,
+            archive_wdpa_country_level_file_name=ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
             pp_api_key=PP_API_KEY,
             project_id=PROJECT,
-            url=WDPA_GLOBAL_LEVEL_URL,
+            wdpa_global_url=WDPA_GLOBAL_LEVEL_URL,
+            wdpa_url=WDPA_URL,
             api_url=WDPA_API_URL,
+            wdpa_file_name=WDPA_FILE_NAME,
+            archive_wdpa_file_name=ARCHIVE_WDPA_FILE_NAME,
             bucket=BUCKET,
-            per_page=50,
             verbose=True,
         )
     elif method == "calculate_global_stats":
