@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy requirements and install
-COPY requirements.txt params.py utils/ .
+COPY requirements.txt src/ .
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
