@@ -321,7 +321,7 @@ module "data_pipes_cloud_function" {
   function_name                    = "${var.project_name}-data"
   description                      = "Data Pipeline Cloud Function"
   source_dir                       = "${path.root}/../../cloud_functions/data_processing"
-  runtime                          = "python312"
+  runtime                          = "python313"
   entry_point                      = "main"
   runtime_environment_variables    = local.data_processing_cloud_function_env
   secrets                          = local.data_processing_cloud_function_secrets
@@ -335,6 +335,12 @@ module "data_pipes_cloud_function" {
 resource "google_storage_bucket_iam_member" "function_writer" {
   bucket = google_storage_bucket.data_bucket.name
   role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
+}
+
+resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.legacyBucketReader"
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
@@ -365,10 +371,24 @@ module "download_mpatlas_scheduler" {
   })
 }
 
+module "download_protected_seas_scheduler" {
+  source                   = "../cloud_scheduler"
+  name                     = "trigger-protected-seas-download-method"
+  schedule                 = "0 9 1 * *"
+  target_url               = module.data_pipes_cloud_function.function_uri
+  invoker_service_account  = google_service_account.scheduler_invoker.email
+  headers = {
+    "Content-Type" = "application/json"
+  }
+  body = jsonencode({
+    METHOD = "download_protected_seas"
+  })
+}
+
 module "download_protected_planet_wdpa_scheduler" {
   source                   = "../cloud_scheduler"
   name                     = "trigger-wdpa-download-method"
-  schedule                 = "0 9 1 * *"
+  schedule                 = "0 10 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
   headers = {
