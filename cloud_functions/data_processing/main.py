@@ -240,25 +240,26 @@ def download_protected_planet_country(
         If True, prints progress messages. Default is True.
 
     """
-    page = 1
-    all_areas = []
-    while True:
-        if verbose:
-            print(f"Fetching page {page}...")
-        params = {"token": pp_api_key, "per_page": per_page, "page": page}
 
+    def fetch_data(params):
         response = requests.get(f"{url}/countries", params=params)
         response.raise_for_status()
         data = response.json()
+        return data.get("countries", [])
 
-        results = data.get("countries", [])
-        if not results:
-            if verbose:
-                print("All pages fetched.")
-            break
+    page = 1
+    params = {"token": pp_api_key, "per_page": per_page, "page": page}
+    all_areas = []
+
+    results = fetch_data(params)
+    while results:
+        if verbose:
+            print(f"Fetching page {page}...")
 
         all_areas.extend(results)
         page += 1
+        params = {"token": pp_api_key, "per_page": per_page, "page": page}
+        results = fetch_data(params)
 
         time.sleep(0.2)
 
