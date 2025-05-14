@@ -321,7 +321,7 @@ module "data_pipes_cloud_function" {
   function_name                    = "${var.project_name}-data"
   description                      = "Data Pipeline Cloud Function"
   source_dir                       = "${path.root}/../../cloud_functions/data_processing"
-  runtime                          = "python312"
+  runtime                          = "python313"
   entry_point                      = "main"
   runtime_environment_variables    = local.data_processing_cloud_function_env
   secrets                          = local.data_processing_cloud_function_secrets
