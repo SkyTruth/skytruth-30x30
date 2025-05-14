@@ -99,7 +99,7 @@ SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
 )
 SEAMOUNTS_FILE_NAME = "habitats/seamounts.zip"
-ARCHIVE_SEAMOUNTS_FILE_NAME = SEAMOUNTS_URL.split("/")[-1]
+ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
 
 FISHING_PROTECTION_FILENAME = "intermediate/fishing_protection.csv"
