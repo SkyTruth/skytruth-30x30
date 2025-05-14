@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import requests
 
-from params import (
+from src.params import (
     CHUNK_SIZE,
     MPATLAS_URL,
     MPATLAS_FILE_NAME,
@@ -27,7 +27,7 @@ from params import (
     SEAMOUNTS_FILE_NAME,
     ARCHIVE_SEAMOUNTS_FILE_NAME,
 )
-from utils.gcp import (
+from src.utils.gcp import (
     save_file_bucket,
     duplicate_blob,
     download_zip_to_gcs,
