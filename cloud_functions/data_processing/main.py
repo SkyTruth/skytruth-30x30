@@ -47,6 +47,15 @@ BUCKET = os.getenv("BUCKET", "")
 PROJECT = os.getenv("PROJECT", "")
 
 
+def download_and_duplicate_zipfile(
+    url, bucket, blob_name, archive_blob_name, chunk_size=8192, verbose=True
+):
+    if verbose:
+        print(f"downloading {url} to gs://{bucket}/{archive_blob_name}")
+    download_zip_to_gcs(url, bucket, archive_blob_name, chunk_size=chunk_size, verbose=verbose)
+    duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
+
+
 def download_eezs(blob_name=EEZ_ZIPFILE_NAME, verbose=True):
     """
     Downloads eez polygon zipfile from Marine Regions
@@ -127,15 +136,6 @@ def download_protected_seas(
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
-def download_and_duplicate_zipfile(
-    url, bucket, blob_name, archive_blob_name, chunk_size=8192, verbose=True
-):
-    if verbose:
-        print(f"downloading {url} to gs://{bucket}/{archive_blob_name}")
-    download_zip_to_gcs(url, bucket, archive_blob_name, chunk_size=chunk_size, verbose=verbose)
-    duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
-
-
 def download_protected_planet_global(
     current_filename, archive_filename, project_id=PROJECT, url=WDPA_GLOBAL_LEVEL_URL, bucket=BUCKET
 ):
@@ -193,39 +193,6 @@ def download_protected_planet_country(
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
 
 
-def download_protected_planet_aggregates(
-    protected_planet_global_filename,
-    protected_planet_global_archive_filename,
-    protected_planet_country_filename,
-    protected_planet_country_archive_filename,
-    pp_api_key=PP_API_KEY,
-    project_id=PROJECT,
-    url=WDPA_GLOBAL_LEVEL_URL,
-    api_url=WDPA_API_URL,
-    bucket=BUCKET,
-    per_page=50,
-    verbose=True,
-):
-    download_protected_planet_global(
-        protected_planet_global_filename,
-        protected_planet_global_archive_filename,
-        project_id=project_id,
-        url=url,
-        bucket=bucket,
-    )
-    download_protected_planet_country(
-        protected_planet_country_filename,
-        protected_planet_country_archive_filename,
-        pp_api_key,
-        val="countries",
-        bucket=bucket,
-        project=project_id,
-        url=api_url,
-        per_page=per_page,
-        verbose=verbose,
-    )
-
-
 def download_protected_planet(
     wdpa_global_level_file_name=WDPA_GLOBAL_LEVEL_FILE_NAME,
     archive_wdpa_global_level_file_name=ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -241,20 +208,29 @@ def download_protected_planet(
     bucket=BUCKET,
     verbose=True,
 ):
+    # download wdpa
     download_and_duplicate_zipfile(
         wdpa_url, bucket, wdpa_file_name, archive_wdpa_file_name, chunk_size=8192, verbose=verbose
     )
 
-    download_protected_planet_aggregates(
+    # download wdpa global stats
+    download_protected_planet_global(
         wdpa_global_level_file_name,
         archive_wdpa_global_level_file_name,
-        wdpa_country_level_file_name,
-        archive_wdpa_country_level_file_name,
-        pp_api_key=pp_api_key,
         project_id=project_id,
         url=wdpa_global_url,
-        api_url=api_url,
         bucket=bucket,
+    )
+
+    # download wdpa country stats
+    download_protected_planet_country(
+        wdpa_country_level_file_name,
+        archive_wdpa_country_level_file_name,
+        pp_api_key,
+        val="countries",
+        bucket=bucket,
+        project=project_id,
+        url=api_url,
         per_page=50,
         verbose=verbose,
     )

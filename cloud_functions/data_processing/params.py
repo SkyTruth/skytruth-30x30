@@ -93,7 +93,7 @@ MANGROVES_REQUEST_HEADERS = {
     )
 }
 
-MANGROVES_FILE_NAME = "habitats/mangrobes_protected_areas.csv"
+MANGROVES_FILE_NAME = "habitats/mangroves_protected_areas.csv"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{today_formatted}.csv"
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
