@@ -4,36 +4,40 @@ import os
 
 import requests
 
+from utils.logger import Logger
+
 
 class Strapi:
     def __init__(self):
-        self.ENV = "local"  # local | dev | prod
-        self.PROJECT_ID = "x30-399415"
-        self.USER_ID = "data_write"
+        self.logger = Logger()
+        self.BASE_URL = os.environ.get("STRAPI_API_URL", "")
+        self.USERNAME = os.environ.get("STRAPI_USERNAME", "")
 
-        self.BASE_URLS = {
-            "local": "http://localhost:1337/api/",
-            "dev": "https://30x30-dev.skytruth.org/cms/api/",
-            "prod": "https://30x30.skytruth.org/cms/api/",
-        }
-
-        self.api_password = os.environ.get("API_PASSWORD")
+        self.PASSWORD = os.environ.get("STRAPI_PASSWORD", None)
         self.token = self.login()
 
+    
     # Authenitcate with the 30x30 API
     # The API requires passwrod based auth, after which it responds with a JWT
     # which must be included in the auth heaer of subsequent authenticated endpoints
     # this inlcudes all PUT and POST endpoints
     def login(self):
         try:
-            if not self.api_password:
+            if not self.PASSWORD:
                 raise ValueError("No API password provided")
             response = requests.post(
-                f"{self.BASE_URLS.get(self.ENV)}auth/local",
-                data={"identifier": self.USER_ID, "password": self.api_password},
+                f"{self.BASE_URL}auth/local",
+                data={"identifier": self.USERNAME, "password": self.PASSWORD},
+                timeout=5,
             )
 
             response_data = response.json()
             return response_data.get("jwt")
         except Exception as excep:
-            print("Failed to authenticate with 30x30 API ", excep)
+            self.logger.error(
+                {
+                    "message": "Failed to authenticate with 30x30 API",
+                    "exception": str(excep),
+                }
+            )
+            

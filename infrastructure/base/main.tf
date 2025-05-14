@@ -22,6 +22,7 @@ module "staging" {
   domain                                             = var.domain
   subdomain                                          = var.staging_subdomain
   backend_path_prefix                                = "cms"
+  backend_write_user                                 = "data_write"
   functions_path_prefix                              = "functions"
   analysis_function_path_prefix                      = "analysis"
   analysis_function_timeout_seconds                  = 600
@@ -50,6 +51,7 @@ module "production" {
   domain                                             = var.domain
   subdomain                                          = var.production_subdomain
   backend_path_prefix                                = "cms"
+  backend_write_user                                 = "data_write"
   functions_path_prefix                              = "functions"
   analysis_function_path_prefix                      = "analysis"
   analysis_function_timeout_seconds                  = 600
