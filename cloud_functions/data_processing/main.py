@@ -477,17 +477,7 @@ def main(request: Request) -> Tuple[str, int]:
                 )
 
             case "download_habitats":
-                download_habitats(
-                    habitats_url=HABITATS_URL,
-                    habitats_file_name=HABITATS_FILE_NAME,
-                    archive_habitats_file_name=ARCHIVE_HABITATS_FILE_NAME,
-                    seamounts_url=SEAMOUNTS_URL,
-                    seamounts_file_name=SEAMOUNTS_FILE_NAME,
-                    archive_seamounts_file_name=ARCHIVE_SEAMOUNTS_FILE_NAME,
-                    bucket=BUCKET,
-                    chunk_size=CHUNK_SIZE,
-                    verbose=verbose,
-                )
+                download_habitats(verbose=verbose)
 
             case "download_habitats":
                 download_habitats(verbose=verbose)
