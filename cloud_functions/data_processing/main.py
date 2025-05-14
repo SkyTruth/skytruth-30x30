@@ -271,22 +271,6 @@ def download_habitats(
     )
 
 
-def calculate_global_stats():
-    return
-
-
-def calculate_country_stats():
-    return
-
-
-def calculate_habitat_stats():
-    return
-
-
-def calculate_insights_table():
-    return
-
-
 def main(request):
     data = request.get_json(silent=True) or {}
     method = data.get("METHOD", "default")
@@ -351,14 +335,6 @@ def main(request):
             bucket=BUCKET,
             verbose=True,
         )
-    elif method == "calculate_global_stats":
-        calculate_global_stats()
-    elif method == "calculate_country_stats":
-        calculate_country_stats()
-    elif method == "calculate_habitat_stats":
-        calculate_habitat_stats()
-    elif method == "calculate_insights_table":
-        calculate_insights_table()
     else:
         print(f"METHOD: {method} not a valid option")
 
