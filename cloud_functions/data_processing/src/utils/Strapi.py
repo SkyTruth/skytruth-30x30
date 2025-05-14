@@ -37,4 +37,3 @@ class Strapi:
             return response_data.get("jwt")
         except Exception as excep:
             print("Failed to authenticate with 30x30 API ", excep)
-
