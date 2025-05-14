@@ -7,6 +7,7 @@ import time
 from typing import Tuple
 
 from params import (
+    CHUNK_SIZE,
     MARINE_REGIONS_URL,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
@@ -54,7 +55,7 @@ def download_and_duplicate_zipfile(
     bucket: str,
     blob_name: str,
     archive_blob_name: str,
-    chunk_size: int = 8192,
+    chunk_size: int = CHUNK_SIZE,
     verbose: bool = True,
 ) -> None:
     """
@@ -72,7 +73,7 @@ def download_and_duplicate_zipfile(
     archive_blob_name : str
         Name of the original blob that receives the downloaded ZIP content.
     chunk_size : int, optional
-        Size (in bytes) of each chunk used during the download/upload process. Default is 8192.
+        Size (in bytes) of each chunk used during the download/upload process.
     verbose : bool, optional
         If True, prints progress messages. Default is True.
 
@@ -283,6 +284,7 @@ def download_protected_planet(
     wdpa_file_name: str = WDPA_FILE_NAME,
     archive_wdpa_file_name: str = ARCHIVE_WDPA_FILE_NAME,
     bucket: str = BUCKET,
+    chunk_size: int = CHUNK_SIZE,
     verbose: bool = True,
 ) -> None:
     """
@@ -325,7 +327,12 @@ def download_protected_planet(
     """
     # download wdpa
     download_and_duplicate_zipfile(
-        wdpa_url, bucket, wdpa_file_name, archive_wdpa_file_name, chunk_size=8192, verbose=verbose
+        wdpa_url,
+        bucket,
+        wdpa_file_name,
+        archive_wdpa_file_name,
+        chunk_size=chunk_size,
+        verbose=verbose,
     )
 
     # download wdpa global stats
@@ -358,7 +365,7 @@ def download_habitats(
     seamounts_file_name: str = SEAMOUNTS_FILE_NAME,
     archive_seamounts_file_name: str = ARCHIVE_SEAMOUNTS_FILE_NAME,
     bucket: str = BUCKET,
-    chunk_size: int = 8192,
+    chunk_size: int = CHUNK_SIZE,
     verbose: bool = True,
 ) -> None:
     """
@@ -382,7 +389,7 @@ def download_habitats(
     bucket : str
         Name of the GCS bucket where all files will be uploaded.
     chunk_size : int, optional
-        Size in bytes of each chunk used during download. Default is 8192.
+        Size in bytes of each chunk used during download.
     verbose : bool, optional
         If True, prints progress messages. Default is True.
     """
@@ -455,7 +462,7 @@ def main(request: Request) -> Tuple[str, int]:
             data=MARINE_REGIONS_BODY,
             params=EEZ_PARAMS,
             headers=MARINE_REGIONS_HEADERS,
-            chunk_size=8192,
+            chunk_size=CHUNK_SIZE,
             verbose=verbose,
         )
     elif method == "download_high_seas":
@@ -469,7 +476,7 @@ def main(request: Request) -> Tuple[str, int]:
             data=MARINE_REGIONS_BODY,
             params=HIGH_SEAS_PARAMS,
             headers=MARINE_REGIONS_HEADERS,
-            chunk_size=8192,
+            chunk_size=CHUNK_SIZE,
             verbose=verbose,
         )
     elif method == "download_habitats":
@@ -484,7 +491,7 @@ def main(request: Request) -> Tuple[str, int]:
             seamounts_file_name=SEAMOUNTS_FILE_NAME,
             archive_seamounts_file_name=ARCHIVE_SEAMOUNTS_FILE_NAME,
             bucket=BUCKET,
-            chunk_size=8192,
+            chunk_size=CHUNK_SIZE,
             verbose=True,
         )
     elif method == "download_mpatlas":

@@ -102,9 +102,4 @@ SEAMOUNTS_FILE_NAME = "habitats/seamounts.zip"
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
 
-FISHING_PROTECTION_FILENAME = "intermediate/fishing_protection.csv"
-LOCATIONS_FILENAME = "static/locations.csv"
-
-
-# Product Archive
-HIGHLY_PROTECTED_MPA_FILE_NAME = f"archive/prod/highly_protected_mpa_{today_formatted}.zip"
+CHUNK_SIZE = 8192
