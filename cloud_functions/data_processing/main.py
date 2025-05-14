@@ -3,7 +3,6 @@ from io import BytesIO
 import os
 import pandas as pd
 import requests
-import time
 from typing import Tuple
 
 from params import (
@@ -260,8 +259,6 @@ def download_protected_planet_country(
         page += 1
         params = {"token": pp_api_key, "per_page": per_page, "page": page}
         results = fetch_data(params)
-
-        time.sleep(0.2)
 
     if verbose:
         print(f"Uploading {len(all_areas)} protected areas to gs://{bucket}/{archive_filename}")

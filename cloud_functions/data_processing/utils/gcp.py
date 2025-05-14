@@ -5,6 +5,7 @@ from io import BytesIO
 import pandas as pd
 import requests
 from tqdm import tqdm
+from typing import Optional
 import os
 from google.api_core.retry import Retry
 
@@ -45,7 +46,7 @@ class TqdmBytesIO(BytesIO):
 
 def save_file_bucket(
     data: bytes,
-    content_type: str,
+    content_type: Optional[str],
     blob_name: str,
     bucket_name: str,
     verbose: bool = True,
