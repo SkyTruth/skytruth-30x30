@@ -5,13 +5,13 @@ import requests
 import time
 
 from params import (
-    MARINE_REGIONS_url,
-    MARINE_REGIONS_body,
-    MARINE_REGIONS_headers,
+    MARINE_REGIONS_URL,
+    MARINE_REGIONS_BODY,
+    MARINE_REGIONS_HEADERS,
     EEZ_ZIPFILE_NAME,
-    EEZ_params,
+    EEZ_PARAMS,
     HIGH_SEAS_ZIPFILE_NAME,
-    HIGH_SEAS_params,
+    HIGH_SEAS_PARAMS,
     MPATLAS_URL,
     MPATLAS_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
@@ -61,12 +61,12 @@ def download_eezs(blob_name=EEZ_ZIPFILE_NAME, verbose=True):
     Downloads eez polygon zipfile from Marine Regions
     """
     download_zip_to_gcs(
-        MARINE_REGIONS_url,
+        MARINE_REGIONS_URL,
         BUCKET,
         blob_name,
-        data=MARINE_REGIONS_body,
-        params=EEZ_params,
-        headers=MARINE_REGIONS_headers,
+        data=MARINE_REGIONS_BODY,
+        params=EEZ_PARAMS,
+        headers=MARINE_REGIONS_HEADERS,
         chunk_size=8192,
         verbose=verbose,
     )
@@ -77,12 +77,12 @@ def download_high_seas(blob_name=HIGH_SEAS_ZIPFILE_NAME, verbose=True):
     Downloads High Seas polygon zipfile from Marine Regions
     """
     download_zip_to_gcs(
-        MARINE_REGIONS_url,
+        MARINE_REGIONS_URL,
         BUCKET,
         blob_name,
-        data=MARINE_REGIONS_body,
-        params=HIGH_SEAS_params,
-        headers=MARINE_REGIONS_headers,
+        data=MARINE_REGIONS_BODY,
+        params=HIGH_SEAS_PARAMS,
+        headers=MARINE_REGIONS_HEADERS,
         chunk_size=8192,
         verbose=verbose,
     )
