@@ -2,6 +2,7 @@ from google.cloud import storage
 import geopandas as gpd
 import fsspec
 from io import BytesIO
+import pandas as pd
 import requests
 from tqdm import tqdm
 import os
@@ -11,26 +12,64 @@ PROJECT = os.getenv("PROJECT", "")
 
 
 class TqdmBytesIO(BytesIO):
-    def __init__(self, data, total_size, chunk_size):
+    """
+    A subclass of BytesIO that wraps a tqdm progress bar around read operations.
+
+    This is especially useful when streaming binary data (e.g. to upload to cloud storage)
+    and you want to track progress in real-time using tqdm.
+
+    Attributes:
+    ----------
+    tqdm_bar : tqdm.tqdm
+        The progress bar tracking number of bytes read.
+    chunk_size : int
+        Size of each read chunk, used for progress updates.
+    """
+
+    def __init__(self, data: bytes, total_size: int, chunk_size: int):
         super().__init__(data)
         self.tqdm_bar = tqdm(
             total=total_size, unit="B", unit_scale=True, desc="Uploading", leave=True
         )
         self.chunk_size = chunk_size
 
-    def read(self, n=-1):
+    def read(self, n: int = -1) -> bytes:
         chunk = super().read(n)
         self.tqdm_bar.update(len(chunk))
         return chunk
 
-    def close(self):
+    def close(self) -> None:
         self.tqdm_bar.close()
         super().close()
 
 
-def save_file_bucket(data, content_type, blob_name, bucket_name, verbose=True, chunk_size_mb=5):
+def save_file_bucket(
+    data: bytes,
+    content_type: str,
+    blob_name: str,
+    bucket_name: str,
+    verbose: bool = True,
+    chunk_size_mb: int = 5,
+) -> None:
     """
-    Uploads a binary file (BytesIO) to GCS using chunked (resumable) upload with a progress bar.
+    Uploads a binary file to a Google Cloud Storage (GCS) bucket using a resumable upload
+    with chunked streaming and a tqdm progress bar.
+
+    Parameters:
+    ----------
+    data : bytes
+        The binary content to upload, typically from a file or HTTP response.
+    content_type : str
+        The MIME type of the file (e.g., "application/zip", "application/json").
+    blob_name : str
+        Name of the destination blob in the GCS bucket.
+    bucket_name : str
+        Name of the GCS bucket to upload the file to.
+    verbose : bool, optional
+        If True, prints upload status and progress messages. Default is True.
+    chunk_size_mb : int, optional
+        Size of each upload chunk in megabytes. Must be a multiple of 256 KB.
+        Default is 5 MB.
     """
     client = storage.Client()
     bucket = client.bucket(bucket_name)
@@ -63,14 +102,23 @@ def save_file_bucket(data, content_type, blob_name, bucket_name, verbose=True, c
         print("Upload complete.")
 
 
-def duplicate_blob(bucket_name, filename_in, filename_out, verbose=True):
+def duplicate_blob(
+    bucket_name: str, filename_in: str, filename_out: str, verbose: bool = True
+) -> None:
     """
-    Duplicate a GCS object by copying it within the same bucket.
+    Duplicates a file (blob) within a Google Cloud Storage (GCS) bucket by copying
+    an existing object to a new location (name).
 
     Parameters:
-        bucket_name (str): Name of the GCS bucket.
-        filename_in (str): Source blob name (path to existing file).
-        filename_out (str): Destination blob name (path for the new file).
+    ----------
+    bucket_name : str
+        Name of the GCS bucket containing the file.
+    filename_in : str
+        Name of the existing blob to copy (source).
+    filename_out : str
+        Name for the new blob (destination).
+    verbose : bool, optional
+        If True, prints a message confirming the copy. Default is True.
     """
     client = storage.Client()
     bucket = client.bucket(bucket_name)
@@ -83,16 +131,37 @@ def duplicate_blob(bucket_name, filename_in, filename_out, verbose=True):
 
 
 def download_zip_to_gcs(
-    url, bucket_name, blob_name, data=None, params=None, headers=None, chunk_size=8192, verbose=True
-):
+    url: str,
+    bucket_name: str,
+    blob_name: str,
+    data: dict | None = None,
+    params: dict | None = None,
+    headers: dict | None = None,
+    chunk_size: int = 8192,
+    verbose: bool = True,
+) -> None:
     """
-    Downloads a ZIP file from a URL and uploads it directly to GCS.
+    Downloads a ZIP file from a URL (via GET or POST) and uploads it to Google Cloud Storage
+    with a progress bar.
 
     Parameters:
-        url (str): The URL of the ZIP file.
-        bucket_name (str): GCS bucket name.
-        blob_name (str): Path within the bucket to store the file.
-        chunk_size (int): Size of each streamed chunk (default 8 KB).
+    ----------
+    url : str
+        The URL of the ZIP file to download.
+    bucket_name : str
+        Name of the GCS bucket to upload the file to.
+    blob_name : str
+        Destination path (blob name) within the GCS bucket.
+    data : dict, optional
+        Data to include in the POST request body. If `None`, a GET request is used.
+    params : dict, optional
+        URL query parameters to include in the request.
+    headers : dict, optional
+        HTTP headers to send with the request.
+    chunk_size : int, optional
+        Number of bytes to read at a time while streaming. Default is 8192 (8 KB).
+    verbose : bool, optional
+        If True, prints progress messages. Default is True.
     """
     # Start HTTP download stream
     if verbose:
@@ -135,8 +204,29 @@ def download_zip_to_gcs(
     tqdm_buffer.close()
 
 
-def upload_dataframe(bucket_name, df, destination_blob_name, project_id=PROJECT, verbose=True):
-    """Uploads a dataframe to the bucket."""
+def upload_dataframe(
+    bucket_name: str,
+    df: pd.DataFrame,
+    destination_blob_name: str,
+    project_id: str = PROJECT,
+    verbose: bool = True,
+) -> None:
+    """
+    Uploads a pandas DataFrame to a Google Cloud Storage bucket as a CSV file.
+
+    Parameters:
+    ----------
+    bucket_name : str
+        Name of the GCS bucket to upload the file to.
+    df : pd.DataFrame
+        The pandas DataFrame to upload.
+    destination_blob_name : str
+        Name of the destination blob (object path) in the GCS bucket.
+    project_id : str, optional
+        Google Cloud project ID. Defaults to global `PROJECT`.
+    verbose : bool, optional
+        If True, prints status messages. Default is True.
+    """
 
     client = storage.Client(project=project_id)
     bucket = client.get_bucket(bucket_name)
@@ -147,8 +237,25 @@ def upload_dataframe(bucket_name, df, destination_blob_name, project_id=PROJECT,
 
 def load_zipped_shapefile_from_gcs(filename: str, bucket: str) -> gpd.GeoDataFrame:
     """
-    Loads a zipped shapefile from GCS into a GeoDataFrame.
+    Loads a zipped shapefile from a Google Cloud Storage (GCS) bucket into a GeoDataFrame.
+
+    This function assumes that the ZIP file contains a single shapefile with
+    consistent base names (e.g., `.shp`, `.shx`, `.dbf`, etc.) and reads it directly
+    using fsspec-compatible streaming.
+
+    Parameters:
+    ----------
+    filename : str
+        Name of the ZIP file (blob) in the GCS bucket.
+    bucket : str
+        Name of the GCS bucket where the ZIP file is stored.
+
+    Returns:
+    -------
+    gpd.GeoDataFrame
+        A GeoDataFrame containing the shapefile’s features and attributes.
     """
+
     gcs_zip_path = f"gs://{bucket}/{filename}"
     with fsspec.open(gcs_zip_path, mode="rb") as f:
         gdf = gpd.read_file(f)

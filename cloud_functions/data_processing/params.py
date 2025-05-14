@@ -26,8 +26,8 @@ MARINE_REGIONS_HEADERS = {
 MARINE_REGIONS_BODY = {
     "name": "Jason",
     "organisation": "skytruth",
-    "email": "hello@skytruth.com",
-    "country": "Spain",
+    "email": "tech@skytruth.com",
+    "country": "United States",
     "user_category": "academia",
     "purpose_category": "Conservation",
     "agree": "1",
