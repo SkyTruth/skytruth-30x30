@@ -338,4 +338,6 @@ def main(request):
     else:
         print(f"METHOD: {method} not a valid option")
 
+    print("Process complete!")
+
     return "OK", 200
