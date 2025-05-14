@@ -444,89 +444,94 @@ def main(request: Request) -> Tuple[str, int]:
         A tuple of ("OK", 200) to signal successful completion to the client.
     """
 
-    data = request.get_json(silent=True) or {}
-    method = data.get("METHOD", "default")
+    try:
+        data = request.get_json(silent=True) or {}
+        method = data.get("METHOD", "default")
 
-    match method:
-        case "dry_run":
-            print("Dry Run Complete!")
+        match method:
+            case "dry_run":
+                print("Dry Run Complete!")
 
-        case "download_eezs":
-            download_zip_to_gcs(
-                MARINE_REGIONS_URL,
-                BUCKET,
-                EEZ_ZIPFILE_NAME,
-                data=MARINE_REGIONS_BODY,
-                params=EEZ_PARAMS,
-                headers=MARINE_REGIONS_HEADERS,
-                chunk_size=CHUNK_SIZE,
-                verbose=verbose,
-            )
+            case "download_eezs":
+                download_zip_to_gcs(
+                    MARINE_REGIONS_URL,
+                    BUCKET,
+                    EEZ_ZIPFILE_NAME,
+                    data=MARINE_REGIONS_BODY,
+                    params=EEZ_PARAMS,
+                    headers=MARINE_REGIONS_HEADERS,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=verbose,
+                )
 
-        case "download_high_seas":
-            download_zip_to_gcs(
-                MARINE_REGIONS_URL,
-                BUCKET,
-                HIGH_SEAS_ZIPFILE_NAME,
-                data=MARINE_REGIONS_BODY,
-                params=HIGH_SEAS_PARAMS,
-                headers=MARINE_REGIONS_HEADERS,
-                chunk_size=CHUNK_SIZE,
-                verbose=verbose,
-            )
+            case "download_high_seas":
+                download_zip_to_gcs(
+                    MARINE_REGIONS_URL,
+                    BUCKET,
+                    HIGH_SEAS_ZIPFILE_NAME,
+                    data=MARINE_REGIONS_BODY,
+                    params=HIGH_SEAS_PARAMS,
+                    headers=MARINE_REGIONS_HEADERS,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=verbose,
+                )
 
-        case "download_habitats":
-            download_habitats(
-                habitats_url=HABITATS_URL,
-                habitats_file_name=HABITATS_FILE_NAME,
-                archive_habitats_file_name=ARCHIVE_HABITATS_FILE_NAME,
-                seamounts_url=SEAMOUNTS_URL,
-                seamounts_file_name=SEAMOUNTS_FILE_NAME,
-                archive_seamounts_file_name=ARCHIVE_SEAMOUNTS_FILE_NAME,
-                bucket=BUCKET,
-                chunk_size=CHUNK_SIZE,
-                verbose=verbose,
-            )
+            case "download_habitats":
+                download_habitats(
+                    habitats_url=HABITATS_URL,
+                    habitats_file_name=HABITATS_FILE_NAME,
+                    archive_habitats_file_name=ARCHIVE_HABITATS_FILE_NAME,
+                    seamounts_url=SEAMOUNTS_URL,
+                    seamounts_file_name=SEAMOUNTS_FILE_NAME,
+                    archive_seamounts_file_name=ARCHIVE_SEAMOUNTS_FILE_NAME,
+                    bucket=BUCKET,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=verbose,
+                )
 
-        case "download_mpatlas":
-            download_mpatlas(
-                url=MPATLAS_URL,
-                bucket=BUCKET,
-                filename=MPATLAS_FILE_NAME,
-                archive_filename=ARCHIVE_MPATLAS_FILE_NAME,
-                verbose=verbose,
-            )
+            case "download_mpatlas":
+                download_mpatlas(
+                    url=MPATLAS_URL,
+                    bucket=BUCKET,
+                    filename=MPATLAS_FILE_NAME,
+                    archive_filename=ARCHIVE_MPATLAS_FILE_NAME,
+                    verbose=verbose,
+                )
 
-        case "download_protected_seas":
-            download_protected_seas(
-                url=PROTECTED_SEAS_URL,
-                bucket=BUCKET,
-                filename=PROTECTED_SEAS_FILE_NAME,
-                archive_filename=ARCHIVE_PROTECTED_SEAS_FILE_NAME,
-                project=PROJECT,
-                verbose=verbose,
-            )
+            case "download_protected_seas":
+                download_protected_seas(
+                    url=PROTECTED_SEAS_URL,
+                    bucket=BUCKET,
+                    filename=PROTECTED_SEAS_FILE_NAME,
+                    archive_filename=ARCHIVE_PROTECTED_SEAS_FILE_NAME,
+                    project=PROJECT,
+                    verbose=verbose,
+                )
 
-        case "download_protected_planet_wdpa":
-            download_protected_planet(
-                wdpa_global_level_file_name=WDPA_GLOBAL_LEVEL_FILE_NAME,
-                archive_wdpa_global_level_file_name=ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
-                wdpa_country_level_file_name=WDPA_COUNTRY_LEVEL_FILE_NAME,
-                archive_wdpa_country_level_file_name=ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
-                pp_api_key=PP_API_KEY,
-                project_id=PROJECT,
-                wdpa_global_url=WDPA_GLOBAL_LEVEL_URL,
-                wdpa_url=WDPA_URL,
-                api_url=WDPA_API_URL,
-                wdpa_file_name=WDPA_FILE_NAME,
-                archive_wdpa_file_name=ARCHIVE_WDPA_FILE_NAME,
-                bucket=BUCKET,
-                verbose=verbose,
-            )
+            case "download_protected_planet_wdpa":
+                download_protected_planet(
+                    wdpa_global_level_file_name=WDPA_GLOBAL_LEVEL_FILE_NAME,
+                    archive_wdpa_global_level_file_name=ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
+                    wdpa_country_level_file_name=WDPA_COUNTRY_LEVEL_FILE_NAME,
+                    archive_wdpa_country_level_file_name=ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
+                    pp_api_key=PP_API_KEY,
+                    project_id=PROJECT,
+                    wdpa_global_url=WDPA_GLOBAL_LEVEL_URL,
+                    wdpa_url=WDPA_URL,
+                    api_url=WDPA_API_URL,
+                    wdpa_file_name=WDPA_FILE_NAME,
+                    archive_wdpa_file_name=ARCHIVE_WDPA_FILE_NAME,
+                    bucket=BUCKET,
+                    verbose=verbose,
+                )
 
-        case _:
-            print(f"METHOD: {method} not a valid option")
+            case _:
+                print(f"METHOD: {method} not a valid option")
 
-    print("Process complete!")
+        print("Process complete!")
 
-    return "OK", 200
+        return "OK", 200
+    except Exception as e:
+        print(f"METHOD {method} failed: {e}")
+
+        return f"Internal Server Error: {e}", 500
