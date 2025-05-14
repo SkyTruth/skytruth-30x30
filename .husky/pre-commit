@@ -18,5 +18,5 @@ if git diff --cached --exit-code --quiet -- ../cloud_functions/data_processing/ 
     echo "No changes in data_processing directory"
 else
     echo "Changes detected in data_processing directory, running pre-commit hook"
-    cd ../cloud_functions/data_processing && poetry run ruff check --fix && poetry run ruff format . && git add .
+    cd ../cloud_functions/data_processing && poetry run ruff check --fix && poetry run ruff format
 fi

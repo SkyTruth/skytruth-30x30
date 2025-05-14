@@ -38,18 +38,3 @@ class Strapi:
         except Exception as excep:
             print("Failed to authenticate with 30x30 API ", excep)
 
-    def fishing_protection_stats(self, location: str) -> dict[str:any]:
-        """"""
-        try:
-            path = (
-                f"locations?filters[code]={location}"
-                "&populate[fishing_protection_level_stats][populate][fishing_protection_level]"
-                "=*&fields=code"
-            )
-            response = requests.get(
-                f"{self.BASE_URLS.get(self.ENV)}{path}",
-            )
-            response_data = response.json()
-            return response_data.get("data")
-        except Exception as excep:
-            print(f"Failed to get fishing stats for location {location} ", excep)
