@@ -6,10 +6,18 @@ authors = [
     {name = "SkyTruth"}
 ]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<4"
 
 dependencies = [
-    "requests (>=2.32.3,<3.0.0)"
+    "requests (>=2.32.3,<3.0.0)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "fiona (>=1.10.1,<2.0.0)",
+    "google-cloud-storage (>=3.1.0,<4.0.0)",
+    "tqdm (>=4.67.1,<5.0.0)",
+    "geopandas (>=1.0.1,<2.0.0)",
+    "fsspec (>=2025.3.2,<2026.0.0)",
+    "google-api-core (>=2.24.2,<3.0.0)",
+    "flask (>=3.1.1,<4.0.0)"
 ]
 
 [tool.poetry.group.dev.dependencies]

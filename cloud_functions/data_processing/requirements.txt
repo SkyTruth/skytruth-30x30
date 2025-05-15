@@ -1,9 +1,0 @@
-pandas
-requests
-fiona
-google-cloud-storage
-tqdm
-geopandas
-fsspec
-google-api-core
-flask
