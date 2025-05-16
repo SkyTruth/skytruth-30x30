@@ -8,7 +8,7 @@ For architecture, data sources and teh high-level data update plan, please see t
 
 ## Development
 
-This project is managed using [Poetry][poetry]. Install Poetry, and run `poetry install` from this directory to install dependencies.
+This project is managed using [Poetry][poetry]. Install Poetry and the poetry export plug in `poetry self add poetry-plugin-export`. Then run `poetry install` from this directory to install dependencies.
 
 ### Environment Variables
 

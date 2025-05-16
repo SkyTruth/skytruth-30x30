@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN poetry self add poetry-plugin-export
 
 # Set working directory
 WORKDIR /app
@@ -34,8 +35,11 @@ WORKDIR /app
 # Copy requirements and install
 COPY poetry.lock pyproject.toml ./
 
-# Do not install dev dependencies
-RUN poetry install --only=main --no-interaction --no-ansi
+# Export the requirements to a requirements.txt file
+RUN poetry export -f requirements.txt --without-hashes  > requirements.txt
+
+RUN pip install --upgrade pip && \
+    pip install -r ./requirements.txt
 
 # Copy the rest of your function code
 COPY . .
