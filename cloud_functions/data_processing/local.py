@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # This is especially important for local testing
 load_dotenv(override=True)
 
-from main import main as handler #noqa: E402,I001
+from main import main as handler  # noqa: E402,I001
 
 
 def main(request):
