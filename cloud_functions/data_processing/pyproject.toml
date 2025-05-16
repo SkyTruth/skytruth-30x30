@@ -42,3 +42,6 @@ line-length = 100
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
