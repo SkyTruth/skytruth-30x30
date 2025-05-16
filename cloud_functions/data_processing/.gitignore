@@ -1,3 +1,8 @@
+#  Cache and temporary files
 .ruff_cache
 *.pyc
 .DS_Store
+
+# environment variables
+.env
+!.env.default

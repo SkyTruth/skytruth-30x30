@@ -1,5 +1,6 @@
 import os
 
+import functions_framework
 from flask import Request
 
 from src.methods import (
@@ -26,6 +27,7 @@ BUCKET = os.getenv("BUCKET", "")
 PROJECT = os.getenv("PROJECT", "")
 
 
+@functions_framework.http
 def main(request: Request) -> tuple[str, int]:
     """
     Cloud Function entry point that dispatches behavior based on the 'METHOD' key

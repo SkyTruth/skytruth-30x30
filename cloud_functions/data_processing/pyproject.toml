@@ -6,7 +6,7 @@ authors = [
     {name = "SkyTruth"}
 ]
 readme = "README.md"
-requires-python = ">=3.13,<4"
+requires-python = ">=3.13,<3.14"
 
 dependencies = [
     "requests (>=2.32.3,<3.0.0)",
@@ -17,13 +17,15 @@ dependencies = [
     "geopandas (>=1.0.1,<2.0.0)",
     "fsspec (>=2025.3.2,<2026.0.0)",
     "google-api-core (>=2.24.2,<3.0.0)",
-    "flask (>=3.1.1,<4.0.0)"
+    "flask (>=3.1.1,<4.0.0)",
+    "functions-framework (>=3.8.2,<4.0.0)"
 ]
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.11.9"
 pytest = "^8.3.5"
 responses = "^0.25.7"
+python-dotenv = "^1.1.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

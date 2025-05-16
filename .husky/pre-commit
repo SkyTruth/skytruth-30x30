@@ -19,4 +19,5 @@ if git diff --cached --exit-code --quiet -- ../cloud_functions/data_processing/ 
 else
     echo "Changes detected in data_processing directory, running pre-commit hook"
     cd ../cloud_functions/data_processing && poetry run ruff check --fix && poetry run ruff format
+    poetry export -f requirements.txt --without-hashes  > requirements.txt && git add requirements.txt
 fi
