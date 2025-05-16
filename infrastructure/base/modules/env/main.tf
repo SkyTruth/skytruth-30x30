@@ -289,10 +289,10 @@ module "analysis_cloud_function" {
 }
 
 resource "google_storage_bucket" "data_bucket" {
-  name     = "${var.project_name}-data-processing"
-  location = var.gcp_region
-  project  = var.gcp_project_id
-  force_destroy = false
+  name                        = "${var.project_name}-data-processing"
+  location                    = var.gcp_region
+  project                     = var.gcp_project_id
+  force_destroy               = false
   uniform_bucket_level_access = true
   labels = {
     environment = var.environment
@@ -302,13 +302,21 @@ resource "google_storage_bucket" "data_bucket" {
 
 locals {
   data_processing_cloud_function_env = {
-    BUCKET = google_storage_bucket.data_bucket.name
-    PROJECT = var.gcp_project_id
+    BUCKET              = google_storage_bucket.data_bucket.name
+    PROJECT             = var.gcp_project_id
+    STRAPI_API_URL      = local.api_lb_url
+    STRAPI_USERNAME     = var.backend_write_user
   }
   data_processing_cloud_function_secrets = [{
     key        = "PP_API_KEY"
     project_id = var.gcp_project_id
     secret     = "protected-planet-api-key"
+    version    = "latest"
+  },
+  {
+    key        = "STRAPI_PASSWORD"
+    project_id = var.gcp_project_id
+    secret     = "${var.project_name}_strapi_write_user_password"
     version    = "latest"
   }]
 }

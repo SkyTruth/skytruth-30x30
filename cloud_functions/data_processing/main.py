@@ -1,32 +1,34 @@
-from flask import Request
 import os
-from typing import Tuple
 
-from src.params import (
-    CHUNK_SIZE,
-    MARINE_REGIONS_URL,
-    MARINE_REGIONS_BODY,
-    MARINE_REGIONS_HEADERS,
-    EEZ_ZIPFILE_NAME,
-    EEZ_PARAMS,
-    HIGH_SEAS_ZIPFILE_NAME,
-    HIGH_SEAS_PARAMS,
-)
-from src.utils.gcp import download_zip_to_gcs
+import functions_framework
+from flask import Request
+
 from src.methods import (
     download_habitats,
     download_mpatlas,
-    download_protected_seas,
     download_protected_planet,
+    download_protected_seas,
 )
+from src.params import (
+    CHUNK_SIZE,
+    EEZ_PARAMS,
+    EEZ_ZIPFILE_NAME,
+    HIGH_SEAS_PARAMS,
+    HIGH_SEAS_ZIPFILE_NAME,
+    MARINE_REGIONS_BODY,
+    MARINE_REGIONS_HEADERS,
+    MARINE_REGIONS_URL,
+)
+from src.utils.gcp import download_zip_to_gcs
 
 verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
 BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "")
+PROJECT = os.getenv("PROJECT", "BAD!")
 
 
-def main(request: Request) -> Tuple[str, int]:
+@functions_framework.http
+def main(request: Request) -> tuple[str, int]:
     """
     Cloud Function entry point that dispatches behavior based on the 'METHOD' key
     in the incoming HTTP request body. Each METHOD corresponds to a specific data
