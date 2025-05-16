@@ -24,7 +24,7 @@ from src.utils.gcp import download_zip_to_gcs
 verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
 BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "")
+PROJECT = os.getenv("PROJECT", "BAD!")
 
 
 @functions_framework.http
@@ -58,6 +58,7 @@ def main(request: Request) -> tuple[str, int]:
     """
 
     try:
+        print("PROJECT:", PROJECT, "<-T%hats ist")
         data = request.get_json(silent=True) or {}
         method = data.get("METHOD", "default")
 

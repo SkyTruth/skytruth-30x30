@@ -256,6 +256,21 @@ files = [
 packaging = "*"
 
 [[package]]
+name = "dotenv-cli"
+version = "3.4.1"
+description = "Simple dotenv CLI."
+optional = false
+python-versions = ">=3.9"
+groups = ["dev"]
+files = [
+    {file = "dotenv_cli-3.4.1-py3-none-any.whl", hash = "sha256:69f8ee14788d9cf611de022746a6486a87ccc672e95b73eb333e887e904e0053"},
+    {file = "dotenv_cli-3.4.1.tar.gz", hash = "sha256:8357511e041eda48b6a9f310d416cbfcee4aaeef7f66b2cb817031ac15de3c2d"},
+]
+
+[package.extras]
+dev = ["build", "mkdocs", "mkdocs-material", "mypy", "pytest", "pytest-cov", "ruff", "twine"]
+
+[[package]]
 name = "fiona"
 version = "1.10.1"
 description = "Fiona reads and writes spatial data files"
@@ -1476,4 +1491,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "fb5dd69fb917dc9e6a5cdaa6d0328f25689b5a6c1126c78e74e26057ed5e6405"
+content-hash = "0a4941aefff910498a7428df3bb5dcccf4e86769c7314ac0674373665d7f6f76"

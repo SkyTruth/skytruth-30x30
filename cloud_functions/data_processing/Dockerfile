@@ -40,4 +40,4 @@ RUN poetry install --only=main --no-interaction --no-ansi
 # Copy the rest of your function code
 COPY . .
 
-CMD ["poetry", "run", "python", "main.py"]
+ENTRYPOINT ["functions-framework", "--target=main", "--debug", "--port=8080"]
