@@ -58,7 +58,6 @@ def main(request: Request) -> tuple[str, int]:
     """
 
     try:
-        print("PROJECT:", PROJECT, "<-T%hats ist")
         data = request.get_json(silent=True) or {}
         method = data.get("METHOD", "default")
 
