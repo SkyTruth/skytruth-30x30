@@ -41,6 +41,22 @@ HIGH_SEAS_ZIPFILE_NAME = "static/high_seas.zip"
 HIGH_SEAS_SHAPEFILE_NAME = "High_Seas_v2.shp"
 HIGH_SEAS_PARAMS = {"name": "World_High_Seas_v2_20241010.zip"}
 
+MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"
+
+# ------------------------------------------------------------
+#                           GADM
+# ------------------------------------------------------------
+
+GADM_URL = "https://geodata.ucdavis.edu/gadm/gadm4.1/gadm_410-levels.zip"
+GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
+GADM_FILE_NAME = "static/GADM_processed.geojson"
+
+
+# ------------------------------------------------------------
+#        Locations (combined Marine Regions and GADM)
+# ------------------------------------------------------------
+LOCATIONS_FILE_NAME = "static/locations_processed.csv"
+
 
 # ------------------------------------------------------------
 #                    MPATLAS
@@ -102,4 +118,9 @@ SEAMOUNTS_FILE_NAME = "habitats/seamounts.zip"
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
 
+# ------------------------------------------------------------
+#                            MISC
+# ------------------------------------------------------------
 CHUNK_SIZE = 8192
+LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
+DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"

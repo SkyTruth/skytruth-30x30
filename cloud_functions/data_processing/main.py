@@ -1,9 +1,12 @@
 from flask import Request
 import os
+import sys
 from typing import Tuple
 
 from src.params import (
     CHUNK_SIZE,
+    GADM_URL,
+    GADM_ZIPFILE_NAME,
     MARINE_REGIONS_URL,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
@@ -13,12 +16,15 @@ from src.params import (
     HIGH_SEAS_PARAMS,
 )
 from src.utils.gcp import download_zip_to_gcs
+from src.utils.processing import process_locations
 from src.methods import (
     download_habitats,
     download_mpatlas,
     download_protected_seas,
     download_protected_planet,
 )
+
+sys.path.append("./src")
 
 verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
@@ -63,6 +69,15 @@ def main(request: Request) -> Tuple[str, int]:
             case "dry_run":
                 print("Dry Run Complete!")
 
+            case "download_gadm":
+                download_zip_to_gcs(
+                    GADM_URL,
+                    BUCKET,
+                    GADM_ZIPFILE_NAME,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=verbose,
+                )
+
             case "download_eezs":
                 download_zip_to_gcs(
                     MARINE_REGIONS_URL,
@@ -98,6 +113,9 @@ def main(request: Request) -> Tuple[str, int]:
 
             case "download_protected_planet_wdpa":
                 download_protected_planet(verbose=verbose)
+
+            case "process_locations":
+                process_locations(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")
