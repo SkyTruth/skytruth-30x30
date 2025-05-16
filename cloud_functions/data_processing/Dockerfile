@@ -13,17 +13,17 @@ ENV POETRY_NO_INTERACTION=1 \
   
 # Install OS dependencies
 RUN apt-get update && apt-get install -y \
-g++ \
-gcc \
-git \
-libgdal-dev \
-libgeos-dev \
-libproj-dev \
-libspatialindex-dev \
-python3-dev \
-unzip \
-curl \
-&& rm -rf /var/lib/apt/lists/*
+  g++ \
+  gcc \
+  git \
+  libgdal-dev \
+  libgeos-dev \
+  libproj-dev \
+  libspatialindex-dev \
+  python3-dev \
+  unzip \
+  curl \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
