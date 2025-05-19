@@ -16,7 +16,7 @@ class Strapi:
         self.PASSWORD = os.environ.get("STRAPI_PASSWORD", None)
         self.token = self.authenticate()
         self.default_headers = {'Content-Type': 'application/json'}
-        self.auth_headers = headers = {"Authorization": f"Bearer {self.token}"}
+        self.auth_headers = {"Authorization": f"Bearer {self.token}"}
 
     # Authenitcate with the 30x30 API
     # The API requires passwrod based auth, after which it responds with a JWT
@@ -99,4 +99,5 @@ class Strapi:
         str
             The query string.
         """
-        return "&".join([f"filters[{key}][$eq]={value}" for key, value in filters.items() if value is not None])
+        return "&".join([f"filters[{key}][$eq]={value}" for key, value in filters.items() 
+            if value is not None])
