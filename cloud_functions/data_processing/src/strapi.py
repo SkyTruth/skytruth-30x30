@@ -15,7 +15,7 @@ class Strapi:
 
         self.PASSWORD = os.environ.get("STRAPI_PASSWORD", None)
         self.token = self.authenticate()
-        self.default_headers = {'Content-Type': 'application/json'}
+        self.default_headers = {"Content-Type": "application/json"}
         self.auth_headers = {"Authorization": f"Bearer {self.token}"}
 
     # Authenitcate with the 30x30 API
@@ -43,11 +43,11 @@ class Strapi:
                 }
             )
             raise excep
-        
+
     def _get_pa(self, properties: dict[str, str]) -> int | None:
         """
         Get the protected area from the 30x30 API.
-        
+
         Parameters
         ----------
         properties : dict[str, str]
@@ -84,11 +84,11 @@ class Strapi:
                 }
             )
             raise excep
-        
+
     def _make_query_filters(self, filters: dict) -> str:
         """
         Make a query string from the filters dictionary.
-        
+
         Parameters
         ----------
         filters : dict
@@ -99,5 +99,6 @@ class Strapi:
         str
             The query string.
         """
-        return "&".join([f"filters[{key}][$eq]={value}" for key, value in filters.items() 
-            if value is not None])
+        return "&".join(
+            [f"filters[{key}][$eq]={value}" for key, value in filters.items() if value is not None]
+        )

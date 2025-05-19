@@ -19,10 +19,11 @@ def set_common_env(monkeypatch):
 
     yield
 
+
 @pytest.fixture()
 def mock_authenticate():
     """Mock the authenticate method."""
-    with patch("src.strapi.Strapi.authenticate", return_value='jwt') as mock_authenticate:
+    with patch("src.strapi.Strapi.authenticate", return_value="jwt") as mock_authenticate:
         yield mock_authenticate
 
 
@@ -80,14 +81,15 @@ def test__make_query_filters(mock_authenticate):
     """Test the _make_query_filters method."""
     strapi = Strapi()
     properties = {"name": "test_name", "type": "test_type"}
-    expected = 'filters[name][$eq]=test_name&filters[type][$eq]=test_type'
+    expected = "filters[name][$eq]=test_name&filters[type][$eq]=test_type"
     filters = strapi._make_query_filters(properties)
     assert filters == expected
+
 
 def test__make_query_filters_none_values(mock_authenticate):
     """Test the _make_query_filters method ignores None fields."""
     strapi = Strapi()
     properties = {"name": None, "type": "test_type", "other": None}
-    expected = 'filters[type][$eq]=test_type'
+    expected = "filters[type][$eq]=test_type"
     filters = strapi._make_query_filters(properties)
     assert filters == expected
