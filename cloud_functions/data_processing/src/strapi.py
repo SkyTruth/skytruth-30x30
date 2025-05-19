@@ -15,6 +15,8 @@ class Strapi:
 
         self.PASSWORD = os.environ.get("STRAPI_PASSWORD", None)
         self.token = self.authenticate()
+        self.default_headers = {'Content-Type': 'application/json'}
+        self.auth_headers = headers = {"Authorization": f"Bearer {self.token}"}
 
     # Authenitcate with the 30x30 API
     # The API requires passwrod based auth, after which it responds with a JWT
@@ -41,3 +43,60 @@ class Strapi:
                 }
             )
             raise excep
+        
+    def _get_pa(self, properties: dict[str, str]) -> int | None:
+        """
+        Get the protected area from the 30x30 API.
+        
+        Parameters
+        ----------
+        properties : dict[str, str]
+            The properties that define the PA to be used as filters.
+
+        Returns
+        -------
+        int
+            The ID of the protected area.
+        """
+        try:
+            filters = self._make_query_filters(properties)
+            response = requests.get(
+                f"{self.BASE_URL}pas?{filters}",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=5,
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            if len(response_data.data) > 1:
+                self.logger.warning(
+                    {
+                        "message": "Multiple protected areas found with the same properties",
+                        "properties": properties,
+                    }
+                )
+                return None
+            return response.json()
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to get protected area from 30x30 API",
+                    "exception": str(excep),
+                }
+            )
+            raise excep
+        
+    def _make_query_filters(self, filters: dict) -> str:
+        """
+        Make a query string from the filters dictionary.
+        
+        Parameters
+        ----------
+        filters : dict
+            The filters to apply to the query.
+
+        Returns
+        -------
+        str
+            The query string.
+        """
+        return "&".join([f"filters[{key}][$eq]={value}" for key, value in filters.items() if value is not None])
