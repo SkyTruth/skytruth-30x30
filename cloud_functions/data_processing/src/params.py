@@ -65,6 +65,9 @@ LOCATIONS_FILE_NAME = "static/locations_processed.csv"
 MPATLAS_URL = "https://guide.mpatlas.org/api/v2/zone/geojson"
 MPATLAS_FILE_NAME = "raw/mpatlas_zone_assessment.zip"
 ARCHIVE_MPATLAS_FILE_NAME = f"archive/raw/mpatlas_zone_assessment_{today_formatted}.zip"
+MPATLAS_COUNTRY_LEVEL_API_URL = "https://mpatlas.org/api/v1/internal/countries"
+MPATLAS_COUNTRY_LEVEL_FILE_NAME = "raw/mpatlas_country_level.csv"
+ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/mpatlas_{today_formatted}_country_level.csv"
 
 # ------------------------------------------------------------
 #                 Protected Seas
@@ -95,7 +98,7 @@ WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_do
 #                         Habitats
 # ------------------------------------------------------------
 HABITATS_URL = "https://habitats.oceanplus.org/downloads/global_statistics.zip"
-HABITATS_FILE_NAME = "habitats/global_statistics.zip"
+HABITATS_ZIP_FILE_NAME = "habitats/global_statistics.zip"
 ARCHIVE_HABITATS_FILE_NAME = f"archive/habitats/global_statistics_{today_formatted}.zip"
 MANGROVES_API_URL = "https://mangrove-atlas-api.herokuapp.com/admin/widget_protected_areas.csv"
 MANGROVES_REQUEST_HEADERS = {
@@ -117,6 +120,7 @@ SEAMOUNTS_URL = (
 SEAMOUNTS_FILE_NAME = "habitats/seamounts.zip"
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
+HABITATS_FILE_NAME = "habitats/habitats_table.csv"
 
 # ------------------------------------------------------------
 #                            MISC

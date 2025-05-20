@@ -2,6 +2,9 @@ from io import BytesIO
 import os
 import pandas as pd
 import requests
+import gcsfs
+import zipfile
+import io
 
 from src.params import (
     CHUNK_SIZE,
@@ -25,6 +28,7 @@ from src.params import (
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
     HABITATS_URL,
     HABITATS_FILE_NAME,
+    HABITATS_ZIP_FILE_NAME,
     ARCHIVE_HABITATS_FILE_NAME,
     SEAMOUNTS_URL,
     SEAMOUNTS_FILE_NAME,
@@ -33,8 +37,21 @@ from src.params import (
 from src.utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
+    load_gdb_layer_from_gcs,
+    load_zipped_shapefile_from_gcs,
     save_file_bucket,
     upload_dataframe,
+)
+
+from utils.processors import (
+    add_constants,
+    add_environment,
+    add_simplified_name,
+    add_year,
+    calculate_area,
+    remove_columns,
+    remove_non_designated_m,
+    remove_non_designated_p,
 )
 
 verbose = True
@@ -422,3 +439,95 @@ def download_habitats(
         chunk_size=chunk_size,
         verbose=verbose,
     )
+
+
+def generate_prptected_areas_table(
+    wdpa_file_name: str = WDPA_FILE_NAME,
+    mpatlas_file_name: str = MPATLAS_FILE_NAME,
+    bucket: str = BUCKET,
+):
+    wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
+
+    wdpa_dict = {
+        "NAME": "name",
+        "GIS_AREA": "area",
+        "STATUS": "STATUS",
+        "STATUS_YR": "year",
+        "WDPAID": "wdpa_id",
+        "DESIG_TYPE": "designation",
+        "ISO3": "iso_3",
+        "IUCN_CAT": "iucn_category",
+        "MARINE": "MARINE",
+        "PARENT_ISO3": "parent_id",
+        "geometry": "geometry",
+    }
+    cols = [i for i in wdpa_dict]
+
+    wdpa_pa = (
+        wdpa[cols]
+        .rename(columns=wdpa_dict)
+        .pipe(remove_non_designated_p)
+        .pipe(add_simplified_name)
+        .pipe(add_environment)
+        .pipe(add_constants, {"data_source": "Protected Planet"})
+        .pipe(remove_columns, ["STATUS", "MARINE"])
+    )
+
+    mpatlas = load_zipped_shapefile_from_gcs(mpatlas_file_name, bucket)
+
+    mpa_dict = {
+        "name": "name",
+        "designated_date": "designated_date",
+        "wdpa_id": "wdpa_id",
+        "designation": "designation",
+        "establishment_stage": "mpaa_establishment_stage",
+        "sovereign": "location",
+        "protection_mpaguide_level": "mpaa_protection_level",
+        "geometry": "geometry",
+    }
+    cols = [i for i in mpa_dict]
+    mpa_pa = (
+        mpatlas[cols]
+        .rename(columns=mpa_dict)
+        .pipe(add_simplified_name)
+        .pipe(remove_non_designated_m)
+        .pipe(add_year)
+        .pipe(add_constants, {"environment": "marine", "data_source": "MPATLAS"})
+        .pipe(remove_columns, "designated_date")
+        .pipe(calculate_area)
+    )
+
+    return wdpa_pa, mpa_pa
+
+
+def generate_habitats_table(
+    habitats_file_name: str = HABITATS_ZIP_FILE_NAME,
+    file_name_out: str = HABITATS_FILE_NAME,
+    bucket: str = BUCKET,
+    project: str = PROJECT,
+):
+    habitats = ["warmwatercorals", "coldwatercorals", "seagrasses", "saltmarshes"]
+
+    fs = gcsfs.GCSFileSystem()
+    gcs_path = f"gs://{bucket}/{habitats_file_name}"
+
+    # Download zipfile from GCS into memory
+    with fs.open(gcs_path, "rb") as f:
+        zip_bytes = f.read()
+
+    dfs = {}
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+        for name in habitats:
+            with zf.open(f"Ocean+HabitatsDownload_Global/{name}.csv") as csv_file:
+                dfs[name] = pd.read_csv(csv_file)
+
+    marine_habitats = pd.DataFrame()
+    for habitat in habitats:
+        tmp = dfs[habitat][["ISO3", "protected_area", "total_area"]].copy()
+        tmp["environment"] = "marine"
+        tmp["habitat"] = habitat
+        marine_habitats = pd.concat((marine_habitats, tmp))
+
+    # TODO: Add Mangroves and Sea Mounts
+
+    upload_dataframe(bucket, marine_habitats, file_name_out, project_id=project, verbose=True)

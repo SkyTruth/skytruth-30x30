@@ -1,18 +1,20 @@
 import gcsfs
+from google.api_core.retry import Retry
 from google.cloud import storage
 import geopandas as gpd
 import fiona
 import fsspec
 from io import BytesIO
 import json
+import os
 import pandas as pd
+from pathlib import Path
 import requests
+import shutil
 import tempfile
 from tqdm import tqdm
 from typing import Optional
 import zipfile
-import os
-from google.api_core.retry import Retry
 
 PROJECT = os.getenv("PROJECT", "")
 
@@ -451,6 +453,56 @@ def read_json_from_gcs(bucket_name: str, filename: str, verbose: bool = True) ->
 
     with fs.open(gcs_path, "r") as f:
         return json.load(f)
+
+
+def download_zipfile_from_gcs(bucket_name: str, zip_filename: str, verbose: bool = True) -> Path:
+    """
+    Downloads a ZIP file from GCS into a temporary directory and extracts it,
+    with a progress bar during download.
+
+    Parameters:
+    ----------
+    bucket_name : str
+        GCS bucket name.
+    zip_filename : str
+        Path to the zip file in the bucket.
+    verbose : bool
+        If True, prints status messages and shows progress bar.
+
+    Returns:
+    -------
+    Path
+        Path to the directory containing extracted zip contents.
+    """
+    fs = gcsfs.GCSFileSystem()
+    gcs_path = f"gs://{bucket_name}/{zip_filename}"
+
+    if verbose:
+        print(f"Downloading {gcs_path}...")
+
+    # Create a temp dir to hold zip and extracted files
+    temp_dir = Path(tempfile.mkdtemp())
+    zip_path = temp_dir / "archive.zip"
+
+    with fs.open(gcs_path, "rb") as f_in, open(zip_path, "wb") as f_out:
+        total_size = fs.info(gcs_path)["size"]
+        with tqdm(total=total_size, unit="B", unit_scale=True, desc="Downloading zip") as pbar:
+            while True:
+                chunk = f_in.read(8192)
+                if not chunk:
+                    break
+                f_out.write(chunk)
+                pbar.update(len(chunk))
+
+    # Extract
+    extract_dir = temp_dir / "unzipped"
+    extract_dir.mkdir()
+    shutil.unpack_archive(zip_path, extract_dir)
+
+    if verbose:
+        print(f"Extracted to: {extract_dir}")
+
+    return extract_dir
 
 
 def load_gdb_layer_from_gcs(
