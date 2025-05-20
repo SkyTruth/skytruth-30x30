@@ -1,4 +1,5 @@
 from io import BytesIO
+import json
 import os
 import pandas as pd
 import requests
@@ -39,6 +40,7 @@ from src.utils.gcp import (
     duplicate_blob,
     load_gdb_layer_from_gcs,
     load_zipped_shapefile_from_gcs,
+    read_dataframe,
     save_file_bucket,
     upload_dataframe,
 )
@@ -46,9 +48,11 @@ from src.utils.gcp import (
 from utils.processors import (
     add_constants,
     add_environment,
+    add_pas_oecm,
     add_simplified_name,
     add_year,
     calculate_area,
+    extract_column_dict_str,
     remove_columns,
     remove_non_designated_m,
     remove_non_designated_p,
@@ -441,7 +445,7 @@ def download_habitats(
     )
 
 
-def generate_prptected_areas_table(
+def generate_protected_areas_table(
     wdpa_file_name: str = WDPA_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_FILE_NAME,
     bucket: str = BUCKET,
@@ -531,3 +535,118 @@ def generate_habitats_table(
     # TODO: Add Mangroves and Sea Mounts
 
     upload_dataframe(bucket, marine_habitats, file_name_out, project_id=project, verbose=True)
+
+
+def generate_protected_coverage_table(
+    bucket: str = BUCKET, wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME
+):
+    def get_group_stats_pp(df, loc, relations):
+        """
+        Computes summary stats for a group of related locations.
+        """
+        df_group = df[df["location"].isin(relations[loc])]
+
+        total_protected_area = df_group["protected_area"].sum()
+        total_area = df_group["area"].sum()
+        # pas = 100 * df_group['pa_coverage'].sum()/df_group['coverage'].sum()
+        # oecm = 100 - pas
+        pas = (
+            100
+            * df_group["pas_count"].sum()
+            / (df_group["pas_count"] + df_group["oecm_count"]).sum()
+        )
+        oecm = (
+            100
+            * df_group["oecm_count"].sum()
+            / (df_group["pas_count"] + df_group["oecm_count"]).sum()
+        )
+
+        return {
+            "location": loc,
+            "environment": df_group.iloc[0]["environment"] if not df_group.empty else None,
+            "protected_area": total_protected_area,
+            "protected_area_count": df_group["protected_area_count"].sum(),
+            "coverage": total_protected_area / total_area if total_area else None,
+            "pas": pas,
+            "oecm": oecm,
+            "global_contribution": None,  # TODO: fill this in
+        }
+
+    wdpa_country = read_dataframe(bucket, wdpa_country_level_file_name)
+
+    # TODO: update this!
+    with open("related_countries_final.json", "r") as file:
+        related_countries = json.load(file)
+
+    # WDPA country level marine
+
+    wdpa_dict = {"id": "location", "pas_count": "protected_area_count", "statistics": "statistics"}
+    stats_dict = {
+        "marine_area": "area",
+        "oecms_pa_marine_area": "protected_area",
+        "percentage_oecms_pa_marine_cover": "coverage",
+        "pa_marine_area": "pa_protected_area",
+        "percentage_pa_marine_cover": "pa_coverage",
+        "protected_area_polygon_count": "n_pa_poly",
+        "protected_area_point_count": "n_pa_point",
+        "oecm_polygon_count": "n_oecm_poly",
+        "oecm_point_count": "n_oecm_point",
+    }
+    cols = [i for i in wdpa_dict]
+    wdpa_cl_m = (
+        wdpa_country[cols]
+        .rename(columns=wdpa_dict)
+        .pipe(add_constants, {"environment": "marine"})
+        .pipe(extract_column_dict_str, stats_dict, "statistics")
+        .pipe(add_pas_oecm)
+        .pipe(
+            remove_columns, ["statistics", "n_pa_poly", "n_pa_point", "n_oecm_poly", "n_oecm_point"]
+        )
+    )
+
+    # WDPA country level terrestrial
+
+    wdpa_dict = {"id": "location", "pas_count": "protected_area_count", "statistics": "statistics"}
+    stats_dict = {
+        "land_area": "area",
+        "oecms_pa_land_area": "protected_area",
+        "percentage_oecms_pa_land_cover": "coverage",
+        "pa_land_area": "pa_protected_area",
+        "percentage_pa_land_cover": "pa_coverage",
+        "protected_area_polygon_count": "n_pa_poly",
+        "protected_area_point_count": "n_pa_point",
+        "oecm_polygon_count": "n_oecm_poly",
+        "oecm_point_count": "n_oecm_point",
+    }
+    cols = [i for i in wdpa_dict]
+    wdpa_cl_t = (
+        wdpa_country[cols]
+        .rename(columns=wdpa_dict)
+        .pipe(add_constants, {"environment": "terrestrial"})
+        .pipe(extract_column_dict_str, stats_dict, "statistics")
+        .pipe(add_pas_oecm)
+        .pipe(
+            remove_columns, ["statistics", "n_pa_poly", "n_pa_point", "n_oecm_poly", "n_oecm_point"]
+        )
+    )
+
+    reg_t = pd.DataFrame(
+        [
+            get_group_stats_pp(wdpa_cl_t, loc, related_countries)
+            for loc in related_countries
+            if loc in list(wdpa_cl_t["location"])
+        ]
+    )
+    reg_t = reg_t[reg_t["protected_area"] > 0]
+    reg_m = pd.DataFrame(
+        [
+            get_group_stats_pp(wdpa_cl_m, loc, related_countries)
+            for loc in related_countries
+            if loc in list(wdpa_cl_m["location"])
+        ]
+    )
+    reg_m = reg_m[reg_m["protected_area"] > 0]
+
+    protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
+
+    return protection_coverage_table

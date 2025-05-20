@@ -1,4 +1,6 @@
+import ast
 import geopandas as gpd
+import pandas as pd
 
 
 def add_constants(df, const):
@@ -9,6 +11,14 @@ def add_constants(df, const):
 
 def add_environment(df):
     df["environment"] = df["MARINE"].map({"0": "terrestrial", "1": "marine", "2": "marine"})
+    return df
+
+
+def add_pas_oecm(df):
+    df["pas_percent_area"] = 100 * df["pa_coverage"] / df["coverage"]
+    df["oecm_percent_area"] = 100 * (1 - df["pa_coverage"] / df["coverage"])
+    df["pas_count"] = df["n_pa_poly"] + df["n_pa_point"]
+    df["oecm_count"] = df["n_oecm_poly"] + df["n_oecm_point"]
     return df
 
 
@@ -29,6 +39,20 @@ def calculate_area(
     if round:
         col = col.round(round)
     return df.assign(**{output_area_column: col})
+
+
+def extract_column_dict_str(df, column_dict, column):
+    if isinstance(column_dict, dict):
+        for d in column_dict:
+            df[column_dict[d]] = df[column].apply(
+                lambda x: ast.literal_eval(x).get(d) if pd.notnull(x) else None
+            )
+    if isinstance(column_dict, list):
+        for d in column_dict:
+            df[d] = df[column].apply(
+                lambda x: ast.literal_eval(x).get(d) if pd.notnull(x) else None
+            )
+    return df
 
 
 def remove_columns(df, columns):
