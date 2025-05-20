@@ -5,6 +5,9 @@ import requests
 
 from src.params import (
     CHUNK_SIZE,
+    MPATLAS_COUNTRY_LEVEL_API_URL,
+    MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_URL,
     MPATLAS_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
@@ -28,9 +31,9 @@ from src.params import (
     ARCHIVE_SEAMOUNTS_FILE_NAME,
 )
 from src.utils.gcp import (
-    save_file_bucket,
-    duplicate_blob,
     download_zip_to_gcs,
+    duplicate_blob,
+    save_file_bucket,
     upload_dataframe,
 )
 
@@ -114,6 +117,21 @@ def download_mpatlas(
         verbose=verbose,
     )
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
+
+
+def download_mpatlas_country(
+    bucket: str = BUCKET,
+    project: str = PROJECT,
+    url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
+    current_filename: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    archive_filename: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+):
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+
+    upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
+    duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
 
 
 def download_protected_seas(
