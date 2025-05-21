@@ -1,5 +1,4 @@
 from io import BytesIO
-import json
 import os
 import pandas as pd
 import requests
@@ -34,28 +33,40 @@ from src.params import (
     SEAMOUNTS_URL,
     SEAMOUNTS_FILE_NAME,
     ARCHIVE_SEAMOUNTS_FILE_NAME,
+    RELATED_COUNTRIES_FILE_NAME,
+    REGIONS_FILE_NAME,
+    HIGH_SEAS_ZIPFILE_NAME,
+    HIGH_SEAS_PARAMS,
+    HIGH_SEAS_SHAPEFILE_NAME,
 )
+
 from src.utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
     load_gdb_layer_from_gcs,
     load_zipped_shapefile_from_gcs,
     read_dataframe,
+    read_json_from_gcs,
     save_file_bucket,
     upload_dataframe,
 )
+
+from utils.processing import load_marine_regions
 
 from utils.processors import (
     add_constants,
     add_environment,
     add_pas_oecm,
+    add_percentage_protection_mp,
     add_simplified_name,
     add_year,
     calculate_area,
+    clean_geometries,
     extract_column_dict_str,
     remove_columns,
     remove_non_designated_m,
     remove_non_designated_p,
+    update_mpatlas_asterisk,
 )
 
 verbose = True
@@ -537,49 +548,71 @@ def generate_habitats_table(
     upload_dataframe(bucket, marine_habitats, file_name_out, project_id=project, verbose=True)
 
 
+def load_regions(
+    bucket: str = BUCKET,
+    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
+    regions_file_name: str = REGIONS_FILE_NAME,
+):
+    # Load related countries and regions
+    related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
+    regions = read_json_from_gcs(bucket, regions_file_name, verbose=verbose)
+
+    combined_regions = related_countries | regions
+    combined_regions["GLOB"] = []
+
+    return combined_regions
+
+
 def generate_protected_coverage_table(
-    bucket: str = BUCKET, wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME
+    bucket: str = BUCKET,
+    wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME,
 ):
     def get_group_stats_pp(df, loc, relations):
         """
         Computes summary stats for a group of related locations.
         """
-        df_group = df[df["location"].isin(relations[loc])]
+        if loc == "GLOB":
+            df_group = df
+        else:
+            df_group = df[df["location"].isin(relations[loc])]
 
-        total_protected_area = df_group["protected_area"].sum()
-        total_area = df_group["area"].sum()
-        # pas = 100 * df_group['pa_coverage'].sum()/df_group['coverage'].sum()
-        # oecm = 100 - pas
-        pas = (
-            100
-            * df_group["pas_count"].sum()
-            / (df_group["pas_count"] + df_group["oecm_count"]).sum()
-        )
-        oecm = (
-            100
-            * df_group["oecm_count"].sum()
-            / (df_group["pas_count"] + df_group["oecm_count"]).sum()
-        )
+        if len(df_group) > 0:
+            total_protected_area = df_group["protected_area"].sum()
+            total_area = df_group["area"].sum()
+            # pas = 100 * df_group['pa_coverage'].sum()/df_group['coverage'].sum()
+            # oecm = 100 - pas
+            pas = (
+                100
+                * df_group["pas_count"].sum()
+                / (df_group["pas_count"] + df_group["oecm_count"]).sum()
+            )
+            oecm = (
+                100
+                * df_group["oecm_count"].sum()
+                / (df_group["pas_count"] + df_group["oecm_count"]).sum()
+            )
 
-        return {
-            "location": loc,
-            "environment": df_group.iloc[0]["environment"] if not df_group.empty else None,
-            "protected_area": total_protected_area,
-            "protected_area_count": df_group["protected_area_count"].sum(),
-            "coverage": total_protected_area / total_area if total_area else None,
-            "pas": pas,
-            "oecm": oecm,
-            "global_contribution": None,  # TODO: fill this in
-        }
+            return {
+                "location": loc,
+                "environment": df_group.iloc[0]["environment"] if not df_group.empty else None,
+                "protected_area": total_protected_area,
+                "protected_area_count": df_group["protected_area_count"].sum(),
+                "coverage": total_protected_area / total_area if total_area else None,
+                "pas": pas,
+                "oecm": oecm,
+                "global_contribution": None,  # TODO: fill this in
+                "area": total_area,
+            }
+        else:
+            return None
 
+    # Load protected planet country level statistics
     wdpa_country = read_dataframe(bucket, wdpa_country_level_file_name)
 
-    # TODO: update this!
-    with open("related_countries_final.json", "r") as file:
-        related_countries = json.load(file)
+    # Load related countries and regions
+    combined_regions = load_regions()
 
     # WDPA country level marine
-
     wdpa_dict = {"id": "location", "pas_count": "protected_area_count", "statistics": "statistics"}
     stats_dict = {
         "marine_area": "area",
@@ -630,23 +663,95 @@ def generate_protected_coverage_table(
         )
     )
 
+    # get country and regional groupings
     reg_t = pd.DataFrame(
-        [
-            get_group_stats_pp(wdpa_cl_t, loc, related_countries)
-            for loc in related_countries
-            if loc in list(wdpa_cl_t["location"])
-        ]
+        stat
+        for loc in combined_regions
+        if (stat := get_group_stats_pp(wdpa_cl_t, loc, combined_regions)) is not None
     )
     reg_t = reg_t[reg_t["protected_area"] > 0]
     reg_m = pd.DataFrame(
-        [
-            get_group_stats_pp(wdpa_cl_m, loc, related_countries)
-            for loc in related_countries
-            if loc in list(wdpa_cl_m["location"])
-        ]
+        stat
+        for loc in combined_regions
+        if (stat := get_group_stats_pp(wdpa_cl_m, loc, combined_regions)) is not None
     )
     reg_m = reg_m[reg_m["protected_area"] > 0]
 
     protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
 
     return protection_coverage_table
+
+
+def generate_marine_protection_level_stats_table(
+    mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME, bucket: str = BUCKET
+):
+    def get_group_stats_mp(
+        df, loc, relations, protection_level="highly/fully", high_seas_area=212949627.65
+    ):
+        if loc == "GLOB":
+            df_group = df
+            ext = high_seas_area  # Include high seas area
+        else:
+            df_group = df[df["location"].isin(relations[loc])]
+            ext = 0
+
+        if len(df_group) > 0:
+            total_protected_area = df_group["protected_area"].sum()
+            total_area = df_group["area"].sum() + ext
+
+            return {
+                "location": loc,
+                "protected_area": total_protected_area,
+                "area": total_area,
+                "mpaa_protection_level": protection_level,
+                "percent": 100 * total_protected_area / total_area,
+            }
+        else:
+            return None
+
+    # Load related countries and regions
+    combined_regions = load_regions()
+
+    # Load MPAtlas Country level statistics
+    mpatlas_country = read_dataframe(bucket, mpatlas_country_level_file_name)
+
+    # TODO: is this how we want to calculate high seas area?
+    hs = load_marine_regions(
+        HIGH_SEAS_ZIPFILE_NAME,
+        f"{HIGH_SEAS_PARAMS['name'].rsplit('.',1)[0]}/{HIGH_SEAS_SHAPEFILE_NAME}",
+        BUCKET,
+    ).pipe(clean_geometries)
+    high_seas_area = calculate_area(hs).iloc[0]["area_km2"]
+
+    protection_level = "highly/fully"
+
+    mpa_dict = {
+        "id": "location",
+        "highly_protected_km2": "protected_area",
+        "wdpa_marine_km2": "area",
+    }
+    cols = [i for i in mpa_dict]
+    mpa_cl_mps = (
+        mpatlas_country[cols]
+        .rename(columns=mpa_dict)
+        .pipe(add_constants, {"mpaa_protection_level": protection_level})
+        .pipe(add_percentage_protection_mp)
+        .pipe(update_mpatlas_asterisk, asterisk=True)
+    )
+
+    reg_m = pd.DataFrame(
+        stat
+        for loc in combined_regions
+        if (
+            stat := get_group_stats_mp(
+                mpa_cl_mps,
+                loc,
+                combined_regions,
+                protection_level=protection_level,
+                high_seas_area=high_seas_area,
+            )
+        )
+        is not None
+    )
+
+    return reg_m

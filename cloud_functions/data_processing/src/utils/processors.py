@@ -22,6 +22,11 @@ def add_pas_oecm(df):
     return df
 
 
+def add_percentage_protection_mp(df):
+    df["percentage"] = df["protected_area"] / df["area"]
+    return df
+
+
 def add_simplified_name(df):
     df["simplified_name"] = df["name"].apply(lambda x: x.split(" - ")[0])
     return df
@@ -39,6 +44,11 @@ def calculate_area(
     if round:
         col = col.round(round)
     return df.assign(**{output_area_column: col})
+
+
+def clean_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    gdf.geometry = gdf.geometry.make_valid()
+    return gdf
 
 
 def extract_column_dict_str(df, column_dict, column):
@@ -66,3 +76,26 @@ def remove_non_designated_m(df):
 
 def remove_non_designated_p(df):
     return df[df["STATUS"] == "Designated"]
+
+
+def update_mpatlas_asterisk(df: pd.DataFrame, asterisk: bool = False) -> pd.DataFrame:
+    """
+    If `asterisk` is True, updates 'protected_area' using values from rows with
+    asterisks in 'location'Returns a filtered or modified DataFrame in all cases.
+    """
+
+    # Separate rows with and without asterisk
+    reg = df[~df["location"].str.contains(r"\*", regex=True)].copy()
+
+    if not asterisk:
+        return reg
+
+    star = df[df["location"].str.contains(r"\*", regex=True)].copy()
+    star["location"] = star["location"].str.replace("*", "", regex=False)
+
+    for _, row in star.iterrows():
+        loc = row["location"]
+        value = row["protected_area"]
+        reg.loc[reg["location"] == loc, "protected_area"] = value
+
+    return reg

@@ -362,11 +362,35 @@ def read_zipped_gpkg_from_gcs(
             return gpd.read_file(gpkg_files[0])
 
 
-def read_dataframe(bucket_name, filename, skip_empty=False, skip_empty_val=2, verbose=False):
+def read_dataframe(
+    bucket_name: str,
+    filename: str,
+    skip_empty: bool = False,
+    skip_empty_val: int = 2,
+    verbose: bool = False,
+) -> Optional[pd.DataFrame]:
     """
-    Reads blob as pandas dataframe. Optionally will skip empty files.
-    Skip file size can be set if desired but defaults to 2 bytes
+    Reads a CSV file from Google Cloud Storage into a pandas DataFrame.
+
+    Parameters
+    ----------
+    bucket_name : str
+        Name of the GCS bucket.
+    filename : str
+        Path to the CSV file in the bucket.
+    skip_empty : bool, optional
+        If True, checks the file size before reading and skips files that are empty.
+    skip_empty_val : int, optional
+        File size threshold in bytes to consider as empty (default is 2).
+    verbose : bool, optional
+        If True, prints a message when skipping an empty file.
+
+    Returns
+    -------
+    pd.DataFrame or None
+        A DataFrame if the file is non-empty and readable, or None if skipped.
     """
+
     # must have gcsfs installed to work
     fs = gcsfs.GCSFileSystem()
     fpath = f"gs://{bucket_name}/{filename}"
