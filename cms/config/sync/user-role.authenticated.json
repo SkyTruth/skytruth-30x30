@@ -70,6 +70,21 @@
       "action": "api::location.location.findOne"
     },
     {
+      "action": "api::pa.pa.bulkUpsert"
+    },
+    {
+      "action": "api::pa.pa.create"
+    },
+    {
+      "action": "api::pa.pa.find"
+    },
+    {
+      "action": "api::pa.pa.findOne"
+    },
+    {
+      "action": "api::pa.pa.update"
+    },
+    {
       "action": "plugin::users-permissions.auth.changePassword"
     },
     {
