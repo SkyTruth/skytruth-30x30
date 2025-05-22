@@ -1972,6 +1972,7 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributes = 
   environment?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesEnvironment;
   coverage?: number;
   parent?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesParent;
+  zone_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesCreatedBy;
@@ -2974,6 +2975,7 @@ export interface Pa {
   environment?: PaEnvironment;
   coverage: number;
   parent?: PaParent;
+  zone_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: PaCreatedBy;
@@ -3017,6 +3019,7 @@ export type PaChildrenDataItemAttributes = {
   environment?: PaChildrenDataItemAttributesEnvironment;
   coverage?: number;
   parent?: PaChildrenDataItemAttributesParent;
+  zone_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: PaChildrenDataItemAttributesCreatedBy;
@@ -3972,6 +3975,7 @@ export type PaRequestData = {
   environment?: PaRequestDataEnvironment;
   coverage: number;
   parent?: PaRequestDataParent;
+  zone_id?: string;
 };
 
 export type MpaaProtectionLevelStatResponseMeta = { [key: string]: any };
@@ -4140,6 +4144,7 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributes =
   environment?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesEnvironment;
   coverage?: number;
   parent?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesParent;
+  zone_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesCreatedBy;
@@ -6051,6 +6056,7 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributes = {
   environment?: LocationGroupsDataItemAttributesPasDataItemAttributesEnvironment;
   coverage?: number;
   parent?: LocationGroupsDataItemAttributesPasDataItemAttributesParent;
+  zone_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesCreatedBy;
@@ -7719,6 +7725,7 @@ export type HabitatStatLocationDataAttributesPasDataItemAttributes = {
   environment?: HabitatStatLocationDataAttributesPasDataItemAttributesEnvironment;
   coverage?: number;
   parent?: HabitatStatLocationDataAttributesPasDataItemAttributesParent;
+  zone_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: HabitatStatLocationDataAttributesPasDataItemAttributesCreatedBy;
@@ -9085,6 +9092,7 @@ export type FishingProtectionLevelStatLocationDataAttributesPasDataItemAttribute
   environment?: FishingProtectionLevelStatLocationDataAttributesPasDataItemAttributesEnvironment;
   coverage?: number;
   parent?: FishingProtectionLevelStatLocationDataAttributesPasDataItemAttributesParent;
+  zone_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: FishingProtectionLevelStatLocationDataAttributesPasDataItemAttributesCreatedBy;

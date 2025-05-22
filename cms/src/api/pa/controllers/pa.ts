@@ -74,67 +74,76 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
   },
   async bulkUpsert(ctx) {
     // console.log("Context", ctx, ctx.request.body);
-    if (!Array.isArray(ctx?.request?.body?.data)) {
-      return ctx.badRequest('Invalid data format. Expected a body with an array of objects.');
-    }
-    const errors = []
-    const data = ctx.request.body.data;
-    for (const item of data) {
-      const { id, wdpaid, zone, ...attributes } = item;
-      if (id) {
-        // Update existing entry
-        await strapi.entityService.update('api::pa.pa', id, {
-          data: attributes,
-        });
+    try{
+      if (!Array.isArray(ctx?.request?.body?.data)) {
+        return ctx.badRequest('Invalid data format. Expected a body with an array of objects.');
       }
-      else {
-        console.log("wdpaid", wdpaid);
-        const filters = {
-          ...(wdpaid && { wdpaid }), 
-          ...(zone && { zone })
-        };
-        console.log("filters", filters);
-        const entries = await strapi.entityService.findMany('api::pa.pa', 
-          {
-          fields: ['name'],
-          filters,
-        }
-      )
-        console.log(entries)
-        if (entries.length === 1) {
-          // Entry already exists, update it
-          await strapi.entityService.update('api::pa.pa', entries[0].id, {
-            data: attributes,
-          });
-        } else if (entries.length > 1) {
-          // Handle the case where multiple entries are found
-          let record = null;
-          if (attributes?.name) {
-            record = entries.find((entry) => entry.name === attributes.name)
+      const knex = strapi.db.connection;
+      await knex.transaction(async (trx) => {
+
+        const errors = []
+      
+        const data = ctx.request.body.data;
+        for (const item of data) {
+          const { id, wdpaid, zone_id, ...attributes } = item;
+          if (id) {
+            // Update existing entry
+            await strapi.entityService.update('api::pa.pa', id, {
+              data: attributes,
+            });
           }
-          if (!attributes?.name || !record) {
-            strapi.log.warn('Multiple entries found for PA upsert', {wdpaid, zone, name: attributes?.name});
+          else {
+            const filters = {
+              ...(wdpaid && { wdpaid }), 
+              ...(zone_id && { zone_id })
+            };
+            const entries = await strapi.entityService.findMany('api::pa.pa', 
+              {
+              fields: ['name'],
+              filters,
+              }
+            )
+            console.log(entries)
+            if (entries.length === 1) {
+              // Entry already exists, update it
+              await strapi.entityService.update('api::pa.pa', entries[0].id, {
+                data: attributes,
+              });
+            } else if (entries.length > 1) {
+              // Handle the case where multiple entries are found
+              let record = null;
+              if (attributes?.name) {
+                record = entries.find((entry) => entry.name === attributes.name)
+              }
+              if (!attributes?.name || !record) {
+                strapi.log.warn('Multiple entries found for PA upsert', {wdpaid, zone_id, name: attributes?.name});
+              }
+              errors.push({wdpaid, zone_id, name: attributes?.name, message: 'Multiple entries found with the same wdpaid, zone_id, and/or name.'});
+            } else {
+              // Create new entry
+              await strapi.entityService.create('api::pa.pa', {
+                data: {
+                  ...attributes,
+                  ...(wdpaid && { wdpaid }),
+                  ...(zone_id && { zone_id })
+                },
+              });
+            }
           }
-          errors.push({wdpaid, zone, name: attributes?.name, message: 'Multiple entries found with the same wdpaid, zone, and/or name.'});
-        } else {
-          // Create new entry
-          await strapi.entityService.create('api::pa.pa', {
-            data: {
-              ...attributes,
-              ...(wdpaid && { wdpaid }),
-              ...(zone && { zone })
-            },
-          });
         }
+
+        if (errors.length === ctx.request.body.data.length) {
+          // All entries failed to create or update
+          return ctx.badRequest('Some entries were not created or updated.', { errors });
+        }
+        return ctx.send({
+          message: 'Entries created or updated successfully.',
+          errors: errors.length > 0 ? errors : null
+        });
+      })
+    } catch (error) {
+      strapi.log.error('Error in bulkUpsert:', error);
+      return ctx.internalServerError('An error occurred while processing the request.', { error });
     }
-  }
-    if (errors.length === ctx.request.body.data.length) {
-      // All entries failed to create or update
-      return ctx.badRequest('Some entries were not created or updated.', { errors });
-    }
-  return ctx.send({
-    message: 'Entries created or updated successfully.',
-    ...(errors.length > 0 && errors) ,
-  });
   }
 }));
