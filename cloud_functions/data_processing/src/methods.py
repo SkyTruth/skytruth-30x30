@@ -55,7 +55,6 @@ from utils.processors import (
     add_highly_protected_from_fishing_percent,
     add_pas_oecm,
     add_percentage_protection_mp,
-    add_simplified_name,
     add_year,
     calculate_area,
     extract_column_dict_str,
@@ -490,7 +489,6 @@ def generate_protected_areas_table(
         wdpa[cols]
         .rename(columns=wdpa_dict)
         .pipe(remove_non_designated_p)
-        .pipe(add_simplified_name)
         .pipe(add_environment)
         .pipe(add_constants, {"data_source": "Protected Planet"})
         .pipe(remove_columns, ["STATUS", "MARINE"])
@@ -513,7 +511,6 @@ def generate_protected_areas_table(
     mpa_pa = (
         mpatlas[cols]
         .rename(columns=mpa_dict)
-        .pipe(add_simplified_name)
         .pipe(remove_non_designated_m)
         .pipe(add_year)
         .pipe(add_constants, {"environment": "marine", "data_source": "MPATLAS"})
@@ -582,6 +579,44 @@ def generate_protection_coverage_stats_table(
     percent_type: str = "area",  # area or counts,
     verbose: bool = True,
 ):
+    def process_protected_area(wdpa_country, environment="marine"):
+        wdpa_dict = {
+            "id": "location",
+            "pas_count": "protected_area_count",
+            "statistics": "statistics",
+        }
+
+        stats_dict = {
+            f"{environment}_area": "area",
+            f"oecms_pa_{environment}_area": "protected_area",
+            f"percentage_oecms_pa_{environment}_cover": "coverage",
+            f"pa_{environment}_area": "pa_protected_area",
+            f"percentage_pa_{environment}_cover": "pa_coverage",
+            "protected_area_polygon_count": "protected_area_polygon_count",
+            "protected_area_point_count": "protected_area_point_count",
+            "oecm_polygon_count": "oecm_polygon_count",
+            "oecm_point_count": "oecm_point_count",
+        }
+        cols = [i for i in wdpa_dict]
+        wdpa_cl = (
+            wdpa_country[cols]
+            .rename(columns=wdpa_dict)
+            .pipe(add_constants, {"environment": environment})
+            .pipe(extract_column_dict_str, stats_dict, "statistics")
+            .pipe(add_pas_oecm)
+            .pipe(
+                remove_columns,
+                [
+                    "statistics",
+                    "protected_area_polygon_count",
+                    "protected_area_point_count",
+                    "oecm_polygon_count",
+                    "oecm_point_count",
+                ],
+            )
+        )
+        return wdpa_cl
+
     def get_group_stats(df, loc, relations, percent_type):
         """
         Computes summary stats for a group of related locations.
@@ -622,44 +657,6 @@ def generate_protection_coverage_stats_table(
             }
         else:
             return None
-
-    def process_protected_area(wdpa_country, environment="marine"):
-        wdpa_dict = {
-            "id": "location",
-            "pas_count": "protected_area_count",
-            "statistics": "statistics",
-        }
-
-        stats_dict = {
-            f"{environment}_area": "area",
-            f"oecms_pa_{environment}_area": "protected_area",
-            f"percentage_oecms_pa_{environment}_cover": "coverage",
-            f"pa_{environment}_area": "pa_protected_area",
-            f"percentage_pa_{environment}_cover": "pa_coverage",
-            "protected_area_polygon_count": "protected_area_polygon_count",
-            "protected_area_point_count": "protected_area_point_count",
-            "oecm_polygon_count": "oecm_polygon_count",
-            "oecm_point_count": "oecm_point_count",
-        }
-        cols = [i for i in wdpa_dict]
-        wdpa_cl = (
-            wdpa_country[cols]
-            .rename(columns=wdpa_dict)
-            .pipe(add_constants, {"environment": environment})
-            .pipe(extract_column_dict_str, stats_dict, "statistics")
-            .pipe(add_pas_oecm)
-            .pipe(
-                remove_columns,
-                [
-                    "statistics",
-                    "protected_area_polygon_count",
-                    "protected_area_point_count",
-                    "oecm_polygon_count",
-                    "oecm_point_count",
-                ],
-            )
-        )
-        return wdpa_cl
 
     def group_by_region(wdpa_cl, combined_regions):
         reg = pd.DataFrame(

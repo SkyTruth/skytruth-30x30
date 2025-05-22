@@ -42,12 +42,6 @@ def add_percentage_protection_mp(df):
     return df
 
 
-def add_simplified_name(df):
-    df = df.copy()
-    df["simplified_name"] = df["name"].apply(lambda x: x.split(" - ")[0])
-    return df
-
-
 def add_year(df):
     df = df.copy()
     df["year"] = df["designated_date"].apply(lambda x: int(x.split("-")[0]))
