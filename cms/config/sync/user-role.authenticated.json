@@ -70,6 +70,12 @@
       "action": "api::location.location.findOne"
     },
     {
+<<<<<<< HEAD
+=======
+      "action": "api::pa.pa.bulkUpsert"
+    },
+    {
+>>>>>>> feature/api-data-integration
       "action": "api::pa.pa.create"
     },
     {

@@ -1918,6 +1918,7 @@ export interface ApiPaPa extends Schema.CollectionType {
         min: 0;
       }>;
     parent: Attribute.Relation<'api::pa.pa', 'oneToOne', 'api::pa.pa'>;
+    zone_id: Attribute.BigInteger;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<'api::pa.pa', 'oneToOne', 'admin::user'> &
