@@ -5,6 +5,8 @@ import requests
 import gcsfs
 import zipfile
 import io
+import fiona
+import geopandas as gpd
 
 from src.params import (
     CHUNK_SIZE,
@@ -41,7 +43,6 @@ from src.utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
     load_gdb_layer_from_gcs,
-    load_zipped_shapefile_from_gcs,
     read_dataframe,
     read_json_from_gcs,
     save_file_bucket,
@@ -58,7 +59,6 @@ from utils.processors import (
     add_year,
     calculate_area,
     extract_column_dict_str,
-    get_highly_protected_from_fishing_area,
     remove_columns,
     remove_non_designated_m,
     remove_non_designated_p,
@@ -71,6 +71,43 @@ BUCKET = os.getenv("BUCKET", "")
 PROJECT = os.getenv("PROJECT", "")
 
 GLOBAL_MARINE_AREA_KM2 = 361000000
+
+
+def read_mpatlas_from_gcs(
+    bucket: str = BUCKET, filename: str = MPATLAS_FILE_NAME
+) -> gpd.GeoDataFrame:
+    """
+    Reads a GeoJSON file from GCS and preserves the top-level 'id' field
+    as zone_id
+
+    Parameters
+    ----------
+    bucket : str
+        The name of the GCS bucket.
+    filename : str
+        Path to the GeoJSON file in the bucket.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        A GeoDataFrame that includes top-level 'id' and all properties.
+    """
+    fs = gcsfs.GCSFileSystem()
+    with fs.open(f"gs://{bucket}/{filename}", "rb") as f:
+        raw_bytes = f.read()
+
+    # Open the GeoJSON from in-memory bytes
+    with fiona.open(BytesIO(raw_bytes), driver="GeoJSON") as src:
+        features = list(src)
+
+        # Extract top-level 'id' and merge with properties
+        for feature in features:
+            feature["properties"]["zone_id"] = feature.get("id")
+
+        gdf = gpd.GeoDataFrame.from_features(features)
+        gdf.set_crs(src.crs, inplace=True)
+
+    return gdf
 
 
 def download_and_duplicate_zipfile(
@@ -466,7 +503,7 @@ def generate_protected_areas_table(
 
     if verbose:
         print(f"loading gs://{bucket}/{mpatlas_file_name}")
-    mpatlas = load_zipped_shapefile_from_gcs(mpatlas_file_name, bucket)
+    mpatlas = read_mpatlas_from_gcs(bucket, mpatlas_file_name)
 
     if verbose:
         print("processing WDPAs")
@@ -780,29 +817,75 @@ def generate_fishing_protection_table(
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
+    def get_group_stats(
+        df,
+        loc,
+        relations,
+        global_marine_area=361000000,
+        fishing_protection_level="Highly protected from fishing",
+    ):
+        if loc == "GLOB":
+            df_group = df
+            total_area = global_marine_area
+        else:
+            df_group = df[df["location"].isin(relations[loc])]
+            total_area = df_group["area"].sum()
+
+        highly_protected_area = df_group["highly_protected_area"].sum()
+        assessed = True if len(df) > 0 else False
+
+        return {
+            "location": loc,
+            "area": total_area,
+            "highly_protected_area": highly_protected_area if assessed else None,
+            "fishing_protection_level": fishing_protection_level,
+            "percent": (
+                100 * highly_protected_area / total_area if assessed and total_area > 0 else None
+            ),
+        }
+
+    # Load related countries and regions
+    if verbose:
+        print("loading country and region groupings")
+    combined_regions = load_regions()
+
     if verbose:
         print(f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}")
     protected_seas = read_dataframe(bucket, protected_seas_file_name)
 
     if verbose:
         print("processing fishing level protection")
+
+    fishing_protection_level = "Highly protected from fishing"
     ps_dict = {
-        # TODO: do we want iso_sov or iso_ter and then group by our related_countries?
-        "iso_sov": "location",
+        "iso_ter": "location",
         "total_area": "area",
         "lfp5_area": "lfp5_area",
         "lfp4_area": "lfp4_area",
     }
     cols = [i for i in ps_dict]
+    # TODO: I think total_area is not the same as marine area,
+    # need to update with marine area from WDPA!
     ps_cl_fp = (
         protected_seas[cols]
         .rename(columns=ps_dict)
         .pipe(add_highly_protected_from_fishing_area)
-        .pipe(get_highly_protected_from_fishing_area)
         .pipe(add_constants, {"fishing_protection_level": "Highly protected from fishing"})
         .pipe(add_highly_protected_from_fishing_percent)
     )
 
-    # TODO: group by region (or keep iso_sov?)
+    reg = pd.DataFrame(
+        stat
+        for loc in combined_regions
+        if (
+            stat := get_group_stats(
+                ps_cl_fp,
+                loc,
+                combined_regions,
+                fishing_protection_level=fishing_protection_level,
+            )
+        )
+        is not None
+    )
 
-    return ps_cl_fp
+    return reg
