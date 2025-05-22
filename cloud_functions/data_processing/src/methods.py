@@ -623,6 +623,56 @@ def generate_protection_coverage_stats_table(
         else:
             return None
 
+    def process_protected_area(wdpa_country, environment="marine"):
+        wdpa_dict = {
+            "id": "location",
+            "pas_count": "protected_area_count",
+            "statistics": "statistics",
+        }
+
+        stats_dict = {
+            f"{environment}_area": "area",
+            f"oecms_pa_{environment}_area": "protected_area",
+            f"percentage_oecms_pa_{environment}_cover": "coverage",
+            f"pa_{environment}_area": "pa_protected_area",
+            f"percentage_pa_{environment}_cover": "pa_coverage",
+            "protected_area_polygon_count": "protected_area_polygon_count",
+            "protected_area_point_count": "protected_area_point_count",
+            "oecm_polygon_count": "oecm_polygon_count",
+            "oecm_point_count": "oecm_point_count",
+        }
+        cols = [i for i in wdpa_dict]
+        wdpa_cl = (
+            wdpa_country[cols]
+            .rename(columns=wdpa_dict)
+            .pipe(add_constants, {"environment": environment})
+            .pipe(extract_column_dict_str, stats_dict, "statistics")
+            .pipe(add_pas_oecm)
+            .pipe(
+                remove_columns,
+                [
+                    "statistics",
+                    "protected_area_polygon_count",
+                    "protected_area_point_count",
+                    "oecm_polygon_count",
+                    "oecm_point_count",
+                ],
+            )
+        )
+        return wdpa_cl
+
+    def group_by_region(wdpa_cl, combined_regions):
+        reg = pd.DataFrame(
+            stat
+            for loc in combined_regions
+            if (stat := get_group_stats(wdpa_cl, loc, combined_regions, percent_type)) is not None
+        )
+        reg = reg[reg["protected_area"] > 0]
+        global_protected_area = reg[reg["location"] == "GLOB"].iloc[0]["protected_area"]
+        reg["global_contribution"] = 100 * reg["protected_area"] / global_protected_area
+
+        return reg
+
     # Load protected planet country level statistics
     if verbose:
         print(
@@ -635,81 +685,19 @@ def generate_protection_coverage_stats_table(
         print("loading country and region groupings")
     combined_regions = load_regions()
 
-    # WDPA country level marine
+    # WDPA country level
     if verbose:
-        print("processing Marine country level stats")
-    wdpa_dict = {"id": "location", "pas_count": "protected_area_count", "statistics": "statistics"}
-    stats_dict = {
-        "marine_area": "area",
-        "oecms_pa_marine_area": "protected_area",
-        "percentage_oecms_pa_marine_cover": "coverage",
-        "pa_marine_area": "pa_protected_area",
-        "percentage_pa_marine_cover": "pa_coverage",
-        "protected_area_polygon_count": "n_pa_poly",
-        "protected_area_point_count": "n_pa_point",
-        "oecm_polygon_count": "n_oecm_poly",
-        "oecm_point_count": "n_oecm_point",
-    }
-    cols = [i for i in wdpa_dict]
-    wdpa_cl_m = (
-        wdpa_country[cols]
-        .rename(columns=wdpa_dict)
-        .pipe(add_constants, {"environment": "marine"})
-        .pipe(extract_column_dict_str, stats_dict, "statistics")
-        .pipe(add_pas_oecm)
-        .pipe(
-            remove_columns, ["statistics", "n_pa_poly", "n_pa_point", "n_oecm_poly", "n_oecm_point"]
-        )
-    )
+        print("processing Marine and terrestrial country level stats")
 
-    # WDPA country level terrestrial
-    if verbose:
-        print("processing Terrestrial country level stats")
-
-    wdpa_dict = {"id": "location", "pas_count": "protected_area_count", "statistics": "statistics"}
-    stats_dict = {
-        "land_area": "area",
-        "oecms_pa_land_area": "protected_area",
-        "percentage_oecms_pa_land_cover": "coverage",
-        "pa_land_area": "pa_protected_area",
-        "percentage_pa_land_cover": "pa_coverage",
-        "protected_area_polygon_count": "n_pa_poly",
-        "protected_area_point_count": "n_pa_point",
-        "oecm_polygon_count": "n_oecm_poly",
-        "oecm_point_count": "n_oecm_point",
-    }
-    cols = [i for i in wdpa_dict]
-    wdpa_cl_t = (
-        wdpa_country[cols]
-        .rename(columns=wdpa_dict)
-        .pipe(add_constants, {"environment": "terrestrial"})
-        .pipe(extract_column_dict_str, stats_dict, "statistics")
-        .pipe(add_pas_oecm)
-        .pipe(
-            remove_columns, ["statistics", "n_pa_poly", "n_pa_point", "n_oecm_poly", "n_oecm_point"]
-        )
-    )
+    wdpa_cl_m = process_protected_area(wdpa_country, environment="marine")
+    wdpa_cl_t = process_protected_area(wdpa_country, environment="land")
 
     if verbose:
         print("Grouping by sovereign country and region")
 
-    reg_t = pd.DataFrame(
-        stat
-        for loc in combined_regions
-        if (stat := get_group_stats(wdpa_cl_t, loc, combined_regions, percent_type)) is not None
-    )
-    reg_t = reg_t[reg_t["protected_area"] > 0]
-    global_terrestrial_protected_area = reg_t[reg_t["location"] == "GLOB"].iloc[0]["protected_area"]
-    reg_t["global_contribution"] = 100 * reg_t["protected_area"] / global_terrestrial_protected_area
-
-    reg_m = pd.DataFrame(
-        stat
-        for loc in combined_regions
-        if (stat := get_group_stats(wdpa_cl_m, loc, combined_regions, percent_type)) is not None
-    )
-    reg_m = reg_m[reg_m["protected_area"] > 0]
-    global_marine_protected_area = reg_m[reg_m["location"] == "GLOB"].iloc[0]["protected_area"]
-    reg_m["global_contribution"] = 100 * reg_m["protected_area"] / global_marine_protected_area
+    # Roll up into sovereign countries and regions
+    reg_t = group_by_region(wdpa_cl_t, combined_regions)
+    reg_m = group_by_region(wdpa_cl_m, combined_regions)
 
     protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
 

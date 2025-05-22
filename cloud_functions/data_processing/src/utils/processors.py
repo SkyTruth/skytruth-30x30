@@ -31,8 +31,8 @@ def add_pas_oecm(df):
     df = df.copy()
     df["pas_percent_area"] = 100 * df["pa_coverage"] / df["coverage"]
     df["oecm_percent_area"] = 100 * (1 - df["pa_coverage"] / df["coverage"])
-    df["pas_count"] = df["n_pa_poly"] + df["n_pa_point"]
-    df["oecm_count"] = df["n_oecm_poly"] + df["n_oecm_point"]
+    df["pas_count"] = df["protected_area_polygon_count"] + df["protected_area_point_count"]
+    df["oecm_count"] = df["oecm_polygon_count"] + df["oecm_point_count"]
     return df
 
 
