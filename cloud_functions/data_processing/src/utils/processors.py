@@ -10,11 +10,25 @@ def add_constants(df, const):
 
 
 def add_environment(df):
+    df = df.copy()
     df["environment"] = df["MARINE"].map({"0": "terrestrial", "1": "marine", "2": "marine"})
     return df
 
 
+def add_highly_protected_from_fishing_area(df):
+    df = df.copy()
+    df["highly_protected_area"] = df["lfp5_area"] + df["lfp4_area"]
+    return df
+
+
+def add_highly_protected_from_fishing_percent(df):
+    df = df.copy()
+    df["pct"] = 100 * df["highly_protected_area"] / df["area"]
+    return df
+
+
 def add_pas_oecm(df):
+    df = df.copy()
     df["pas_percent_area"] = 100 * df["pa_coverage"] / df["coverage"]
     df["oecm_percent_area"] = 100 * (1 - df["pa_coverage"] / df["coverage"])
     df["pas_count"] = df["n_pa_poly"] + df["n_pa_point"]
@@ -23,16 +37,19 @@ def add_pas_oecm(df):
 
 
 def add_percentage_protection_mp(df):
+    df = df.copy()
     df["percentage"] = df["protected_area"] / df["area"]
     return df
 
 
 def add_simplified_name(df):
+    df = df.copy()
     df["simplified_name"] = df["name"].apply(lambda x: x.split(" - ")[0])
     return df
 
 
 def add_year(df):
+    df = df.copy()
     df["year"] = df["designated_date"].apply(lambda x: int(x.split("-")[0]))
     return df
 
@@ -63,6 +80,10 @@ def extract_column_dict_str(df, column_dict, column):
                 lambda x: ast.literal_eval(x).get(d) if pd.notnull(x) else None
             )
     return df
+
+
+def get_highly_protected_from_fishing_area(df):
+    return df.groupby("location")[["area", "highly_protected_area"]].sum().reset_index()
 
 
 def remove_columns(df, columns):

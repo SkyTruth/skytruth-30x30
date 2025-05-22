@@ -35,9 +35,6 @@ from src.params import (
     ARCHIVE_SEAMOUNTS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     REGIONS_FILE_NAME,
-    HIGH_SEAS_ZIPFILE_NAME,
-    HIGH_SEAS_PARAMS,
-    HIGH_SEAS_SHAPEFILE_NAME,
 )
 
 from src.utils.gcp import (
@@ -51,18 +48,18 @@ from src.utils.gcp import (
     upload_dataframe,
 )
 
-from utils.processing import load_marine_regions
-
 from utils.processors import (
     add_constants,
     add_environment,
+    add_highly_protected_from_fishing_area,
+    add_highly_protected_from_fishing_percent,
     add_pas_oecm,
     add_percentage_protection_mp,
     add_simplified_name,
     add_year,
     calculate_area,
-    clean_geometries,
     extract_column_dict_str,
+    get_highly_protected_from_fishing_area,
     remove_columns,
     remove_non_designated_m,
     remove_non_designated_p,
@@ -73,6 +70,8 @@ verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
 BUCKET = os.getenv("BUCKET", "")
 PROJECT = os.getenv("PROJECT", "")
+
+GLOBAL_MARINE_AREA_KM2 = 361000000
 
 
 def download_and_duplicate_zipfile(
@@ -460,9 +459,18 @@ def generate_protected_areas_table(
     wdpa_file_name: str = WDPA_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_FILE_NAME,
     bucket: str = BUCKET,
+    verbose: bool = True,
 ):
+    if verbose:
+        print(f"loading gs://{bucket}/{wdpa_file_name}")
     wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
 
+    if verbose:
+        print(f"loading gs://{bucket}/{mpatlas_file_name}")
+    mpatlas = load_zipped_shapefile_from_gcs(mpatlas_file_name, bucket)
+
+    if verbose:
+        print("processing WDPAs")
     wdpa_dict = {
         "NAME": "name",
         "GIS_AREA": "area",
@@ -488,7 +496,8 @@ def generate_protected_areas_table(
         .pipe(remove_columns, ["STATUS", "MARINE"])
     )
 
-    mpatlas = load_zipped_shapefile_from_gcs(mpatlas_file_name, bucket)
+    if verbose:
+        print("processing MPAs")
 
     mpa_dict = {
         "name": "name",
@@ -520,21 +529,25 @@ def generate_habitats_table(
     file_name_out: str = HABITATS_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
+    verbose: bool = True,
 ):
     habitats = ["warmwatercorals", "coldwatercorals", "seagrasses", "saltmarshes"]
 
-    fs = gcsfs.GCSFileSystem()
-    gcs_path = f"gs://{bucket}/{habitats_file_name}"
+    if verbose:
+        print("downloading habitats zipfile into memory")
 
-    # Download zipfile from GCS into memory
-    with fs.open(gcs_path, "rb") as f:
-        zip_bytes = f.read()
+    with gcsfs.GCSFileSystem() as fs:
+        with fs.open(f"gs://{bucket}/{habitats_file_name}", "rb") as f:
+            zip_bytes = f.read()
 
     dfs = {}
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
         for name in habitats:
             with zf.open(f"Ocean+HabitatsDownload_Global/{name}.csv") as csv_file:
                 dfs[name] = pd.read_csv(csv_file)
+
+    if verbose:
+        print("generating habitats table")
 
     marine_habitats = pd.DataFrame()
     for habitat in habitats:
@@ -563,11 +576,13 @@ def load_regions(
     return combined_regions
 
 
-def generate_protected_coverage_table(
+def generate_protection_coverage_stats_table(
     bucket: str = BUCKET,
     wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME,
+    percent_type: str = "area",  # area or counts,
+    verbose: bool = True,
 ):
-    def get_group_stats_pp(df, loc, relations):
+    def get_group_stats(df, loc, relations, percent_type):
         """
         Computes summary stats for a group of related locations.
         """
@@ -579,40 +594,50 @@ def generate_protected_coverage_table(
         if len(df_group) > 0:
             total_protected_area = df_group["protected_area"].sum()
             total_area = df_group["area"].sum()
-            # pas = 100 * df_group['pa_coverage'].sum()/df_group['coverage'].sum()
-            # oecm = 100 - pas
-            pas = (
-                100
-                * df_group["pas_count"].sum()
-                / (df_group["pas_count"] + df_group["oecm_count"]).sum()
-            )
-            oecm = (
-                100
-                * df_group["oecm_count"].sum()
-                / (df_group["pas_count"] + df_group["oecm_count"]).sum()
-            )
+            if percent_type == "area":
+                coverage = df_group["coverage"].sum()
+                pas = 100 * df_group["pa_coverage"].sum() / coverage if coverage > 0 else None
+                oecm = 100 - pas if pas is not None else None
+            elif percent_type == "counts":
+                pas = (
+                    100
+                    * df_group["pas_count"].sum()
+                    / (df_group["pas_count"] + df_group["oecm_count"]).sum()
+                )
+                oecm = (
+                    100
+                    * df_group["oecm_count"].sum()
+                    / (df_group["pas_count"] + df_group["oecm_count"]).sum()
+                )
 
             return {
                 "location": loc,
                 "environment": df_group.iloc[0]["environment"] if not df_group.empty else None,
                 "protected_area": total_protected_area,
                 "protected_area_count": df_group["protected_area_count"].sum(),
-                "coverage": total_protected_area / total_area if total_area else None,
+                "coverage": 100 * total_protected_area / total_area if total_area else None,
                 "pas": pas,
                 "oecm": oecm,
-                "global_contribution": None,  # TODO: fill this in
                 "area": total_area,
             }
         else:
             return None
 
     # Load protected planet country level statistics
+    if verbose:
+        print(
+            f"loading Protected Planet Country-level data gs://{bucket}/{wdpa_country_level_file_name}"
+        )
     wdpa_country = read_dataframe(bucket, wdpa_country_level_file_name)
 
     # Load related countries and regions
+    if verbose:
+        print("loading country and region groupings")
     combined_regions = load_regions()
 
     # WDPA country level marine
+    if verbose:
+        print("processing Marine country level stats")
     wdpa_dict = {"id": "location", "pas_count": "protected_area_count", "statistics": "statistics"}
     stats_dict = {
         "marine_area": "area",
@@ -638,6 +663,8 @@ def generate_protected_coverage_table(
     )
 
     # WDPA country level terrestrial
+    if verbose:
+        print("processing Terrestrial country level stats")
 
     wdpa_dict = {"id": "location", "pas_count": "protected_area_count", "statistics": "statistics"}
     stats_dict = {
@@ -663,19 +690,26 @@ def generate_protected_coverage_table(
         )
     )
 
-    # get country and regional groupings
+    if verbose:
+        print("Grouping by sovereign country and region")
+
     reg_t = pd.DataFrame(
         stat
         for loc in combined_regions
-        if (stat := get_group_stats_pp(wdpa_cl_t, loc, combined_regions)) is not None
+        if (stat := get_group_stats(wdpa_cl_t, loc, combined_regions, percent_type)) is not None
     )
     reg_t = reg_t[reg_t["protected_area"] > 0]
+    global_terrestrial_protected_area = reg_t[reg_t["location"] == "GLOB"].iloc[0]["protected_area"]
+    reg_t["global_contribution"] = 100 * reg_t["protected_area"] / global_terrestrial_protected_area
+
     reg_m = pd.DataFrame(
         stat
         for loc in combined_regions
-        if (stat := get_group_stats_pp(wdpa_cl_m, loc, combined_regions)) is not None
+        if (stat := get_group_stats(wdpa_cl_m, loc, combined_regions, percent_type)) is not None
     )
     reg_m = reg_m[reg_m["protected_area"] > 0]
+    global_marine_protected_area = reg_m[reg_m["location"] == "GLOB"].iloc[0]["protected_area"]
+    reg_m["global_contribution"] = 100 * reg_m["protected_area"] / global_marine_protected_area
 
     protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
 
@@ -683,48 +717,46 @@ def generate_protected_coverage_table(
 
 
 def generate_marine_protection_level_stats_table(
-    mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME, bucket: str = BUCKET
+    mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    bucket: str = BUCKET,
+    verbose: bool = True,
 ):
-    def get_group_stats_mp(
-        df, loc, relations, protection_level="highly/fully", high_seas_area=212949627.65
-    ):
+    def get_group_stats(df, loc, relations, protection_level="highly/fully"):
         if loc == "GLOB":
             df_group = df
-            ext = high_seas_area  # Include high seas area
+            total_area = GLOBAL_MARINE_AREA_KM2
         else:
             df_group = df[df["location"].isin(relations[loc])]
-            ext = 0
+            total_area = df_group["area"].sum()
 
         if len(df_group) > 0:
             total_protected_area = df_group["protected_area"].sum()
-            total_area = df_group["area"].sum() + ext
 
             return {
                 "location": loc,
                 "protected_area": total_protected_area,
                 "area": total_area,
                 "mpaa_protection_level": protection_level,
-                "percent": 100 * total_protected_area / total_area,
+                "percent": 100 * total_protected_area / total_area if total_area > 0 else None,
             }
         else:
             return None
 
     # Load related countries and regions
+    if verbose:
+        print("loading country and region groupings")
     combined_regions = load_regions()
 
     # Load MPAtlas Country level statistics
+    if verbose:
+        print(
+            f"loading MPAtlas country-level stats from gs://{bucket}/{mpatlas_country_level_file_name}"
+        )
     mpatlas_country = read_dataframe(bucket, mpatlas_country_level_file_name)
 
-    # TODO: is this how we want to calculate high seas area?
-    hs = load_marine_regions(
-        HIGH_SEAS_ZIPFILE_NAME,
-        f"{HIGH_SEAS_PARAMS['name'].rsplit('.',1)[0]}/{HIGH_SEAS_SHAPEFILE_NAME}",
-        BUCKET,
-    ).pipe(clean_geometries)
-    high_seas_area = calculate_area(hs).iloc[0]["area_km2"]
-
+    if verbose:
+        print("Calculating Marine Protection Level Statistics")
     protection_level = "highly/fully"
-
     mpa_dict = {
         "id": "location",
         "highly_protected_km2": "protected_area",
@@ -736,22 +768,56 @@ def generate_marine_protection_level_stats_table(
         .rename(columns=mpa_dict)
         .pipe(add_constants, {"mpaa_protection_level": protection_level})
         .pipe(add_percentage_protection_mp)
-        .pipe(update_mpatlas_asterisk, asterisk=True)
+        .pipe(update_mpatlas_asterisk, asterisk=False)
     )
 
+    if verbose:
+        print("Grouping by sovereign country and region")
     reg_m = pd.DataFrame(
         stat
         for loc in combined_regions
         if (
-            stat := get_group_stats_mp(
+            stat := get_group_stats(
                 mpa_cl_mps,
                 loc,
                 combined_regions,
                 protection_level=protection_level,
-                high_seas_area=high_seas_area,
             )
         )
         is not None
     )
 
     return reg_m
+
+
+def generate_fishing_protection_table(
+    protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    if verbose:
+        print(f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}")
+    protected_seas = read_dataframe(bucket, protected_seas_file_name)
+
+    if verbose:
+        print("processing fishing level protection")
+    ps_dict = {
+        # TODO: do we want iso_sov or iso_ter and then group by our related_countries?
+        "iso_sov": "location",
+        "total_area": "area",
+        "lfp5_area": "lfp5_area",
+        "lfp4_area": "lfp4_area",
+    }
+    cols = [i for i in ps_dict]
+    ps_cl_fp = (
+        protected_seas[cols]
+        .rename(columns=ps_dict)
+        .pipe(add_highly_protected_from_fishing_area)
+        .pipe(get_highly_protected_from_fishing_area)
+        .pipe(add_constants, {"fishing_protection_level": "Highly protected from fishing"})
+        .pipe(add_highly_protected_from_fishing_percent)
+    )
+
+    # TODO: group by region (or keep iso_sov?)
+
+    return ps_cl_fp

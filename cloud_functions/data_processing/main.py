@@ -16,12 +16,18 @@ from src.params import (
     HIGH_SEAS_PARAMS,
 )
 from src.utils.gcp import download_zip_to_gcs
-from src.utils.processing import process_locations
+
+# from src.utils.processing import process_locations
 from src.methods import (
     download_habitats,
     download_mpatlas,
     download_protected_seas,
     download_protected_planet,
+    generate_fishing_protection_table,
+    generate_habitats_table,
+    generate_marine_protection_level_stats_table,
+    generate_protected_areas_table,
+    generate_protection_coverage_stats_table,
 )
 
 sys.path.append("./src")
@@ -114,8 +120,20 @@ def main(request: Request) -> Tuple[str, int]:
             case "download_protected_planet_wdpa":
                 download_protected_planet(verbose=verbose)
 
-            case "process_locations":
-                process_locations(verbose=verbose)
+            case "generate_protected_areas_table":
+                generate_protected_areas_table(verbose=verbose)
+
+            case "generate_habitats_table":
+                generate_habitats_table(verbose=verbose)
+
+            case "generate_protection_coverage_stats_table":
+                generate_protection_coverage_stats_table(verbose=verbose)
+
+            case "generate_marine_protection_level_stats_table":
+                generate_marine_protection_level_stats_table(verbose=verbose)
+
+            case "generate_fishing_protection_table":
+                generate_fishing_protection_table(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")
