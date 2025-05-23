@@ -37,6 +37,7 @@ from src.params import (
     ARCHIVE_SEAMOUNTS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     REGIONS_FILE_NAME,
+    PROTECTION_COVERAGE_FILE_NAME,
 )
 
 from src.utils.gcp import (
@@ -612,6 +613,8 @@ def load_regions(
 
 def generate_protection_coverage_stats_table(
     bucket: str = BUCKET,
+    project: str = PROJECT,
+    protection_coverage_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
     wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME,
     percent_type: str = "area",  # area or counts,
     verbose: bool = True,
@@ -660,12 +663,13 @@ def generate_protection_coverage_stats_table(
         """
         if loc == "GLOB":
             df_group = df
+            total_area = GLOBAL_MARINE_AREA_KM2
         else:
             df_group = df[df["location"].isin(relations[loc])]
+            total_area = df_group["area"].sum()
 
         if len(df_group) > 0:
             total_protected_area = df_group["protected_area"].sum()
-            total_area = df_group["area"].sum()
             if percent_type == "area":
                 coverage = df_group["coverage"].sum()
                 pas = 100 * df_group["pa_coverage"].sum() / coverage if coverage > 0 else None
@@ -734,6 +738,14 @@ def generate_protection_coverage_stats_table(
     reg_m = group_by_region(wdpa_cl_m, combined_regions)
 
     protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
+
+    upload_dataframe(
+        bucket,
+        protection_coverage_table,
+        protection_coverage_file_name,
+        project_id=project,
+        verbose=verbose,
+    )
 
     return protection_coverage_table
 
@@ -813,14 +825,16 @@ def generate_marine_protection_level_stats_table(
 
 
 def generate_fishing_protection_table(
-    protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
     bucket: str = BUCKET,
+    protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
+    wdpa_marine_area_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
     verbose: bool = True,
 ):
     def get_group_stats(
         df,
         loc,
         relations,
+        marine_area,
         global_marine_area=361000000,
         fishing_protection_level="Highly protected from fishing",
     ):
@@ -829,7 +843,8 @@ def generate_fishing_protection_table(
             total_area = global_marine_area
         else:
             df_group = df[df["location"].isin(relations[loc])]
-            total_area = df_group["area"].sum()
+            ma = marine_area[marine_area["location"] == loc]
+            total_area = ma.iloc[0]["area"] if len(ma) > 0 else 0
 
         highly_protected_area = df_group["highly_protected_area"].sum()
         assessed = True if len(df) > 0 else False
@@ -852,6 +867,12 @@ def generate_fishing_protection_table(
     if verbose:
         print(f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}")
     protected_seas = read_dataframe(bucket, protected_seas_file_name)
+
+    if verbose:
+        print("loading Protected Planet country level data for Marine Area")
+
+    marine_area = read_dataframe(bucket, wdpa_marine_area_file_name)
+    marine_area = marine_area[(marine_area["environment"] == "marine")]
 
     if verbose:
         print("processing fishing level protection")
@@ -882,6 +903,7 @@ def generate_fishing_protection_table(
                 ps_cl_fp,
                 loc,
                 combined_regions,
+                marine_area,
                 fishing_protection_level=fishing_protection_level,
             )
         )
