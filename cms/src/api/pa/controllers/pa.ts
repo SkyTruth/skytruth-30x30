@@ -72,7 +72,41 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
       return await super.find(ctx);
     }
   },
+  async bulkUpdate(ctx) {
+    console.log("HERE!")
+    try {
+      if (!Array.isArray(ctx?.request?.body?.data)) {
+        return ctx.badRequest('Invalid data format. Expected a body with an array of objects.');
+      }
+      const data = ctx.request.body.data;
+      const knex = strapi.db.connection;
+      const errors = [];
+      const updated = []
+      await knex.transaction(async (trx) => {
+        for (const pa of data) {
+          if (!pa.id) {
+            errors.push({ name: pa?.name, msg: "No ID"});
+          }
+          // const { id, ...attributes } = pa;
+          // console.log("updating", id, attributes);
+          // const res = await trx('pas').where({id}).update(attributes, ['id'])
+          const id = await strapi.service('api::pa.pa').updateWithRelations(pa, trx);
+          console.log(id)
+          updated.push(id)
+        }
+      })
+      return ctx.send({
+          message: updated.length + ' Entries updated successfully.',
+          updated,
+          // errors: errors.length > 0 ? errors : null
+        });
+    } catch (error) {
+      strapi.log.error('Error in bulkUpdate:', error);
+      return ctx.internalServerError('An error occurred while processing the request.', { error });
+    }
+  },
   async bulkUpsert(ctx) {
+    console.log("not here right")
     // console.log("Context", ctx, ctx.request.body);
     try{
       if (!Array.isArray(ctx?.request?.body?.data)) {

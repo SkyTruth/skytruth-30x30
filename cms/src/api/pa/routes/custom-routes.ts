@@ -3,7 +3,7 @@ export default {
     {
       method: 'PUT',
       path: '/pas',
-      handler: 'pa.bulkUpsert'
+      handler: 'pa.bulkUpdate'
     }
   ]
 }

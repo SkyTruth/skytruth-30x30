@@ -44,6 +44,26 @@ class Strapi:
             )
             raise excep
 
+    def update_pas(self, pas: list[dict]) -> dict:
+        """
+        Bulk update existing PAs
+        """
+        try:
+            response = requests.put(
+                f"{self.BASE_URL}pas",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=5,
+            )
+            return response.json()
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to update protected areas",
+                    "exception": str(excep),
+                }
+            )
+            raise excep
+
     def _get_pa(self, properties: dict[str, str]) -> int | None:
         """
         Get the protected area from the 30x30 API.
