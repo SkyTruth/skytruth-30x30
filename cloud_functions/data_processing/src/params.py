@@ -122,6 +122,15 @@ ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
 HABITATS_FILE_NAME = "habitats/habitats_table.csv"
 
+
+# ------------------------------------------------------------
+#                            Tables
+# ------------------------------------------------------------
+PROTECTION_COVERAGE_FILE_NAME = f"tables/protection_coverage_{today_formatted}.csv"
+PROTECTION_LEVEL_FILE_NAME = f"tables/protection_level_{today_formatted}.csv"
+FISHING_PROTECTION_FILE_NAME = f"tables/fishing_protection_{today_formatted}.csv"
+HABITAT_PROTECTION_FILE_NAME = f"tables/habitat_protection_{today_formatted}.csv"
+
 # ------------------------------------------------------------
 #                            MISC
 # ------------------------------------------------------------

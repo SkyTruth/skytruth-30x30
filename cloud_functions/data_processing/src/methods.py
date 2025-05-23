@@ -38,6 +38,8 @@ from src.params import (
     RELATED_COUNTRIES_FILE_NAME,
     REGIONS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
+    PROTECTION_LEVEL_FILE_NAME,
+    FISHING_PROTECTION_FILE_NAME,
 )
 
 from src.utils.gcp import (
@@ -752,7 +754,9 @@ def generate_protection_coverage_stats_table(
 
 def generate_marine_protection_level_stats_table(
     mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     bucket: str = BUCKET,
+    project: str = PROJECT,
     verbose: bool = True,
 ):
     def get_group_stats(df, loc, relations, protection_level="highly/fully"):
@@ -807,7 +811,7 @@ def generate_marine_protection_level_stats_table(
 
     if verbose:
         print("Grouping by sovereign country and region")
-    reg_m = pd.DataFrame(
+    protection_level_table = pd.DataFrame(
         stat
         for loc in combined_regions
         if (
@@ -821,13 +825,23 @@ def generate_marine_protection_level_stats_table(
         is not None
     )
 
-    return reg_m
+    upload_dataframe(
+        bucket,
+        protection_level_table,
+        protection_level_file_name,
+        project_id=project,
+        verbose=verbose,
+    )
+
+    return protection_level_table
 
 
 def generate_fishing_protection_table(
     bucket: str = BUCKET,
+    project: str = PROJECT,
     protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
     wdpa_marine_area_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
+    fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
     verbose: bool = True,
 ):
     def get_group_stats(
@@ -895,7 +909,7 @@ def generate_fishing_protection_table(
         .pipe(add_highly_protected_from_fishing_percent)
     )
 
-    reg = pd.DataFrame(
+    fishing_protection_table = pd.DataFrame(
         stat
         for loc in combined_regions
         if (
@@ -910,4 +924,12 @@ def generate_fishing_protection_table(
         is not None
     )
 
-    return reg
+    upload_dataframe(
+        bucket,
+        fishing_protection_table,
+        fishing_protecton_file_name,
+        project_id=project,
+        verbose=verbose,
+    )
+
+    return fishing_protection_table
