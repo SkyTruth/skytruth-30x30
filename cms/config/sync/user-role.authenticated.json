@@ -73,10 +73,16 @@
       "action": "api::pa.pa.bulkInsert"
     },
     {
+      "action": "api::pa.pa.bulkPatch"
+    },
+    {
       "action": "api::pa.pa.bulkUpdate"
     },
     {
       "action": "api::pa.pa.create"
+    },
+    {
+      "action": "api::pa.pa.delete"
     },
     {
       "action": "api::pa.pa.find"

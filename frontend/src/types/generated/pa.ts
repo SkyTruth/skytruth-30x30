@@ -269,3 +269,54 @@ export const usePutPasId = <TError = ErrorType<Error>, TContext = unknown>(optio
 
   return useMutation(mutationOptions);
 };
+export const deletePasId = (id: number, options?: SecondParameter<typeof API>) => {
+  return API<number>({ url: `/pas/${id}`, method: 'delete' }, options);
+};
+
+export const getDeletePasIdMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePasId>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePasId>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePasId>>, { id: number }> = (
+    props
+  ) => {
+    const { id } = props ?? {};
+
+    return deletePasId(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeletePasIdMutationResult = NonNullable<Awaited<ReturnType<typeof deletePasId>>>;
+
+export type DeletePasIdMutationError = ErrorType<Error>;
+
+export const useDeletePasId = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePasId>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getDeletePasIdMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};

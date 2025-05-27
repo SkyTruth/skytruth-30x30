@@ -9,6 +9,11 @@ export default {
       method: 'POST',
       path: '/pas',
       handler: 'pa.bulkInsert'
+    },
+    {
+      method: 'PATCH',
+      path: '/pas',
+      handler: 'pa.bulkPatch'
     }
   ]
 }

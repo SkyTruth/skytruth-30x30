@@ -73,7 +73,6 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
       }
       // Continue with falsy values other than undefined which are used to unset the realtionship
         for (const field of linkedFields) {
-          console.log(field)
           if (pa[field] !== undefined) {
             await this.insertLinkTable(field, res[0].id, pa[field], connection)
           }
