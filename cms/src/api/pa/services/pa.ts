@@ -4,26 +4,32 @@
 
 import { factories } from '@strapi/strapi';
 
-import type { ApiPaPa } from '@/types/generated/contentTypes';
-import type { Shared } from '@strapi/strapi';
+type PA = {
+  id?: number;
+  year?: number;
+  name?: string;
+  area?: number;
+  bbox?: number[] | null;
+  wdpaid?: number | null;
+  wdpa_p_id?: string | null;
+  zone_id?: number | null;
+  coverage?: number | null;
+  children?: number[] | null;
+  data_source?: number | null;
+  environment?: number | null;
+  protection_status?: number | null;
+  iucn_category?: number | null;
+  location?: number | null;
+  mpaa_protection_level?: number | null;
+  mpaa_stablishment_stage?: number | null;
+  parent?: number | null;
+};
 
 export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
-  async updateWithRelations(pa, trx = null) {
+  async upsertWithRelations(pa: PA, trx: typeof strapi.db.connection = null):
+    Promise<{ id: number | null; error: Error | null }> {
     try {
       const connection = trx ?? strapi.db.connection;
-      // const {
-      //   child,
-      //   data_source,
-      //   environment,
-      //   protection_status,
-      //   iucn_category,
-      //   location,
-      //   mpaa_protection_level,
-      //   mpaa_establishment_stage,
-      //   id,
-      //   parent,
-      //   ...attributes
-      // } = pa;
       const {
         id,
         year,
@@ -40,14 +46,14 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         year,
         name,
         area,
-        bbox,
+        bbox: bbox ? JSON.stringify(bbox) : bbox,
         wdpaid,
         wdpa_p_id,
         zone_id,
         coverage
       }
 
-      const linkedFields = [
+      const linkedFields: string[] = [
         "children",
         "data_source", 
         "environment",
@@ -59,28 +65,54 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         "parent",
       ];
 
-      const res = await connection('pas').where({ id }).update(attributes, ['id']);
+      let res: PA[] = [];
+      if (id) {
+       res = await connection('pas').where({ id }).update(attributes, ['id']);
+      } else {
+        res = await connection('pas').insert(attributes, ['id']);
+      }
       // Continue with falsy values other than undefined which are used to unset the realtionship
         for (const field of linkedFields) {
+          console.log(field)
           if (pa[field] !== undefined) {
-            await this.updateLinkTable(field, id, pa[field], connection)
+            await this.insertLinkTable(field, res[0].id, pa[field], connection)
           }
         }
-      return res[0];
+      return {
+        id: res[0].id,
+        error: null
+      }
     } catch (error) {
-      strapi.log.error('Error in PA updateWithRelations: ', error);
-
+      strapi.log.error('Error in PA upsertWithRelations: ', error);
+      return {
+        id: null,
+        error
+      }
     }
   },
-  async updateLinkTable(field, pa_id, linkID, connection) {
-    const linkTable = `pas_${field}_links`; 
-    const linkIDName = field ===  'parent' || field === 'children' 
-      ? 'inv_pa_id'
-      : `${field}_id`;
-     console.log("Here we update " + linkTable, pa_id, linkID)
+  async insertLinkTable(
+    field: string,
+    pa_id: number,
+    linkID: number | number[],
+    connection: typeof strapi.db.connection): 
+      Promise<void> {
+    const linkTable: string = `pas_${field}_links`; 
+    let linkIDName: string;
+
+      switch (field) {
+        case 'children':
+        case 'parent':
+          linkIDName = 'inv_pa_id';
+          break;
+        case 'iucn_category':
+          linkIDName = 'mpa_iucn_category_id';
+          break;
+        default:
+          linkIDName = `${field}_id`;
+          break;
+      }
      await connection(linkTable).where({ pa_id }).del();
      if (Array.isArray(linkID)) {
-      //  for (const id of linkID) { 
       for (let i=0; i<linkID.length; i++) {
         const id = +linkID[i];
         await connection(linkTable).insert({ pa_id, [linkIDName]: id })
@@ -88,39 +120,5 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
      } else if (linkID) {
       await connection(linkTable).insert({ pa_id, [linkIDName]: linkID })
     }
-  },
-
-  async getRelations(pa: ApiPaPa['attributes']) {
-    type ContentTypeKey = keyof Shared.ContentTypes
-    type ApiSuffix<S extends String> =
-      S extends `api::${infer Rest}` ? Rest : never
-    type ValidSuffix = ApiSuffix<ContentTypeKey>
-
-
-    // const relations = {};
-    // const relationFields: {[key: String] : ValidSuffix} = {
-    //     protection_status: 'protection-status',
-    //     children: 'pas',
-    //     parent: 'pas',
-    //     data_source: 'data-source',
-    //     mpaa_establishment_stage: 'mpaa_establishment_stage' ,
-    //     location: 'location',
-    //     mpaa_protection_level: 'mpaa_protection_level',
-    //     iucn_category: 'iucn_category',
-    //     environment:'environment'
-    // };
-
-    // for (const attr in pa) {
-    //   if (relationFields[attr]) {
-    //      // @ts-ignore
-    //     const contentType: `api::${ValidSuffix}` = `api::${relationFields[attr]}:${relationFields[attr]}`;
-    //     const id = await strapi.entityService?.findMany(contentType,
-    //      { 
-    //       filters: {
-    //         slug: pa[attr] 
-    //       }
-    //     })
-    //   }
-    // }
   },
 }));

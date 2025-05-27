@@ -70,10 +70,10 @@
       "action": "api::location.location.findOne"
     },
     {
-      "action": "api::pa.pa.bulkUpdate"
+      "action": "api::pa.pa.bulkInsert"
     },
     {
-      "action": "api::pa.pa.bulkUpsert"
+      "action": "api::pa.pa.bulkUpdate"
     },
     {
       "action": "api::pa.pa.create"

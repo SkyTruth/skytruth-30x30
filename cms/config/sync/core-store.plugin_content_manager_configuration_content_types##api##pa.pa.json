@@ -267,6 +267,20 @@
           "sortable": true
         }
       },
+      "wdpa_p_id": {
+        "edit": {
+          "label": "wdpa_p_id",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "wdpa_p_id",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -418,6 +432,12 @@
           {
             "name": "zone_id",
             "size": 4
+          }
+        ],
+        [
+          {
+            "name": "wdpa_p_id",
+            "size": 6
           }
         ]
       ]

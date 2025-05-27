@@ -1973,6 +1973,7 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributes = 
   coverage?: number;
   parent?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesParent;
   zone_id?: string;
+  wdpa_p_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesCreatedBy;
@@ -2976,6 +2977,7 @@ export interface Pa {
   coverage: number;
   parent?: PaParent;
   zone_id?: string;
+  wdpa_p_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: PaCreatedBy;
@@ -3020,6 +3022,7 @@ export type PaChildrenDataItemAttributes = {
   coverage?: number;
   parent?: PaChildrenDataItemAttributesParent;
   zone_id?: string;
+  wdpa_p_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: PaChildrenDataItemAttributesCreatedBy;
@@ -3976,6 +3979,7 @@ export type PaRequestData = {
   coverage: number;
   parent?: PaRequestDataParent;
   zone_id?: string;
+  wdpa_p_id?: string;
 };
 
 export type MpaaProtectionLevelStatResponseMeta = { [key: string]: any };
@@ -4145,6 +4149,7 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributes =
   coverage?: number;
   parent?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesParent;
   zone_id?: string;
+  wdpa_p_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesCreatedBy;
@@ -6057,6 +6062,7 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributes = {
   coverage?: number;
   parent?: LocationGroupsDataItemAttributesPasDataItemAttributesParent;
   zone_id?: string;
+  wdpa_p_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesCreatedBy;
@@ -7726,6 +7732,7 @@ export type HabitatStatLocationDataAttributesPasDataItemAttributes = {
   coverage?: number;
   parent?: HabitatStatLocationDataAttributesPasDataItemAttributesParent;
   zone_id?: string;
+  wdpa_p_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: HabitatStatLocationDataAttributesPasDataItemAttributesCreatedBy;
@@ -9093,6 +9100,7 @@ export type FishingProtectionLevelStatLocationDataAttributesPasDataItemAttribute
   coverage?: number;
   parent?: FishingProtectionLevelStatLocationDataAttributesPasDataItemAttributesParent;
   zone_id?: string;
+  wdpa_p_id?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: FishingProtectionLevelStatLocationDataAttributesPasDataItemAttributesCreatedBy;
