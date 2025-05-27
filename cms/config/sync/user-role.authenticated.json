@@ -94,6 +94,15 @@
       "action": "api::pa.pa.update"
     },
     {
+      "action": "api::protection-coverage-stat.protection-coverage-stat.bulkUpsert"
+    },
+    {
+      "action": "api::protection-coverage-stat.protection-coverage-stat.find"
+    },
+    {
+      "action": "api::protection-coverage-stat.protection-coverage-stat.findOne"
+    },
+    {
       "action": "plugin::users-permissions.auth.changePassword"
     },
     {

@@ -52,13 +52,120 @@ class Strapi:
             response = requests.put(
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
-                timeout=5,
+                timeout=600, # Wait ten minutes
+                data={'data': pas}
+
             )
             return response.json()
         except Exception as excep:
             self.logger.error(
                 {
                     "message": "Failed to update protected areas",
+                    "exception": str(excep),
+                }
+            )
+            raise excep
+        
+    def create_pas(self, pas: list[dict]) -> dict:
+        """
+        Bulk create existing PAs
+        """
+        try:
+            response = requests.post(
+                f"{self.BASE_URL}pas",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=600, # Wait ten minutes
+                data={'data': pas}
+
+            )
+            return response.json()
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to update protected areas",
+                    "exception": str(excep),
+                }
+            )
+            raise excep
+    
+    def delete_pas(self, pas: list[int]) -> dict:
+        """
+        Bulk delete existing PAs
+        """
+        try:
+            response = requests.patch(
+                f"{self.BASE_URL}pas",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=600, # Wait ten minutes
+                data={'data': pas}
+
+            )
+            return response.json()
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to update protected areas",
+                    "exception": str(excep),
+                }
+            )
+            raise excep
+        
+    def get_pas(self) -> list[dict]:
+        """
+        Get all protected areas from the 30x30 API.
+
+        Returns
+        -------
+        list[dict]
+            A list of protected areas.
+        """
+        try:
+            response = requests.get(
+                f"{self.BASE_URL}pas",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=5,
+            )
+            response.raise_for_status()
+            return response.json().get("data", [])
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to get protected areas from 30x30 API",
+                    "exception": str(excep),
+                }
+            )
+            raise excep
+    
+    def add_protection_coverage_stats(self, year: int, stats: list[dict]) -> dict:
+        """
+        Add protection coverage stats for a given year.
+        Parameters
+        ----------
+        year : int
+            The year for which the stats are being added.
+        stats : list[dict]
+            The protection coverage stats to be added.
+        Returns
+        -------
+        dict
+            The response from the API.
+        Raises
+        ------
+        Exception
+            If the request fails or the API returns an error.
+        """
+        try:
+            response = requests.post(
+                f"{self.BASE_URL}protection-coverage-stats/{year}",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=600,  # Wait ten minutes
+                data={'data': stats}
+            )
+            return response.json()
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to add protection coverage stats",
                     "exception": str(excep),
                 }
             )

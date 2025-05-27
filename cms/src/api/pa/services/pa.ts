@@ -23,6 +23,8 @@ type PA = {
   mpaa_protection_level?: number | null;
   mpaa_stablishment_stage?: number | null;
   parent?: number | null;
+  created_at?: Date;
+  updated_at?: Date;
 };
 
 export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
@@ -50,7 +52,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         wdpaid,
         wdpa_p_id,
         zone_id,
-        coverage
+        coverage,
       }
 
       const linkedFields: string[] = [
@@ -67,9 +69,17 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
 
       let res: PA[] = [];
       if (id) {
-       res = await connection('pas').where({ id }).update(attributes, ['id']);
+       res = await connection('pas').where({ id })
+        .update({
+          ...attributes,
+          updated_at: connection.fn.now(),
+        }, ['id']);
       } else {
-        res = await connection('pas').insert(attributes, ['id']);
+        res = await connection('pas')
+          .insert({
+            ...attributes,
+            created_at: connection.fn.now(),
+          }, ['id']);
       }
       // Continue with falsy values other than undefined which are used to unset the realtionship
         for (const field of linkedFields) {
@@ -119,5 +129,5 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
      } else if (linkID) {
       await connection(linkTable).insert({ pa_id, [linkIDName]: linkID })
     }
-  },
+  }
 }));
