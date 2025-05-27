@@ -52,9 +52,8 @@ class Strapi:
             response = requests.put(
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
-                timeout=600, # Wait ten minutes
-                data={'data': pas}
-
+                timeout=600,  # Wait ten minutes
+                data={"data": pas},
             )
             return response.json()
         except Exception as excep:
@@ -65,7 +64,7 @@ class Strapi:
                 }
             )
             raise excep
-        
+
     def create_pas(self, pas: list[dict]) -> dict:
         """
         Bulk create existing PAs
@@ -74,9 +73,8 @@ class Strapi:
             response = requests.post(
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
-                timeout=600, # Wait ten minutes
-                data={'data': pas}
-
+                timeout=600,  # Wait ten minutes
+                data={"data": pas},
             )
             return response.json()
         except Exception as excep:
@@ -87,7 +85,7 @@ class Strapi:
                 }
             )
             raise excep
-    
+
     def delete_pas(self, pas: list[int]) -> dict:
         """
         Bulk delete existing PAs
@@ -96,9 +94,8 @@ class Strapi:
             response = requests.patch(
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
-                timeout=600, # Wait ten minutes
-                data={'data': pas}
-
+                timeout=600,  # Wait ten minutes
+                data={"data": pas},
             )
             return response.json()
         except Exception as excep:
@@ -109,7 +106,7 @@ class Strapi:
                 }
             )
             raise excep
-        
+
     def get_pas(self) -> list[dict]:
         """
         Get all protected areas from the 30x30 API.
@@ -135,7 +132,7 @@ class Strapi:
                 }
             )
             raise excep
-    
+
     def add_protection_coverage_stats(self, year: int, stats: list[dict]) -> dict:
         """
         Add protection coverage stats for a given year.
@@ -159,7 +156,7 @@ class Strapi:
                 f"{self.BASE_URL}protection-coverage-stats/{year}",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                data={'data': stats}
+                data={"data": stats},
             )
             return response.json()
         except Exception as excep:
