@@ -24,7 +24,7 @@ from src.methods import (
     download_protected_seas,
     download_protected_planet,
     generate_fishing_protection_table,
-    generate_habitats_table,
+    generate_habitat_protection_table,
     generate_marine_protection_level_stats_table,
     generate_protected_areas_table,
     generate_protection_coverage_stats_table,
@@ -123,8 +123,8 @@ def main(request: Request) -> Tuple[str, int]:
             case "generate_protected_areas_table":
                 generate_protected_areas_table(verbose=verbose)
 
-            case "generate_habitats_table":
-                generate_habitats_table(verbose=verbose)
+            case "generate_habitat_protection_table":
+                generate_habitat_protection_table(verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
                 generate_protection_coverage_stats_table(verbose=verbose)

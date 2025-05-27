@@ -95,7 +95,7 @@ WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_do
 
 
 # ------------------------------------------------------------
-#                         Habitats
+#                     Marine Habitats
 # ------------------------------------------------------------
 HABITATS_URL = "https://habitats.oceanplus.org/downloads/global_statistics.zip"
 HABITATS_ZIP_FILE_NAME = "habitats/global_statistics.zip"
@@ -120,7 +120,13 @@ SEAMOUNTS_URL = (
 SEAMOUNTS_FILE_NAME = "habitats/seamounts.zip"
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
-HABITATS_FILE_NAME = "habitats/habitats_table.csv"
+# HABITATS_FILE_NAME = "habitats/habitats_table.csv"
+
+# ------------------------------------------------------------
+#                     Terrestrial Habitats
+# ------------------------------------------------------------
+
+TERRESTRIAL_HABITATS_URL = "https://storage.cloud.google.com/vector-data-raw/terrestrial/jung_etal_2020/iucn_habitatclassification_composite_lvl1_ver004.tif"
 
 
 # ------------------------------------------------------------
