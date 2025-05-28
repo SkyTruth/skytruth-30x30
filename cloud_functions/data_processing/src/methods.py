@@ -1027,7 +1027,7 @@ def generate_protection_coverage_stats_table(
         verbose=verbose,
     )
 
-    return protection_coverage_table
+    return protection_coverage_table.to_dict(orient="records")
 
 
 def generate_marine_protection_level_stats_table(
