@@ -1177,8 +1177,7 @@ def generate_fishing_protection_table(
         "lfp4_area": "lfp4_area",
     }
     cols = [i for i in ps_dict]
-    # TODO: I think total_area is not the same as marine area,
-    # need to update with marine area from WDPA!
+
     ps_cl_fp = (
         protected_seas[cols]
         .rename(columns=ps_dict)
