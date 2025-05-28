@@ -281,7 +281,7 @@ def upload_gdf(
         print("Upload complete.")
 
 
-def load_zipped_shapefile_from_gcs(filename: str, bucket: str) -> gpd.GeoDataFrame:
+def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefile_path: str = ""):
     """
     Loads a zipped shapefile from a Google Cloud Storage (GCS) bucket into a GeoDataFrame.
 
@@ -295,6 +295,8 @@ def load_zipped_shapefile_from_gcs(filename: str, bucket: str) -> gpd.GeoDataFra
         Name of the ZIP file (blob) in the GCS bucket.
     bucket : str
         Name of the GCS bucket where the ZIP file is stored.
+    internal_shapefile_path : str
+        Path to shapefile
 
     Returns:
     -------
@@ -302,9 +304,37 @@ def load_zipped_shapefile_from_gcs(filename: str, bucket: str) -> gpd.GeoDataFra
         A GeoDataFrame containing the shapefile’s features and attributes.
     """
 
-    gcs_zip_path = f"gs://{bucket}/{filename}"
-    with fsspec.open(gcs_zip_path, mode="rb") as f:
-        gdf = gpd.read_file(f)
+    gcs_path = f"gs://{bucket}/{filename}"
+
+    if internal_shapefile_path == "":
+        with fsspec.open(gcs_path, mode="rb") as f:
+            gdf = gpd.read_file(f)
+
+    else:
+        with fsspec.open(gcs_path, mode="rb") as f:
+            zip_bytes = f.read()
+
+        with zipfile.ZipFile(BytesIO(zip_bytes)) as zf:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # Extract only the files associated with the shapefile
+                base_path = os.path.dirname(internal_shapefile_path)
+                basename = os.path.splitext(os.path.basename(internal_shapefile_path))[0]
+
+                shapefile_parts = [
+                    name
+                    for name in zf.namelist()
+                    if name.startswith(f"{base_path}/{basename}")
+                    and name.split(".")[-1].lower() in {"shp", "shx", "dbf", "prj", "cpg"}
+                ]
+
+                for part in shapefile_parts:
+                    target_path = os.path.join(tmpdir, os.path.basename(part))
+                    with zf.open(part) as source, open(target_path, "wb") as target:
+                        target.write(source.read())
+
+                local_shp_path = os.path.join(tmpdir, f"{basename}.shp")
+                gdf = gpd.read_file(local_shp_path)
+
     return gdf
 
 

@@ -27,6 +27,12 @@ def add_highly_protected_from_fishing_percent(df):
     return df
 
 
+def add_parent(df, parent_dict, location_name="location"):
+    df = df.copy()
+    df["parent_id"] = df[location_name].apply(lambda x: parent_dict[x] if x in parent_dict else x)
+    return df
+
+
 def add_pas_oecm(df):
     df = df.copy()
     df["pas_percent_area"] = 100 * df["pa_coverage"] / df["coverage"]
@@ -60,6 +66,15 @@ def calculate_area(
 def clean_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     gdf.geometry = gdf.geometry.make_valid()
     return gdf
+
+
+def convert_type(df, conversion):
+    df = df.copy()
+    for col in conversion:
+        for con in conversion[col]:
+            df[col] = df[col].astype(con)
+
+    return df
 
 
 def extract_column_dict_str(df, column_dict, column):
