@@ -90,9 +90,9 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             }
             
             const { year } = ctx.params;
-            const knex = strapi.db.connection;
+            // const knex = strapi.db.connection;
             const errors = []
-            await knex.transaction(async (trx) => {
+            await strapi.db.transaction(async () => {
                 const locationMap = await strapi
                     .service('api::location.location')
                     .getLocationMap();
@@ -159,6 +159,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                             await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, prevLastYear[0].id, {
                                 data: { is_last_year: false }
                             });
+
                             await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
                                 data: { is_last_year: true }
                             });
@@ -172,7 +173,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             });
         } catch (error) {
             Logger.error('Error in protection-coverage-stat bulkUpsert:', error);
-            return ctx.internalServerError('Error in bulkUpsert', { error });
+            return ctx.internalServerError('Error in bulkUpsert', error.message );
         }
     }
 }));

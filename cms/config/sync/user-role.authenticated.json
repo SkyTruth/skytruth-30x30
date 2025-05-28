@@ -70,6 +70,15 @@
       "action": "api::location.location.findOne"
     },
     {
+      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.bulkUpdate"
+    },
+    {
+      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.find"
+    },
+    {
+      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.findOne"
+    },
+    {
       "action": "api::pa.pa.bulkInsert"
     },
     {
