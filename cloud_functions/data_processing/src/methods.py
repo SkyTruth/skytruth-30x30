@@ -10,6 +10,7 @@ import io
 import fiona
 import geopandas as gpd
 import tempfile
+from tqdm import tqdm
 import shutil
 from pathlib import Path
 
@@ -581,6 +582,30 @@ def generate_protected_areas_table(
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
+    def unique_pa(w, m, wdpa_id):
+        w = w[w["wdpa_id"] == wdpa_id].sort_values(by="wdpa_pid")
+        m = m[m["wdpa_id"] == wdpa_id].sort_values(by="wdpa_pid")
+
+        if len(w) > 0:
+            parent = w[w["wdpa_id"] == w["wdpa_pid"]]
+            parent = parent.iloc[0:1] if len(parent) == 1 else w.iloc[0:1]
+            children = (
+                pd.concat([w.drop(index=parent.index), m], axis=0)
+                if len(m) > 0
+                else w.drop(index=parent.index)
+            )
+        else:
+            parent = m[m["wdpa_id"] == m["wdpa_pid"]]
+            parent = parent.iloc[0:1] if len(parent) == 1 else m.iloc[0:1]
+            children = m.drop(index=parent.index)
+
+        parent = parent.copy()
+        children = children.copy()
+        parent["parent"] = True
+        children["parent"] = False
+
+        return pd.concat([parent, children], axis=0)
+
     if verbose:
         print(f"loading gs://{bucket}/{wdpa_file_name}")
     wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
@@ -648,7 +673,25 @@ def generate_protected_areas_table(
         .pipe(convert_type, {"wdpa_id": [pd.Int64Dtype(), str], "wdpa_pid": [str]})
     )
 
-    return wdpa_pa, mpa_pa
+    results = []
+    for environment in ["marine", "terrestrial"]:
+        print(environment)
+
+        # Filter once per environment
+        w = wdpa_pa[wdpa_pa["environment"] == environment]
+        m = mpa_pa[mpa_pa["environment"] == environment]
+
+        # Union of unique wdpa_ids
+        wdpa_ids = sorted(set(w["wdpa_id"]) | set(m["wdpa_id"]))
+
+        for wdpa_id in tqdm(wdpa_ids):
+            entries = unique_pa(w, m, wdpa_id)
+            results.append(entries)
+
+    # Combine all at once
+    protected_areas = pd.concat(results, axis=0, ignore_index=True)
+
+    return protected_areas.to_dict(orient="records")
 
 
 def load_regions(
@@ -765,7 +808,7 @@ def create_seamounts_subtable(
 
     if verbose:
         print("downloading zipfile from gcs")
-    # TODO: download seamoutns
+    # TODO: download seamounts
 
     if verbose:
         print("loading seamounts")
@@ -844,7 +887,7 @@ def generate_habitat_protection_table(
 
     upload_dataframe(bucket, marine_habitats, file_name_out, project_id=project, verbose=True)
 
-    return marine_habitats
+    return marine_habitats.to_dict(orient="records")
 
 
 def generate_protection_coverage_stats_table(
@@ -891,7 +934,7 @@ def generate_protection_coverage_stats_table(
                 ],
             )
         )
-        return wdpa_cl
+        return wdpa_cl.to_dict(orient="records")
 
     def get_group_stats(df, loc, relations, percent_type):
         """
@@ -1068,7 +1111,7 @@ def generate_marine_protection_level_stats_table(
         verbose=verbose,
     )
 
-    return protection_level_table
+    return protection_level_table.to_dict(orient="records")
 
 
 def generate_fishing_protection_table(
@@ -1167,4 +1210,4 @@ def generate_fishing_protection_table(
         verbose=verbose,
     )
 
-    return fishing_protection_table
+    return fishing_protection_table.to_dict(orient="records")
