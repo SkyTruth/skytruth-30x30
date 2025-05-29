@@ -117,7 +117,10 @@ ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{toda
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
 )
-SEAMOUNTS_FILE_NAME = "habitats/seamounts.zip"
+SEAMOUNTS_ZIPFILE_NAME = "habitats/seamounts.zip"
+SEAMOUNTS_SHAPEFILE_NAME = (
+    "DownloadPack-14_001_ZSL002_ModelledSeamounts2011_v1/01_Data/Seamounts/Seamounts.shp"
+)
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
 # HABITATS_FILE_NAME = "habitats/habitats_table.csv"

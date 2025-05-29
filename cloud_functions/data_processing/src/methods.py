@@ -42,7 +42,8 @@ from src.params import (
     HABITATS_ZIP_FILE_NAME,
     ARCHIVE_HABITATS_FILE_NAME,
     SEAMOUNTS_URL,
-    SEAMOUNTS_FILE_NAME,
+    SEAMOUNTS_SHAPEFILE_NAME,
+    SEAMOUNTS_ZIPFILE_NAME,
     ARCHIVE_SEAMOUNTS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     REGIONS_FILE_NAME,
@@ -65,8 +66,8 @@ from src.utils.gcp import (
 from utils.processors import (
     add_constants,
     add_environment,
-    add_highly_protected_from_fishing_area,
-    add_highly_protected_from_fishing_percent,
+    add_protected_from_fishing_area,
+    add_protected_from_fishing_percent,
     add_parent,
     add_pas_oecm,
     add_percentage_protection_mp,
@@ -74,6 +75,7 @@ from utils.processors import (
     calculate_area,
     convert_type,
     extract_column_dict_str,
+    fp_location,
     remove_columns,
     remove_non_designated_m,
     remove_non_designated_p,
@@ -186,7 +188,7 @@ def adjust_eez_sovereign(eez, parent_country):
         loc = row["ISO_TER1"] if isinstance(row["ISO_TER1"], str) else row["ISO_SOV1"]
         return parent_country[loc] if loc in parent_country else loc
 
-    eez_adj = eez[["GEONAME", "ISO_TER1", "ISO_SOV1", "geometry"]]
+    eez_adj = eez[["GEONAME", "ISO_TER1", "ISO_SOV1", "AREA_km", "geometry"]]
     eez_adj["location"] = eez_adj.apply(eez_location, axis=1, args=(parent_country,))
 
     return eez_adj
@@ -521,7 +523,7 @@ def download_habitats(
     habitats_file_name: str = HABITATS_ZIP_FILE_NAME,
     archive_habitats_file_name: str = ARCHIVE_HABITATS_FILE_NAME,
     seamounts_url: str = SEAMOUNTS_URL,
-    seamounts_file_name: str = SEAMOUNTS_FILE_NAME,
+    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     archive_seamounts_file_name: str = ARCHIVE_SEAMOUNTS_FILE_NAME,
     bucket: str = BUCKET,
     chunk_size: int = CHUNK_SIZE,
@@ -541,7 +543,7 @@ def download_habitats(
         GCS blob name for the archived habitat dataset.
     seamounts_url : str
         URL to download the seamounts ZIP file.
-    seamounts_file_name : str
+    seamounts_zipfile_name : str
         GCS blob name for the current seamounts dataset.
     archive_seamounts_file_name : str
         GCS blob name for the archived seamounts dataset.
@@ -569,7 +571,7 @@ def download_habitats(
     download_and_duplicate_zipfile(
         seamounts_url,
         bucket,
-        seamounts_file_name,
+        seamounts_zipfile_name,
         archive_seamounts_file_name,
         chunk_size=chunk_size,
         verbose=verbose,
@@ -706,10 +708,18 @@ def load_regions(
     combined_regions = related_countries | regions
     combined_regions["GLOB"] = []
 
-    return combined_regions
+    parent_country = {}
+    for cnt in combined_regions:
+        if len(cnt) == 3:
+            for c in combined_regions[cnt]:
+                parent_country[c] = cnt
+
+    return combined_regions, parent_country
 
 
-def create_habitat_subtable(bucket: str, habitats_file_name: str, verbose: bool):
+def create_habitat_subtable(
+    bucket: str, habitats_file_name: str, combined_regions: dict, verbose: bool
+):
     def get_group_stats(df, loc, relations, habitat):
         if loc == "GLOB":
             df_group = df[df["habitat"] == habitat].replace("-", np.nan)
@@ -751,10 +761,6 @@ def create_habitat_subtable(bucket: str, habitats_file_name: str, verbose: bool)
                 dfs[name] = pd.read_csv(csv_file)
 
     if verbose:
-        print("loading combined regions")
-    combined_regions = load_regions()
-
-    if verbose:
         print("generating habitats table")
 
     marine_habitats = pd.DataFrame()
@@ -783,7 +789,13 @@ def create_habitat_subtable(bucket: str, habitats_file_name: str, verbose: bool)
 
 
 def create_seamounts_subtable(
-    seamounts_file_name, bucket, eez, marine_protected_areas, combined_regions, verbose
+    seamounts_zipfile_name,
+    seamounts_shapefile_name,
+    bucket,
+    eez,
+    marine_protected_areas,
+    combined_regions,
+    verbose,
 ):
     def get_group_stats(df_eez, df_pa, loc, relations):
         if loc == "GLOB":
@@ -791,11 +803,15 @@ def create_seamounts_subtable(
             df_pa_group = df_pa[["PEAKID", "AREA2D"]].drop_duplicates()
             total_area = GLOBAL_MARINE_AREA_KM2
         else:
-            df_eez_group = df_eez[df_eez["location"] == loc][["PEAKID", "AREA2D"]].drop_duplicates()
-            df_pa_group = df_pa[df_pa["parent_id"] == loc][["PEAKID", "AREA2D"]].drop_duplicates()
+            df_eez_group = df_eez[df_eez["location"].isin(relations[loc])][
+                ["PEAKID", "AREA2D"]
+            ].drop_duplicates()
+            df_pa_group = df_pa[df_pa["location"].isin(relations[loc])][
+                ["PEAKID", "AREA2D"]
+            ].drop_duplicates()
             total_area = df_eez_group["AREA2D"].sum()
 
-        protected_area = df_pa_group["AREA2D"].sum()
+        protected_area = min(df_pa_group["AREA2D"].sum(), total_area)
 
         return {
             "location": loc,
@@ -807,17 +823,10 @@ def create_seamounts_subtable(
         }
 
     if verbose:
-        print("downloading zipfile from gcs")
-    # TODO: download seamounts
-
-    if verbose:
         print("loading seamounts")
 
-    internal_shapefile_path = (
-        "DownloadPack-14_001_ZSL002_ModelledSeamounts2011_v1/01_Data/Seamounts/Seamounts.shp"
-    )
     seamounts = load_zipped_shapefile_from_gcs(
-        seamounts_file_name, bucket, internal_shapefile_path=internal_shapefile_path
+        seamounts_zipfile_name, bucket, internal_shapefile_path=seamounts_shapefile_name
     )
 
     if verbose:
@@ -846,40 +855,54 @@ def create_seamounts_subtable(
 
 
 def generate_habitat_protection_table(
-    habitats_file_name: str = HABITATS_ZIP_FILE_NAME,
-    seamounts_file_name: str = SEAMOUNTS_FILE_NAME,
+    habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
+    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
+    seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
     eez_zipfile_name: str = EEZ_ZIPFILE_NAME,
     eez_params: dict = EEZ_PARAMS,
     eez_shapefile_name: str = EEZ_SHAPEFILE_NAME,
+    mpatlas_file_name: str = MPATLAS_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
+    combined_regions, parent_country = load_regions()
+
     eez = load_marine_regions(
-        eez_zipfile_name, f"{eez_params['name'].rsplit('.',1)[0]}/{eez_shapefile_name}", BUCKET
+        eez_zipfile_name, f"{eez_params['name'].rsplit('.',1)[0]}/{eez_shapefile_name}", bucket
     )
-
-    combined_regions = load_regions()
-
-    parent_country = {}
-    for cnt in combined_regions:
-        if len(cnt) == 3:
-            for c in cnt:
-                parent_country[c] = cnt
-
     eez = adjust_eez_sovereign(eez, parent_country)
 
     if verbose:
         print("getting marine protected areas")
 
-    # TODO: should probably also include MPAtlas
-    protected_areas = get_protected_areas(verbose=verbose)
-    marine_protected_areas = protected_areas[protected_areas["environment"] == "marine"]
+    wdpa = get_protected_areas()
+    mpatlas = read_mpatlas_from_gcs(bucket, mpatlas_file_name)
+    mpatlas["location"] = mpatlas["country"].apply(
+        lambda x: parent_country[x] if x in parent_country else x
+    )
+    marine_protected_areas = pd.concat(
+        (
+            wdpa[wdpa["MARINE"] == "2"][["WDPAID", "PARENT_ISO3", "geometry"]].rename(
+                columns={"WDPAID": "wdpa_id", "PARENT_ISO3": "location"}
+            ),
+            mpatlas[["wdpa_id", "location", "geometry"]],
+        ),
+        axis=0,
+    )
 
-    marine_habitats_subtable = create_habitat_subtable(bucket, habitats_file_name, verbose)
+    marine_habitats_subtable = create_habitat_subtable(
+        bucket, habitats_zipfile_name, combined_regions, verbose
+    )
     seamounts_subtable = create_seamounts_subtable(
-        seamounts_file_name, bucket, eez, marine_protected_areas, combined_regions, verbose
+        seamounts_zipfile_name,
+        seamounts_shapefile_name,
+        bucket,
+        eez,
+        marine_protected_areas,
+        combined_regions,
+        verbose,
     )
 
     # TODO: add mangroves
@@ -1000,7 +1023,7 @@ def generate_protection_coverage_stats_table(
     # Load related countries and regions
     if verbose:
         print("loading country and region groupings")
-    combined_regions = load_regions()
+    combined_regions, _ = load_regions()
 
     # WDPA country level
     if verbose:
@@ -1061,7 +1084,7 @@ def generate_marine_protection_level_stats_table(
     # Load related countries and regions
     if verbose:
         print("loading country and region groupings")
-    combined_regions = load_regions()
+    combined_regions, _ = load_regions()
 
     # Load MPAtlas Country level statistics
     if verbose:
@@ -1072,6 +1095,7 @@ def generate_marine_protection_level_stats_table(
 
     if verbose:
         print("Calculating Marine Protection Level Statistics")
+
     protection_level = "highly/fully"
     mpa_dict = {
         "id": "location",
@@ -1126,80 +1150,97 @@ def generate_fishing_protection_table(
         df,
         loc,
         relations,
-        marine_area,
         global_marine_area=361000000,
-        fishing_protection_level="Highly protected from fishing",
+        fishing_protection_level="highly",
     ):
         if loc == "GLOB":
             df_group = df
             total_area = global_marine_area
         else:
             df_group = df[df["location"].isin(relations[loc])]
-            ma = marine_area[marine_area["location"] == loc]
-            total_area = ma.iloc[0]["area"] if len(ma) > 0 else 0
+            total_area = df_group["area"].sum()
 
-        highly_protected_area = df_group["highly_protected_area"].sum()
+        protected_area = df_group[f"{fishing_protection_level}_protected_area"].sum()
         assessed = True if len(df) > 0 else False
 
         return {
             "location": loc,
-            "area": total_area,
-            "highly_protected_area": highly_protected_area if assessed else None,
+            "area": protected_area if assessed else None,
             "fishing_protection_level": fishing_protection_level,
-            "percent": (
-                100 * highly_protected_area / total_area if assessed and total_area > 0 else None
+            "pct": (
+                min(100, 100 * protected_area / total_area) if assessed and total_area > 0 else None
             ),
+            "total_area": total_area,
         }
 
     # Load related countries and regions
     if verbose:
         print("loading country and region groupings")
-    combined_regions = load_regions()
+    combined_regions, _ = load_regions()
 
     if verbose:
         print(f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}")
     protected_seas = read_dataframe(bucket, protected_seas_file_name)
 
     if verbose:
-        print("loading Protected Planet country level data for Marine Area")
-
-    marine_area = read_dataframe(bucket, wdpa_marine_area_file_name)
-    marine_area = marine_area[(marine_area["environment"] == "marine")]
-
-    if verbose:
         print("processing fishing level protection")
 
-    fishing_protection_level = "Highly protected from fishing"
+    fishing_protection_levels = {
+        "highly": ["lfp5_area", "lfp4_area"],
+        "moderately": ["lfp3_area"],
+        "less": ["lfp2_area", "lfp1_area"],
+    }
+
     ps_dict = {
-        "iso_ter": "location",
+        "iso_ter": "iso_ter",
+        "iso_sov": "iso_sov",
         "total_area": "area",
         "lfp5_area": "lfp5_area",
         "lfp4_area": "lfp4_area",
+        "lfp3_area": "lfp3_area",
+        "lfp2_area": "lfp2_area",
+        "lfp1_area": "lfp1_area",
     }
     cols = [i for i in ps_dict]
 
     ps_cl_fp = (
         protected_seas[cols]
         .rename(columns=ps_dict)
-        .pipe(add_highly_protected_from_fishing_area)
-        .pipe(add_constants, {"fishing_protection_level": "Highly protected from fishing"})
-        .pipe(add_highly_protected_from_fishing_percent)
+        .pipe(fp_location)
+        .pipe(add_protected_from_fishing_area, fishing_protection_levels)
+        .pipe(add_protected_from_fishing_percent, fishing_protection_levels)
+        .pipe(
+            remove_columns,
+            ["iso_ter", "iso_sov", "lfp5_area", "lfp4_area", "lfp3_area", "lfp2_area", "lfp1_area"],
+        )
     )
 
-    fishing_protection_table = pd.DataFrame(
-        stat
-        for loc in combined_regions
-        if (
-            stat := get_group_stats(
-                ps_cl_fp,
-                loc,
-                combined_regions,
-                marine_area,
-                fishing_protection_level=fishing_protection_level,
-            )
+    fishing_protection_table = pd.DataFrame()
+    for level in fishing_protection_levels:
+        fishing_protection_table = pd.concat(
+            (
+                fishing_protection_table,
+                pd.DataFrame(
+                    stat
+                    for loc in combined_regions
+                    if (
+                        stat := get_group_stats(
+                            ps_cl_fp,
+                            loc,
+                            combined_regions,
+                            fishing_protection_level=level,
+                        )
+                    )
+                    is not None
+                ),
+            ),
+            axis=0,
         )
-        is not None
-    )
+
+    # Remove countries with no ocean
+    fishing_protection_table = fishing_protection_table[
+        fishing_protection_table["total_area"] > 0
+    ].drop(columns="total_area")
 
     upload_dataframe(
         bucket,

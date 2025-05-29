@@ -15,15 +15,18 @@ def add_environment(df):
     return df
 
 
-def add_highly_protected_from_fishing_area(df):
+def add_protected_from_fishing_area(df, fishing_protection_levels):
     df = df.copy()
-    df["highly_protected_area"] = df["lfp5_area"] + df["lfp4_area"]
+
+    for level in fishing_protection_levels:
+        df[f"{level}_protected_area"] = df[fishing_protection_levels[level]].sum(axis=1)
     return df
 
 
-def add_highly_protected_from_fishing_percent(df):
+def add_protected_from_fishing_percent(df, fishing_protection_levels):
     df = df.copy()
-    df["pct"] = 100 * df["highly_protected_area"] / df["area"]
+    for level in fishing_protection_levels:
+        df[f"{level}_pct"] = 100 * df[f"{level}_protected_area"] / df["area"]
     return df
 
 
@@ -88,6 +91,14 @@ def extract_column_dict_str(df, column_dict, column):
             df[d] = df[column].apply(
                 lambda x: ast.literal_eval(x).get(d) if pd.notnull(x) else None
             )
+    return df
+
+
+def fp_location(df):
+    df = df.copy()
+    df["location"] = df.apply(
+        lambda x: x["iso_ter"] if isinstance(x["iso_ter"], str) else x["iso_sov"], axis=1
+    )
     return df
 
 
