@@ -198,7 +198,7 @@ class Strapi:
                 }
             )
             raise excep
-        
+
     def upsert_fishing_protection_level_stats(self, stats: list[dict]) -> dict:
         """
         Upsert fishing protection level stats.
