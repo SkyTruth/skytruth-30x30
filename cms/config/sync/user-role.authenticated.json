@@ -37,6 +37,9 @@
       "action": "api::dataset.dataset.update"
     },
     {
+      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.bulkUpsert"
+    },
+    {
       "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.create"
     },
     {
@@ -68,9 +71,6 @@
     },
     {
       "action": "api::location.location.findOne"
-    },
-    {
-      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.bulkUpdate"
     },
     {
       "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.find"

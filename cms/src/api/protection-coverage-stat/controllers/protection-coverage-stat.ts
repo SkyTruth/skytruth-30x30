@@ -90,7 +90,6 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             }
             
             const { year } = ctx.params;
-            // const knex = strapi.db.connection;
             const errors = []
             await strapi.db.transaction(async () => {
                 const locationMap = await strapi
@@ -102,7 +101,6 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                 const statsMap = await strapi
                     .service(PROTECTION_COVERAGE_STAT_NAMESPACE)
                     .getStatsMap(year);
-                console.log("STATS MAP", statsMap);
 
                 for (const stat of data) {
                     const { location, environment, ...attributes } = stat;

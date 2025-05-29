@@ -133,7 +133,7 @@ class Strapi:
             )
             raise excep
 
-    def add_protection_coverage_stats(self, year: int, stats: list[dict]) -> dict:
+    def upsert_protection_coverage_stats(self, year: int, stats: list[dict]) -> dict:
         """
         Add protection coverage stats for a given year.
         Parameters
@@ -163,6 +163,37 @@ class Strapi:
             self.logger.error(
                 {
                     "message": "Failed to add protection coverage stats",
+                    "exception": str(excep),
+                }
+            )
+            raise excep
+
+    def upsert_mpaa_protection_level_stats(self, stats: list[dict]) -> dict:
+        """
+        Upsert MPAA protection level stats.
+
+        Parameters
+        ----------
+        stats : list[dict]
+            The MPAA protection level stats to be upserted.
+
+        Returns
+        -------
+        dict
+            The response from the API.
+        """
+        try:
+            response = requests.post(
+                f"{self.BASE_URL}mpaa-protection-level-stats",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=600,  # Wait ten minutes
+                data={"data": stats},
+            )
+            return response.json()
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to upsert MPAA protection level stats",
                     "exception": str(excep),
                 }
             )

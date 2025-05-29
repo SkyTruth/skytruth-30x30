@@ -7,7 +7,7 @@ import { LocationMap } from '../../location/services/location';
 
 export default factories
   .createCoreController('api::mpaa-protection-level-stat.mpaa-protection-level-stat', ({ strapi }) => ({
-    async bulkUpdate(ctx) {
+    async bulkUpsert(ctx) {
       try {
         const { data } = ctx.request?.body;
         if (!Array.isArray(data)) {
