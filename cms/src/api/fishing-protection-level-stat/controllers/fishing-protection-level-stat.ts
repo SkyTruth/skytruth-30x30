@@ -29,7 +29,6 @@ export default factories
           const statKey = `${stat.location}-${stat.fishing_protection_level}`;
 
           // No existing record, create a new one
-          console.log(`Processing stat: ${statKey}`, statsMap[statKey]);
           if (!statsMap[statKey]) {
             if (!locationMap) {
               locationMap = await strapi
@@ -55,7 +54,6 @@ export default factories
               });
               continue;
             }
-            console.log("About to create stat:")
             await strapi.entityService.create(
               'api::fishing-protection-level-stat.fishing-protection-level-stat',
               {

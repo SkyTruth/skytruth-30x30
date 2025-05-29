@@ -198,6 +198,37 @@ class Strapi:
                 }
             )
             raise excep
+        
+    def upsert_fishing_protection_level_stats(self, stats: list[dict]) -> dict:
+        """
+        Upsert fishing protection level stats.
+
+        Parameters
+        ----------
+        stats : list[dict]
+            The fishing protection level stats to be upserted.
+
+        Returns
+        -------
+        dict
+            The response from the API.
+        """
+        try:
+            response = requests.post(
+                f"{self.BASE_URL}fishing-protection-level-stats",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=600,  # Wait ten minutes
+                data={"data": stats},
+            )
+            return response.json()
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to upsert fishing protection level stats",
+                    "exception": str(excep),
+                }
+            )
+            raise excep
 
     def _get_pa(self, properties: dict[str, str]) -> int | None:
         """
