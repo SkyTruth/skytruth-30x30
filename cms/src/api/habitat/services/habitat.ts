@@ -4,22 +4,20 @@
 
 import { factories } from '@strapi/strapi';
 
-export type HabitatMap = {
-  id: number; // Maps habitat slug to ID
-};
-
 export default factories.createCoreService('api::habitat.habitat', ({ strapi }) => ({
-  async getHabitatMap(): Promise<Record<string, number>> {
+  async getHabitatMap(): Promise<IDMap> {
     const habitats = await strapi.db.query('api::habitat.habitat').findMany({
       select: ['id', 'slug'],
       where: {
         locale: 'en'
       }
     }) as { id: number, slug: string }[];
-    const habitatMap: Record<string, number> = {};
+
+    const habitatMap: IDMap = {};
     habitats.forEach((habitat) => {
       habitatMap[habitat.slug] = habitat.id;
     });
+
     return habitatMap;
   }
 }));

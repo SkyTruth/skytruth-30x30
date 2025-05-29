@@ -5,9 +5,13 @@
 import { factories } from '@strapi/strapi';
 
 export default factories.createCoreService('api::habitat-stat.habitat-stat', ({ strapi }) => ({
-  async getStatsMap(year: number): Promise<IDMap> {
-    const stats = await strapi.entityService.findMany('api::habitat-stat.habitat-stat', {
-      filters: { year },
+  async getHabitatStatMap(year: number): Promise<IDMap> {
+    const habitatStats = await strapi.entityService.findMany('api::habitat-stat.habitat-stat', {
+      filters: { 
+        year,
+        locale: 'en',
+      },
+      fields: ['id'],
       populate: {
         location: {
           fields: ['code'],
@@ -21,15 +25,16 @@ export default factories.createCoreService('api::habitat-stat.habitat-stat', ({ 
       },
     }) as { id: number, location: { code: string }, environment: { slug: string }, habitat: { slug: string } }[];
 
+    console.log(habitatStats)
     const statsMap: IDMap = {};
-    stats.forEach((stat) => {
+    habitatStats.forEach((stat) => {
       if (!stat.location || !stat.environment || !stat.habitat) {
         strapi.log.warn(`Habitat stat with ID ${stat.id} is missing location, environment, or habitat.`);
         return;
       }
       statsMap[`${stat.location.code}-${stat.environment.slug}-${stat.habitat.slug}`] = stat.id
     });
-
+    console.log(statsMap);
     return statsMap;
   },
 }));

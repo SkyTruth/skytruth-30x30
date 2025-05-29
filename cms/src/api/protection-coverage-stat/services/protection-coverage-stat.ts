@@ -40,6 +40,10 @@ export default factories.createCoreService('api::protection-coverage-stat.protec
 
       const statsMap: IDMap = {};
       stats.forEach((stat) => {
+        if (!stat.location || !stat.environment) {
+          strapi.log.warn(`Protection coverage stat with ID ${stat.id} is missing location or environment.`);
+          return;
+        }
         statsMap[`${stat.location.code}-${stat.environment.slug}`] = stat.id
       });
 

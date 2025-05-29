@@ -35,15 +35,18 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
             let locationMap: IDMap | null = null;
             let habitatMap: IDMap | null = null;
             let environmentMap: IDMap | null = null;
+
             const habitatStatMap: IDMap = await strapi
                 .service('api::habitat-stat.habitat-stat')
                 .getHabitatStatMap(year);
+
             await strapi.db.transaction(async () => {
                 for (const stat of data) {
                     const { protected_area, total_area } = stat;
-                    const statKey = `${stat.location}-${stat.environemnt}-${stat.habitat}`;
+                    const statKey = `${stat.location}-${stat.environment}-${stat.habitat}`;
 
                     // No existing record, create a new one
+                    console.log(habitatStatMap, statKey, habitatStatMap[statKey]);
                     if (!habitatStatMap[statKey]) {
                         if (!locationMap) {
                             locationMap = await strapi
@@ -74,10 +77,11 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
                                 .service('api::environment.environment')
                                 .getEnvironmentMap();
                         }
-                        if (!environmentMap[stat.environemnt]) {
+                        console.log("map", environmentMap, stat.environment);
+                        if (!environmentMap[stat.environment]) {
                             errors.push({
                                 msg: `Failed to find environment for stat: ${statKey}`,
-                                err: `Environment ${stat.environemnt} not found`
+                                err: `Environment ${stat.environment} not found`
                             });
                             continue;
                         }
@@ -89,7 +93,8 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
                                     total_area,
                                     protected_area,
                                     location: locationMap[stat.location],
-                                    habitat: habitatMap[stat.habitat]
+                                    habitat: habitatMap[stat.habitat],
+                                    environment: environmentMap[stat.environment]
                                 }
                             }
                         );
@@ -110,8 +115,8 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
                 errors: errors.length > 0 ? errors : null,
             });
         } catch (error) {
-            console.error(error);
-            return ctx.internalServerError('An error occurred during bulk upsert');
+            strapi.log.error('Error in habitat-stat bulkUpsert:', {error: error?.message });
+            return ctx.internalServerError('An internal server error occurred during bulk upsert');
         }
     }
 }));
