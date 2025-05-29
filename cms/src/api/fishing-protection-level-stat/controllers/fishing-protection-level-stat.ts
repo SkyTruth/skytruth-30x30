@@ -4,9 +4,6 @@
 
 import { factories } from '@strapi/strapi'
 
-import type { FishingProtectionLevelStatMap } from '../services/fishing-protection-level-stat';
-import type { FishingProtectionLevelMap } from '../../fishing-protection-level/services/fishing-protection-level';
-import type { LocationMap } from '../../location/services/location';
 
 export default factories
 .createCoreController('api::fishing-protection-level-stat.fishing-protection-level-stat' , ({ strapi }) => ({
@@ -17,10 +14,10 @@ export default factories
         return ctx.badRequest('Data must be an array');
       }
       const errors = [];
-      let locationMap: LocationMap | null = null;
-      let fishingProtectionLevelMap: FishingProtectionLevelMap | null = null;
+      let locationMap: IDMap | null = null;
+      let fishingProtectionLevelMap: IDMap | null = null;
       await strapi.db.transaction(async () => {
-        const statsMap: FishingProtectionLevelStatMap = await strapi
+        const statsMap: IDMap = await strapi
           .service('api::fishing-protection-level-stat.fishing-protection-level-stat')
           .getFishingProtectionLevelStatsMap();
 

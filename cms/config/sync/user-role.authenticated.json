@@ -58,6 +58,15 @@
       "action": "api::fishing-protection-level.fishing-protection-level.findOne"
     },
     {
+      "action": "api::habitat-stat.habitat-stat.bulkUpsert"
+    },
+    {
+      "action": "api::habitat-stat.habitat-stat.find"
+    },
+    {
+      "action": "api::habitat-stat.habitat-stat.findOne"
+    },
+    {
       "action": "api::layer.layer.find"
     },
     {

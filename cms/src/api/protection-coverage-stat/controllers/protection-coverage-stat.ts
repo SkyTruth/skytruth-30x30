@@ -89,16 +89,14 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                 return ctx.badRequest('Data must be an array');
             }
             
-            const { year } = ctx.params;
+            let { year } = ctx.params;
+            year = +year
             const errors = []
             await strapi.db.transaction(async () => {
-                const locationMap = await strapi
-                    .service('api::location.location')
-                    .getLocationMap();
-                const environmentMap = await strapi
-                    .service('api::environment.environment')
-                    .getEnvironmentMap();
-                const statsMap = await strapi
+                let locationMap: IDMap = null;
+                let environmentMap: IDMap = null;
+
+                const statsMap: IDMap = await strapi
                     .service(PROTECTION_COVERAGE_STAT_NAMESPACE)
                     .getStatsMap(year);
 
@@ -114,7 +112,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                     }
                     if (statsMap[`${stat.location}-${stat.environment}`]) {
                         // Update existing stat
-                        const { id } = statsMap[`${location}-${environment}`];
+                        const id = statsMap[`${location}-${environment}`];
                         await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
                             data: {
                                 ...attributes,
@@ -122,38 +120,77 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                         });
                     } else {
                         // Create new stat
-                        const locationId = locationMap[location];
-                        const environmentId = environmentMap[environment];
-                        if (!locationId || !environmentId) {
-                            Logger.error('Invalid location or environment', { location, environment });
+                        if (!locationMap) {
+                            locationMap = await strapi
+                                .service('api::location.location')
+                                .getLocationMap();
+                        }
+                        if (!locationMap[location]) {
                             errors.push({
-                                message: 'Invalid location or environment',
-                                stat
-                            }); 
+                                message: `Location ${location} not found`,
+                            })
                             continue;
                         }
+                        if (!environmentMap) {
+                            environmentMap = await strapi
+                                .service('api::environment.environment')
+                                .getEnvironmentMap();
+                        }
+                        if (!environmentMap[environment]) {
+                            errors.push({
+                                message: `Environment ${environment} not found`,
+                            })
+                            continue;
+                        }
+                        const locationId = locationMap[location];
+                        const environmentId = environmentMap[environment];
+                        console.log("creating for locationId:", locationId, "environmentId:", environmentId);
                         const { id } = await strapi.entityService.create(PROTECTION_COVERAGE_STAT_NAMESPACE, {
                             data: {
                                 ...attributes,
-                                year: parseInt(year, 10),
+                                year,
                                 location: locationId,
                                 environment: environmentId
                             },
                         });
-
-                        console.log("returned id", id);
-
+                        console.log("Created")
                         const prevLastYear = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE, {
                             filters: {
                                 is_last_year: true,
-                                location: locationId,
-                                environment: environmentId
-                            },
+                                location: {
+                                    code: {
+                                        $eq: location
+                                    }
+                                },
+                                environment: {
+                                    slug: {
+                                        $eq: environment
+                                    }
+                                }
+                                },
                             fields: ['id', 'year'],
                         }) as { id: number, year: number }[];
-                        
-                        if (prevLastYear[0].year < year) {
-                            // If the new record is the most recent set is_last_)year to true and unset it for the previous last year
+
+                       console.log("prev",prevLastYear, "curr", year);
+                       console.log("condition", prevLastYear.length === 0, year, new Date().getFullYear());
+                        // If multiple records are found taged as last_year, log and alert the user 
+                        if (prevLastYear.length > 1) {
+                            Logger.warn('Multiple last year records found for location and environment', {
+                                location,
+                                environment,
+                                prevLastYear
+                            });
+                            errors.push({
+                                message: `Multiple last year records found for location ${location} and environment ${environment}`,
+                            });
+
+                        } else if (prevLastYear.length === 0 && year === new Date().getFullYear()) {
+                        // If there is no previous last year record, set the new record as last year if it is the current year
+                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                                data: { is_last_year: true }
+                            });
+                        } else if (prevLastYear[0].year < year) {
+                            // If the new record is the most recent set is_last_year to true and unset it for the previous last year
                             await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, prevLastYear[0].id, {
                                 data: { is_last_year: false }
                             });
@@ -170,8 +207,8 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                 errors: errors.length > 0 ? errors : null
             });
         } catch (error) {
-            Logger.error('Error in protection-coverage-stat bulkUpsert:', error);
-            return ctx.internalServerError('Error in bulkUpsert', error.message );
+            Logger.error('Error in protection-coverage-stat bulkUpsert:', { error: error?.message });
+            return ctx.internalServerError('An internal error occured in bulkUpsert');
         }
     }
 }));

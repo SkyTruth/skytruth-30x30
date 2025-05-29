@@ -3,7 +3,6 @@
  */
 
 import { factories } from '@strapi/strapi'
-import { LocationMap } from '../../location/services/location';
 
 export default factories
   .createCoreController('api::mpaa-protection-level-stat.mpaa-protection-level-stat', ({ strapi }) => ({
@@ -14,8 +13,8 @@ export default factories
             return ctx.badRequest('Data must be an array');
         }
         const errors = [];
-        let locationMap: LocationMap = null;
-        let MpaaProtectionLevelMap = null;
+        let locationMap: IDMap | null = null;
+        let MpaaProtectionLevelMap: IDMap | null = null;
 
         await strapi.db.transaction(async () => {
           const statsMap = await strapi
