@@ -1414,7 +1414,37 @@
           "designation",
           "environment",
           "coverage",
-          "parent"
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {}
+    },
+    {
+      "action": "plugin::content-manager.explorer.create",
+      "subject": "api::pa.pa",
+      "properties": {
+        "fields": [
+          "name",
+          "area",
+          "year",
+          "protection_status",
+          "bbox",
+          "children",
+          "data_source",
+          "mpaa_establishment_stage",
+          "location",
+          "wdpaid",
+          "mpaa_protection_level",
+          "iucn_category",
+          "designation",
+          "environment",
+          "coverage",
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
         ]
       },
       "conditions": [],
@@ -1447,7 +1477,37 @@
           "designation",
           "environment",
           "coverage",
-          "parent"
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {}
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "api::pa.pa",
+      "properties": {
+        "fields": [
+          "name",
+          "area",
+          "year",
+          "protection_status",
+          "bbox",
+          "children",
+          "data_source",
+          "mpaa_establishment_stage",
+          "location",
+          "wdpaid",
+          "mpaa_protection_level",
+          "iucn_category",
+          "designation",
+          "environment",
+          "coverage",
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
         ]
       },
       "conditions": [],
@@ -1473,7 +1533,37 @@
           "designation",
           "environment",
           "coverage",
-          "parent"
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {}
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::pa.pa",
+      "properties": {
+        "fields": [
+          "name",
+          "area",
+          "year",
+          "protection_status",
+          "bbox",
+          "children",
+          "data_source",
+          "mpaa_establishment_stage",
+          "location",
+          "wdpaid",
+          "mpaa_protection_level",
+          "iucn_category",
+          "designation",
+          "environment",
+          "coverage",
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
         ]
       },
       "conditions": [],
