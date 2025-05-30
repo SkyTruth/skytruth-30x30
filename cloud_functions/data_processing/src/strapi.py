@@ -1,9 +1,9 @@
 """Class for managing API credentials and CRUD methods for the intenral strapi API"""
 
 import os
+from datetime import datetime
 
 import requests
-from datetime import datetime
 
 from src.utils.logger import Logger
 

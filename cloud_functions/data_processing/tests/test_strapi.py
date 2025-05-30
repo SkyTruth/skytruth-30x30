@@ -1,9 +1,9 @@
 """Unit tests for the database module."""
 
+import re
+from datetime import datetime
 from unittest.mock import patch
 
-from datetime import datetime
-import re
 import pytest
 import responses
 from requests.exceptions import HTTPError
