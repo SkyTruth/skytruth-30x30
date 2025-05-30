@@ -46,7 +46,6 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
                     const statKey = `${stat.location}-${stat.environment}-${stat.habitat}`;
 
                     // No existing record, create a new one
-                    console.log(habitatStatMap, statKey, habitatStatMap[statKey]);
                     if (!habitatStatMap[statKey]) {
                         if (!locationMap) {
                             locationMap = await strapi
@@ -77,7 +76,6 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
                                 .service('api::environment.environment')
                                 .getEnvironmentMap();
                         }
-                        console.log("map", environmentMap, stat.environment);
                         if (!environmentMap[stat.environment]) {
                             errors.push({
                                 msg: `Failed to find environment for stat: ${statKey}`,

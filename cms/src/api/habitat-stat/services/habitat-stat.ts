@@ -25,7 +25,6 @@ export default factories.createCoreService('api::habitat-stat.habitat-stat', ({ 
       },
     }) as { id: number, location: { code: string }, environment: { slug: string }, habitat: { slug: string } }[];
 
-    console.log(habitatStats)
     const statsMap: IDMap = {};
     habitatStats.forEach((stat) => {
       if (!stat.location || !stat.environment || !stat.habitat) {
@@ -34,7 +33,6 @@ export default factories.createCoreService('api::habitat-stat.habitat-stat', ({ 
       }
       statsMap[`${stat.location.code}-${stat.environment.slug}-${stat.habitat.slug}`] = stat.id
     });
-    console.log(statsMap);
     return statsMap;
   },
 }));

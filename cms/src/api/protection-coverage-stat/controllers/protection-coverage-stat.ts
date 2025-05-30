@@ -144,7 +144,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                         }
                         const locationId = locationMap[location];
                         const environmentId = environmentMap[environment];
-                        console.log("creating for locationId:", locationId, "environmentId:", environmentId);
+
                         const { id } = await strapi.entityService.create(PROTECTION_COVERAGE_STAT_NAMESPACE, {
                             data: {
                                 ...attributes,
@@ -153,7 +153,6 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                                 environment: environmentId
                             },
                         });
-                        console.log("Created")
                         const prevLastYear = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE, {
                             filters: {
                                 is_last_year: true,
@@ -171,8 +170,6 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                             fields: ['id', 'year'],
                         }) as { id: number, year: number }[];
 
-                       console.log("prev",prevLastYear, "curr", year);
-                       console.log("condition", prevLastYear.length === 0, year, new Date().getFullYear());
                         // If multiple records are found taged as last_year, log and alert the user 
                         if (prevLastYear.length > 1) {
                             Logger.warn('Multiple last year records found for location and environment', {
