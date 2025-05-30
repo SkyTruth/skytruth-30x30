@@ -1,9 +1,0 @@
-{
-    "python.analysis.autoImportCompletions": false,
-    "python.analysis.typeCheckingMode": "basic",
-    "python.testing.pytestArgs": [
-        "cloud_functions"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
-}
