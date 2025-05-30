@@ -403,7 +403,7 @@ def test_upsert_fishing_protection_level_stats_failure(mock_req, mock_error, moc
         api.upsert_fishing_protection_level_stats([{"fish": 3}])
 
     mock_error.assert_called_once()
-    assert "Failed to upsert fishing protection level stats" in mock_error.call_args[0][0]["message"]
+    assert "Failed to upsert fishing protection level stats" in mock_error.call_args[0][0]["message"] #noqa E501
 
 @responses.activate
 def test_upsert_habitat_stats_success(mock_authenticate):

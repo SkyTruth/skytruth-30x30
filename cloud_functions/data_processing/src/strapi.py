@@ -61,8 +61,8 @@ class Strapi:
             This parameter is ignored if next_page is True.
         page_size : int, optional
             The number of results per page. If None, the default page size of 1000 will be used.
-            If page_size is set and page is not set, it will fetch the first page with the specified page size.
-            This effectivley resets the next_page back to the first page.
+            If page_size is set and page is not set, it will fetch the first page with the
+            specified page size. This effectivley resets the next_page back to the first page.
 
         Returns
         -------
