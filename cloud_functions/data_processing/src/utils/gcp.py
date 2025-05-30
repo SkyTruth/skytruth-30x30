@@ -53,7 +53,7 @@ class TqdmBytesIO(BytesIO):
 
 def save_file_bucket(
     data: bytes,
-    content_type: Optional[str],
+    content_type: str | None,
     blob_name: str,
     bucket_name: str,
     verbose: bool = True,
@@ -94,10 +94,8 @@ def save_file_bucket(
 
     if verbose:
         print(
-            (
-                f"Uploading {total_size/1e6:.2f} MB to gs://{bucket_name}/{blob_name} "
-                f"in {chunk_size_mb} MB chunks..."
-            )
+            f"Uploading {total_size / 1e6:.2f} MB to gs://{bucket_name}/{blob_name} "
+            f"in {chunk_size_mb} MB chunks..."
         )
 
     blob.upload_from_file(

@@ -102,6 +102,11 @@ variable "backend_path_prefix" {
   description = "Path prefix for the backend service"
 }
 
+variable "backend_write_user" {
+  type        = string
+  description = "Username to authenticate the write and update endpoints in the backend service"
+}
+
 variable "functions_path_prefix" {
   type        = string
   description = "Path prefix for the functions services"

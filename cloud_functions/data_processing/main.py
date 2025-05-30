@@ -1,7 +1,7 @@
-from flask import Request
 import os
 import sys
-from typing import Tuple
+import functions_framework
+from flask import Request
 
 from src.params import (
     CHUNK_SIZE,
@@ -10,24 +10,22 @@ from src.params import (
     MARINE_REGIONS_URL,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
-    EEZ_ZIPFILE_NAME,
     EEZ_PARAMS,
-    HIGH_SEAS_ZIPFILE_NAME,
     HIGH_SEAS_PARAMS,
 )
 from src.utils.gcp import download_zip_to_gcs
 
-# from src.utils.processing import process_locations
+
 from src.methods import (
     download_habitats,
     download_mpatlas,
-    download_protected_seas,
     download_protected_planet,
     generate_fishing_protection_table,
     generate_habitat_protection_table,
     generate_marine_protection_level_stats_table,
     generate_protected_areas_table,
     generate_protection_coverage_stats_table,
+    download_protected_seas,
 )
 
 sys.path.append("./src")
@@ -35,10 +33,11 @@ sys.path.append("./src")
 verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
 BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "")
+PROJECT = os.getenv("PROJECT", "BAD!")
 
 
-def main(request: Request) -> Tuple[str, int]:
+@functions_framework.http
+def main(request: Request) -> tuple[str, int]:
     """
     Cloud Function entry point that dispatches behavior based on the 'METHOD' key
     in the incoming HTTP request body. Each METHOD corresponds to a specific data
@@ -88,7 +87,7 @@ def main(request: Request) -> Tuple[str, int]:
                 download_zip_to_gcs(
                     MARINE_REGIONS_URL,
                     BUCKET,
-                    EEZ_ZIPFILE_NAME,
+                    EEZ_PARAMS["zipfile_name"],
                     data=MARINE_REGIONS_BODY,
                     params=EEZ_PARAMS,
                     headers=MARINE_REGIONS_HEADERS,
@@ -100,7 +99,7 @@ def main(request: Request) -> Tuple[str, int]:
                 download_zip_to_gcs(
                     MARINE_REGIONS_URL,
                     BUCKET,
-                    HIGH_SEAS_ZIPFILE_NAME,
+                    HIGH_SEAS_PARAMS["zipfile_name"],
                     data=MARINE_REGIONS_BODY,
                     params=HIGH_SEAS_PARAMS,
                     headers=MARINE_REGIONS_HEADERS,

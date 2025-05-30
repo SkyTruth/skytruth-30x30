@@ -1,0 +1,44 @@
+[project]
+name = "data-processing"
+version = "0.1.0"
+description = "Cloud function for agregating, processing, and updating data for the 30x30 Progress Tracker"
+authors = [
+    {name = "SkyTruth"}
+]
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+
+dependencies = [
+    "requests (>=2.32.3,<3.0.0)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "fiona (>=1.10.1,<2.0.0)",
+    "google-cloud-storage (>=3.1.0,<4.0.0)",
+    "tqdm (>=4.67.1,<5.0.0)",
+    "geopandas (>=1.0.1,<2.0.0)",
+    "fsspec (>=2025.3.2,<2026.0.0)",
+    "google-api-core (>=2.24.2,<3.0.0)",
+    "flask (>=3.1.1,<4.0.0)",
+    "functions-framework (>=3.8.2,<4.0.0)",
+]
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.11.9"
+pytest = "^8.3.5"
+responses = "^0.25.7"
+python-dotenv = "^1.1.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+
+[tool.poetry.requires-plugins]
+poetry-plugin-export = ">=1.8"
