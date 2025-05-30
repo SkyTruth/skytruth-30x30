@@ -119,6 +119,29 @@ def remove_non_designated_p(df):
     return df[df["STATUS"] == "Designated"]
 
 
+def rename_habitats(df):
+    naming_conventions = {
+        "coldwatercorals": "cold-water corals",
+        "saltmarshes": "saltmarshes",
+        "warmwatercorals": "warm-water corals",
+        "seagrasses": "seagrasses",
+        "mangroves": "mangroves",
+        "seamounts": "seamounts",
+        "Artificial": "artificial",
+        "Forest": "forest",
+        "Grassland": "grassland",
+        "Wetlands/open water": "wetlands-open-waters",
+        "Desert": "desert",
+        "Rocky/mountains": "rocky-mountains",
+        "Savanna": "savanna",
+        "Shrubland": "shrubland",
+    }
+
+    df = df.copy()
+    df["habitat"] = df["habitat"].apply(lambda x: naming_conventions[x])
+    return df
+
+
 def update_mpatlas_asterisk(df: pd.DataFrame, asterisk: bool = False) -> pd.DataFrame:
     """
     If `asterisk` is True, updates 'protected_area' using values from rows with

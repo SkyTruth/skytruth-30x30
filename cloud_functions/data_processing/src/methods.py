@@ -20,8 +20,6 @@ from src.params import (
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     EEZ_PARAMS,
-    EEZ_SHAPEFILE_NAME,
-    EEZ_ZIPFILE_NAME,
     MPATLAS_URL,
     MPATLAS_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
@@ -73,12 +71,14 @@ from utils.processors import (
     add_percentage_protection_mp,
     add_year,
     calculate_area,
+    clean_geometries,
     convert_type,
     extract_column_dict_str,
     fp_location,
     remove_columns,
     remove_non_designated_m,
     remove_non_designated_p,
+    rename_habitats,
     update_mpatlas_asterisk,
 )
 
@@ -162,8 +162,11 @@ def download_and_duplicate_zipfile(
     duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
 
 
-def load_marine_regions(filename: str, shp_filename: str, bucket: str = BUCKET):
-    gcs_zip_path = f"gs://{bucket}/{filename}"
+def load_marine_regions(params: dict, bucket: str = BUCKET):
+    zipfile_name = params["zipfile_name"]
+    shp_filename = f"{params['name'].rsplit('.',1)[0]}/{params['shapefile_name']}"
+
+    gcs_zip_path = f"gs://{bucket}/{zipfile_name}"
     shp_base_name = shp_filename.rsplit(".", 1)[0]
 
     with fsspec.open(gcs_zip_path, mode="rb") as f:
@@ -178,7 +181,7 @@ def load_marine_regions(filename: str, shp_filename: str, bucket: str = BUCKET):
                 # Build the correct path into the .shp file inside the zip
                 internal_shp_path = shp_base_name + ".shp"
                 zip_path = f"zip://{tmp_zip_file.name}!{internal_shp_path}"
-                gdf = gpd.read_file(zip_path)
+                gdf = gpd.read_file(zip_path).pipe(clean_geometries)
 
     return gdf
 
@@ -188,7 +191,7 @@ def adjust_eez_sovereign(eez, parent_country):
         loc = row["ISO_TER1"] if isinstance(row["ISO_TER1"], str) else row["ISO_SOV1"]
         return parent_country[loc] if loc in parent_country else loc
 
-    eez_adj = eez[["GEONAME", "ISO_TER1", "ISO_SOV1", "AREA_km", "geometry"]]
+    eez_adj = eez[["GEONAME", "ISO_TER1", "ISO_SOV1", "AREA_KM2", "geometry"]]
     eez_adj["location"] = eez_adj.apply(eez_location, axis=1, args=(parent_country,))
 
     return eez_adj
@@ -742,7 +745,7 @@ def create_habitat_subtable(
             "environment": "marine",
             "protected_area": protected_area,
             "total_area": total_area,
-            "percent_protected": 100 * protected_area / total_area if total_area else None,
+            # "percent_protected": 100 * protected_area / total_area if total_area else None,
         }
 
     habitats = ["warmwatercorals", "coldwatercorals", "seagrasses", "saltmarshes"]
@@ -819,7 +822,7 @@ def create_seamounts_subtable(
             "environment": "marine",
             "protected_area": protected_area,
             "total_area": total_area,
-            "percent_protected": 100 * protected_area / total_area if total_area > 0 else np.nan,
+            # "percent_protected": 100 * protected_area / total_area if total_area > 0 else np.nan,
         }
 
     if verbose:
@@ -841,7 +844,7 @@ def create_seamounts_subtable(
 
     marine_pa_joined = gpd.sjoin(
         seamounts[["PEAKID", "AREA2D", "geometry"]],
-        marine_protected_areas[["name", "area", "parent_id", "geometry"]],
+        marine_protected_areas[["wdpa_id", "location", "geometry"]],
         how="left",
         predicate="within",
     )
@@ -859,38 +862,27 @@ def generate_habitat_protection_table(
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
-    eez_zipfile_name: str = EEZ_ZIPFILE_NAME,
     eez_params: dict = EEZ_PARAMS,
-    eez_shapefile_name: str = EEZ_SHAPEFILE_NAME,
-    mpatlas_file_name: str = MPATLAS_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
     combined_regions, parent_country = load_regions()
 
-    eez = load_marine_regions(
-        eez_zipfile_name, f"{eez_params['name'].rsplit('.',1)[0]}/{eez_shapefile_name}", bucket
-    )
+    if verbose:
+        print("loading eezs")
+    eez = load_marine_regions(eez_params, bucket)
     eez = adjust_eez_sovereign(eez, parent_country)
 
     if verbose:
-        print("getting marine protected areas")
+        print("getting marine protected areas (this may take a few minutes)")
 
-    wdpa = get_protected_areas()
-    mpatlas = read_mpatlas_from_gcs(bucket, mpatlas_file_name)
-    mpatlas["location"] = mpatlas["country"].apply(
-        lambda x: parent_country[x] if x in parent_country else x
+    protected_areas = get_protected_areas()
+    marine_protected_areas = protected_areas[protected_areas["MARINE"].isin(["1", "2"])]
+    marine_protected_areas = marine_protected_areas.rename(
+        columns={"WDPAID": "wdpa_id", "PARENT_ISO3": "location"}
     )
-    marine_protected_areas = pd.concat(
-        (
-            wdpa[wdpa["MARINE"] == "2"][["WDPAID", "PARENT_ISO3", "geometry"]].rename(
-                columns={"WDPAID": "wdpa_id", "PARENT_ISO3": "location"}
-            ),
-            mpatlas[["wdpa_id", "location", "geometry"]],
-        ),
-        axis=0,
-    )
+    marine_protected_areas = marine_protected_areas[["wdpa_id", "location", "geometry"]]
 
     marine_habitats_subtable = create_habitat_subtable(
         bucket, habitats_zipfile_name, combined_regions, verbose
@@ -908,9 +900,14 @@ def generate_habitat_protection_table(
     # TODO: add mangroves
     marine_habitats = pd.concat((marine_habitats_subtable, seamounts_subtable), axis=0)
 
-    upload_dataframe(bucket, marine_habitats, file_name_out, project_id=project, verbose=True)
+    # TODO: combine with terrestrial
+    habitats = marine_habitats.copy()
 
-    return marine_habitats.to_dict(orient="records")
+    habitats = habitats[habitats["total_area"] > 0].pipe(rename_habitats)
+
+    upload_dataframe(bucket, habitats, file_name_out, project_id=project, verbose=True)
+
+    return habitats.to_dict(orient="records")
 
 
 def generate_protection_coverage_stats_table(
@@ -957,7 +954,7 @@ def generate_protection_coverage_stats_table(
                 ],
             )
         )
-        return wdpa_cl.to_dict(orient="records")
+        return wdpa_cl
 
     def get_group_stats(df, loc, relations, percent_type):
         """

@@ -33,13 +33,24 @@ MARINE_REGIONS_BODY = {
     "agree": "1",
 }
 
-EEZ_ZIPFILE_NAME = "static/eezs.zip"
-EEZ_SHAPEFILE_NAME = "eez_v12.shp"
-EEZ_PARAMS = {"name": "World_EEZ_v12_20231025.zip"}
+EEZ_PARAMS = {
+    "name": "World_EEZ_v12_20231025.zip",
+    "zipfile_name": "static/eezs.zip",
+    "shapefile_name": "eez_v12.shp",
+}
+# EEZ_ZIPFILE_NAME = "static/eezs.zip"
+# EEZ_SHAPEFILE_NAME = "eez_v12.shp"
+# EEZ_PARAMS = {"name": "World_EEZ_v12_20231025.zip"}
 
-HIGH_SEAS_ZIPFILE_NAME = "static/high_seas.zip"
-HIGH_SEAS_SHAPEFILE_NAME = "High_Seas_v2.shp"
-HIGH_SEAS_PARAMS = {"name": "World_High_Seas_v2_20241010.zip"}
+HIGH_SEAS_PARAMS = {
+    "name": "World_High_Seas_v2_20241010.zip",
+    "zipfile_name": "static/high_seas.zip",
+    "shapefile_name": "High_Seas_v2.shp",
+}
+
+# HIGH_SEAS_ZIPFILE_NAME = "static/high_seas.zip"
+# HIGH_SEAS_SHAPEFILE_NAME = "High_Seas_v2.shp"
+# HIGH_SEAS_PARAMS = {"name": "World_High_Seas_v2_20241010.zip"}
 
 MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"
 
