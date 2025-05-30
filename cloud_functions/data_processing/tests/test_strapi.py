@@ -12,6 +12,7 @@ from src.strapi import Strapi
 
 BASE_URL = "https://test.com/api/"
 
+
 @pytest.fixture(autouse=True)
 def set_common_env(monkeypatch):
     """Set common environment variables for all tests."""
@@ -78,19 +79,17 @@ def test_login_failure_bad_auth(mock_logger_error):
 
     mock_logger_error.assert_called_once()
 
+
 @responses.activate
 def test_get_pas_default_pagination(mock_authenticate):
     # prepare a fake response with page=1
     payload = {
         "data": [{"id": 1, "attributes": {}}, {"id": 2, "attributes": {}}],
-        "meta": {"pagination": {"page": 1}}
+        "meta": {"pagination": {"page": 1}},
     }
     # match any /pas?…pagination[…]=… URL
     responses.add(
-        responses.GET,
-        re.compile(rf"{re.escape(BASE_URL)}pas\?.*"),
-        json=payload,
-        status=200
+        responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), json=payload, status=200
     )
 
     client = Strapi()
@@ -104,17 +103,12 @@ def test_get_pas_default_pagination(mock_authenticate):
     assert "pagination%5BpageSize%5D=1000" in url
     assert "pagination%5Bpage%5D=1" in url
 
+
 @responses.activate
 def test_get_pas_with_custom_page_size(mock_authenticate):
-    payload = {
-        "data": [],
-        "meta": {"pagination": {"page": 1}}
-    }
+    payload = {"data": [], "meta": {"pagination": {"page": 1}}}
     responses.add(
-        responses.GET,
-        re.compile(rf"{re.escape(BASE_URL)}pas\?.*"),
-        json=payload,
-        status=200
+        responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), json=payload, status=200
     )
 
     client = Strapi()
@@ -128,17 +122,12 @@ def test_get_pas_with_custom_page_size(mock_authenticate):
     assert "pagination%5BpageSize%5D=50" in url
     assert "pagination%5Bpage%5D=1" in url
 
+
 @responses.activate
 def test_get_pas_with_custom_page_size_after_first_request(mock_authenticate):
-    payload = {
-        "data": [],
-        "meta": {"pagination": {"page": 1}}
-    }
+    payload = {"data": [], "meta": {"pagination": {"page": 1}}}
     responses.add(
-        responses.GET,
-        re.compile(rf"{re.escape(BASE_URL)}pas\?.*"),
-        json=payload,
-        status=200
+        responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), json=payload, status=200
     )
 
     client = Strapi()
@@ -153,18 +142,13 @@ def test_get_pas_with_custom_page_size_after_first_request(mock_authenticate):
     assert "pagination%5BpageSize%5D=50" in url
     assert "pagination%5Bpage%5D=1" in url
 
+
 @responses.activate
 def test_get_pas_explicit_page_over_next_page(mock_authenticate):
     # fake response for page=5
-    payload = {
-        "data": [],
-        "meta": {"pagination": {"page": 5}}
-    }
+    payload = {"data": [], "meta": {"pagination": {"page": 5}}}
     responses.add(
-        responses.GET,
-        re.compile(rf"{re.escape(BASE_URL)}pas\?.*"),
-        json=payload,
-        status=200
+        responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), json=payload, status=200
     )
 
     client = Strapi()
@@ -183,11 +167,7 @@ def test_get_pas_explicit_page_over_next_page(mock_authenticate):
 @patch("src.strapi.Logger.error")
 def test_get_pas_raises_and_logs_on_http_error(mock_error, mock_authenticate):
     # simulate a server error
-    responses.add(
-        responses.GET,
-        re.compile(rf"{re.escape(BASE_URL)}pas\?.*"),
-        status=500
-    )
+    responses.add(responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), status=500)
 
     client = Strapi()
     with pytest.raises(HTTPError):
@@ -205,7 +185,7 @@ def test_update_pas_success(mock_authenticate):
     payload = {"data": [{"id": 10}]}
     responses.add(
         responses.PUT,
-        BASE_URL + 'pas',
+        BASE_URL + "pas",
         json=payload,
         status=200,
     )
@@ -218,6 +198,7 @@ def test_update_pas_success(mock_authenticate):
     assert call.method == "PUT"
     assert call.url == BASE_URL + "pas"
 
+
 @patch("src.strapi.Logger.error")
 @patch("src.strapi.requests.put", side_effect=HTTPError("update-fail"))
 def test_update_pas_failure(mock_req, mock_error, mock_authenticate):
@@ -227,6 +208,7 @@ def test_update_pas_failure(mock_req, mock_error, mock_authenticate):
 
     mock_error.assert_called_once()
     assert "Failed to create protected areas" in mock_error.call_args[0][0]["message"]
+
 
 @responses.activate
 def test_create_pas_success(mock_authenticate):
@@ -247,6 +229,7 @@ def test_create_pas_success(mock_authenticate):
     assert call.method == "POST"
     assert call.url == BASE_URL + "pas"
 
+
 @patch("src.strapi.Logger.error")
 @patch("src.strapi.requests.post", side_effect=HTTPError("create-fail"))
 def test_create_pas_failure(mock_req, mock_error, mock_authenticate):
@@ -256,6 +239,7 @@ def test_create_pas_failure(mock_req, mock_error, mock_authenticate):
 
     mock_error.assert_called_once()
     assert "Failed to update protected areas" in mock_error.call_args[0][0]["message"]
+
 
 @responses.activate
 def test_delete_pas_success(mock_authenticate):
@@ -276,6 +260,7 @@ def test_delete_pas_success(mock_authenticate):
     assert call.method == "PATCH"
     assert call.url == BASE_URL + "pas"
 
+
 @patch("src.strapi.Logger.error")
 @patch("src.strapi.requests.patch", side_effect=HTTPError("delete-fail"))
 def test_delete_pas_failure(mock_req, mock_error, mock_authenticate):
@@ -285,6 +270,7 @@ def test_delete_pas_failure(mock_req, mock_error, mock_authenticate):
 
     mock_error.assert_called_once()
     assert "Failed to delete protected areas" in mock_error.call_args[0][0]["message"]
+
 
 @responses.activate
 def test_upsert_protection_coverage_stats_success(mock_authenticate):
@@ -309,10 +295,11 @@ def test_upsert_protection_coverage_stats_success(mock_authenticate):
     assert call.method == "POST"
     assert call.url == url
 
+
 @responses.activate
 def test_upsert_protection_coverage_stats_no_year_provided(mock_authenticate):
     api = Strapi()
-    year = int(datetime.now().strftime('%Y'))
+    year = int(datetime.now().strftime("%Y"))
     stats = [{"cov": 75}]
     payload = {"data": stats}
     url = f"{BASE_URL}protection-coverage-stats/{year}"
@@ -331,6 +318,7 @@ def test_upsert_protection_coverage_stats_no_year_provided(mock_authenticate):
     call = responses.calls[0].request
     assert call.method == "POST"
     assert call.url == url
+
 
 @patch("src.strapi.Logger.error")
 @patch("src.strapi.requests.post", side_effect=HTTPError("stats-fail"))
@@ -364,6 +352,7 @@ def test_upsert_mpaa_protection_level_stats_success(mock_authenticate):
     assert call.method == "POST"
     assert call.url == BASE_URL + "mpaa-protection-level-stats"
 
+
 @patch("src.strapi.Logger.error")
 @patch("src.strapi.requests.post", side_effect=HTTPError("mpaa-fail"))
 def test_upsert_mpaa_protection_level_stats_failure(mock_req, mock_error, mock_authenticate):
@@ -373,6 +362,7 @@ def test_upsert_mpaa_protection_level_stats_failure(mock_req, mock_error, mock_a
 
     mock_error.assert_called_once()
     assert "Failed to upsert MPAA protection level stats" in mock_error.call_args[0][0]["message"]
+
 
 @responses.activate
 def test_upsert_fishing_protection_level_stats_success(mock_authenticate):
@@ -395,6 +385,7 @@ def test_upsert_fishing_protection_level_stats_success(mock_authenticate):
     assert call.method == "POST"
     assert call.url == BASE_URL + "fishing-protection-level-stats"
 
+
 @patch("src.strapi.Logger.error")
 @patch("src.strapi.requests.post", side_effect=HTTPError("fish-fail"))
 def test_upsert_fishing_protection_level_stats_failure(mock_req, mock_error, mock_authenticate):
@@ -403,7 +394,10 @@ def test_upsert_fishing_protection_level_stats_failure(mock_req, mock_error, moc
         api.upsert_fishing_protection_level_stats([{"fish": 3}])
 
     mock_error.assert_called_once()
-    assert "Failed to upsert fishing protection level stats" in mock_error.call_args[0][0]["message"] #noqa E501
+    assert (
+        "Failed to upsert fishing protection level stats" in mock_error.call_args[0][0]["message"]
+    )  # noqa E501
+
 
 @responses.activate
 def test_upsert_habitat_stats_success(mock_authenticate):
@@ -427,10 +421,11 @@ def test_upsert_habitat_stats_success(mock_authenticate):
     assert call.method == "POST"
     assert call.url == f"{BASE_URL}habitat-stats/{year}"
 
+
 @responses.activate
 def test_upsert_habitat_stats_success_no_year_provided(mock_authenticate):
     api = Strapi()
-    year = int(datetime.now().strftime('%Y'))
+    year = int(datetime.now().strftime("%Y"))
     stats = [{"h": 3}]
     payload = {"data": stats}
 
@@ -448,6 +443,7 @@ def test_upsert_habitat_stats_success_no_year_provided(mock_authenticate):
     call = responses.calls[0].request
     assert call.method == "POST"
     assert call.url == f"{BASE_URL}habitat-stats/{year}"
+
 
 @patch("src.strapi.Logger.error")
 @patch("src.strapi.requests.post", side_effect=HTTPError("hab-fail"))

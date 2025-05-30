@@ -80,7 +80,7 @@ class Strapi:
 
             if not next_page:
                 self.pas_page = page if page else 1
-               
+
             query_params = (
                 "fields[]=name&fields[]=year&fields[]=wdpaid&fields[]=wdpa_p_id&fields[]=zone_id"
                 "&fields[]=designation&fields[]=bbox&fields[]=coverage&populate[data_source][fields]=slug"
