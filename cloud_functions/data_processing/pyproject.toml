@@ -34,9 +34,11 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 package-mode = false
 
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM", "I"]
+
 [tool.ruff]
 line-length = 100
-select = ["E", "F", "UP", "B", "SIM", "I"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
