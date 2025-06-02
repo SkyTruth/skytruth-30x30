@@ -90,6 +90,7 @@ BUCKET = os.getenv("BUCKET", "")
 PROJECT = os.getenv("PROJECT", "")
 
 GLOBAL_MARINE_AREA_KM2 = 361000000
+GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
 
 
 def read_mpatlas_from_gcs(
@@ -235,7 +236,7 @@ def get_protected_areas(
     return wdpa
 
 
-def download_mpatlas(
+def download_mpatlas_zone(
     url: str = MPATLAS_URL,
     bucket: str = BUCKET,
     filename: str = MPATLAS_FILE_NAME,
@@ -290,6 +291,34 @@ def download_mpatlas_country(
 
     upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+
+
+def download_mpatlas(
+    url: str = MPATLAS_URL,
+    bucket: str = BUCKET,
+    project: str = PROJECT,
+    mpatlas_filename: str = MPATLAS_FILE_NAME,
+    archive_mpatlas_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
+    mpatlas_country_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
+    mpatlas_country_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    verbose: bool = True,
+) -> None:
+    download_mpatlas_country(
+        bucket,
+        project,
+        mpatlas_country_url,
+        mpatlas_country_file_name,
+        archive_mpatlas_country_file_name,
+    )
+
+    download_mpatlas_zone(
+        url,
+        bucket,
+        mpatlas_filename,
+        archive_mpatlas_filename,
+        verbose,
+    )
 
 
 def download_protected_seas(
@@ -916,6 +945,7 @@ def generate_protection_coverage_stats_table(
     project: str = PROJECT,
     protection_coverage_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
     wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME,
+    wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
     percent_type: str = "area",  # area or counts,
     verbose: bool = True,
 ):
@@ -961,19 +991,18 @@ def generate_protection_coverage_stats_table(
         """
         Computes summary stats for a group of related locations.
         """
-        if loc == "GLOB":
-            df_group = df
-            total_area = GLOBAL_MARINE_AREA_KM2
-        else:
+        if loc != "GLOB":
             df_group = df[df["location"].isin(relations[loc])]
             total_area = df_group["area"].sum()
+        else:
+            return None
 
         if len(df_group) > 0:
             total_protected_area = df_group["protected_area"].sum()
             if percent_type == "area":
                 coverage = df_group["coverage"].sum()
-                pas = 100 * df_group["pa_coverage"].sum() / coverage if coverage > 0 else None
-                oecm = 100 - pas if pas is not None else None
+                pas = 100 * df_group["pa_coverage"].sum() / coverage if coverage > 0 else 0
+                oecm = 100 - pas if coverage > 0 else 0
             elif percent_type == "counts":
                 pas = (
                     100
@@ -985,6 +1014,11 @@ def generate_protection_coverage_stats_table(
                     * df_group["oecm_count"].sum()
                     / (df_group["pas_count"] + df_group["oecm_count"]).sum()
                 )
+            global_area = (
+                GLOBAL_MARINE_AREA_KM2
+                if df_group.iloc[0]["environment"] == "marine"
+                else GLOBAL_TERRESTRIAL_AREA_KM2
+            )
 
             return {
                 "location": loc,
@@ -993,7 +1027,8 @@ def generate_protection_coverage_stats_table(
                 "protected_areas_count": df_group["protected_areas_count"].sum(),
                 "coverage": 100 * total_protected_area / total_area if total_area else None,
                 "pas": pas,
-                "oecm": oecm,
+                "oecms": oecm,
+                "global_contribution": 100 * total_protected_area / global_area,
                 "area": total_area,
             }
         else:
@@ -1005,11 +1040,46 @@ def generate_protection_coverage_stats_table(
             for loc in combined_regions
             if (stat := get_group_stats(wdpa_cl, loc, combined_regions, percent_type)) is not None
         )
-        global_protected_area = reg[reg["location"] == "GLOB"].iloc[0]["protected_area"]
-        reg["global_contribution"] = 100 * reg["protected_area"] / global_protected_area
         reg = reg[reg["protected_area"] > 0]
 
         return reg
+
+    def add_global_stats(df, global_stats, environment):
+        def get_value(df, col):
+            return df[df["type"] == col].iloc[0]["value"]
+
+        environment2 = "ocean" if environment == "marine" else "land"
+        oecms_pas = get_value(global_stats, f"total_{environment2}_area_oecms_pas")
+        oecms = get_value(global_stats, f"total_{environment2}_area_oecms")
+        pas = oecms_pas - oecms
+
+        return pd.concat(
+            (
+                df,
+                pd.DataFrame(
+                    [
+                        {
+                            "location": "GLOB",
+                            "environment": environment,
+                            "protected_area": get_value(
+                                global_stats, f"total_{environment}_protected_areas"
+                            ),
+                            "protected_areas_count": get_value(
+                                global_stats, f"total_{environment}_oecms_pas"
+                            ),
+                            "coverage": get_value(
+                                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
+                            ),
+                            "pas": 100 * pas / oecms_pas,
+                            "oecms": 100 * oecms / oecms_pas,
+                            "global_contribution": get_value(
+                                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
+                            ),
+                        }
+                    ]
+                ),
+            )
+        )
 
     # Load protected planet country level statistics
     if verbose:
@@ -1017,6 +1087,12 @@ def generate_protection_coverage_stats_table(
             f"loading Protected Planet Country-level data gs://{bucket}/{wdpa_country_level_file_name}"
         )
     wdpa_country = read_dataframe(bucket, wdpa_country_level_file_name)
+
+    if verbose:
+        print(
+            f"loading Protected Planet Global-level data gs://{bucket}/{wdpa_global_level_file_name}"
+        )
+    wdpa_global = read_dataframe(bucket, wdpa_global_level_file_name)
 
     # Load related countries and regions
     if verbose:
@@ -1028,7 +1104,7 @@ def generate_protection_coverage_stats_table(
         print("processing Marine and terrestrial country level stats")
 
     wdpa_cl_m = process_protected_area(wdpa_country, environment="marine")
-    wdpa_cl_t = process_protected_area(wdpa_country, environment="terrestrial")
+    wdpa_cl_t = process_protected_area(wdpa_country, environment="land")
     wdpa_cl_t["environment"] = wdpa_cl_t["environment"].replace("land", "terrestrial")
 
     if verbose:
@@ -1039,6 +1115,12 @@ def generate_protection_coverage_stats_table(
     reg_m = group_by_region(wdpa_cl_m, combined_regions)
 
     protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
+    protection_coverage_table = protection_coverage_table[protection_coverage_table["area"] > 0]
+    protection_coverage_table = (
+        protection_coverage_table.drop(columns="area")
+        .pipe(add_global_stats, wdpa_global, "marine")
+        .pipe(add_global_stats, wdpa_global, "terrestrial")
+    )
 
     upload_dataframe(
         bucket,
@@ -1140,7 +1222,6 @@ def generate_fishing_protection_table(
     bucket: str = BUCKET,
     project: str = PROJECT,
     protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
-    wdpa_marine_area_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
     fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
     verbose: bool = True,
 ):
