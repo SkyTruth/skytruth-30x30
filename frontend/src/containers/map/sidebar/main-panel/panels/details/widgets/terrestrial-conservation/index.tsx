@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 
 import { useAtom } from 'jotai';
-import { groupBy } from 'lodash-es';
 import { useLocale, useTranslations } from 'next-intl';
 
 import ConservationChart from '@/components/charts/conservation-chart';
@@ -49,8 +48,8 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
           fields: ['slug'],
         },
       },
-      sort: 'year:asc',
-      'pagination[limit]': -1,
+      sort: 'year:desc',
+      'pagination[pageSize]': 1,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['year', 'protected_area', 'updatedAt'],
@@ -77,19 +76,11 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   );
 
   const aggregatedData = useMemo(() => {
-    if (!data.length) return [];
-
-    const groupedByYear = groupBy(data, 'attributes.year');
-
-    return Object.keys(groupedByYear).map((year) => {
-      const entries = groupedByYear[year];
-      const protectedArea = entries[0].attributes.protected_area;
-
-      return {
-        year: Number(year),
-        protectedArea,
-      };
-    });
+    if (!data.length) return null;
+    return {
+      year: Number(data[0].attributes.year),
+      protectedArea: data[0].attributes.protected_area,
+    };
   }, [data]);
 
   const { data: metadata } = useGetDataInfos(
@@ -120,10 +111,10 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   );
 
   const stats = useMemo(() => {
-    if (!aggregatedData.length) return null;
+    if (!aggregatedData) return null;
 
     const totalArea = Number(location.total_terrestrial_area);
-    const { protectedArea } = aggregatedData[aggregatedData.length - 1];
+    const { protectedArea } = aggregatedData;
     const percentageFormatted = formatPercentage(locale, (protectedArea / totalArea) * 100, {
       displayPercentageSign: false,
     });
@@ -137,41 +128,12 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
     };
   }, [locale, location, aggregatedData]);
 
-  const chartData = useMemo(() => {
-    if (!aggregatedData.length) return [];
-
-    const data = aggregatedData.map((entry, index) => {
-      const isLastYear = index + 1 === aggregatedData.length;
-      const { year, protectedArea } = entry;
-      const percentage = (protectedArea * 100) / Number(location.total_terrestrial_area);
-
-      return {
-        // We only want to show up to 55%, so we'll cap the percentage here
-        // Some of the data seems incorrect; this is a quick fix in order to not blow the chart
-        percentage: percentage > 55 ? 55 : percentage,
-        year,
-        active: isLastYear,
-        totalArea: Number(location.total_terrestrial_area),
-        protectedArea,
-        future: false,
-      };
-    });
-
-    return data;
-  }, [location, aggregatedData]);
-
   const noData = useMemo(() => {
-    if (!chartData.length) {
+    if (!aggregatedData) {
       return true;
     }
-
-    const emptyValues = chartData.every((d) => d.percentage === 0);
-    if (emptyValues) {
-      return true;
-    }
-
     return false;
-  }, [chartData]);
+  }, [aggregatedData]);
 
   return (
     <Widget
@@ -214,12 +176,6 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
           </span>
         </div>
       )}
-      <ConservationChart
-        className="-ml-8 aspect-[16/10]"
-        tooltipSlug="30x30-terrestrial-target"
-        displayTarget={location?.code === 'GLOB'}
-        data={chartData}
-      />
       {tab !== 'terrestrial' && (
         <Button
           variant="white"
