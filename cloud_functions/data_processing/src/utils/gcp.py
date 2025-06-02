@@ -395,6 +395,7 @@ def read_dataframe(
     filename: str,
     skip_empty: bool = False,
     skip_empty_val: int = 2,
+    keep_default_na=False,
     verbose: bool = False,
 ) -> Optional[pd.DataFrame]:
     """
@@ -430,7 +431,7 @@ def read_dataframe(
             if verbose:
                 print(f"Skipping empty file: {filename}")
             return None
-    return pd.read_csv(fpath, low_memory=False)
+    return pd.read_csv(fpath, low_memory=False, keep_default_na=keep_default_na)
 
 
 def read_json_df(
