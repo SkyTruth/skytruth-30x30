@@ -119,7 +119,7 @@ class Strapi:
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                data={"data": pas},
+                json={"data": pas},
             )
             return response.json()
         except Exception as excep:
@@ -140,7 +140,7 @@ class Strapi:
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                data={"data": pas},
+                json={"data": pas},
             )
             return response.json()
         except Exception as excep:
@@ -161,7 +161,7 @@ class Strapi:
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                data={"data": pas},
+                json={"data": pas},
             )
             return response.json()
         except Exception as excep:
@@ -199,7 +199,7 @@ class Strapi:
                 f"{self.BASE_URL}protection-coverage-stats/{year}",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                data={"data": stats},
+                json={"data": stats},
             )
             return response.json()
         except Exception as excep:
@@ -230,7 +230,7 @@ class Strapi:
                 f"{self.BASE_URL}mpaa-protection-level-stats",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                data={"data": stats},
+                json={"data": stats},
             )
             return response.json()
         except Exception as excep:
@@ -261,7 +261,7 @@ class Strapi:
                 f"{self.BASE_URL}fishing-protection-level-stats",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                data={"data": stats},
+                json={"data": stats},
             )
             return response.json()
         except Exception as excep:
@@ -299,7 +299,7 @@ class Strapi:
                 f"{self.BASE_URL}habitat-stats/{year}",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                data={"data": stats},
+                json={"data": stats},
             )
             return response.json()
         except Exception as excep:
