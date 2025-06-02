@@ -1062,7 +1062,7 @@ def generate_protection_coverage_stats_table(
                             "location": "GLOB",
                             "environment": environment,
                             "protected_area": get_value(
-                                global_stats, f"total_{environment}_protected_areas"
+                                global_stats, f"total_{environment2}_area_oecms_pas"
                             ),
                             "protected_areas_count": get_value(
                                 global_stats, f"total_{environment}_oecms_pas"
@@ -1206,6 +1206,8 @@ def generate_marine_protection_level_stats_table(
         )
         is not None
     )
+
+    protection_level_table = protection_level_table[protection_level_table["area"] > 0]
 
     upload_dataframe(
         bucket,
