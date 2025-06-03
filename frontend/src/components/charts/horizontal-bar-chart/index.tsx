@@ -54,12 +54,12 @@ const HorizontalBarChart: FCWithMessages<HorizontalBarChartProps> = ({
     return formatPercentage(locale, percent, {
       displayPercentageSign: false,
     });
-  }, [locale, totalArea, protectedArea, percent]);
+  }, [locale, percent]);
 
   const barFillPercentage = useMemo(() => {
     // Prevent overflowing if the bar fill exceeds the set max percentage
     return percent > DEFAULT_MAX_PERCENTAGE ? 100 : percent;
-  }, [protectedArea, totalArea, percent]);
+  }, [percent]);
 
   return (
     <div className={cn('font-mono', className)}>
