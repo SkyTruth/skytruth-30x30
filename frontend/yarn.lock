@@ -1041,15 +1041,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mapbox/mapbox-gl-language@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "@mapbox/mapbox-gl-language@npm:1.0.1"
-  peerDependencies:
-    mapbox-gl: ">=0.29.0"
-  checksum: 1e7334feb74723f08bfcf29e17b3cffb90ae603b6d4c2597103644c0f6c7ade0137b1aa4d3bfda7d784872c09578fcafdd9659d511e053dfe954eeee6a80859d
-  languageName: node
-  linkType: hard
-
 "@mapbox/mapbox-gl-supported@npm:^2.0.1":
   version: 2.0.1
   resolution: "@mapbox/mapbox-gl-supported@npm:2.0.1"
@@ -13142,7 +13133,6 @@ __metadata:
     "@loaders.gl/zip": ^3.4.14
     "@localazy/cdn-client": ^1.5.2
     "@mapbox/mapbox-gl-draw": 1.4.3
-    "@mapbox/mapbox-gl-language": ^1.0.1
     "@radix-ui/react-accordion": ^1.1.2
     "@radix-ui/react-checkbox": ^1.0.4
     "@radix-ui/react-collapsible": ^1.0.3
