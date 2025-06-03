@@ -369,7 +369,7 @@ resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
 
 module "download_mpatlas_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "trigger-mpatlas-download-method"
+  name                     = "${var.project_name}-trigger-mpatlas-download-method"
   schedule                 = "0 8 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
@@ -383,7 +383,7 @@ module "download_mpatlas_scheduler" {
 
 module "download_protected_seas_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "trigger-protected-seas-download-method"
+  name                     = "${var.project_name}-trigger-protected-seas-download-method"
   schedule                 = "0 9 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
@@ -397,7 +397,7 @@ module "download_protected_seas_scheduler" {
 
 module "download_protected_planet_wdpa_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "trigger-wdpa-download-method"
+  name                     = "${var.project_name}-trigger-wdpa-download-method"
   schedule                 = "0 10 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
