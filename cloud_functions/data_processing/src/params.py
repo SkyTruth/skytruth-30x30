@@ -123,6 +123,8 @@ MANGROVES_REQUEST_HEADERS = {
     )
 }
 
+MANGROVES_ZIPFILE_NAME = "habitats/Marine-habitats_Mangroves_GlobalMangroveWatch_v3_2020.zip"
+MANGROVES_SHAPEFILE_NAME = "gmw_v3_2020_vec.shp"
 MANGROVES_FILE_NAME = "habitats/mangroves_protected_areas.csv"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{today_formatted}.csv"
 SEAMOUNTS_URL = (

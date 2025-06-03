@@ -733,6 +733,7 @@ def load_regions(
     bucket: str = BUCKET,
     related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
     regions_file_name: str = REGIONS_FILE_NAME,
+    verbose: bool = True,
 ):
     # Load related countries and regions
     related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
@@ -1140,7 +1141,7 @@ def generate_marine_protection_level_stats_table(
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    def get_group_stats(df, loc, relations, protection_level="highly/fully"):
+    def get_group_stats(df, loc, relations, protection_level="fully-highly-protected"):
         if loc == "GLOB":
             df_group = df
             total_area = GLOBAL_MARINE_AREA_KM2
@@ -1153,8 +1154,8 @@ def generate_marine_protection_level_stats_table(
 
             return {
                 "location": loc,
-                "protected_area": total_protected_area,
-                "area": total_area,
+                "total_area": total_area,
+                "area": total_protected_area,
                 "mpaa_protection_level": protection_level,
                 "percent": 100 * total_protected_area / total_area if total_area > 0 else None,
             }
@@ -1176,7 +1177,7 @@ def generate_marine_protection_level_stats_table(
     if verbose:
         print("Calculating Marine Protection Level Statistics")
 
-    protection_level = "highly/fully"
+    protection_level = "fully-highly-protected"
     mpa_dict = {
         "id": "location",
         "highly_protected_km2": "protected_area",
@@ -1207,7 +1208,8 @@ def generate_marine_protection_level_stats_table(
         is not None
     )
 
-    protection_level_table = protection_level_table[protection_level_table["area"] > 0]
+    protection_level_table = protection_level_table[protection_level_table["total_area"] > 0]
+    protection_level_table = protection_level_table.drop(columns="total_area")
 
     upload_dataframe(
         bucket,
