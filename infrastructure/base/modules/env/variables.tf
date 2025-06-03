@@ -102,6 +102,11 @@ variable "backend_path_prefix" {
   description = "Path prefix for the backend service"
 }
 
+variable "backend_write_user" {
+  type        = string
+  description = "Username to authenticate the write and update endpoints in the backend service"
+}
+
 variable "functions_path_prefix" {
   type        = string
   description = "Path prefix for the functions services"
@@ -146,4 +151,40 @@ variable "use_hello_world_image" {
   type        = bool
   default     = false
   description = "Use the hello-world image for the cloud run service"
+}
+
+variable "data_processing_timeout_seconds" {
+  type        = number
+  default     = 600
+  description = "Timeout for the data processing function"
+}
+
+variable "data_processing_available_memory" {
+  type        = string
+  default     = "8G"
+  description = "Available memory for the data processing function"
+}
+
+variable "data_processing_available_cpu" {
+  type        = number
+  default     = 2
+  description = "Available cpu for the data processing function"
+}
+
+variable "data_processing_max_instance_count" {
+  type        = number
+  default     = 1
+  description = "Max instance count for the data processing function"
+}
+
+variable "data_processing_max_instance_request_concurrency" {
+  type        = number
+  default     = 1
+  description = "Max instance request concurrency for the data processing function"
+}
+
+variable "scheduler_invoker_sa" {
+  type        = string
+  default     = null
+  description = "Service account used by Cloud Scheduler"
 }

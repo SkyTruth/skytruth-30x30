@@ -1,0 +1,11 @@
+services:
+  data-processing-cloud-functions:
+    container_name: data_processing_cloud_functions
+    build:
+      context: .
+    volumes:
+      - ./:/app
+    ports:
+      - 3001:8080
+    env_file: .env
+    restart: always
