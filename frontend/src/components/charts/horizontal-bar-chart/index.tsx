@@ -43,8 +43,8 @@ const HorizontalBarChart: FCWithMessages<HorizontalBarChartProps> = ({
   const { title, background, totalArea, percentage, protectedArea, info, sources } = data;
 
   const percent = useMemo(() => {
-    return percentage ?? ((protectedArea / totalArea) * 100);
-}, [percentage])
+    return percentage ?? (protectedArea / totalArea) * 100;
+  }, [percentage]);
 
   const targetPositionPercentage = useMemo(() => {
     return (PROTECTION_TARGET * 100) / DEFAULT_MAX_PERCENTAGE;

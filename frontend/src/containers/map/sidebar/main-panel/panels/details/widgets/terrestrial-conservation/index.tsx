@@ -80,7 +80,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
     return {
       year: Number(data[0].attributes.year),
       protectedArea: data[0].attributes.protected_area,
-      coverage: data[0].attributes.coverage
+      coverage: data[0].attributes.coverage,
     };
   }, [data]);
 
@@ -116,7 +116,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
 
     const totalArea = Number(location.total_terrestrial_area);
     const { protectedArea } = aggregatedData;
-    const percentage = aggregatedData.coverage ?? ((protectedArea / totalArea) * 100)
+    const percentage = aggregatedData.coverage ?? (protectedArea / totalArea) * 100;
     const percentageFormatted = formatPercentage(locale, percentage, {
       displayPercentageSign: false,
     });

@@ -81,7 +81,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       return {
         year: Number(year),
         protectedArea,
-        coverage
+        coverage,
       };
     });
   }, [data]);
@@ -118,7 +118,8 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
     const totalArea = Number(location.total_marine_area);
     const { protectedArea } = aggregatedData[aggregatedData.length - 1];
-    const percentage = aggregatedData[aggregatedData.length - 1].coverage ?? ((protectedArea / totalArea) * 100) 
+    const percentage =
+      aggregatedData[aggregatedData.length - 1].coverage ?? (protectedArea / totalArea) * 100;
     const percentageFormatted = formatPercentage(locale, percentage, {
       displayPercentageSign: false,
     });

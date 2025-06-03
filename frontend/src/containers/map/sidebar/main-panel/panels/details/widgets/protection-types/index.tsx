@@ -109,7 +109,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
 
   const noData = !widgetChartData.length;
   const loading = isFetchingProtectionLevelsStatsData;
-  console.log(widgetChartData)
+  console.log(widgetChartData);
 
   return (
     <Widget
