@@ -2,6 +2,7 @@
 .ruff_cache
 *.pyc
 .DS_Store
+.pytest_cache
 
 # environment variables
 .env
