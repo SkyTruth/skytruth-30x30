@@ -91,6 +91,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
         background: FISHING_PROTECTION_CHART_COLORS[protectionLevel.slug],
         totalArea: stats?.totalArea,
         protectedArea: stats?.area,
+        percentage: stats?.pct,
         info: metadata?.info,
         sources: metadata?.sources,
         updatedAt: stats?.updatedAt,

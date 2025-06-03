@@ -45,7 +45,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       'pagination[limit]': -1,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      fields: ['year', 'protected_area', 'updatedAt'],
+      fields: ['year', 'protected_area', 'updatedAt', 'coverage'],
       filters: {
         location: {
           code: {
@@ -76,10 +76,12 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
     return Object.keys(groupedByYear).map((year) => {
       const entries = groupedByYear[year];
       const protectedArea = entries[0].attributes.protected_area;
+      const coverage = entries[0].attributes.coverage;
 
       return {
         year: Number(year),
         protectedArea,
+        coverage
       };
     });
   }, [data]);
@@ -116,7 +118,8 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
     const totalArea = Number(location.total_marine_area);
     const { protectedArea } = aggregatedData[aggregatedData.length - 1];
-    const percentageFormatted = formatPercentage(locale, (protectedArea / totalArea) * 100, {
+    const percentage = aggregatedData[aggregatedData.length - 1].coverage ?? ((protectedArea / totalArea) * 100) 
+    const percentageFormatted = formatPercentage(locale, percentage, {
       displayPercentageSign: false,
     });
     const protectedAreaFormatted = formatKM(locale, protectedArea);
