@@ -197,6 +197,7 @@ locals {
   cms_service       = "${upper(var.environment)}_CMS_SERVICE"
   client_service    = "${upper(var.environment)}_CLIENT_SERVICE"
   analysis_cf_name  = "${upper(var.environment)}_ANALYSIS_CF_NAME"
+  data_cf_name      = "${upper(var.environment)}_DATA_CF_NAME"
 }
 
 module "github_values" {
@@ -210,6 +211,7 @@ module "github_values" {
     (local.cms_service)       = module.backend_cloudrun.name
     (local.client_service)    = module.frontend_cloudrun.name
     (local.analysis_cf_name)  = module.analysis_cloud_function.function_name
+    (local.data_cf_name)      = module.data_pipes_cloud_function.function_name
     (local.cms_env_file)      = join("\n", [for key, value in local.cms_env : "${key}=${value}"])
     (local.client_env_file)   = join("\n", [for key, value in local.client_env : "${key}=${value}"])
   }
