@@ -140,8 +140,8 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
     const data = aggregatedData.map((entry, index) => {
       const isLastYear = index + 1 === aggregatedData.length;
-      const { year, protectedArea } = entry;
-      const percentage = (protectedArea * 100) / Number(location.total_marine_area);
+      const { year, protectedArea, coverage } = entry;
+      const percentage = coverage ?? (protectedArea * 100) / Number(location.total_marine_area);
 
       return {
         // We only want to show up to 55%, so we'll cap the percentage here
