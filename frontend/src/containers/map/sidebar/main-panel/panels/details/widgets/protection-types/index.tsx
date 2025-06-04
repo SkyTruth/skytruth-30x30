@@ -96,6 +96,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
         background: barColor,
         totalArea: Number(location?.total_marine_area),
         protectedArea: protectionLevelStats?.area,
+        percentage: protectionLevelStats?.percentage,
         info: metadata?.info,
         sources: metadata?.sources,
       };

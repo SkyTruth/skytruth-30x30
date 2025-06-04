@@ -253,6 +253,34 @@
           "sortable": true
         }
       },
+      "zone_id": {
+        "edit": {
+          "label": "zone_id",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "zone_id",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "wdpa_p_id": {
+        "edit": {
+          "label": "wdpa_p_id",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "wdpa_p_id",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -399,6 +427,16 @@
         [
           {
             "name": "parent",
+            "size": 6
+          },
+          {
+            "name": "zone_id",
+            "size": 4
+          }
+        ],
+        [
+          {
+            "name": "wdpa_p_id",
             "size": 6
           }
         ]

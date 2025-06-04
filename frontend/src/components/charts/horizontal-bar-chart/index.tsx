@@ -23,6 +23,7 @@ interface HorizontalBarChartProps {
     title?: string;
     totalArea: number;
     protectedArea: number;
+    percentage?: number;
     info?: string;
     sources?: Source | Source[];
   };
@@ -39,25 +40,26 @@ const HorizontalBarChart: FCWithMessages<HorizontalBarChartProps> = ({
   const t = useTranslations('components.chart-horizontal-bar');
   const locale = useLocale();
 
-  const { title, background, totalArea, protectedArea, info, sources } = data;
+  const { title, background, totalArea, percentage, protectedArea, info, sources } = data;
+
+  const percent = useMemo(() => {
+    return percentage ?? (protectedArea / totalArea) * 100;
+  }, [percentage, protectedArea, totalArea]);
 
   const targetPositionPercentage = useMemo(() => {
     return (PROTECTION_TARGET * 100) / DEFAULT_MAX_PERCENTAGE;
   }, []);
 
   const protectedAreaPercentage = useMemo(() => {
-    return formatPercentage(locale, (protectedArea / totalArea) * 100, {
+    return formatPercentage(locale, percent, {
       displayPercentageSign: false,
     });
-  }, [locale, totalArea, protectedArea]);
+  }, [locale, percent]);
 
   const barFillPercentage = useMemo(() => {
-    const totalPercentage = (protectedArea * 100) / totalArea;
-    const relativeToMaxPercentage = (totalPercentage * 100) / DEFAULT_MAX_PERCENTAGE;
-
     // Prevent overflowing if the bar fill exceeds the set max percentage
-    return relativeToMaxPercentage > DEFAULT_MAX_PERCENTAGE ? 100 : relativeToMaxPercentage;
-  }, [protectedArea, totalArea]);
+    return percent > DEFAULT_MAX_PERCENTAGE ? 100 : percent;
+  }, [percent]);
 
   return (
     <div className={cn('font-mono', className)}>

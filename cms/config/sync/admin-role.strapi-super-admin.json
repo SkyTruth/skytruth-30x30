@@ -1414,7 +1414,9 @@
           "designation",
           "environment",
           "coverage",
-          "parent"
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
         ]
       },
       "conditions": [],
@@ -1447,7 +1449,9 @@
           "designation",
           "environment",
           "coverage",
-          "parent"
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
         ]
       },
       "conditions": [],
@@ -1473,7 +1477,9 @@
           "designation",
           "environment",
           "coverage",
-          "parent"
+          "parent",
+          "zone_id",
+          "wdpa_p_id"
         ]
       },
       "conditions": [],

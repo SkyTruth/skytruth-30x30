@@ -52,7 +52,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
       'pagination[pageSize]': 1,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      fields: ['year', 'protected_area', 'updatedAt'],
+      fields: ['year', 'protected_area', 'updatedAt', 'coverage'],
       filters: {
         location: {
           code: {
@@ -80,6 +80,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
     return {
       year: Number(data[0].attributes.year),
       protectedArea: data[0].attributes.protected_area,
+      coverage: data[0].attributes.coverage,
     };
   }, [data]);
 
@@ -115,7 +116,8 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
 
     const totalArea = Number(location.total_terrestrial_area);
     const { protectedArea } = aggregatedData;
-    const percentageFormatted = formatPercentage(locale, (protectedArea / totalArea) * 100, {
+    const percentage = aggregatedData.coverage ?? (protectedArea / totalArea) * 100;
+    const percentageFormatted = formatPercentage(locale, percentage, {
       displayPercentageSign: false,
     });
     const protectedAreaFormatted = formatKM(locale, protectedArea);
