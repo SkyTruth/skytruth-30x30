@@ -703,8 +703,10 @@ def preprocess_mangroves(
                 }
             )
 
-    mangroves_by_country = gpd.GeoDataFrame(mangroves_by_country)
-    upload_gdf(bucket, mangroves_by_country, mangroves_by_country_file_name, project, verbose)
+    mangroves_by_country = gpd.GeoDataFrame(mangroves_by_country, crs="EPSG:6933")
+    upload_gdf(
+        BUCKET, mangroves_by_country, MANGROVES_BY_COUNTRY_FILE_NAME, PROJECT, True, timeout=600
+    )
 
 
 def generate_protected_areas_table(
