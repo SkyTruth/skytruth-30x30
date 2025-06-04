@@ -10,6 +10,10 @@ import zipfile
 import io
 import fiona
 import geopandas as gpd
+from shapely.geometry import box
+from shapely.ops import unary_union
+from shapely.validation import make_valid
+from shapely.strtree import STRtree
 import tempfile
 from tqdm import tqdm
 import shutil
@@ -21,6 +25,7 @@ from src.params import (
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     EEZ_PARAMS,
+    EEZ_LAND_UNION_PARAMS,
     MPATLAS_URL,
     MPATLAS_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
@@ -40,6 +45,8 @@ from src.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     ARCHIVE_HABITATS_FILE_NAME,
+    MANGROVES_ZIPFILE_NAME,
+    MANGROVES_BY_COUNTRY_FILE_NAME,
     SEAMOUNTS_URL,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
@@ -60,6 +67,7 @@ from src.utils.gcp import (
     read_json_from_gcs,
     save_file_bucket,
     upload_dataframe,
+    upload_gdf,
 )
 
 from utils.processors import (
@@ -91,6 +99,19 @@ PROJECT = os.getenv("PROJECT", "")
 
 GLOBAL_MARINE_AREA_KM2 = 361000000
 GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
+
+
+def safe_union(df, batch_size=1000, simplify_tolerance=1000):
+    parts = []
+    for i in range(0, len(df), batch_size):
+        chunk = df.iloc[i : i + batch_size]
+        if simplify_tolerance is None:
+            parts.append(unary_union(chunk.geometry))
+        else:
+            parts.append(
+                unary_union(chunk.geometry).simplify(simplify_tolerance, preserve_topology=False)
+            )
+    return unary_union(parts)
 
 
 def read_mpatlas_from_gcs(
@@ -609,6 +630,59 @@ def download_habitats(
         chunk_size=chunk_size,
         verbose=verbose,
     )
+
+
+def preprocess_mangroves(
+    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
+    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    bucket: str = BUCKET,
+    project: str = PROJECT,
+):
+    # Pre-process - this should be done only when a new country_union_reproj is downloaded
+
+    print("loading mangroves")
+    mangrove = load_zipped_shapefile_from_gcs(mangroves_zipfile_name, bucket).pipe(clean_geometries)
+    mangrove["index"] = range(len(mangrove))
+    print("making mangrove geometries valid")
+    mangrove["geometry"] = mangrove["geometry"].progress_apply(make_valid)
+    mangrove_reproj = mangrove.to_crs("EPSG:6933")
+
+    country_union = load_marine_regions(eez_land_union_params, bucket)[
+        ["ISO_TER1", "geometry"]
+    ].rename(columns={"ISO_TER1": "location"})
+    country_union_reproj = country_union.to_crs("EPSG:6933")
+
+    mangroves_by_country = []
+    for cnt in tqdm(list(sorted(set(country_union_reproj["location"].dropna())))):
+        country_geom = make_valid(
+            country_union_reproj[country_union_reproj["location"] == cnt].iloc[0]["geometry"]
+        )
+
+        # clip mangroves to country bounding box
+        xmin, ymin, xmax, ymax = country_geom.bounds
+        mangroves_clipped = mangrove_reproj[mangrove_reproj.intersects(box(xmin, ymin, xmax, ymax))]
+
+        # Build STRtree index
+        mangrove_geoms = list(mangroves_clipped.geometry)
+        tree = STRtree(mangrove_geoms)
+
+        indices = tree.query(country_geom, predicate="intersects")
+        country_mangroves = mangroves_clipped.iloc[indices]
+        if len(country_mangroves) > 0:
+            mangrove_geom = safe_union(country_mangroves, batch_size=3000, simplify_tolerance=100)
+            mangroves_by_country.append(
+                {
+                    "country": cnt,
+                    "n_mangrove_polygons": len(country_mangroves),
+                    "bbox": country_geom.bounds,
+                    "mangrove_area_km2": mangrove_geom.area / 1e6,
+                    "geometry": mangrove_geom,
+                }
+            )
+
+    mangroves_by_country = gpd.GeoDataFrame(mangroves_by_country)
+    upload_gdf(bucket, mangroves_by_country, mangroves_by_country_file_name, project, verbose)
 
 
 def generate_protected_areas_table(

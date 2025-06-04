@@ -12,6 +12,7 @@ from src.params import (
     MARINE_REGIONS_HEADERS,
     EEZ_PARAMS,
     HIGH_SEAS_PARAMS,
+    EEZ_LAND_UNION_PARAMS,
 )
 from src.utils.gcp import download_zip_to_gcs
 
@@ -105,6 +106,18 @@ def main(request: Request) -> tuple[str, int]:
                     headers=MARINE_REGIONS_HEADERS,
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
+                )
+
+            case "download_eez_land_union":
+                download_zip_to_gcs(
+                    MARINE_REGIONS_URL,
+                    BUCKET,
+                    EEZ_LAND_UNION_PARAMS["zipfile_name"],
+                    data=MARINE_REGIONS_BODY,
+                    params=EEZ_LAND_UNION_PARAMS,
+                    headers=MARINE_REGIONS_HEADERS,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=True,
                 )
 
             case "download_habitats":

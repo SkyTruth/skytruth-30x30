@@ -48,6 +48,12 @@ HIGH_SEAS_PARAMS = {
     "shapefile_name": "High_Seas_v2.shp",
 }
 
+EEZ_LAND_UNION_PARAMS = {
+    "name": "EEZ_land_union_v4_202410.zip",
+    "zipfile_name": "static/eez_land_union.zip",
+    "shapefile_name": "EEZ_land_union_v4_202410.shp",
+}
+
 # HIGH_SEAS_ZIPFILE_NAME = "static/high_seas.zip"
 # HIGH_SEAS_SHAPEFILE_NAME = "High_Seas_v2.shp"
 # HIGH_SEAS_PARAMS = {"name": "World_High_Seas_v2_20241010.zip"}
@@ -126,6 +132,7 @@ MANGROVES_REQUEST_HEADERS = {
 MANGROVES_ZIPFILE_NAME = "habitats/Marine-habitats_Mangroves_GlobalMangroveWatch_v3_2020.zip"
 MANGROVES_SHAPEFILE_NAME = "gmw_v3_2020_vec.shp"
 MANGROVES_FILE_NAME = "habitats/mangroves_protected_areas.csv"
+MANGROVES_BY_COUNTRY_FILE_NAME = "static/mangroves_by_country.geojson"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{today_formatted}.csv"
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"

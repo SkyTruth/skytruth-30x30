@@ -247,6 +247,7 @@ def upload_gdf(
     destination_blob_name: str,
     project_id: str = PROJECT,
     verbose: bool = True,
+    timeout: int = 600,
 ) -> None:
     """
     Saves a GeoDataFrame to GCS as a .geojson file.
@@ -260,9 +261,11 @@ def upload_gdf(
     destination_blob_name : str
         Destination path for the .geojson file in the bucket.
     project_id : str, optional
-        Google Cloud project ID. Defaults to global `PROJECT`.
+        Google Cloud project ID. Defaults to global PROJECT.
     verbose : bool
         If True, prints progress messages.
+    timeout : int
+        Timeout in seconds for the upload. Defaults to 600 (10 minutes).
     """
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
@@ -273,7 +276,7 @@ def upload_gdf(
         if verbose:
             print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
 
-        bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name)
+        bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
 
     if verbose:
         print("Upload complete.")
