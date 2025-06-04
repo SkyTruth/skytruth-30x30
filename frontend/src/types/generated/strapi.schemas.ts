@@ -1222,11 +1222,6 @@ export interface UploadFile {
 
 export type StaticIndicatorResponseMeta = { [key: string]: any };
 
-export interface StaticIndicatorResponse {
-  data?: StaticIndicatorResponseDataObject;
-  meta?: StaticIndicatorResponseMeta;
-}
-
 export type StaticIndicatorLocalizations = {
   data?: StaticIndicator[];
 };
@@ -1250,7 +1245,10 @@ export interface StaticIndicatorResponseDataObject {
   attributes?: StaticIndicator;
 }
 
-export type StaticIndicatorUpdatedByDataAttributes = { [key: string]: any };
+export interface StaticIndicatorResponse {
+  data?: StaticIndicatorResponseDataObject;
+  meta?: StaticIndicatorResponseMeta;
+}
 
 export type StaticIndicatorUpdatedByData = {
   id?: number;
@@ -1261,22 +1259,7 @@ export type StaticIndicatorUpdatedBy = {
   data?: StaticIndicatorUpdatedByData;
 };
 
-export type StaticIndicatorCreatedByDataAttributes = {
-  firstname?: string;
-  lastname?: string;
-  username?: string;
-  email?: string;
-  resetPasswordToken?: string;
-  registrationToken?: string;
-  isActive?: boolean;
-  roles?: StaticIndicatorCreatedByDataAttributesRoles;
-  blocked?: boolean;
-  preferedLanguage?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: StaticIndicatorCreatedByDataAttributesCreatedBy;
-  updatedBy?: StaticIndicatorCreatedByDataAttributesUpdatedBy;
-};
+export type StaticIndicatorUpdatedByDataAttributes = { [key: string]: any };
 
 export type StaticIndicatorCreatedByData = {
   id?: number;
@@ -1309,6 +1292,18 @@ export type StaticIndicatorCreatedByDataAttributesCreatedBy = {
   data?: StaticIndicatorCreatedByDataAttributesCreatedByData;
 };
 
+export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributes = {
+  name?: string;
+  code?: string;
+  description?: string;
+  users?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUsers;
+  permissions?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissions;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
+  updatedBy?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
+};
+
 export type StaticIndicatorCreatedByDataAttributesRolesDataItem = {
   id?: number;
   attributes?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributes;
@@ -1316,6 +1311,23 @@ export type StaticIndicatorCreatedByDataAttributesRolesDataItem = {
 
 export type StaticIndicatorCreatedByDataAttributesRoles = {
   data?: StaticIndicatorCreatedByDataAttributesRolesDataItem[];
+};
+
+export type StaticIndicatorCreatedByDataAttributes = {
+  firstname?: string;
+  lastname?: string;
+  username?: string;
+  email?: string;
+  resetPasswordToken?: string;
+  registrationToken?: string;
+  isActive?: boolean;
+  roles?: StaticIndicatorCreatedByDataAttributesRoles;
+  blocked?: boolean;
+  preferedLanguage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: StaticIndicatorCreatedByDataAttributesCreatedBy;
+  updatedBy?: StaticIndicatorCreatedByDataAttributesUpdatedBy;
 };
 
 export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUpdatedByDataAttributes = {
@@ -1329,18 +1341,6 @@ export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUpdated
 
 export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUpdatedBy = {
   data?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUpdatedByData;
-};
-
-export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributes = {
-  name?: string;
-  code?: string;
-  description?: string;
-  users?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUsers;
-  permissions?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissions;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
-  updatedBy?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
 };
 
 export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes = {
@@ -1379,20 +1379,6 @@ export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermiss
     data?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData;
   };
 
-export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
-  {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
-  };
-
 export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
@@ -1419,6 +1405,20 @@ export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermiss
 export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole =
   {
     data?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRoleData;
+  };
+
+export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type StaticIndicatorCreatedByDataAttributesRolesDataItemAttributesUsersDataItemAttributes = {
@@ -1519,23 +1519,6 @@ export type ProtectionStatusLocalizations = {
   data?: ProtectionStatus[];
 };
 
-export interface ProtectionStatus {
-  slug: string;
-  name: string;
-  info?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: ProtectionStatusCreatedBy;
-  updatedBy?: ProtectionStatusUpdatedBy;
-  localizations?: ProtectionStatusLocalizations;
-  locale?: string;
-}
-
-export interface ProtectionStatusResponseDataObject {
-  id?: number;
-  attributes?: ProtectionStatus;
-}
-
 export type ProtectionStatusUpdatedByDataAttributes = { [key: string]: any };
 
 export type ProtectionStatusUpdatedByData = {
@@ -1555,6 +1538,23 @@ export type ProtectionStatusCreatedByData = {
 export type ProtectionStatusCreatedBy = {
   data?: ProtectionStatusCreatedByData;
 };
+
+export interface ProtectionStatus {
+  slug: string;
+  name: string;
+  info?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: ProtectionStatusCreatedBy;
+  updatedBy?: ProtectionStatusUpdatedBy;
+  localizations?: ProtectionStatusLocalizations;
+  locale?: string;
+}
+
+export interface ProtectionStatusResponseDataObject {
+  id?: number;
+  attributes?: ProtectionStatus;
+}
 
 export type ProtectionStatusCreatedByDataAttributesUpdatedByDataAttributes = { [key: string]: any };
 
@@ -1595,18 +1595,6 @@ export type ProtectionStatusCreatedByDataAttributesCreatedBy = {
   data?: ProtectionStatusCreatedByDataAttributesCreatedByData;
 };
 
-export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributes = {
-  name?: string;
-  code?: string;
-  description?: string;
-  users?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesUsers;
-  permissions?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissions;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
-  updatedBy?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
-};
-
 export type ProtectionStatusCreatedByDataAttributesRolesDataItem = {
   id?: number;
   attributes?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributes;
@@ -1628,6 +1616,18 @@ export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesUpdate
   data?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesUpdatedByData;
 };
 
+export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributes = {
+  name?: string;
+  code?: string;
+  description?: string;
+  users?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesUsers;
+  permissions?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissions;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
+  updatedBy?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
+};
+
 export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
@@ -1639,20 +1639,6 @@ export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesCreate
 export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesCreatedBy = {
   data?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
 };
-
-export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
-  {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
-  };
 
 export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem = {
   id?: number;
@@ -1675,6 +1661,20 @@ export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermis
 export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy =
   {
     data?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData;
+  };
+
+export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type ProtectionStatusCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedByDataAttributes =
@@ -1791,6 +1791,23 @@ export interface ProtectionStatusLocalizationRequest {
 
 export type ProtectionCoverageStatResponseMeta = { [key: string]: any };
 
+export interface ProtectionCoverageStat {
+  location?: ProtectionCoverageStatLocation;
+  year: number;
+  protected_area?: number;
+  protected_areas_count: number;
+  environment?: ProtectionCoverageStatEnvironment;
+  coverage?: number;
+  pas?: number;
+  oecms?: number;
+  is_last_year?: boolean;
+  global_contribution?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: ProtectionCoverageStatCreatedBy;
+  updatedBy?: ProtectionCoverageStatUpdatedBy;
+}
+
 export interface ProtectionCoverageStatResponseDataObject {
   id?: number;
   attributes?: ProtectionCoverageStat;
@@ -1812,23 +1829,6 @@ export type ProtectionCoverageStatUpdatedBy = {
   data?: ProtectionCoverageStatUpdatedByData;
 };
 
-export interface ProtectionCoverageStat {
-  location?: ProtectionCoverageStatLocation;
-  year: number;
-  protected_area?: number;
-  protected_areas_count: number;
-  environment?: ProtectionCoverageStatEnvironment;
-  coverage?: number;
-  pas?: number;
-  oecms?: number;
-  is_last_year?: boolean;
-  global_contribution?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: ProtectionCoverageStatCreatedBy;
-  updatedBy?: ProtectionCoverageStatUpdatedBy;
-}
-
 export type ProtectionCoverageStatCreatedByDataAttributes = { [key: string]: any };
 
 export type ProtectionCoverageStatCreatedByData = {
@@ -1840,39 +1840,15 @@ export type ProtectionCoverageStatCreatedBy = {
   data?: ProtectionCoverageStatCreatedByData;
 };
 
+export type ProtectionCoverageStatEnvironment = {
+  data?: ProtectionCoverageStatEnvironmentData;
+};
+
 export type ProtectionCoverageStatEnvironmentDataAttributes = { [key: string]: any };
 
 export type ProtectionCoverageStatEnvironmentData = {
   id?: number;
   attributes?: ProtectionCoverageStatEnvironmentDataAttributes;
-};
-
-export type ProtectionCoverageStatEnvironment = {
-  data?: ProtectionCoverageStatEnvironmentData;
-};
-
-export type ProtectionCoverageStatLocationDataAttributes = {
-  code?: string;
-  name?: string;
-  total_marine_area?: string;
-  type?: string;
-  groups?: ProtectionCoverageStatLocationDataAttributesGroups;
-  members?: ProtectionCoverageStatLocationDataAttributesMembers;
-  fishing_protection_level_stats?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStats;
-  mpaa_protection_level_stats?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStats;
-  protection_coverage_stats?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStats;
-  marine_bounds?: unknown;
-  total_terrestrial_area?: string;
-  terrestrial_bounds?: unknown;
-  name_es?: string;
-  name_fr?: string;
-  marine_target?: number;
-  marine_target_year?: number;
-  pas?: ProtectionCoverageStatLocationDataAttributesPas;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: ProtectionCoverageStatLocationDataAttributesCreatedBy;
-  updatedBy?: ProtectionCoverageStatLocationDataAttributesUpdatedBy;
 };
 
 export type ProtectionCoverageStatLocationData = {
@@ -1910,6 +1886,31 @@ export type ProtectionCoverageStatLocationDataAttributesCreatedBy = {
   data?: ProtectionCoverageStatLocationDataAttributesCreatedByData;
 };
 
+export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributes = {
+  name?: string;
+  area?: number;
+  year?: number;
+  protection_status?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatus;
+  bbox?: unknown;
+  children?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesChildren;
+  data_source?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSource;
+  mpaa_establishment_stage?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStage;
+  location?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesLocation;
+  wdpaid?: string;
+  mpaa_protection_level?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaProtectionLevel;
+  iucn_category?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesIucnCategory;
+  designation?: string;
+  environment?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesEnvironment;
+  coverage?: number;
+  parent?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesParent;
+  zone_id?: string;
+  wdpa_p_id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesCreatedBy;
+  updatedBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesUpdatedBy;
+};
+
 export type ProtectionCoverageStatLocationDataAttributesPasDataItem = {
   id?: number;
   attributes?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributes;
@@ -1917,6 +1918,30 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItem = {
 
 export type ProtectionCoverageStatLocationDataAttributesPas = {
   data?: ProtectionCoverageStatLocationDataAttributesPasDataItem[];
+};
+
+export type ProtectionCoverageStatLocationDataAttributes = {
+  code?: string;
+  name?: string;
+  total_marine_area?: string;
+  type?: string;
+  groups?: ProtectionCoverageStatLocationDataAttributesGroups;
+  members?: ProtectionCoverageStatLocationDataAttributesMembers;
+  fishing_protection_level_stats?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStats;
+  mpaa_protection_level_stats?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStats;
+  protection_coverage_stats?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStats;
+  marine_bounds?: unknown;
+  total_terrestrial_area?: string;
+  terrestrial_bounds?: unknown;
+  name_es?: string;
+  name_fr?: string;
+  marine_target?: number;
+  marine_target_year?: number;
+  pas?: ProtectionCoverageStatLocationDataAttributesPas;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: ProtectionCoverageStatLocationDataAttributesCreatedBy;
+  updatedBy?: ProtectionCoverageStatLocationDataAttributesUpdatedBy;
 };
 
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesUpdatedByDataAttributes =
@@ -1953,31 +1978,6 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesPar
 
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesParent = {
   data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesParentData;
-};
-
-export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributes = {
-  name?: string;
-  area?: number;
-  year?: number;
-  protection_status?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatus;
-  bbox?: unknown;
-  children?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesChildren;
-  data_source?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSource;
-  mpaa_establishment_stage?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStage;
-  location?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesLocation;
-  wdpaid?: string;
-  mpaa_protection_level?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaProtectionLevel;
-  iucn_category?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesIucnCategory;
-  designation?: string;
-  environment?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesEnvironment;
-  coverage?: number;
-  parent?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesParent;
-  zone_id?: string;
-  wdpa_p_id?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesCreatedBy;
-  updatedBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesUpdatedBy;
 };
 
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesEnvironmentDataAttributes =
@@ -2082,6 +2082,20 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpa
     data?: unknown[];
   };
 
+export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByDataAttributes =
+  { [key: string]: any };
+
+export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByData =
+  {
+    id?: number;
+    attributes?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByDataAttributes;
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedBy =
+  {
+    data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByData;
+  };
+
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes =
   {
     slug?: string;
@@ -2101,20 +2115,6 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpa
     attributes?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes;
   };
 
-export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByDataAttributes =
-  { [key: string]: any };
-
-export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByData =
-  {
-    id?: number;
-    attributes?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByDataAttributes;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedBy =
-  {
-    data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByData;
-  };
-
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
@@ -2129,14 +2129,32 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpa
     data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByData;
   };
 
-export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSource = {
-  data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceData;
-};
-
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations =
   {
     data?: unknown[];
   };
+
+export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributes =
+  {
+    slug?: string;
+    title?: string;
+    url?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesCreatedBy;
+    updatedBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedBy;
+    localizations?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations;
+    locale?: string;
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceData = {
+  id?: number;
+  attributes?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributes;
+};
+
+export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSource = {
+  data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceData;
+};
 
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
@@ -2166,24 +2184,6 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDat
     data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesCreatedByData;
   };
 
-export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributes =
-  {
-    slug?: string;
-    title?: string;
-    url?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesCreatedBy;
-    updatedBy?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedBy;
-    localizations?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations;
-    locale?: string;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceData = {
-  id?: number;
-  attributes?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributes;
-};
-
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesChildrenDataItemAttributes =
   { [key: string]: any };
 
@@ -2195,6 +2195,11 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesChi
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesChildren = {
   data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesChildrenDataItem[];
 };
+
+export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesLocalizations =
+  {
+    data?: unknown[];
+  };
 
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributes =
   {
@@ -2218,11 +2223,6 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesPro
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatus = {
   data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatusData;
 };
-
-export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesLocalizations =
-  {
-    data?: unknown[];
-  };
 
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
@@ -2250,24 +2250,6 @@ export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesPro
 export type ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedBy =
   {
     data?: ProtectionCoverageStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByData;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributes =
-  {
-    location?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesLocation;
-    year?: number;
-    protected_area?: number;
-    protected_areas_count?: number;
-    environment?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironment;
-    coverage?: number;
-    pas?: number;
-    oecms?: number;
-    is_last_year?: boolean;
-    global_contribution?: number;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy;
-    updatedBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesUpdatedBy;
   };
 
 export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItem = {
@@ -2307,32 +2289,14 @@ export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsD
     data?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByData;
   };
 
-export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations =
-  {
-    data?: unknown[];
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes =
-  {
-    name?: string;
-    slug?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedBy;
-    updatedBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedBy;
-    localizations?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations;
-    locale?: string;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData =
-  {
-    id?: number;
-    attributes?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes;
-  };
-
 export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironment =
   {
     data?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData;
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations =
+  {
+    data?: unknown[];
   };
 
 export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByDataAttributes =
@@ -2363,6 +2327,24 @@ export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsD
     data?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedByData;
   };
 
+export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes =
+  {
+    name?: string;
+    slug?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedBy;
+    updatedBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedBy;
+    localizations?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations;
+    locale?: string;
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData =
+  {
+    id?: number;
+    attributes?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes;
+  };
+
 export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesLocationDataAttributes =
   { [key: string]: any };
 
@@ -2375,6 +2357,24 @@ export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsD
 export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesLocation =
   {
     data?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesLocationData;
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributes =
+  {
+    location?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesLocation;
+    year?: number;
+    protected_area?: number;
+    protected_areas_count?: number;
+    environment?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironment;
+    coverage?: number;
+    pas?: number;
+    oecms?: number;
+    is_last_year?: boolean;
+    global_contribution?: number;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy;
+    updatedBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesUpdatedBy;
   };
 
 export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributes = {
@@ -2439,9 +2439,25 @@ export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStats
     data?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocationData;
   };
 
+export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelData =
+  {
+    id?: number;
+    attributes?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributes;
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevel =
+  {
+    data?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelData;
+  };
+
 export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesLocalizations =
   {
     data?: unknown[];
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesUpdatedBy =
+  {
+    data?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesUpdatedByData;
   };
 
 export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributes =
@@ -2457,17 +2473,6 @@ export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStats
     locale?: string;
   };
 
-export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelData =
-  {
-    id?: number;
-    attributes?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributes;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevel =
-  {
-    data?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelData;
-  };
-
 export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
 
@@ -2475,11 +2480,6 @@ export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStats
   {
     id?: number;
     attributes?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesUpdatedByDataAttributes;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesUpdatedBy =
-  {
-    data?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesUpdatedByData;
   };
 
 export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesCreatedByDataAttributes =
@@ -2533,6 +2533,12 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
     data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData;
   };
 
+export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelData =
+  {
+    id?: number;
+    attributes?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributes;
+  };
+
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel =
   {
     data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelData;
@@ -2569,24 +2575,6 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
     data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByData;
   };
 
-export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributes =
-  {
-    firstname?: string;
-    lastname?: string;
-    username?: string;
-    email?: string;
-    resetPasswordToken?: string;
-    registrationToken?: string;
-    isActive?: boolean;
-    roles?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRoles;
-    blocked?: boolean;
-    preferedLanguage?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesCreatedBy;
-    updatedBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedBy;
-  };
-
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByData =
   {
     id?: number;
@@ -2609,12 +2597,6 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
     updatedBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedBy;
     localizations?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations;
     locale?: string;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelData =
-  {
-    id?: number;
-    attributes?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributes;
   };
 
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes =
@@ -2645,9 +2627,33 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
     data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesCreatedByData;
   };
 
+export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItem =
+  {
+    id?: number;
+    attributes?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributes;
+  };
+
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRoles =
   {
     data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItem[];
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributes =
+  {
+    firstname?: string;
+    lastname?: string;
+    username?: string;
+    email?: string;
+    resetPasswordToken?: string;
+    registrationToken?: string;
+    isActive?: boolean;
+    roles?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRoles;
+    blocked?: boolean;
+    preferedLanguage?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesCreatedBy;
+    updatedBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedBy;
   };
 
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedByDataAttributes =
@@ -2664,9 +2670,6 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
     data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedByData;
   };
 
-export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
-  { [key: string]: any };
-
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData =
   {
     id?: number;
@@ -2676,31 +2679,6 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedBy =
   {
     data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
-  {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem =
-  {
-    id?: number;
-    attributes?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes;
-  };
-
-export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissions =
-  {
-    data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem[];
   };
 
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributes =
@@ -2716,10 +2694,18 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
     updatedBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
   };
 
-export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItem =
+export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
+  { [key: string]: any };
+
+export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem =
   {
     id?: number;
-    attributes?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributes;
+    attributes?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes;
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissions =
+  {
+    data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem[];
   };
 
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByDataAttributes =
@@ -2762,6 +2748,20 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole =
   {
     data?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRoleData;
+  };
+
+export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUsersDataItemAttributes =
@@ -2862,8 +2862,6 @@ export type PaUpdatedBy = {
   data?: PaUpdatedByData;
 };
 
-export type PaCreatedByDataAttributes = { [key: string]: any };
-
 export type PaCreatedByData = {
   id?: number;
   attributes?: PaCreatedByDataAttributes;
@@ -2872,6 +2870,33 @@ export type PaCreatedByData = {
 export type PaCreatedBy = {
   data?: PaCreatedByData;
 };
+
+export interface Pa {
+  name: string;
+  area: number;
+  year?: number;
+  protection_status?: PaProtectionStatus;
+  bbox: unknown;
+  children?: PaChildren;
+  data_source?: PaDataSource;
+  mpaa_establishment_stage?: PaMpaaEstablishmentStage;
+  location?: PaLocation;
+  wdpaid?: string;
+  mpaa_protection_level?: PaMpaaProtectionLevel;
+  iucn_category?: PaIucnCategory;
+  designation?: string;
+  environment?: PaEnvironment;
+  coverage: number;
+  parent?: PaParent;
+  zone_id?: string;
+  wdpa_p_id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: PaCreatedBy;
+  updatedBy?: PaUpdatedBy;
+}
+
+export type PaCreatedByDataAttributes = { [key: string]: any };
 
 export type PaParentDataAttributes = { [key: string]: any };
 
@@ -2950,60 +2975,6 @@ export type PaDataSource = {
   data?: PaDataSourceData;
 };
 
-export type PaChildrenDataItem = {
-  id?: number;
-  attributes?: PaChildrenDataItemAttributes;
-};
-
-export type PaChildren = {
-  data?: PaChildrenDataItem[];
-};
-
-export interface Pa {
-  name: string;
-  area: number;
-  year?: number;
-  protection_status?: PaProtectionStatus;
-  bbox: unknown;
-  children?: PaChildren;
-  data_source?: PaDataSource;
-  mpaa_establishment_stage?: PaMpaaEstablishmentStage;
-  location?: PaLocation;
-  wdpaid?: string;
-  mpaa_protection_level?: PaMpaaProtectionLevel;
-  iucn_category?: PaIucnCategory;
-  designation?: string;
-  environment?: PaEnvironment;
-  coverage: number;
-  parent?: PaParent;
-  zone_id?: string;
-  wdpa_p_id?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: PaCreatedBy;
-  updatedBy?: PaUpdatedBy;
-}
-
-export type PaChildrenDataItemAttributesUpdatedByDataAttributes = { [key: string]: any };
-
-export type PaChildrenDataItemAttributesUpdatedByData = {
-  id?: number;
-  attributes?: PaChildrenDataItemAttributesUpdatedByDataAttributes;
-};
-
-export type PaChildrenDataItemAttributesUpdatedBy = {
-  data?: PaChildrenDataItemAttributesUpdatedByData;
-};
-
-export type PaChildrenDataItemAttributesCreatedByData = {
-  id?: number;
-  attributes?: PaChildrenDataItemAttributesCreatedByDataAttributes;
-};
-
-export type PaChildrenDataItemAttributesCreatedBy = {
-  data?: PaChildrenDataItemAttributesCreatedByData;
-};
-
 export type PaChildrenDataItemAttributes = {
   name?: string;
   area?: number;
@@ -3029,7 +3000,36 @@ export type PaChildrenDataItemAttributes = {
   updatedBy?: PaChildrenDataItemAttributesUpdatedBy;
 };
 
+export type PaChildrenDataItem = {
+  id?: number;
+  attributes?: PaChildrenDataItemAttributes;
+};
+
+export type PaChildren = {
+  data?: PaChildrenDataItem[];
+};
+
+export type PaChildrenDataItemAttributesUpdatedByDataAttributes = { [key: string]: any };
+
+export type PaChildrenDataItemAttributesUpdatedByData = {
+  id?: number;
+  attributes?: PaChildrenDataItemAttributesUpdatedByDataAttributes;
+};
+
+export type PaChildrenDataItemAttributesUpdatedBy = {
+  data?: PaChildrenDataItemAttributesUpdatedByData;
+};
+
 export type PaChildrenDataItemAttributesCreatedByDataAttributes = { [key: string]: any };
+
+export type PaChildrenDataItemAttributesCreatedByData = {
+  id?: number;
+  attributes?: PaChildrenDataItemAttributesCreatedByDataAttributes;
+};
+
+export type PaChildrenDataItemAttributesCreatedBy = {
+  data?: PaChildrenDataItemAttributesCreatedByData;
+};
 
 export type PaChildrenDataItemAttributesParentDataAttributes = { [key: string]: any };
 
@@ -3053,17 +3053,29 @@ export type PaChildrenDataItemAttributesEnvironment = {
   data?: PaChildrenDataItemAttributesEnvironmentData;
 };
 
-export type PaChildrenDataItemAttributesIucnCategoryData = {
-  id?: number;
-  attributes?: PaChildrenDataItemAttributesIucnCategoryDataAttributes;
-};
-
 export type PaChildrenDataItemAttributesIucnCategory = {
   data?: PaChildrenDataItemAttributesIucnCategoryData;
 };
 
 export type PaChildrenDataItemAttributesIucnCategoryDataAttributesLocalizations = {
   data?: unknown[];
+};
+
+export type PaChildrenDataItemAttributesIucnCategoryDataAttributes = {
+  slug?: string;
+  name?: string;
+  info?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: PaChildrenDataItemAttributesIucnCategoryDataAttributesCreatedBy;
+  updatedBy?: PaChildrenDataItemAttributesIucnCategoryDataAttributesUpdatedBy;
+  localizations?: PaChildrenDataItemAttributesIucnCategoryDataAttributesLocalizations;
+  locale?: string;
+};
+
+export type PaChildrenDataItemAttributesIucnCategoryData = {
+  id?: number;
+  attributes?: PaChildrenDataItemAttributesIucnCategoryDataAttributes;
 };
 
 export type PaChildrenDataItemAttributesIucnCategoryDataAttributesUpdatedByDataAttributes = {
@@ -3077,18 +3089,6 @@ export type PaChildrenDataItemAttributesIucnCategoryDataAttributesUpdatedByData 
 
 export type PaChildrenDataItemAttributesIucnCategoryDataAttributesUpdatedBy = {
   data?: PaChildrenDataItemAttributesIucnCategoryDataAttributesUpdatedByData;
-};
-
-export type PaChildrenDataItemAttributesIucnCategoryDataAttributes = {
-  slug?: string;
-  name?: string;
-  info?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: PaChildrenDataItemAttributesIucnCategoryDataAttributesCreatedBy;
-  updatedBy?: PaChildrenDataItemAttributesIucnCategoryDataAttributesUpdatedBy;
-  localizations?: PaChildrenDataItemAttributesIucnCategoryDataAttributesLocalizations;
-  locale?: string;
 };
 
 export type PaChildrenDataItemAttributesIucnCategoryDataAttributesCreatedByDataAttributes = {
@@ -3113,30 +3113,6 @@ export type PaChildrenDataItemAttributesMpaaProtectionLevelData = {
 
 export type PaChildrenDataItemAttributesMpaaProtectionLevel = {
   data?: PaChildrenDataItemAttributesMpaaProtectionLevelData;
-};
-
-export type PaChildrenDataItemAttributesLocationDataAttributes = {
-  code?: string;
-  name?: string;
-  total_marine_area?: string;
-  type?: string;
-  groups?: PaChildrenDataItemAttributesLocationDataAttributesGroups;
-  members?: PaChildrenDataItemAttributesLocationDataAttributesMembers;
-  fishing_protection_level_stats?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStats;
-  mpaa_protection_level_stats?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStats;
-  protection_coverage_stats?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStats;
-  marine_bounds?: unknown;
-  total_terrestrial_area?: string;
-  terrestrial_bounds?: unknown;
-  name_es?: string;
-  name_fr?: string;
-  marine_target?: number;
-  marine_target_year?: number;
-  pas?: PaChildrenDataItemAttributesLocationDataAttributesPas;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: PaChildrenDataItemAttributesLocationDataAttributesCreatedBy;
-  updatedBy?: PaChildrenDataItemAttributesLocationDataAttributesUpdatedBy;
 };
 
 export type PaChildrenDataItemAttributesLocationData = {
@@ -3187,6 +3163,39 @@ export type PaChildrenDataItemAttributesLocationDataAttributesPas = {
   data?: PaChildrenDataItemAttributesLocationDataAttributesPasDataItem[];
 };
 
+export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItem = {
+  id?: number;
+  attributes?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributes;
+};
+
+export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStats = {
+  data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItem[];
+};
+
+export type PaChildrenDataItemAttributesLocationDataAttributes = {
+  code?: string;
+  name?: string;
+  total_marine_area?: string;
+  type?: string;
+  groups?: PaChildrenDataItemAttributesLocationDataAttributesGroups;
+  members?: PaChildrenDataItemAttributesLocationDataAttributesMembers;
+  fishing_protection_level_stats?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStats;
+  mpaa_protection_level_stats?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStats;
+  protection_coverage_stats?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStats;
+  marine_bounds?: unknown;
+  total_terrestrial_area?: string;
+  terrestrial_bounds?: unknown;
+  name_es?: string;
+  name_fr?: string;
+  marine_target?: number;
+  marine_target_year?: number;
+  pas?: PaChildrenDataItemAttributesLocationDataAttributesPas;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: PaChildrenDataItemAttributesLocationDataAttributesCreatedBy;
+  updatedBy?: PaChildrenDataItemAttributesLocationDataAttributesUpdatedBy;
+};
+
 export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesUpdatedByDataAttributes =
   { [key: string]: any };
 
@@ -3199,6 +3208,31 @@ export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverage
 export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesUpdatedBy =
   {
     data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesUpdatedByData;
+  };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes =
+  { [key: string]: any };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByData =
+  {
+    id?: number;
+    attributes?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes;
+  };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy =
+  {
+    data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByData;
+  };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData =
+  {
+    id?: number;
+    attributes?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes;
+  };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironment =
+  {
+    data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData;
   };
 
 export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributes =
@@ -3219,32 +3253,14 @@ export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverage
     updatedBy?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesUpdatedBy;
   };
 
-export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItem = {
-  id?: number;
-  attributes?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributes;
-};
-
-export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStats = {
-  data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItem[];
-};
-
-export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes =
-  { [key: string]: any };
-
-export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByData =
-  {
-    id?: number;
-    attributes?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes;
-  };
-
-export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy =
-  {
-    data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByData;
-  };
-
 export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations =
   {
     data?: unknown[];
+  };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedBy =
+  {
+    data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByData;
   };
 
 export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes =
@@ -3259,17 +3275,6 @@ export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverage
     locale?: string;
   };
 
-export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData =
-  {
-    id?: number;
-    attributes?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes;
-  };
-
-export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironment =
-  {
-    data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData;
-  };
-
 export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
 
@@ -3277,11 +3282,6 @@ export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverage
   {
     id?: number;
     attributes?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByDataAttributes;
-  };
-
-export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedBy =
-  {
-    data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByData;
   };
 
 export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedByDataAttributes =
@@ -3311,6 +3311,23 @@ export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverage
   {
     data?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesLocationData;
   };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributes =
+  {
+    mpaa_protection_level?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevel;
+    area?: number;
+    percentage?: number;
+    location?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
+    updatedBy?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesUpdatedBy;
+  };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsData = {
+  id?: number;
+  attributes?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributes;
+};
 
 export type PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStats = {
   data?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsData;
@@ -3362,23 +3379,6 @@ export type PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLeve
   {
     data?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelData;
   };
-
-export type PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributes =
-  {
-    mpaa_protection_level?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevel;
-    area?: number;
-    percentage?: number;
-    location?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
-    updatedBy?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesUpdatedBy;
-  };
-
-export type PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsData = {
-  id?: number;
-  attributes?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributes;
-};
 
 export type PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesLocalizations =
   {
@@ -3456,6 +3456,17 @@ export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionL
     data?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesUpdatedByData;
   };
 
+export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData =
+  {
+    id?: number;
+    attributes?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByDataAttributes;
+  };
+
+export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy =
+  {
+    data?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData;
+  };
+
 export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributes =
   {
     location?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesLocation;
@@ -3471,15 +3482,22 @@ export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionL
 export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
-export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData =
+export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations =
   {
-    id?: number;
-    attributes?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByDataAttributes;
+    data?: unknown[];
   };
 
-export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy =
+export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributes =
   {
-    data?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData;
+    slug?: string;
+    name?: string;
+    info?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedBy;
+    updatedBy?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedBy;
+    localizations?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations;
+    locale?: string;
   };
 
 export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelData =
@@ -3491,11 +3509,6 @@ export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionL
 export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel =
   {
     data?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelData;
-  };
-
-export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations =
-  {
-    data?: unknown[];
   };
 
 export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByDataAttributes =
@@ -3524,19 +3537,6 @@ export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionL
 export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedBy =
   {
     data?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByData;
-  };
-
-export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributes =
-  {
-    slug?: string;
-    name?: string;
-    info?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedBy;
-    updatedBy?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedBy;
-    localizations?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations;
-    locale?: string;
   };
 
 export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesLocationDataAttributes =
@@ -3628,6 +3628,10 @@ export type PaChildrenDataItemAttributesMpaaEstablishmentStageDataAttributesCrea
   data?: PaChildrenDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByData;
 };
 
+export type PaChildrenDataItemAttributesDataSource = {
+  data?: PaChildrenDataItemAttributesDataSourceData;
+};
+
 export type PaChildrenDataItemAttributesDataSourceDataAttributesLocalizations = {
   data?: unknown[];
 };
@@ -3649,10 +3653,6 @@ export type PaChildrenDataItemAttributesDataSourceData = {
   attributes?: PaChildrenDataItemAttributesDataSourceDataAttributes;
 };
 
-export type PaChildrenDataItemAttributesDataSource = {
-  data?: PaChildrenDataItemAttributesDataSourceData;
-};
-
 export type PaChildrenDataItemAttributesDataSourceDataAttributesUpdatedByDataAttributes = {
   [key: string]: any;
 };
@@ -3666,6 +3666,10 @@ export type PaChildrenDataItemAttributesDataSourceDataAttributesUpdatedBy = {
   data?: PaChildrenDataItemAttributesDataSourceDataAttributesUpdatedByData;
 };
 
+export type PaChildrenDataItemAttributesDataSourceDataAttributesCreatedBy = {
+  data?: PaChildrenDataItemAttributesDataSourceDataAttributesCreatedByData;
+};
+
 export type PaChildrenDataItemAttributesDataSourceDataAttributesCreatedByDataAttributes = {
   [key: string]: any;
 };
@@ -3673,10 +3677,6 @@ export type PaChildrenDataItemAttributesDataSourceDataAttributesCreatedByDataAtt
 export type PaChildrenDataItemAttributesDataSourceDataAttributesCreatedByData = {
   id?: number;
   attributes?: PaChildrenDataItemAttributesDataSourceDataAttributesCreatedByDataAttributes;
-};
-
-export type PaChildrenDataItemAttributesDataSourceDataAttributesCreatedBy = {
-  data?: PaChildrenDataItemAttributesDataSourceDataAttributesCreatedByData;
 };
 
 export type PaChildrenDataItemAttributesChildrenDataItemAttributes = { [key: string]: any };
@@ -3701,22 +3701,6 @@ export type PaChildrenDataItemAttributesProtectionStatus = {
   data?: PaChildrenDataItemAttributesProtectionStatusData;
 };
 
-export type PaProtectionStatusDataAttributesLocalizations = {
-  data?: unknown[];
-};
-
-export type PaProtectionStatusDataAttributes = {
-  slug?: string;
-  name?: string;
-  info?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: PaProtectionStatusDataAttributesCreatedBy;
-  updatedBy?: PaProtectionStatusDataAttributesUpdatedBy;
-  localizations?: PaProtectionStatusDataAttributesLocalizations;
-  locale?: string;
-};
-
 export type PaProtectionStatusData = {
   id?: number;
   attributes?: PaProtectionStatusDataAttributes;
@@ -3724,6 +3708,10 @@ export type PaProtectionStatusData = {
 
 export type PaProtectionStatus = {
   data?: PaProtectionStatusData;
+};
+
+export type PaProtectionStatusDataAttributesLocalizations = {
+  data?: unknown[];
 };
 
 export type PaProtectionStatusDataAttributesUpdatedByDataAttributes = { [key: string]: any };
@@ -3737,23 +3725,6 @@ export type PaProtectionStatusDataAttributesUpdatedBy = {
   data?: PaProtectionStatusDataAttributesUpdatedByData;
 };
 
-export type PaProtectionStatusDataAttributesCreatedByDataAttributes = {
-  firstname?: string;
-  lastname?: string;
-  username?: string;
-  email?: string;
-  resetPasswordToken?: string;
-  registrationToken?: string;
-  isActive?: boolean;
-  roles?: PaProtectionStatusDataAttributesCreatedByDataAttributesRoles;
-  blocked?: boolean;
-  preferedLanguage?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: PaProtectionStatusDataAttributesCreatedByDataAttributesCreatedBy;
-  updatedBy?: PaProtectionStatusDataAttributesCreatedByDataAttributesUpdatedBy;
-};
-
 export type PaProtectionStatusDataAttributesCreatedByData = {
   id?: number;
   attributes?: PaProtectionStatusDataAttributesCreatedByDataAttributes;
@@ -3761,6 +3732,18 @@ export type PaProtectionStatusDataAttributesCreatedByData = {
 
 export type PaProtectionStatusDataAttributesCreatedBy = {
   data?: PaProtectionStatusDataAttributesCreatedByData;
+};
+
+export type PaProtectionStatusDataAttributes = {
+  slug?: string;
+  name?: string;
+  info?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: PaProtectionStatusDataAttributesCreatedBy;
+  updatedBy?: PaProtectionStatusDataAttributesUpdatedBy;
+  localizations?: PaProtectionStatusDataAttributesLocalizations;
+  locale?: string;
 };
 
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesUpdatedByDataAttributes = {
@@ -3789,6 +3772,27 @@ export type PaProtectionStatusDataAttributesCreatedByDataAttributesCreatedBy = {
   data?: PaProtectionStatusDataAttributesCreatedByDataAttributesCreatedByData;
 };
 
+export type PaProtectionStatusDataAttributesCreatedByDataAttributesRoles = {
+  data?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItem[];
+};
+
+export type PaProtectionStatusDataAttributesCreatedByDataAttributes = {
+  firstname?: string;
+  lastname?: string;
+  username?: string;
+  email?: string;
+  resetPasswordToken?: string;
+  registrationToken?: string;
+  isActive?: boolean;
+  roles?: PaProtectionStatusDataAttributesCreatedByDataAttributesRoles;
+  blocked?: boolean;
+  preferedLanguage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: PaProtectionStatusDataAttributesCreatedByDataAttributesCreatedBy;
+  updatedBy?: PaProtectionStatusDataAttributesCreatedByDataAttributesUpdatedBy;
+};
+
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedByDataAttributes =
   { [key: string]: any };
 
@@ -3801,6 +3805,20 @@ export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItem
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedBy =
   {
     data?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedByData;
+  };
+
+export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
+  { [key: string]: any };
+
+export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData =
+  {
+    id?: number;
+    attributes?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes;
+  };
+
+export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedBy =
+  {
+    data?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
   };
 
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributes = {
@@ -3820,22 +3838,29 @@ export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItem
   attributes?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributes;
 };
 
-export type PaProtectionStatusDataAttributesCreatedByDataAttributesRoles = {
-  data?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItem[];
-};
-
-export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
-  { [key: string]: any };
-
-export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData =
+export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData =
   {
     id?: number;
-    attributes?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes;
+    attributes?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByDataAttributes;
   };
 
-export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedBy =
+export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy =
   {
-    data?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
+    data?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData;
+  };
+
+export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem =
@@ -3851,17 +3876,6 @@ export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItem
 
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByDataAttributes =
   { [key: string]: any };
-
-export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData =
-  {
-    id?: number;
-    attributes?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByDataAttributes;
-  };
-
-export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy =
-  {
-    data?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData;
-  };
 
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
@@ -3889,20 +3903,6 @@ export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItem
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole =
   {
     data?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRoleData;
-  };
-
-export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
-  {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type PaProtectionStatusDataAttributesCreatedByDataAttributesRolesDataItemAttributesUsersDataItemAttributes =
@@ -3984,10 +3984,22 @@ export type PaRequestData = {
 
 export type MpaaProtectionLevelStatResponseMeta = { [key: string]: any };
 
+export interface MpaaProtectionLevelStatResponseDataObject {
+  id?: number;
+  attributes?: MpaaProtectionLevelStat;
+}
+
 export interface MpaaProtectionLevelStatResponse {
   data?: MpaaProtectionLevelStatResponseDataObject;
   meta?: MpaaProtectionLevelStatResponseMeta;
 }
+
+export type MpaaProtectionLevelStatUpdatedByDataAttributes = { [key: string]: any };
+
+export type MpaaProtectionLevelStatUpdatedByData = {
+  id?: number;
+  attributes?: MpaaProtectionLevelStatUpdatedByDataAttributes;
+};
 
 export type MpaaProtectionLevelStatUpdatedBy = {
   data?: MpaaProtectionLevelStatUpdatedByData;
@@ -4004,18 +4016,6 @@ export interface MpaaProtectionLevelStat {
   updatedBy?: MpaaProtectionLevelStatUpdatedBy;
 }
 
-export interface MpaaProtectionLevelStatResponseDataObject {
-  id?: number;
-  attributes?: MpaaProtectionLevelStat;
-}
-
-export type MpaaProtectionLevelStatUpdatedByDataAttributes = { [key: string]: any };
-
-export type MpaaProtectionLevelStatUpdatedByData = {
-  id?: number;
-  attributes?: MpaaProtectionLevelStatUpdatedByDataAttributes;
-};
-
 export type MpaaProtectionLevelStatCreatedByDataAttributes = { [key: string]: any };
 
 export type MpaaProtectionLevelStatCreatedByData = {
@@ -4025,6 +4025,30 @@ export type MpaaProtectionLevelStatCreatedByData = {
 
 export type MpaaProtectionLevelStatCreatedBy = {
   data?: MpaaProtectionLevelStatCreatedByData;
+};
+
+export type MpaaProtectionLevelStatLocationDataAttributes = {
+  code?: string;
+  name?: string;
+  total_marine_area?: string;
+  type?: string;
+  groups?: MpaaProtectionLevelStatLocationDataAttributesGroups;
+  members?: MpaaProtectionLevelStatLocationDataAttributesMembers;
+  fishing_protection_level_stats?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStats;
+  mpaa_protection_level_stats?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStats;
+  protection_coverage_stats?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats;
+  marine_bounds?: unknown;
+  total_terrestrial_area?: string;
+  terrestrial_bounds?: unknown;
+  name_es?: string;
+  name_fr?: string;
+  marine_target?: number;
+  marine_target_year?: number;
+  pas?: MpaaProtectionLevelStatLocationDataAttributesPas;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: MpaaProtectionLevelStatLocationDataAttributesCreatedBy;
+  updatedBy?: MpaaProtectionLevelStatLocationDataAttributesUpdatedBy;
 };
 
 export type MpaaProtectionLevelStatLocationData = {
@@ -4062,6 +4086,31 @@ export type MpaaProtectionLevelStatLocationDataAttributesCreatedBy = {
   data?: MpaaProtectionLevelStatLocationDataAttributesCreatedByData;
 };
 
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributes = {
+  name?: string;
+  area?: number;
+  year?: number;
+  protection_status?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatus;
+  bbox?: unknown;
+  children?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesChildren;
+  data_source?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSource;
+  mpaa_establishment_stage?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStage;
+  location?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesLocation;
+  wdpaid?: string;
+  mpaa_protection_level?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaProtectionLevel;
+  iucn_category?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategory;
+  designation?: string;
+  environment?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesEnvironment;
+  coverage?: number;
+  parent?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesParent;
+  zone_id?: string;
+  wdpa_p_id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesCreatedBy;
+  updatedBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesUpdatedBy;
+};
+
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItem = {
   id?: number;
   attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributes;
@@ -4069,30 +4118,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItem = {
 
 export type MpaaProtectionLevelStatLocationDataAttributesPas = {
   data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItem[];
-};
-
-export type MpaaProtectionLevelStatLocationDataAttributes = {
-  code?: string;
-  name?: string;
-  total_marine_area?: string;
-  type?: string;
-  groups?: MpaaProtectionLevelStatLocationDataAttributesGroups;
-  members?: MpaaProtectionLevelStatLocationDataAttributesMembers;
-  fishing_protection_level_stats?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStats;
-  mpaa_protection_level_stats?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStats;
-  protection_coverage_stats?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats;
-  marine_bounds?: unknown;
-  total_terrestrial_area?: string;
-  terrestrial_bounds?: unknown;
-  name_es?: string;
-  name_fr?: string;
-  marine_target?: number;
-  marine_target_year?: number;
-  pas?: MpaaProtectionLevelStatLocationDataAttributesPas;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: MpaaProtectionLevelStatLocationDataAttributesCreatedBy;
-  updatedBy?: MpaaProtectionLevelStatLocationDataAttributesUpdatedBy;
 };
 
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesUpdatedByDataAttributes =
@@ -4129,31 +4154,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesPa
 
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesParent = {
   data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesParentData;
-};
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributes = {
-  name?: string;
-  area?: number;
-  year?: number;
-  protection_status?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatus;
-  bbox?: unknown;
-  children?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesChildren;
-  data_source?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSource;
-  mpaa_establishment_stage?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStage;
-  location?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesLocation;
-  wdpaid?: string;
-  mpaa_protection_level?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaProtectionLevel;
-  iucn_category?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategory;
-  designation?: string;
-  environment?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesEnvironment;
-  coverage?: number;
-  parent?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesParent;
-  zone_id?: string;
-  wdpa_p_id?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesCreatedBy;
-  updatedBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesUpdatedBy;
 };
 
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesEnvironmentDataAttributes =
@@ -4196,17 +4196,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIu
     data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesUpdatedByData;
   };
 
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedByData =
-  {
-    id?: number;
-    attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedByDataAttributes;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedBy =
-  {
-    data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedByData;
-  };
-
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributes =
   {
     slug?: string;
@@ -4222,6 +4211,17 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIu
 
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedByDataAttributes =
   { [key: string]: any };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedByData =
+  {
+    id?: number;
+    attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedByDataAttributes;
+  };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedBy =
+  {
+    data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedByData;
+  };
 
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaProtectionLevelDataAttributes =
   { [key: string]: any };
@@ -4249,12 +4249,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesLo
   data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesLocationData;
 };
 
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageData =
-  {
-    id?: number;
-    attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes;
-  };
-
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStage =
   {
     data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageData;
@@ -4263,6 +4257,25 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMp
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesLocalizations =
   {
     data?: unknown[];
+  };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes =
+  {
+    slug?: string;
+    name?: string;
+    info?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedBy;
+    updatedBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedBy;
+    localizations?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesLocalizations;
+    locale?: string;
+  };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageData =
+  {
+    id?: number;
+    attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes;
   };
 
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByDataAttributes =
@@ -4279,19 +4292,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMp
     data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByData;
   };
 
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes =
-  {
-    slug?: string;
-    name?: string;
-    info?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedBy;
-    updatedBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedBy;
-    localizations?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesLocalizations;
-    locale?: string;
-  };
-
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
@@ -4306,24 +4306,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMp
     data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByData;
   };
 
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations =
-  {
-    data?: unknown[];
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributes =
-  {
-    slug?: string;
-    title?: string;
-    url?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesCreatedBy;
-    updatedBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedBy;
-    localizations?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations;
-    locale?: string;
-  };
-
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceData = {
   id?: number;
   attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributes;
@@ -4332,6 +4314,11 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDa
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSource = {
   data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceData;
 };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations =
+  {
+    data?: unknown[];
+  };
 
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
@@ -4361,6 +4348,19 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDa
     data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesCreatedByData;
   };
 
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributes =
+  {
+    slug?: string;
+    title?: string;
+    url?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesCreatedBy;
+    updatedBy?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedBy;
+    localizations?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations;
+    locale?: string;
+  };
+
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesChildrenDataItemAttributes =
   { [key: string]: any };
 
@@ -4382,6 +4382,34 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesPr
     data?: unknown[];
   };
 
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByDataAttributes =
+  { [key: string]: any };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByData =
+  {
+    id?: number;
+    attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByDataAttributes;
+  };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedBy =
+  {
+    data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByData;
+  };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByDataAttributes =
+  { [key: string]: any };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByData =
+  {
+    id?: number;
+    attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByDataAttributes;
+  };
+
+export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedBy =
+  {
+    data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByData;
+  };
+
 export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributes =
   {
     slug?: string;
@@ -4400,43 +4428,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesPr
     id?: number;
     attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributes;
   };
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByDataAttributes =
-  { [key: string]: any };
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByData =
-  {
-    id?: number;
-    attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByDataAttributes;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedBy =
-  {
-    data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByData;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedBy =
-  {
-    data?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByData;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByDataAttributes =
-  { [key: string]: any };
-
-export type MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByData =
-  {
-    id?: number;
-    attributes?: MpaaProtectionLevelStatLocationDataAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByDataAttributes;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItem = {
-  id?: number;
-  attributes?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributes;
-};
-
-export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats = {
-  data?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItem[];
-};
 
 export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesUpdatedByDataAttributes =
   { [key: string]: any };
@@ -4470,6 +4461,15 @@ export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats
     updatedBy?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesUpdatedBy;
   };
 
+export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItem = {
+  id?: number;
+  attributes?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributes;
+};
+
+export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats = {
+  data?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItem[];
+};
+
 export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
@@ -4484,6 +4484,23 @@ export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats
     data?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedByData;
   };
 
+export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations =
+  {
+    data?: unknown[];
+  };
+
+export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes =
+  {
+    name?: string;
+    slug?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedBy;
+    updatedBy?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedBy;
+    localizations?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations;
+    locale?: string;
+  };
+
 export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData =
   {
     id?: number;
@@ -4493,11 +4510,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats
 export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironment =
   {
     data?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations =
-  {
-    data?: unknown[];
   };
 
 export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByDataAttributes =
@@ -4526,18 +4538,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats
 export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedBy =
   {
     data?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedByData;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes =
-  {
-    name?: string;
-    slug?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedBy;
-    updatedBy?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedBy;
-    localizations?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations;
-    locale?: string;
   };
 
 export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesLocationDataAttributes =
@@ -4577,6 +4577,17 @@ export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStat
     data?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesUpdatedByData;
   };
 
+export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributes = {
+  mpaa_protection_level?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevel;
+  area?: number;
+  percentage?: number;
+  location?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
+  updatedBy?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesUpdatedBy;
+};
+
 export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
@@ -4605,6 +4616,9 @@ export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStat
     data?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocationData;
   };
 
+export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributes =
+  { [key: string]: any };
+
 export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelData =
   {
     id?: number;
@@ -4615,20 +4629,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStat
   {
     data?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelData;
   };
-
-export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributes = {
-  mpaa_protection_level?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevel;
-  area?: number;
-  percentage?: number;
-  location?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
-  updatedBy?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesUpdatedBy;
-};
-
-export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributes =
-  { [key: string]: any };
 
 export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItem = {
   id?: number;
@@ -4653,6 +4653,11 @@ export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelS
     data?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesUpdatedByData;
   };
 
+export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy =
+  {
+    data?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData;
+  };
+
 export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributes =
   {
     location?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesLocation;
@@ -4674,9 +4679,22 @@ export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelS
     attributes?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByDataAttributes;
   };
 
-export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy =
+export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations =
   {
-    data?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData;
+    data?: unknown[];
+  };
+
+export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributes =
+  {
+    slug?: string;
+    name?: string;
+    info?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedBy;
+    updatedBy?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedBy;
+    localizations?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations;
+    locale?: string;
   };
 
 export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelData =
@@ -4688,11 +4706,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelS
 export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel =
   {
     data?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelData;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations =
-  {
-    data?: unknown[];
   };
 
 export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByDataAttributes =
@@ -4721,19 +4734,6 @@ export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelS
 export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedBy =
   {
     data?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByData;
-  };
-
-export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributes =
-  {
-    slug?: string;
-    name?: string;
-    info?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedBy;
-    updatedBy?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedBy;
-    localizations?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations;
-    locale?: string;
   };
 
 export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesLocationDataAttributes =
@@ -4802,15 +4802,6 @@ export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesUpdatedBy = 
   data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesUpdatedByData;
 };
 
-export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByData = {
-  id?: number;
-  attributes?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributes;
-};
-
-export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedBy = {
-  data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByData;
-};
-
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributes = {
   slug?: string;
   name?: string;
@@ -4822,20 +4813,6 @@ export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributes = {
   localizations?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesLocalizations;
   locale?: string;
 };
-
-export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes =
-  { [key: string]: any };
-
-export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByData =
-  {
-    id?: number;
-    attributes?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes;
-  };
-
-export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedBy =
-  {
-    data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByData;
-  };
 
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributes = {
   firstname?: string;
@@ -4853,6 +4830,29 @@ export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDat
   createdBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesCreatedBy;
   updatedBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedBy;
 };
+
+export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByData = {
+  id?: number;
+  attributes?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributes;
+};
+
+export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedBy = {
+  data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByData;
+};
+
+export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes =
+  { [key: string]: any };
+
+export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByData =
+  {
+    id?: number;
+    attributes?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes;
+  };
+
+export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedBy =
+  {
+    data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByData;
+  };
 
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesCreatedByDataAttributes =
   { [key: string]: any };
@@ -4892,6 +4892,19 @@ export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDat
     data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedByData;
   };
 
+export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributes =
+  {
+    name?: string;
+    code?: string;
+    description?: string;
+    users?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUsers;
+    permissions?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissions;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
+    updatedBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
+  };
+
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
@@ -4906,6 +4919,20 @@ export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDat
     data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
   };
 
+export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
+  };
+
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem =
   {
     id?: number;
@@ -4915,19 +4942,6 @@ export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDat
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissions =
   {
     data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem[];
-  };
-
-export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributes =
-  {
-    name?: string;
-    code?: string;
-    description?: string;
-    users?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUsers;
-    permissions?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissions;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
-    updatedBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
   };
 
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByDataAttributes =
@@ -4942,20 +4956,6 @@ export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDat
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy =
   {
     data?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData;
-  };
-
-export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
-  {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type MpaaProtectionLevelStatMpaaProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedByDataAttributes =
@@ -5023,11 +5023,6 @@ export interface MpaaProtectionLevelStatListResponse {
 
 export type MpaaProtectionLevelResponseMeta = { [key: string]: any };
 
-export interface MpaaProtectionLevelResponseDataObject {
-  id?: number;
-  attributes?: MpaaProtectionLevel;
-}
-
 export interface MpaaProtectionLevelResponse {
   data?: MpaaProtectionLevelResponseDataObject;
   meta?: MpaaProtectionLevelResponseMeta;
@@ -5035,6 +5030,17 @@ export interface MpaaProtectionLevelResponse {
 
 export type MpaaProtectionLevelLocalizations = {
   data?: MpaaProtectionLevel[];
+};
+
+export type MpaaProtectionLevelUpdatedByDataAttributes = { [key: string]: any };
+
+export type MpaaProtectionLevelUpdatedByData = {
+  id?: number;
+  attributes?: MpaaProtectionLevelUpdatedByDataAttributes;
+};
+
+export type MpaaProtectionLevelUpdatedBy = {
+  data?: MpaaProtectionLevelUpdatedByData;
 };
 
 export interface MpaaProtectionLevel {
@@ -5049,15 +5055,26 @@ export interface MpaaProtectionLevel {
   locale?: string;
 }
 
-export type MpaaProtectionLevelUpdatedByDataAttributes = { [key: string]: any };
-
-export type MpaaProtectionLevelUpdatedByData = {
+export interface MpaaProtectionLevelResponseDataObject {
   id?: number;
-  attributes?: MpaaProtectionLevelUpdatedByDataAttributes;
-};
+  attributes?: MpaaProtectionLevel;
+}
 
-export type MpaaProtectionLevelUpdatedBy = {
-  data?: MpaaProtectionLevelUpdatedByData;
+export type MpaaProtectionLevelCreatedByDataAttributes = {
+  firstname?: string;
+  lastname?: string;
+  username?: string;
+  email?: string;
+  resetPasswordToken?: string;
+  registrationToken?: string;
+  isActive?: boolean;
+  roles?: MpaaProtectionLevelCreatedByDataAttributesRoles;
+  blocked?: boolean;
+  preferedLanguage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: MpaaProtectionLevelCreatedByDataAttributesCreatedBy;
+  updatedBy?: MpaaProtectionLevelCreatedByDataAttributesUpdatedBy;
 };
 
 export type MpaaProtectionLevelCreatedByData = {
@@ -5104,23 +5121,6 @@ export type MpaaProtectionLevelCreatedByDataAttributesRoles = {
   data?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItem[];
 };
 
-export type MpaaProtectionLevelCreatedByDataAttributes = {
-  firstname?: string;
-  lastname?: string;
-  username?: string;
-  email?: string;
-  resetPasswordToken?: string;
-  registrationToken?: string;
-  isActive?: boolean;
-  roles?: MpaaProtectionLevelCreatedByDataAttributesRoles;
-  blocked?: boolean;
-  preferedLanguage?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: MpaaProtectionLevelCreatedByDataAttributesCreatedBy;
-  updatedBy?: MpaaProtectionLevelCreatedByDataAttributesUpdatedBy;
-};
-
 export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesUpdatedByDataAttributes =
   { [key: string]: any };
 
@@ -5144,20 +5144,6 @@ export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesCre
 export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesCreatedBy = {
   data?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
 };
-
-export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
-  {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
-  };
 
 export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem = {
   id?: number;
@@ -5220,6 +5206,20 @@ export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPer
 export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole =
   {
     data?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRoleData;
+  };
+
+export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type MpaaProtectionLevelCreatedByDataAttributesRolesDataItemAttributesUsersDataItemAttributes =
@@ -5308,6 +5308,11 @@ export interface MpaaProtectionLevelLocalizationRequest {
 
 export type MpaaEstablishmentStageResponseMeta = { [key: string]: any };
 
+export interface MpaaEstablishmentStageResponseDataObject {
+  id?: number;
+  attributes?: MpaaEstablishmentStage;
+}
+
 export interface MpaaEstablishmentStageResponse {
   data?: MpaaEstablishmentStageResponseDataObject;
   meta?: MpaaEstablishmentStageResponseMeta;
@@ -5315,6 +5320,26 @@ export interface MpaaEstablishmentStageResponse {
 
 export type MpaaEstablishmentStageLocalizations = {
   data?: MpaaEstablishmentStage[];
+};
+
+export type MpaaEstablishmentStageUpdatedByDataAttributes = { [key: string]: any };
+
+export type MpaaEstablishmentStageUpdatedByData = {
+  id?: number;
+  attributes?: MpaaEstablishmentStageUpdatedByDataAttributes;
+};
+
+export type MpaaEstablishmentStageUpdatedBy = {
+  data?: MpaaEstablishmentStageUpdatedByData;
+};
+
+export type MpaaEstablishmentStageCreatedByData = {
+  id?: number;
+  attributes?: MpaaEstablishmentStageCreatedByDataAttributes;
+};
+
+export type MpaaEstablishmentStageCreatedBy = {
+  data?: MpaaEstablishmentStageCreatedByData;
 };
 
 export interface MpaaEstablishmentStage {
@@ -5328,48 +5353,6 @@ export interface MpaaEstablishmentStage {
   localizations?: MpaaEstablishmentStageLocalizations;
   locale?: string;
 }
-
-export interface MpaaEstablishmentStageResponseDataObject {
-  id?: number;
-  attributes?: MpaaEstablishmentStage;
-}
-
-export type MpaaEstablishmentStageUpdatedByDataAttributes = { [key: string]: any };
-
-export type MpaaEstablishmentStageUpdatedByData = {
-  id?: number;
-  attributes?: MpaaEstablishmentStageUpdatedByDataAttributes;
-};
-
-export type MpaaEstablishmentStageUpdatedBy = {
-  data?: MpaaEstablishmentStageUpdatedByData;
-};
-
-export type MpaaEstablishmentStageCreatedByDataAttributes = {
-  firstname?: string;
-  lastname?: string;
-  username?: string;
-  email?: string;
-  resetPasswordToken?: string;
-  registrationToken?: string;
-  isActive?: boolean;
-  roles?: MpaaEstablishmentStageCreatedByDataAttributesRoles;
-  blocked?: boolean;
-  preferedLanguage?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: MpaaEstablishmentStageCreatedByDataAttributesCreatedBy;
-  updatedBy?: MpaaEstablishmentStageCreatedByDataAttributesUpdatedBy;
-};
-
-export type MpaaEstablishmentStageCreatedByData = {
-  id?: number;
-  attributes?: MpaaEstablishmentStageCreatedByDataAttributes;
-};
-
-export type MpaaEstablishmentStageCreatedBy = {
-  data?: MpaaEstablishmentStageCreatedByData;
-};
 
 export type MpaaEstablishmentStageCreatedByDataAttributesUpdatedByDataAttributes = {
   [key: string]: any;
@@ -5397,6 +5380,18 @@ export type MpaaEstablishmentStageCreatedByDataAttributesCreatedBy = {
   data?: MpaaEstablishmentStageCreatedByDataAttributesCreatedByData;
 };
 
+export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributes = {
+  name?: string;
+  code?: string;
+  description?: string;
+  users?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesUsers;
+  permissions?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissions;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
+  updatedBy?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
+};
+
 export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItem = {
   id?: number;
   attributes?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributes;
@@ -5404,6 +5399,23 @@ export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItem = {
 
 export type MpaaEstablishmentStageCreatedByDataAttributesRoles = {
   data?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItem[];
+};
+
+export type MpaaEstablishmentStageCreatedByDataAttributes = {
+  firstname?: string;
+  lastname?: string;
+  username?: string;
+  email?: string;
+  resetPasswordToken?: string;
+  registrationToken?: string;
+  isActive?: boolean;
+  roles?: MpaaEstablishmentStageCreatedByDataAttributesRoles;
+  blocked?: boolean;
+  preferedLanguage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: MpaaEstablishmentStageCreatedByDataAttributesCreatedBy;
+  updatedBy?: MpaaEstablishmentStageCreatedByDataAttributesUpdatedBy;
 };
 
 export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesUpdatedByDataAttributes =
@@ -5418,22 +5430,6 @@ export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributes
   data?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesUpdatedByData;
 };
 
-export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesCreatedBy = {
-  data?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
-};
-
-export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributes = {
-  name?: string;
-  code?: string;
-  description?: string;
-  users?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesUsers;
-  permissions?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissions;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
-  updatedBy?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
-};
-
 export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
@@ -5442,14 +5438,8 @@ export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributes
   attributes?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes;
 };
 
-export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem =
-  {
-    id?: number;
-    attributes?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes;
-  };
-
-export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissions = {
-  data?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem[];
+export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesCreatedBy = {
+  data?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
 };
 
 export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByDataAttributes =
@@ -5465,6 +5455,30 @@ export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributes
   {
     data?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData;
   };
+
+export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
+  };
+
+export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem =
+  {
+    id?: number;
+    attributes?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes;
+  };
+
+export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissions = {
+  data?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem[];
+};
 
 export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
@@ -5492,20 +5506,6 @@ export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributes
 export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole =
   {
     data?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRoleData;
-  };
-
-export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
-  {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type MpaaEstablishmentStageCreatedByDataAttributesRolesDataItemAttributesUsersDataItemAttributes =
@@ -5594,31 +5594,14 @@ export interface MpaaEstablishmentStageLocalizationRequest {
 
 export type MpaIucnCategoryResponseMeta = { [key: string]: any };
 
-export type MpaIucnCategoryLocalizations = {
-  data?: MpaIucnCategory[];
-};
-
-export interface MpaIucnCategory {
-  slug: string;
-  name: string;
-  info?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: MpaIucnCategoryCreatedBy;
-  updatedBy?: MpaIucnCategoryUpdatedBy;
-  localizations?: MpaIucnCategoryLocalizations;
-  locale?: string;
-}
-
-export interface MpaIucnCategoryResponseDataObject {
-  id?: number;
-  attributes?: MpaIucnCategory;
-}
-
 export interface MpaIucnCategoryResponse {
   data?: MpaIucnCategoryResponseDataObject;
   meta?: MpaIucnCategoryResponseMeta;
 }
+
+export type MpaIucnCategoryLocalizations = {
+  data?: MpaIucnCategory[];
+};
 
 export type MpaIucnCategoryUpdatedByDataAttributes = { [key: string]: any };
 
@@ -5640,6 +5623,23 @@ export type MpaIucnCategoryCreatedBy = {
   data?: MpaIucnCategoryCreatedByData;
 };
 
+export interface MpaIucnCategory {
+  slug: string;
+  name: string;
+  info?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: MpaIucnCategoryCreatedBy;
+  updatedBy?: MpaIucnCategoryUpdatedBy;
+  localizations?: MpaIucnCategoryLocalizations;
+  locale?: string;
+}
+
+export interface MpaIucnCategoryResponseDataObject {
+  id?: number;
+  attributes?: MpaIucnCategory;
+}
+
 export type MpaIucnCategoryCreatedByDataAttributesUpdatedByDataAttributes = { [key: string]: any };
 
 export type MpaIucnCategoryCreatedByDataAttributesUpdatedByData = {
@@ -5651,36 +5651,8 @@ export type MpaIucnCategoryCreatedByDataAttributesUpdatedBy = {
   data?: MpaIucnCategoryCreatedByDataAttributesUpdatedByData;
 };
 
-export type MpaIucnCategoryCreatedByDataAttributesCreatedByDataAttributes = { [key: string]: any };
-
-export type MpaIucnCategoryCreatedByDataAttributesCreatedByData = {
-  id?: number;
-  attributes?: MpaIucnCategoryCreatedByDataAttributesCreatedByDataAttributes;
-};
-
 export type MpaIucnCategoryCreatedByDataAttributesCreatedBy = {
   data?: MpaIucnCategoryCreatedByDataAttributesCreatedByData;
-};
-
-export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributes = {
-  name?: string;
-  code?: string;
-  description?: string;
-  users?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesUsers;
-  permissions?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissions;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
-  updatedBy?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
-};
-
-export type MpaIucnCategoryCreatedByDataAttributesRolesDataItem = {
-  id?: number;
-  attributes?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributes;
-};
-
-export type MpaIucnCategoryCreatedByDataAttributesRoles = {
-  data?: MpaIucnCategoryCreatedByDataAttributesRolesDataItem[];
 };
 
 export type MpaIucnCategoryCreatedByDataAttributes = {
@@ -5698,6 +5670,22 @@ export type MpaIucnCategoryCreatedByDataAttributes = {
   updatedAt?: string;
   createdBy?: MpaIucnCategoryCreatedByDataAttributesCreatedBy;
   updatedBy?: MpaIucnCategoryCreatedByDataAttributesUpdatedBy;
+};
+
+export type MpaIucnCategoryCreatedByDataAttributesCreatedByDataAttributes = { [key: string]: any };
+
+export type MpaIucnCategoryCreatedByDataAttributesCreatedByData = {
+  id?: number;
+  attributes?: MpaIucnCategoryCreatedByDataAttributesCreatedByDataAttributes;
+};
+
+export type MpaIucnCategoryCreatedByDataAttributesRolesDataItem = {
+  id?: number;
+  attributes?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributes;
+};
+
+export type MpaIucnCategoryCreatedByDataAttributesRoles = {
+  data?: MpaIucnCategoryCreatedByDataAttributesRolesDataItem[];
 };
 
 export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesUpdatedByDataAttributes = {
@@ -5726,6 +5714,20 @@ export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesCreated
   data?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
 };
 
+export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
+  };
+
 export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem = {
   id?: number;
   attributes?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes;
@@ -5733,6 +5735,18 @@ export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermiss
 
 export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissions = {
   data?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem[];
+};
+
+export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributes = {
+  name?: string;
+  code?: string;
+  description?: string;
+  users?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesUsers;
+  permissions?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissions;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesCreatedBy;
+  updatedBy?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
 };
 
 export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByDataAttributes =
@@ -5775,20 +5789,6 @@ export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermiss
 export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole =
   {
     data?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRoleData;
-  };
-
-export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
-  {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type MpaIucnCategoryCreatedByDataAttributesRolesDataItemAttributesUsersDataItemAttributes = {
@@ -5878,38 +5878,14 @@ export interface MpaIucnCategoryLocalizationRequest {
 
 export type LocationResponseMeta = { [key: string]: any };
 
-export interface LocationResponse {
-  data?: LocationResponseDataObject;
-  meta?: LocationResponseMeta;
-}
-
-export interface Location {
-  code: string;
-  name: string;
-  total_marine_area: string;
-  type: string;
-  groups?: LocationGroups;
-  members?: LocationMembers;
-  fishing_protection_level_stats?: LocationFishingProtectionLevelStats;
-  mpaa_protection_level_stats?: LocationMpaaProtectionLevelStats;
-  protection_coverage_stats?: LocationProtectionCoverageStats;
-  marine_bounds?: unknown;
-  total_terrestrial_area: string;
-  terrestrial_bounds?: unknown;
-  name_es: string;
-  name_fr: string;
-  marine_target?: number;
-  marine_target_year?: number;
-  pas?: LocationPas;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: LocationCreatedBy;
-  updatedBy?: LocationUpdatedBy;
-}
-
 export interface LocationResponseDataObject {
   id?: number;
   attributes?: Location;
+}
+
+export interface LocationResponse {
+  data?: LocationResponseDataObject;
+  meta?: LocationResponseMeta;
 }
 
 export type LocationUpdatedByDataAttributes = { [key: string]: any };
@@ -5944,6 +5920,30 @@ export type LocationPasDataItem = {
 export type LocationPas = {
   data?: LocationPasDataItem[];
 };
+
+export interface Location {
+  code: string;
+  name: string;
+  total_marine_area: string;
+  type: string;
+  groups?: LocationGroups;
+  members?: LocationMembers;
+  fishing_protection_level_stats?: LocationFishingProtectionLevelStats;
+  mpaa_protection_level_stats?: LocationMpaaProtectionLevelStats;
+  protection_coverage_stats?: LocationProtectionCoverageStats;
+  marine_bounds?: unknown;
+  total_terrestrial_area: string;
+  terrestrial_bounds?: unknown;
+  name_es: string;
+  name_fr: string;
+  marine_target?: number;
+  marine_target_year?: number;
+  pas?: LocationPas;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: LocationCreatedBy;
+  updatedBy?: LocationUpdatedBy;
+}
 
 export type LocationProtectionCoverageStatsDataItemAttributes = { [key: string]: any };
 
@@ -5989,6 +5989,26 @@ export type LocationMembers = {
   data?: LocationMembersDataItem[];
 };
 
+export type LocationGroupsDataItem = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributes;
+};
+
+export type LocationGroups = {
+  data?: LocationGroupsDataItem[];
+};
+
+export type LocationGroupsDataItemAttributesUpdatedByDataAttributes = { [key: string]: any };
+
+export type LocationGroupsDataItemAttributesUpdatedByData = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributesUpdatedByDataAttributes;
+};
+
+export type LocationGroupsDataItemAttributesUpdatedBy = {
+  data?: LocationGroupsDataItemAttributesUpdatedByData;
+};
+
 export type LocationGroupsDataItemAttributes = {
   code?: string;
   name?: string;
@@ -6013,26 +6033,6 @@ export type LocationGroupsDataItemAttributes = {
   updatedBy?: LocationGroupsDataItemAttributesUpdatedBy;
 };
 
-export type LocationGroupsDataItem = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributes;
-};
-
-export type LocationGroups = {
-  data?: LocationGroupsDataItem[];
-};
-
-export type LocationGroupsDataItemAttributesUpdatedByDataAttributes = { [key: string]: any };
-
-export type LocationGroupsDataItemAttributesUpdatedByData = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributesUpdatedByDataAttributes;
-};
-
-export type LocationGroupsDataItemAttributesUpdatedBy = {
-  data?: LocationGroupsDataItemAttributesUpdatedByData;
-};
-
 export type LocationGroupsDataItemAttributesCreatedByDataAttributes = { [key: string]: any };
 
 export type LocationGroupsDataItemAttributesCreatedByData = {
@@ -6042,6 +6042,28 @@ export type LocationGroupsDataItemAttributesCreatedByData = {
 
 export type LocationGroupsDataItemAttributesCreatedBy = {
   data?: LocationGroupsDataItemAttributesCreatedByData;
+};
+
+export type LocationGroupsDataItemAttributesPasDataItem = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributes;
+};
+
+export type LocationGroupsDataItemAttributesPas = {
+  data?: LocationGroupsDataItemAttributesPasDataItem[];
+};
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedByDataAttributes = {
+  [key: string]: any;
+};
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedByData = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedByDataAttributes;
+};
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedBy = {
+  data?: LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedByData;
 };
 
 export type LocationGroupsDataItemAttributesPasDataItemAttributes = {
@@ -6067,28 +6089,6 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributes = {
   updatedAt?: string;
   createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesCreatedBy;
   updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedBy;
-};
-
-export type LocationGroupsDataItemAttributesPasDataItem = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributes;
-};
-
-export type LocationGroupsDataItemAttributesPas = {
-  data?: LocationGroupsDataItemAttributesPasDataItem[];
-};
-
-export type LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedByDataAttributes = {
-  [key: string]: any;
-};
-
-export type LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedByData = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedByDataAttributes;
-};
-
-export type LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedBy = {
-  data?: LocationGroupsDataItemAttributesPasDataItemAttributesUpdatedByData;
 };
 
 export type LocationGroupsDataItemAttributesPasDataItemAttributesCreatedByDataAttributes = {
@@ -6130,11 +6130,6 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesEnvironment = {
   data?: LocationGroupsDataItemAttributesPasDataItemAttributesEnvironmentData;
 };
 
-export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryData = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributes;
-};
-
 export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategory = {
   data?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryData;
 };
@@ -6143,6 +6138,23 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDat
   {
     data?: unknown[];
   };
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributes = {
+  slug?: string;
+  name?: string;
+  info?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedBy;
+  updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesUpdatedBy;
+  localizations?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesLocalizations;
+  locale?: string;
+};
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryData = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributes;
+};
 
 export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
@@ -6157,18 +6169,6 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDat
   {
     data?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesUpdatedByData;
   };
-
-export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributes = {
-  slug?: string;
-  name?: string;
-  info?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedBy;
-  updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesUpdatedBy;
-  localizations?: LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesLocalizations;
-  locale?: string;
-};
 
 export type LocationGroupsDataItemAttributesPasDataItemAttributesIucnCategoryDataAttributesCreatedByDataAttributes =
   { [key: string]: any };
@@ -6209,6 +6209,11 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesLocation = {
   data?: LocationGroupsDataItemAttributesPasDataItemAttributesLocationData;
 };
 
+export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageData = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes;
+};
+
 export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStage = {
   data?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageData;
 };
@@ -6217,24 +6222,6 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishme
   {
     data?: unknown[];
   };
-
-export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes =
-  {
-    slug?: string;
-    name?: string;
-    info?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedBy;
-    updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedBy;
-    localizations?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesLocalizations;
-    locale?: string;
-  };
-
-export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageData = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes;
-};
 
 export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
@@ -6250,9 +6237,6 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishme
     data?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedByData;
   };
 
-export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByDataAttributes =
-  { [key: string]: any };
-
 export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByData =
   {
     id?: number;
@@ -6264,6 +6248,39 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishme
     data?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByData;
   };
 
+export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributes =
+  {
+    slug?: string;
+    name?: string;
+    info?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedBy;
+    updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesUpdatedBy;
+    localizations?: LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesLocalizations;
+    locale?: string;
+  };
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesMpaaEstablishmentStageDataAttributesCreatedByDataAttributes =
+  { [key: string]: any };
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations =
+  {
+    data?: unknown[];
+  };
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributes = {
+  slug?: string;
+  title?: string;
+  url?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesCreatedBy;
+  updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedBy;
+  localizations?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations;
+  locale?: string;
+};
+
 export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceData = {
   id?: number;
   attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributes;
@@ -6272,11 +6289,6 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceData 
 export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSource = {
   data?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceData;
 };
-
-export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations =
-  {
-    data?: unknown[];
-  };
 
 export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
@@ -6306,18 +6318,6 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataA
     data?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesCreatedByData;
   };
 
-export type LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributes = {
-  slug?: string;
-  title?: string;
-  url?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesCreatedBy;
-  updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesUpdatedBy;
-  localizations?: LocationGroupsDataItemAttributesPasDataItemAttributesDataSourceDataAttributesLocalizations;
-  locale?: string;
-};
-
 export type LocationGroupsDataItemAttributesPasDataItemAttributesChildrenDataItemAttributes = {
   [key: string]: any;
 };
@@ -6331,14 +6331,31 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesChildren = {
   data?: LocationGroupsDataItemAttributesPasDataItemAttributesChildrenDataItem[];
 };
 
-export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatus = {
-  data?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusData;
-};
-
 export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesLocalizations =
   {
     data?: unknown[];
   };
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributes = {
+  slug?: string;
+  name?: string;
+  info?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedBy;
+  updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedBy;
+  localizations?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesLocalizations;
+  locale?: string;
+};
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusData = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributes;
+};
+
+export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatus = {
+  data?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusData;
+};
 
 export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
@@ -6368,21 +6385,13 @@ export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatu
     data?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedByData;
   };
 
-export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributes = {
-  slug?: string;
-  name?: string;
-  info?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesCreatedBy;
-  updatedBy?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesUpdatedBy;
-  localizations?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributesLocalizations;
-  locale?: string;
+export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItem = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributes;
 };
 
-export type LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusData = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributesPasDataItemAttributesProtectionStatusDataAttributes;
+export type LocationGroupsDataItemAttributesProtectionCoverageStats = {
+  data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItem[];
 };
 
 export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesUpdatedByDataAttributes =
@@ -6396,6 +6405,29 @@ export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttri
 
 export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesUpdatedBy = {
   data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesUpdatedByData;
+};
+
+export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes =
+  { [key: string]: any };
+
+export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedByData =
+  {
+    id?: number;
+    attributes?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes;
+  };
+
+export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedBy = {
+  data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedByData;
+};
+
+export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData =
+  {
+    id?: number;
+    attributes?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes;
+  };
+
+export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironment = {
+  data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData;
 };
 
 export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributes = {
@@ -6415,31 +6447,14 @@ export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttri
   updatedBy?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesUpdatedBy;
 };
 
-export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItem = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributes;
-};
-
-export type LocationGroupsDataItemAttributesProtectionCoverageStats = {
-  data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItem[];
-};
-
-export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes =
-  { [key: string]: any };
-
-export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedByData =
-  {
-    id?: number;
-    attributes?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedByDataAttributes;
-  };
-
-export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedBy = {
-  data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedByData;
-};
-
 export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesLocalizations =
   {
     data?: unknown[];
+  };
+
+export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedBy =
+  {
+    data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByData;
   };
 
 export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes =
@@ -6454,16 +6469,6 @@ export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttri
     locale?: string;
   };
 
-export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData =
-  {
-    id?: number;
-    attributes?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributes;
-  };
-
-export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironment = {
-  data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentData;
-};
-
 export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
 
@@ -6471,11 +6476,6 @@ export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttri
   {
     id?: number;
     attributes?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByDataAttributes;
-  };
-
-export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedBy =
-  {
-    data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesUpdatedByData;
   };
 
 export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesEnvironmentDataAttributesCreatedByDataAttributes =
@@ -6503,6 +6503,22 @@ export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttri
 
 export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesLocation = {
   data?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesLocationData;
+};
+
+export type LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributes = {
+  mpaa_protection_level?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevel;
+  area?: number;
+  percentage?: number;
+  location?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
+  updatedBy?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesUpdatedBy;
+};
+
+export type LocationGroupsDataItemAttributesMpaaProtectionLevelStatsData = {
+  id?: number;
+  attributes?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributes;
 };
 
 export type LocationGroupsDataItemAttributesMpaaProtectionLevelStats = {
@@ -6549,22 +6565,6 @@ export type LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttribut
   {
     data?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelData;
   };
-
-export type LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributes = {
-  mpaa_protection_level?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevel;
-  area?: number;
-  percentage?: number;
-  location?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesLocation;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
-  updatedBy?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesUpdatedBy;
-};
-
-export type LocationGroupsDataItemAttributesMpaaProtectionLevelStatsData = {
-  id?: number;
-  attributes?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributes;
-};
 
 export type LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesMpaaProtectionLevelDataAttributesLocalizations =
   {
@@ -6641,6 +6641,17 @@ export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemA
     data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesUpdatedByData;
   };
 
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData =
+  {
+    id?: number;
+    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByDataAttributes;
+  };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy =
+  {
+    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData;
+  };
+
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributes = {
   location?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesLocation;
   fishing_protection_level?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel;
@@ -6655,45 +6666,9 @@ export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemA
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByDataAttributes =
   { [key: string]: any };
 
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData =
-  {
-    id?: number;
-    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByDataAttributes;
-  };
-
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy =
-  {
-    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedByData;
-  };
-
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesLocalizations =
   {
     data?: unknown[];
-  };
-
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByDataAttributes =
-  { [key: string]: any };
-
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByData =
-  {
-    id?: number;
-    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByDataAttributes;
-  };
-
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedBy =
-  {
-    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByData;
-  };
-
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByData =
-  {
-    id?: number;
-    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributes;
-  };
-
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedBy =
-  {
-    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByData;
   };
 
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributes =
@@ -6720,18 +6695,18 @@ export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemA
     data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelData;
   };
 
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes =
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByDataAttributes =
   { [key: string]: any };
 
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByData =
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByData =
   {
     id?: number;
-    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes;
+    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByDataAttributes;
   };
 
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedBy =
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedBy =
   {
-    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByData;
+    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesUpdatedByData;
   };
 
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributes =
@@ -6750,6 +6725,31 @@ export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemA
     updatedAt?: string;
     createdBy?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesCreatedBy;
     updatedBy?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedBy;
+  };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByData =
+  {
+    id?: number;
+    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributes;
+  };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedBy =
+  {
+    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByData;
+  };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes =
+  { [key: string]: any };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByData =
+  {
+    id?: number;
+    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByDataAttributes;
+  };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedBy =
+  {
+    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesUpdatedByData;
   };
 
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesCreatedByDataAttributes =
@@ -6791,20 +6791,6 @@ export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemA
     data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedByData;
   };
 
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
-  { [key: string]: any };
-
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData =
-  {
-    id?: number;
-    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes;
-  };
-
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedBy =
-  {
-    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
-  };
-
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributes =
   {
     name?: string;
@@ -6818,23 +6804,18 @@ export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemA
     updatedBy?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesUpdatedBy;
   };
 
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy =
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes =
+  { [key: string]: any };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData =
   {
-    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData;
+    id?: number;
+    attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByDataAttributes;
   };
 
-export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedBy =
   {
-    action?: string;
-    actionParameters?: unknown;
-    subject?: string;
-    properties?: unknown;
-    conditions?: unknown;
-    role?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
-    createdAt?: string;
-    updatedAt?: string;
-    createdBy?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
-    updatedBy?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
+    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesCreatedByData;
   };
 
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItem =
@@ -6855,6 +6836,25 @@ export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemA
   {
     id?: number;
     attributes?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByDataAttributes;
+  };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy =
+  {
+    data?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedByData;
+  };
+
+export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributes =
+  {
+    action?: string;
+    actionParameters?: unknown;
+    subject?: string;
+    properties?: unknown;
+    conditions?: unknown;
+    role?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesRole;
+    createdAt?: string;
+    updatedAt?: string;
+    createdBy?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedBy;
+    updatedBy?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesUpdatedBy;
   };
 
 export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevelDataAttributesCreatedByDataAttributesRolesDataItemAttributesPermissionsDataItemAttributesCreatedByDataAttributes =
@@ -6955,6 +6955,42 @@ export interface LocationListResponse {
   data?: LocationListResponseDataItem[];
   meta?: LocationListResponseMeta;
 }
+
+export interface LocationRequest {
+  data: LocationRequestData;
+}
+
+export type LocationRequestDataPasItem = number | string;
+
+export type LocationRequestDataProtectionCoverageStatsItem = number | string;
+
+export type LocationRequestDataMpaaProtectionLevelStats = number | string;
+
+export type LocationRequestDataFishingProtectionLevelStatsItem = number | string;
+
+export type LocationRequestDataMembersItem = number | string;
+
+export type LocationRequestDataGroupsItem = number | string;
+
+export type LocationRequestData = {
+  code: string;
+  name: string;
+  total_marine_area: string;
+  type: string;
+  groups?: LocationRequestDataGroupsItem[];
+  members?: LocationRequestDataMembersItem[];
+  fishing_protection_level_stats?: LocationRequestDataFishingProtectionLevelStatsItem[];
+  mpaa_protection_level_stats?: LocationRequestDataMpaaProtectionLevelStats;
+  protection_coverage_stats?: LocationRequestDataProtectionCoverageStatsItem[];
+  marine_bounds?: unknown;
+  total_terrestrial_area: string;
+  terrestrial_bounds?: unknown;
+  name_es: string;
+  name_fr: string;
+  marine_target?: number;
+  marine_target_year?: number;
+  pas?: LocationRequestDataPasItem[];
+};
 
 export type LegendLegendComponentItemsItem = {
   id?: number;

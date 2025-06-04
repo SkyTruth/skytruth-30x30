@@ -82,6 +82,9 @@
       "action": "api::location.location.findOne"
     },
     {
+      "action": "api::location.location.update"
+    },
+    {
       "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.find"
     },
     {

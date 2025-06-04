@@ -4,10 +4,12 @@
  * DOCUMENTATION
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import type {
   UseQueryOptions,
+  UseMutationOptions,
   QueryFunction,
+  MutationFunction,
   UseQueryResult,
   QueryKey,
 } from '@tanstack/react-query';
@@ -17,9 +19,10 @@ import type {
   GetLocationsParams,
   LocationResponse,
   GetLocationsIdParams,
+  LocationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
-import type { ErrorType } from '../../services/api/index';
+import type { ErrorType, BodyType } from '../../services/api/index';
 
 // eslint-disable-next-line
 type SecondParameter<T extends (...args: any) => any> = T extends (
@@ -146,4 +149,69 @@ export const useGetLocationsId = <
   query.queryKey = queryOptions.queryKey;
 
   return query;
+};
+
+export const putLocationsId = (
+  id: number,
+  locationRequest: BodyType<LocationRequest>,
+  options?: SecondParameter<typeof API>
+) => {
+  return API<LocationResponse>(
+    {
+      url: `/locations/${id}`,
+      method: 'put',
+      headers: { 'Content-Type': 'application/json' },
+      data: locationRequest,
+    },
+    options
+  );
+};
+
+export const getPutLocationsIdMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putLocationsId>>,
+    TError,
+    { id: number; data: BodyType<LocationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putLocationsId>>,
+  TError,
+  { id: number; data: BodyType<LocationRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putLocationsId>>,
+    { id: number; data: BodyType<LocationRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return putLocationsId(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PutLocationsIdMutationResult = NonNullable<Awaited<ReturnType<typeof putLocationsId>>>;
+export type PutLocationsIdMutationBody = BodyType<LocationRequest>;
+export type PutLocationsIdMutationError = ErrorType<Error>;
+
+export const usePutLocationsId = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putLocationsId>>,
+    TError,
+    { id: number; data: BodyType<LocationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getPutLocationsIdMutationOptions(options);
+
+  return useMutation(mutationOptions);
 };
