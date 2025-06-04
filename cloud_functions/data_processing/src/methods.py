@@ -10,7 +10,7 @@ import zipfile
 import io
 import fiona
 import geopandas as gpd
-from shapely.geometry import box
+from shapely.geometry import box, Polygon, MultiPolygon, GeometryCollection
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from shapely.strtree import STRtree
@@ -65,6 +65,7 @@ from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,
     read_dataframe,
     read_json_from_gcs,
+    read_json_df,
     save_file_bucket,
     upload_dataframe,
     upload_gdf,
@@ -112,6 +113,16 @@ def safe_union(df, batch_size=1000, simplify_tolerance=1000):
                 unary_union(chunk.geometry).simplify(simplify_tolerance, preserve_topology=False)
             )
     return unary_union(parts)
+
+
+def extract_polygons(geom):
+    if isinstance(geom, (Polygon, MultiPolygon)):
+        return geom
+    elif isinstance(geom, GeometryCollection):
+        polys = [g for g in geom.geoms if isinstance(g, (Polygon, MultiPolygon))]
+        return MultiPolygon(polys) if polys else None
+    else:
+        return None
 
 
 def load_mpatlas_country(
@@ -658,26 +669,40 @@ def preprocess_mangroves(
     mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
     eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
     bucket: str = BUCKET,
-    project: str = PROJECT,
+    verbose: bool = True,
+    simplify_tolerance=100,
+    batch_size=3000,
 ):
     # Pre-process - this should be done only when a new
     # country_union_reproj or mangrove is downloaded
 
-    print("loading mangroves")
+    tqdm.pandas()
+
+    if verbose:
+        print("loading mangroves")
     mangrove = load_zipped_shapefile_from_gcs(mangroves_zipfile_name, bucket).pipe(clean_geometries)
     mangrove["index"] = range(len(mangrove))
-    print("making mangrove geometries valid")
+
+    if verbose:
+        print("making mangrove geometries valid")
     mangrove["geometry"] = mangrove["geometry"].progress_apply(make_valid)
     mangrove_reproj = mangrove.to_crs("EPSG:6933")
 
+    if verbose:
+        print("loading eez/land union")
     country_union = load_marine_regions(eez_land_union_params, bucket)[
         ["ISO_TER1", "geometry"]
     ].rename(columns={"ISO_TER1": "location"})
     country_union_reproj = country_union.to_crs("EPSG:6933")
 
+    if verbose:
+        print("generating mangrove polygons by country")
     mangroves_by_country = []
     for cnt in tqdm(list(sorted(set(country_union_reproj["location"].dropna())))):
         country_geom = make_valid(
+            unary_union(country_union_reproj[country_union_reproj["location"] == cnt].geometry)
+        )
+        country_geom = extract_polygons(
             country_union_reproj[country_union_reproj["location"] == cnt].iloc[0]["geometry"]
         )
 
@@ -692,7 +717,9 @@ def preprocess_mangroves(
         indices = tree.query(country_geom, predicate="intersects")
         country_mangroves = mangroves_clipped.iloc[indices]
         if len(country_mangroves) > 0:
-            mangrove_geom = safe_union(country_mangroves, batch_size=3000, simplify_tolerance=100)
+            mangrove_geom = safe_union(
+                country_mangroves, batch_size=batch_size, simplify_tolerance=simplify_tolerance
+            )
             mangroves_by_country.append(
                 {
                     "country": cnt,
@@ -705,7 +732,7 @@ def preprocess_mangroves(
 
     mangroves_by_country = gpd.GeoDataFrame(mangroves_by_country, crs="EPSG:6933")
     upload_gdf(
-        BUCKET, mangroves_by_country, MANGROVES_BY_COUNTRY_FILE_NAME, PROJECT, True, timeout=600
+        BUCKET, mangroves_by_country, mangroves_by_country_file_name, PROJECT, True, timeout=600
     )
 
 
@@ -986,10 +1013,131 @@ def create_seamounts_subtable(
     )
 
 
+def create_mangroves_subtable(
+    protected_areas,
+    combined_regions,
+    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    def dissolve_multipolygons_only(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
+        counts = gdf[key].value_counts()
+
+        singles = gdf[gdf[key].isin(counts[counts == 1].index)]
+        multiples = gdf[gdf[key].isin(counts[counts > 1].index)]
+
+        dissolved = multiples.dissolve(by=key)
+        dissolved = dissolved.reset_index()
+        result = pd.concat([singles, dissolved], ignore_index=True)
+
+        return result
+
+    def get_group_stats(df, loc, relations):
+        if loc == "GLOB":
+            df_group = df
+            total_area = GLOBAL_MARINE_AREA_KM2
+        else:
+            df_group = df[df["location"].isin(relations[loc])]
+
+            # Ensure numeric conversion
+            total_area = df_group["total_mangrove_area_km2"].sum()
+
+        protected_area = df_group["protected_mangrove_area_km2"].sum()
+
+        return {
+            "location": loc,
+            "habitat": "mangrove",
+            "environment": "marine",
+            "protected_area": protected_area,
+            "total_area": total_area,
+            # "percent_protected": 100 * protected_area / total_area if total_area else None,
+        }
+
+    print("dissolving over protected areas")
+    mpa = dissolve_multipolygons_only(
+        protected_areas[protected_areas["MARINE"].isin(["1", "2"])][
+            ["PARENT_ISO3", "WDPAID", "geometry"]
+        ]
+    ).rename(columns={"PARENT_ISO3": "location", "WDPAID": "wdpa_id"})
+    print("making MPA geometries valid")
+    mpa["geometry"] = mpa["geometry"].progress_apply(make_valid)
+
+    print("loading eez/land union")
+    country_union = load_marine_regions(eez_land_union_params, bucket)[
+        ["ISO_TER1", "geometry"]
+    ].rename(columns={"ISO_TER1": "location"})
+
+    print("loading pre-processed mangroves")
+    mangroves_by_country = read_json_df(BUCKET, MANGROVES_BY_COUNTRY_FILE_NAME, verbose=True)
+
+    print("Updating CRS to EPSG:6933 (equal-area for geometry ops)")
+    crs = "EPSG:6933"
+    country_union_reproj = country_union.to_crs(crs)
+    mpa_reproj = mpa.to_crs(crs)
+
+    protected_mangroves = []
+    for cnt in tqdm(list(sorted(set(country_union_reproj["location"].dropna())))):
+        country_geom = make_valid(
+            unary_union(country_union_reproj[country_union_reproj["location"] == cnt].geometry)
+        )
+        country_geom = extract_polygons(
+            country_union_reproj[country_union_reproj["location"] == cnt].iloc[0]["geometry"]
+        )
+
+        country_mangroves = mangroves_by_country[mangroves_by_country["country"] == cnt]
+        if len(country_mangroves) > 0:
+            mangrove_geom = country_mangroves.iloc[0]["geometry"]
+            country_mangrove_area_km2 = country_mangroves.iloc[0]["mangrove_area_km2"]
+
+            # Get MPA features in country and clip
+            country_pas = mpa_reproj[mpa_reproj["location"] == cnt]
+            country_pas = gpd.clip(country_pas, country_geom)
+            country_pas = country_pas[
+                ~country_pas.geometry.is_empty & country_pas.geometry.is_valid
+            ]
+            geom_list = [g for g in country_pas.geometry if isinstance(g, (Polygon, MultiPolygon))]
+
+            if not geom_list:
+                pa_geom = None
+            else:
+                pa_geom = make_valid(unary_union(geom_list))
+            pa_geom = make_valid(unary_union(country_pas.geometry))
+
+            pa_mangrove_area_km2 = mangrove_geom.intersection(pa_geom).area / 1e6
+
+            protected_mangroves.append(
+                {
+                    "location": cnt,
+                    "total_mangrove_area_km2": country_mangrove_area_km2,
+                    "protected_mangrove_area_km2": pa_mangrove_area_km2,
+                }
+            )
+
+    protected_mangroves = pd.DataFrame(protected_mangroves)
+    protected_mangroves["percent_protected"] = (
+        100
+        * protected_mangroves["protected_mangrove_area_km2"]
+        / protected_mangroves["total_mangrove_area_km2"]
+    )
+
+    mangrove_habitat = pd.DataFrame(
+        [
+            stat
+            for loc in combined_regions
+            if (stat := get_group_stats(protected_mangroves, loc, combined_regions)) is not None
+        ]
+    )
+
+    return mangrove_habitat[mangrove_habitat["total_area"] > 0]
+
+
 def generate_habitat_protection_table(
+    eez_land_union_params: str = EEZ_LAND_UNION_PARAMS,
     habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
+    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
     eez_params: dict = EEZ_PARAMS,
     bucket: str = BUCKET,
@@ -1013,9 +1161,14 @@ def generate_habitat_protection_table(
     )
     marine_protected_areas = marine_protected_areas[["wdpa_id", "location", "geometry"]]
 
+    if verbose:
+        print("getting marine habitats subtable")
     marine_habitats_subtable = create_habitat_subtable(
         bucket, habitats_zipfile_name, combined_regions, verbose
     )
+
+    if verbose:
+        print("getting seamounts subtable")
     seamounts_subtable = create_seamounts_subtable(
         seamounts_zipfile_name,
         seamounts_shapefile_name,
@@ -1026,8 +1179,22 @@ def generate_habitat_protection_table(
         verbose,
     )
 
+    if verbose:
+        print("getting mangroves subtable")
+
+    mangroves_subtable = create_mangroves_subtable(
+        protected_areas,
+        combined_regions,
+        eez_land_union_params,
+        mangroves_by_country_file_name,
+        bucket,
+        verbose,
+    )
+
     # TODO: add mangroves
-    marine_habitats = pd.concat((marine_habitats_subtable, seamounts_subtable), axis=0)
+    marine_habitats = pd.concat(
+        (marine_habitats_subtable, seamounts_subtable, mangroves_subtable), axis=0
+    )
 
     # TODO: combine with terrestrial
     habitats = marine_habitats.copy()
@@ -1215,6 +1382,7 @@ def generate_protection_coverage_stats_table(
 
     protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
     protection_coverage_table = protection_coverage_table[protection_coverage_table["area"] > 0]
+    sov_country_area = protection_coverage_table[["location", "environment", "area"]]
     protection_coverage_table = (
         protection_coverage_table.drop(columns="area")
         .pipe(add_global_stats, wdpa_global, "marine")
@@ -1225,6 +1393,14 @@ def generate_protection_coverage_stats_table(
         bucket,
         protection_coverage_table,
         protection_coverage_file_name,
+        project_id=project,
+        verbose=verbose,
+    )
+
+    upload_dataframe(
+        bucket,
+        sov_country_area,
+        "temporary/country_areas.csv",
         project_id=project,
         verbose=verbose,
     )

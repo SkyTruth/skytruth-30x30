@@ -120,7 +120,10 @@ def extract_column_dict_str(df, column_dict, column):
 def fp_location(df):
     df = df.copy()
     df["location"] = df.apply(
-        lambda x: x["iso_ter"] if isinstance(x["iso_ter"], str) else x["iso_sov"], axis=1
+        lambda x: x["iso_ter"]
+        if isinstance(x["iso_ter"], str) and x["iso_ter"] != ""
+        else x["iso_sov"],
+        axis=1,
     )
     return df
 
