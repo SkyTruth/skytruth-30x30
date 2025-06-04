@@ -21,12 +21,13 @@ from src.methods import (
     download_habitats,
     download_mpatlas,
     download_protected_planet,
+    download_protected_seas,
     generate_fishing_protection_table,
     generate_habitat_protection_table,
     generate_marine_protection_level_stats_table,
     generate_protected_areas_table,
     generate_protection_coverage_stats_table,
-    download_protected_seas,
+    preprocess_mangroves,
 )
 
 sys.path.append("./src")
@@ -149,6 +150,11 @@ def main(request: Request) -> tuple[str, int]:
 
             case _:
                 print(f"METHOD: {method} not a valid option")
+
+        # TODO: should this be a triggered cloudrun or is this ok? Also
+        # there is no download_mangroves yet, may add eventually
+        if method in ["download_eez_land_union", "download_mangroves"]:
+            preprocess_mangroves()
 
         print("Process complete!")
 

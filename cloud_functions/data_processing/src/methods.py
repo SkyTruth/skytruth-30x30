@@ -114,6 +114,27 @@ def safe_union(df, batch_size=1000, simplify_tolerance=1000):
     return unary_union(parts)
 
 
+def load_mpatlas_country(
+    bucket: str = BUCKET, mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME
+):
+    df = read_dataframe(bucket, mpatlas_country_level_file_name).copy()
+
+    df["wdpa_marine_km2"] = df["wdpa_marine_km2"].replace("", np.nan)
+    df["wdpa_marine_km2"] = df["wdpa_marine_km2"].apply(pd.to_numeric, errors="coerce")
+
+    return df
+
+
+def load_wdpa_global(
+    bucket: str = BUCKET, wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME
+):
+    wdpa_global = read_dataframe(bucket, wdpa_global_level_file_name)
+    wdpa_global = wdpa_global[wdpa_global["value"] != ""]
+    wdpa_global["value"] = wdpa_global["value"].astype(float)
+
+    return wdpa_global
+
+
 def read_mpatlas_from_gcs(
     bucket: str = BUCKET, filename: str = MPATLAS_FILE_NAME
 ) -> gpd.GeoDataFrame:
@@ -639,7 +660,8 @@ def preprocess_mangroves(
     bucket: str = BUCKET,
     project: str = PROJECT,
 ):
-    # Pre-process - this should be done only when a new country_union_reproj is downloaded
+    # Pre-process - this should be done only when a new
+    # country_union_reproj or mangrove is downloaded
 
     print("loading mangroves")
     mangrove = load_zipped_shapefile_from_gcs(mangroves_zipfile_name, bucket).pipe(clean_geometries)
@@ -1167,7 +1189,7 @@ def generate_protection_coverage_stats_table(
         print(
             f"loading Protected Planet Global-level data gs://{bucket}/{wdpa_global_level_file_name}"
         )
-    wdpa_global = read_dataframe(bucket, wdpa_global_level_file_name)
+    wdpa_global = load_wdpa_global(bucket, wdpa_global_level_file_name)
 
     # Load related countries and regions
     if verbose:
@@ -1231,7 +1253,7 @@ def generate_marine_protection_level_stats_table(
                 "total_area": total_area,
                 "area": total_protected_area,
                 "mpaa_protection_level": protection_level,
-                "percent": 100 * total_protected_area / total_area if total_area > 0 else None,
+                "percentage": 100 * total_protected_area / total_area if total_area > 0 else None,
             }
         else:
             return None
@@ -1246,7 +1268,7 @@ def generate_marine_protection_level_stats_table(
         print(
             f"loading MPAtlas country-level stats from gs://{bucket}/{mpatlas_country_level_file_name}"
         )
-    mpatlas_country = read_dataframe(bucket, mpatlas_country_level_file_name)
+    mpatlas_country = load_mpatlas_country(bucket, mpatlas_country_level_file_name)
 
     if verbose:
         print("Calculating Marine Protection Level Statistics")
@@ -1261,9 +1283,9 @@ def generate_marine_protection_level_stats_table(
     mpa_cl_mps = (
         mpatlas_country[cols]
         .rename(columns=mpa_dict)
+        .pipe(update_mpatlas_asterisk, asterisk=False)
         .pipe(add_constants, {"mpaa_protection_level": protection_level})
         .pipe(add_percentage_protection_mp)
-        .pipe(update_mpatlas_asterisk, asterisk=False)
     )
 
     if verbose:

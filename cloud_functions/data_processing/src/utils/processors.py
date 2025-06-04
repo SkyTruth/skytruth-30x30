@@ -1,6 +1,7 @@
 import ast
 import geopandas as gpd
 import pandas as pd
+from shapely.geometry import MultiPolygon, Polygon
 
 
 def add_constants(df, const):
@@ -71,6 +72,18 @@ def clean_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return gdf
 
 
+def convert_poly_to_multi(df):
+    df = df.copy()
+    df["geometry"] = df["geometry"].apply(
+        lambda x: MultiPolygon([x])
+        if isinstance(x, Polygon)
+        else x
+        if isinstance(x, MultiPolygon)
+        else x
+    )
+    return df
+
+
 def convert_type(df, conversion):
     df = df.copy()
     for col in conversion:
@@ -80,17 +93,27 @@ def convert_type(df, conversion):
     return df
 
 
+def safe_literal_eval(x):
+    try:
+        return ast.literal_eval(x) if isinstance(x, str) else None
+    except (ValueError, SyntaxError):
+        return None
+
+
 def extract_column_dict_str(df, column_dict, column):
+    df = df.copy()
+    parsed_col = df[column].apply(safe_literal_eval)
+
     if isinstance(column_dict, dict):
         for d in column_dict:
-            df[column_dict[d]] = df[column].apply(
-                lambda x: ast.literal_eval(x).get(d) if pd.notnull(x) else None
+            df[column_dict[d]] = parsed_col.apply(
+                lambda x: x.get(d) if isinstance(x, dict) else None
             )
-    if isinstance(column_dict, list):
+
+    elif isinstance(column_dict, list):
         for d in column_dict:
-            df[d] = df[column].apply(
-                lambda x: ast.literal_eval(x).get(d) if pd.notnull(x) else None
-            )
+            df[d] = parsed_col.apply(lambda x: x.get(d) if isinstance(x, dict) else None)
+
     return df
 
 
