@@ -84,7 +84,6 @@ from utils.processors import (
     clean_geometries,
     convert_type,
     extract_column_dict_str,
-    fp_location,
     remove_columns,
     remove_non_designated_m,
     remove_non_designated_p,
@@ -1503,44 +1502,17 @@ def generate_fishing_protection_table(
     fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
     verbose: bool = True,
 ):
-    def get_group_stats(
-        df,
-        loc,
-        relations,
-        global_marine_area=361000000,
-        fishing_protection_level="highly",
-    ):
-        if loc == "GLOB":
-            df_group = df
-            total_area = global_marine_area
-        else:
-            df_group = df[df["location"].isin(relations[loc])]
-            total_area = df_group["area"].sum()
-
-        protected_area = df_group[f"{fishing_protection_level}_protected_area"].sum()
-        assessed = True if len(df) > 0 else False
-
-        return {
-            "location": loc,
-            "area": protected_area if assessed else None,
-            "fishing_protection_level": fishing_protection_level,
-            "pct": (
-                min(100, 100 * protected_area / total_area) if assessed and total_area > 0 else None
-            ),
-            "total_area": total_area,
-        }
-
-    # Load related countries and regions
-    if verbose:
-        print("loading country and region groupings")
-    combined_regions, _ = load_regions()
-
-    if verbose:
-        print(f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}")
-    protected_seas = read_dataframe(bucket, protected_seas_file_name)
-
-    if verbose:
-        print("processing fishing level protection")
+    def group_by_country(df):
+        return (
+            df.groupby("iso_sov")
+            .agg(
+                highly_protected_area=("highly_protected_area", "sum"),
+                moderately_protected_area=("moderately_protected_area", "sum"),
+                less_protected_area=("less_protected_area", "sum"),
+                area=("area", "sum"),
+            )
+            .reset_index()
+        )
 
     fishing_protection_levels = {
         "highly": ["lfp5_area", "lfp4_area"],
@@ -1560,44 +1532,60 @@ def generate_fishing_protection_table(
     }
     cols = [i for i in ps_dict]
 
+    if verbose:
+        print(f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}")
+    protected_seas = read_dataframe(bucket, protected_seas_file_name)
+
+    if verbose:
+        print("processing fishing level protection")
+
     ps_cl_fp = (
-        protected_seas[cols]
+        protected_seas[protected_seas["iso_ter"] == ""][cols]
         .rename(columns=ps_dict)
-        .pipe(fp_location)
         .pipe(add_protected_from_fishing_area, fishing_protection_levels)
+        .pipe(group_by_country)
         .pipe(add_protected_from_fishing_percent, fishing_protection_levels)
-        .pipe(
-            remove_columns,
-            ["iso_ter", "iso_sov", "lfp5_area", "lfp4_area", "lfp3_area", "lfp2_area", "lfp1_area"],
-        )
     )
 
-    fishing_protection_table = pd.DataFrame()
-    for level in fishing_protection_levels:
-        fishing_protection_table = pd.concat(
-            (
-                fishing_protection_table,
-                pd.DataFrame(
-                    stat
-                    for loc in combined_regions
-                    if (
-                        stat := get_group_stats(
-                            ps_cl_fp,
-                            loc,
-                            combined_regions,
-                            fishing_protection_level=level,
-                        )
-                    )
-                    is not None
-                ),
-            ),
-            axis=0,
+    fishing_protection_table = []
+    for country in sorted(set(ps_cl_fp["iso_sov"])):
+        if len(ps_cl_fp[ps_cl_fp["iso_sov"] == country]) > 1:
+            print(country)
+        tmp = ps_cl_fp[ps_cl_fp["iso_sov"] == country].iloc[0].to_dict()
+        for fishing_protection_level in fishing_protection_levels:
+            fishing_protection_table.append(
+                {
+                    "location": country,
+                    "area": tmp[f"{fishing_protection_level}_protected_area"],
+                    "fishing_protection_level": fishing_protection_level,
+                    "pct": tmp[f"{fishing_protection_level}_pct"],
+                    "total_area": tmp["area"],
+                }
+            )
+
+    fishing_protection_table = pd.DataFrame(fishing_protection_table)
+
+    global_area = (
+        fishing_protection_table.groupby("fishing_protection_level")
+        .agg(
+            area=("area", "sum"),
+            total_area=("total_area", "sum"),
         )
+        .reset_index()
+    )
+
+    global_area["location"] = "GLOB"
+    global_area["pct"] = 100 * global_area["area"] / global_area["total_area"]
 
     # Remove countries with no ocean
     fishing_protection_table = fishing_protection_table[
         fishing_protection_table["total_area"] > 0
     ].drop(columns="total_area")
+
+    cols = ["location", "fishing_protection_level", "area", "pct"]
+    fishing_protection_table = pd.concat(
+        (fishing_protection_table[cols], global_area[cols]), axis=0, ignore_index=True
+    )
 
     upload_dataframe(
         bucket,
