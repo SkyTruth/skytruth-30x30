@@ -13,7 +13,7 @@ import requests
 import shutil
 import tempfile
 from tqdm import tqdm
-from typing import Optional
+from typing import Optional, Dict, Any
 import zipfile
 
 PROJECT = os.getenv("PROJECT", "")
@@ -239,6 +239,39 @@ def upload_dataframe(
     if verbose:
         print(f"Uploading dataframe to gs://{bucket_name}/{destination_blob_name}.")
     bucket.blob(destination_blob_name).upload_from_string(df.to_csv(index=None), "csv")
+
+
+def save_json_to_gcs(
+    bucket_name: str,
+    data: Dict[str, Any],
+    destination_blob_name: str,
+    project_id: Optional[str] = None,
+    verbose: bool = True,
+) -> None:
+    """
+    Saves a Python dictionary as a JSON file to Google Cloud Storage.
+
+    Parameters
+    ----------
+    bucket_name : str
+        Name of the GCS bucket.
+    blob_name : str
+        Path to the destination object in the bucket (e.g., "path/to/file.json").
+    data : dict
+        The dictionary to save (e.g., {"value": x}).
+    project_id : str, optional
+        GCP project ID. Required if not using default credentials.
+
+    Returns
+    -------
+    None
+    """
+    if verbose:
+        print(f"Uploading dataframe to gs://{bucket_name}/{destination_blob_name}.")
+    client = storage.Client(project=project_id)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_string(json.dumps(data), content_type="application/json")
 
 
 def upload_gdf(

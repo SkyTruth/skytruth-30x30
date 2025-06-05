@@ -27,6 +27,7 @@ from src.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     EEZ_PARAMS,
     EEZ_LAND_UNION_PARAMS,
+    HIGH_SEAS_PARAMS,
     MPATLAS_URL,
     MPATLAS_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
@@ -58,6 +59,7 @@ from src.params import (
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
+    GLOBAL_MANGROVE_AREA_FILE_NAME,
 )
 
 from src.utils.gcp import (
@@ -71,6 +73,7 @@ from src.utils.gcp import (
     save_file_bucket,
     upload_dataframe,
     upload_gdf,
+    save_json_to_gcs,
 )
 
 from utils.processors import (
@@ -682,7 +685,9 @@ def preprocess_mangroves(
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
     mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
     eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     bucket: str = BUCKET,
+    project: str = PROJECT,
     verbose: bool = True,
     simplify_tolerance=100,
     batch_size=3000,
@@ -698,16 +703,30 @@ def preprocess_mangroves(
     mangrove["index"] = range(len(mangrove))
 
     if verbose:
-        print("making mangrove geometries valid")
-    mangrove["geometry"] = mangrove["geometry"].progress_apply(make_valid)
-    mangrove_reproj = mangrove.to_crs("EPSG:6933").pipe(clean_geometries)
+        print("loading eez/land union")
+    country_union = (
+        load_marine_regions(eez_land_union_params, bucket)[["ISO_TER1", "geometry"]]
+        .rename(columns={"ISO_TER1": "location"})
+        .pipe(clean_geometries)
+    )
 
     if verbose:
-        print("loading eez/land union")
-    country_union = load_marine_regions(eez_land_union_params, bucket)[
-        ["ISO_TER1", "geometry"]
-    ].rename(columns={"ISO_TER1": "location"})
+        print("re-projecting data")
+    mangrove_reproj = mangrove.to_crs("EPSG:6933").pipe(clean_geometries)
     country_union_reproj = country_union.to_crs("EPSG:6933").pipe(clean_geometries)
+
+    if verbose:
+        print(f"saving global mangrove area to gs://{bucket}/{global_mangrove_area_file_name}")
+    mangrove_reproj["area_km2"] = mangrove_reproj.geometry.area / 1e6
+    global_mangrove_area = mangrove_reproj["area_km2"].sum()
+
+    save_json_to_gcs(
+        bucket,
+        {"global_area_km2": global_mangrove_area},
+        global_mangrove_area_file_name,
+        project,
+        verbose,
+    )
 
     if verbose:
         print("generating mangrove polygons by country")
@@ -895,15 +914,14 @@ def create_habitat_subtable(
     def get_group_stats(df, loc, relations, habitat):
         if loc == "GLOB":
             df_group = df[df["habitat"] == habitat].replace("-", np.nan)
-            total_area = GLOBAL_MARINE_AREA_KM2
         else:
             df_group = df[(df["ISO3"].isin(relations[loc])) & (df["habitat"] == habitat)].replace(
                 "-", np.nan
             )
 
-            # Ensure numeric conversion
-            df_group["total_area"] = pd.to_numeric(df_group["total_area"], errors="coerce")
-            total_area = df_group["total_area"].sum()
+        # Ensure numeric conversion
+        df_group["total_area"] = pd.to_numeric(df_group["total_area"], errors="coerce")
+        total_area = df_group["total_area"].sum()
 
         df_group["protected_area"] = pd.to_numeric(df_group["protected_area"], errors="coerce")
         protected_area = df_group["protected_area"].sum()
@@ -964,24 +982,27 @@ def create_seamounts_subtable(
     seamounts_zipfile_name,
     seamounts_shapefile_name,
     bucket,
-    eez,
+    eez_params,
+    parent_country,
     marine_protected_areas,
     combined_regions,
     verbose,
 ):
-    def get_group_stats(df_eez, df_pa, loc, relations):
+    def get_group_stats(df_eez, df_pa, loc, relations, global_seamount_area, hs_seamount_area):
         if loc == "GLOB":
-            df_eez_group = df_eez[["PEAKID", "AREA2D"]].drop_duplicates()
             df_pa_group = df_pa[["PEAKID", "AREA2D"]].drop_duplicates()
-            total_area = GLOBAL_MARINE_AREA_KM2
+            total_area = global_seamount_area
         else:
-            df_eez_group = df_eez[df_eez["location"].isin(relations[loc])][
-                ["PEAKID", "AREA2D"]
-            ].drop_duplicates()
             df_pa_group = df_pa[df_pa["location"].isin(relations[loc])][
                 ["PEAKID", "AREA2D"]
             ].drop_duplicates()
-            total_area = df_eez_group["AREA2D"].sum()
+            if loc == "ABNJ":
+                total_area = hs_seamount_area
+            else:
+                df_eez_group = df_eez[df_eez["location"].isin(relations[loc])][
+                    ["PEAKID", "AREA2D"]
+                ].drop_duplicates()
+                total_area = df_eez_group["AREA2D"].sum()
 
         protected_area = min(df_pa_group["AREA2D"].sum(), total_area)
 
@@ -1002,25 +1023,45 @@ def create_seamounts_subtable(
     )
 
     if verbose:
+        print("loading eezs")
+    eez = load_marine_regions(eez_params, bucket)
+    eez = adjust_eez_sovereign(eez, parent_country)
+
+    if verbose:
         print("spatially joining seamounts with eezs and marine protected areas")
+
+    global_seamount_area = seamounts["AREA2D"].sum()
 
     eez_joined = gpd.sjoin(
         seamounts[["PEAKID", "AREA2D", "geometry"]],
         eez[["GEONAME", "location", "geometry"]],
         how="left",
-        predicate="within",
+        predicate="intersects",
     )
+    high_seas_seamounts = eez_joined[eez_joined["index_right"].isna()]
+    eez_seamounts = eez_joined[eez_joined["index_right"].notna()]
 
     marine_pa_joined = gpd.sjoin(
         seamounts[["PEAKID", "AREA2D", "geometry"]],
         marine_protected_areas[["wdpa_id", "location", "geometry"]],
         how="left",
-        predicate="within",
+        predicate="intersects",
     )
+    marine_pa_seamounts = marine_pa_joined[marine_pa_joined["index_right"].notna()]
+
+    global_seamount_area = seamounts["AREA2D"].sum()
+    hs_seamount_area = high_seas_seamounts["AREA2D"].sum()
 
     return pd.DataFrame(
         [
-            get_group_stats(eez_joined, marine_pa_joined, cnt, combined_regions)
+            get_group_stats(
+                eez_seamounts,
+                marine_pa_seamounts,
+                cnt,
+                combined_regions,
+                global_seamount_area,
+                hs_seamount_area,
+            )
             for cnt in combined_regions
         ]
     )
@@ -1044,13 +1085,14 @@ def create_mangroves_subtable(
     combined_regions,
     eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
-    def get_group_stats(df, loc, relations):
+    def get_group_stats(df, loc, relations, global_mangrove_area):
         if loc == "GLOB":
             df_group = df
-            total_area = GLOBAL_MARINE_AREA_KM2
+            total_area = global_mangrove_area
         else:
             df_group = df[df["location"].isin(relations[loc])]
 
@@ -1068,6 +1110,10 @@ def create_mangroves_subtable(
             # "percent_protected": 100 * protected_area / total_area if total_area else None,
         }
 
+    # TODO: using eez/land union instead of eez, which may miss some coastal regions where
+    # mangroves are. However, several regions are listed under ISO_TER1 = None, most notably,
+    # Alaska, which doesn't matter for mangroves, but there are also tropical areas missing
+    # including Hawaii. Need to find a way to stick them together
     if verbose:
         print("loading eez/land union")
     country_union = (
@@ -1081,6 +1127,7 @@ def create_mangroves_subtable(
     mangroves_by_country = read_json_df(bucket, mangroves_by_country_file_name, verbose=True).pipe(
         clean_geometries
     )
+    global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)["global_area"]
 
     if verbose:
         print("Updating CRS to EPSG:6933 (equal-area for geometry ops)")
@@ -1138,7 +1185,12 @@ def create_mangroves_subtable(
         [
             stat
             for loc in combined_regions
-            if (stat := get_group_stats(protected_mangroves, loc, combined_regions)) is not None
+            if (
+                stat := get_group_stats(
+                    protected_mangroves, loc, combined_regions, global_mangrove_area
+                )
+            )
+            is not None
         ]
     )
 
@@ -1151,20 +1203,16 @@ def generate_habitat_protection_table(
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
     eez_params: dict = EEZ_PARAMS,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    # TODO: TOTAL AREA IS NOT RIGHT FOR GLOB - we are using total marine area,,
-    # need to replace with habitat specific area
-    combined_regions, parent_country = load_regions()
+    # TODO: check if we should return zero values for total_area. Right now we are not.
 
-    if verbose:
-        print("loading eezs")
-    eez = load_marine_regions(eez_params, bucket)
-    eez = adjust_eez_sovereign(eez, parent_country)
+    combined_regions, parent_country = load_regions()
 
     if verbose:
         print("getting protected areas (this may take a few minutes)")
@@ -1203,7 +1251,8 @@ def generate_habitat_protection_table(
         seamounts_zipfile_name,
         seamounts_shapefile_name,
         bucket,
-        eez,
+        eez_params,
+        parent_country,
         marine_protected_areas,
         combined_regions,
         verbose,
@@ -1217,6 +1266,7 @@ def generate_habitat_protection_table(
         combined_regions,
         eez_land_union_params,
         mangroves_by_country_file_name,
+        global_mangrove_area_file_name,
         bucket,
         verbose,
     )
@@ -1341,40 +1391,52 @@ def generate_protection_coverage_stats_table(
 
     def add_global_stats(df, global_stats, environment):
         def get_value(df, col):
-            return df[df["type"] == col].iloc[0]["value"]
+            return float(df[df["type"] == col].iloc[0]["value"])
+
+        df = df.copy()
 
         environment2 = "ocean" if environment == "marine" else "land"
         oecms_pas = get_value(global_stats, f"total_{environment2}_area_oecms_pas")
         oecms = get_value(global_stats, f"total_{environment2}_area_oecms")
         pas = oecms_pas - oecms
 
-        return pd.concat(
-            (
-                df,
-                pd.DataFrame(
-                    [
-                        {
-                            "location": "GLOB",
-                            "environment": environment,
-                            "protected_area": get_value(
-                                global_stats, f"total_{environment2}_area_oecms_pas"
-                            ),
-                            "protected_areas_count": get_value(
-                                global_stats, f"total_{environment}_oecms_pas"
-                            ),
-                            "coverage": get_value(
-                                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
-                            ),
-                            "pas": 100 * pas / oecms_pas,
-                            "oecms": 100 * oecms / oecms_pas,
-                            "global_contribution": get_value(
-                                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
-                            ),
-                        }
-                    ]
-                ),
-            )
-        )
+        global_dict = {
+            "location": "GLOB",
+            "environment": environment,
+            "protected_area": get_value(global_stats, f"total_{environment2}_area_oecms_pas"),
+            "protected_areas_count": get_value(global_stats, f"total_{environment}_oecms_pas"),
+            "coverage": get_value(
+                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
+            ),
+            "pas": 100 * pas / oecms_pas,
+            "oecms": 100 * oecms / oecms_pas,
+            "global_contribution": get_value(
+                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
+            ),
+        }
+
+        df = pd.concat((df, pd.DataFrame([global_dict])), axis=0, ignore_index=True)
+
+        if environment == "terrestrial":
+            return df
+        else:
+            total_area = get_value(global_stats, "high_seas_pa_coverage_area")
+            high_seas_dict = {
+                "location": "ABNJ",
+                "environment": environment,
+                "protected_area": total_area,
+                "protected_areas_count": None,  # get_value(
+                #     global_stats, f"total_{environment}_oecms_pas"
+                # ),
+                "coverage": get_value(global_stats, "high_seas_pa_coverage_percentage"),
+                "pas": None,  # 100 * pas / oecms_pas,
+                "oecms": None,  # 100 * oecms / oecms_pas,
+                "global_contribution": 100 * total_area / GLOBAL_MARINE_AREA_KM2,
+            }
+
+            df = pd.concat((df, pd.DataFrame([high_seas_dict])), axis=0, ignore_index=True)
+
+        return df
 
     # Load protected planet country level statistics
     if verbose:
@@ -1413,10 +1475,10 @@ def generate_protection_coverage_stats_table(
     protection_coverage_table = protection_coverage_table[protection_coverage_table["area"] > 0]
     sov_country_area = protection_coverage_table[["location", "environment", "area"]]
     protection_coverage_table = (
-        protection_coverage_table.drop(columns="area")
-        .pipe(add_global_stats, wdpa_global, "marine")
-        .pipe(add_global_stats, wdpa_global, "terrestrial")
-    )
+        protection_coverage_table.pipe(add_global_stats, wdpa_global, "marine").pipe(
+            add_global_stats, wdpa_global, "terrestrial"
+        )
+    ).drop(columns="area")
 
     upload_dataframe(
         bucket,
@@ -1440,6 +1502,7 @@ def generate_protection_coverage_stats_table(
 def generate_marine_protection_level_stats_table(
     mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
+    high_seas_params: str = HIGH_SEAS_PARAMS,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
@@ -1476,6 +1539,18 @@ def generate_marine_protection_level_stats_table(
             f"loading MPAtlas country-level stats from gs://{bucket}/{mpatlas_country_level_file_name}"
         )
     mpatlas_country = load_mpatlas_country(bucket, mpatlas_country_level_file_name)
+
+    if verbose:
+        print("loading high seas region to get area")
+    high_seas = load_marine_regions(high_seas_params, bucket)
+    high_seas_area_km2 = high_seas.iloc[0]["area_km2"]
+
+    # TODO: verify this is right - MPAtlas leaves wdpa_marine_km2 blank for high
+    # seas so this just fills in with Marine Regions estimate
+    mpatlas_country = mpatlas_country.copy()
+    mpatlas_country.loc[
+        mpatlas_country["id"].isin(["ABNJ", "ATA", "HS"]), "wdpa_marine_km2"
+    ] = high_seas_area_km2
 
     if verbose:
         print("Calculating Marine Protection Level Statistics")
