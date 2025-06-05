@@ -79,12 +79,7 @@
       "intro-description": "We intend to provide an entry point that is accessible and relevant to stakeholders at various levels, democratizing the conversation around 30x30 so everyone can participate in the process from a common starting point.",
       "looking-for": "I am looking for..."
     },
-    "progress-tracker": {
-      "terrestrial-data-disclaimer-dialog-title": "Terrestrial Conservation Coverage Data Disclaimer",
-      "terrestrial-data-disclaimer-dialog-content": "Protected area totals and trends in this dataset are derived from publicly available boundaries sourced from Protected Planet. However, some countries restrict the release of detailed protected area boundaries, leading to differences between our totals and those reported by the World Database on Protected Areas.<br></br><br></br>Due to these data restrictions, our protected area totals are lower both globally and in regions where boundaries are not publicly accessible.",
-      "i-understand": "I understand",
-      "important-notification": "Important notification"
-    },
+    "progress-tracker": {},
     "conservation-builder": {}
   },
   "containers": {
