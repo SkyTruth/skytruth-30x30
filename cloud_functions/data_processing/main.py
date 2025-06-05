@@ -134,19 +134,19 @@ def main(request: Request) -> tuple[str, int]:
                 download_protected_planet(verbose=verbose)
 
             case "generate_protected_areas_table":
-                generate_protected_areas_table(verbose=verbose)
+                _ = generate_protected_areas_table(verbose=verbose)
 
             case "generate_habitat_protection_table":
-                generate_habitat_protection_table(verbose=verbose)
+                _ = generate_habitat_protection_table(verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
-                generate_protection_coverage_stats_table(verbose=verbose)
+                _ = generate_protection_coverage_stats_table(verbose=verbose)
 
             case "generate_marine_protection_level_stats_table":
-                generate_marine_protection_level_stats_table(verbose=verbose)
+                _ = generate_marine_protection_level_stats_table(verbose=verbose)
 
             case "generate_fishing_protection_table":
-                generate_fishing_protection_table(verbose=verbose)
+                _ = generate_fishing_protection_table(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")

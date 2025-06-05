@@ -109,6 +109,7 @@ ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_coun
 WDPA_GLOBAL_LEVEL_FILE_NAME = "raw/WDPA_global_level.csv"
 ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_global_level.csv"
 WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_download"
+WDPA_MPA_FILE_NAME = "raw/WDPA_marine_protected_areas.geojson"
 
 
 # ------------------------------------------------------------
