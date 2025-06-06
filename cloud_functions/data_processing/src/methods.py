@@ -1,4 +1,3 @@
-import fsspec
 from io import BytesIO
 import numpy as np
 import os
@@ -7,18 +6,13 @@ import pandas as pd
 import requests
 import gcsfs
 import zipfile
-import io
 import fiona
 import geopandas as gpd
-from shapely.geometry import box, Polygon, MultiPolygon, GeometryCollection
+from shapely.geometry import box
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from shapely.strtree import STRtree
-import tempfile
 from tqdm.auto import tqdm
-
-import shutil
-from pathlib import Path
 
 from src.params import (
     CHUNK_SIZE,
@@ -41,7 +35,6 @@ from src.params import (
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_URL,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
-    WDPA_MPA_FILE_NAME,
     ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
     HABITATS_URL,
@@ -69,14 +62,13 @@ from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,
     read_dataframe,
     read_json_from_gcs,
-    read_json_df,
     save_file_bucket,
     upload_dataframe,
     upload_gdf,
     save_json_to_gcs,
 )
 
-from utils.processors import (
+from src.utils.processors import (
     add_constants,
     add_environment,
     add_protected_from_fishing_area,
@@ -95,6 +87,10 @@ from utils.processors import (
     rename_habitats,
     update_mpatlas_asterisk,
 )
+
+from src.commons import load_marine_regions, extract_polygons
+
+from src.habitats import create_seamounts_subtable, create_mangroves_subtable
 
 
 verbose = True
@@ -119,16 +115,6 @@ def safe_union(df, batch_size=1000, simplify_tolerance=1000):
     return unary_union(parts)
 
 
-def extract_polygons(geom):
-    if isinstance(geom, (Polygon, MultiPolygon)):
-        return geom
-    elif isinstance(geom, GeometryCollection):
-        polys = [g for g in geom.geoms if isinstance(g, (Polygon, MultiPolygon))]
-        return MultiPolygon(polys) if polys else None
-    else:
-        return None
-
-
 def load_mpatlas_country(
     bucket: str = BUCKET, mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME
 ):
@@ -138,19 +124,6 @@ def load_mpatlas_country(
     df["wdpa_marine_km2"] = df["wdpa_marine_km2"].apply(pd.to_numeric, errors="coerce")
 
     return df
-
-
-def preprocess_marine_protected_areas(
-    mpa_file_name: str = WDPA_MPA_FILE_NAME, bucket: str = BUCKET
-):
-    protected_areas = get_protected_areas()
-    marine_protected_areas = protected_areas[protected_areas["MARINE"].isin(["1", "2"])]
-    marine_protected_areas = marine_protected_areas.rename(
-        columns={"WDPAID": "wdpa_id", "PARENT_ISO3": "location"}
-    )
-    marine_protected_areas = marine_protected_areas[["wdpa_id", "location", "geometry"]]
-
-    upload_gdf(bucket, marine_protected_areas, mpa_file_name, PROJECT, True, timeout=600)
 
 
 def load_wdpa_global(
@@ -232,78 +205,6 @@ def download_and_duplicate_zipfile(
         print(f"downloading {url} to gs://{bucket}/{archive_blob_name}")
     download_zip_to_gcs(url, bucket, archive_blob_name, chunk_size=chunk_size, verbose=verbose)
     duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
-
-
-def load_marine_regions(params: dict, bucket: str = BUCKET):
-    zipfile_name = params["zipfile_name"]
-    shp_filename = f"{params['name'].rsplit('.',1)[0]}/{params['shapefile_name']}"
-
-    gcs_zip_path = f"gs://{bucket}/{zipfile_name}"
-    shp_base_name = shp_filename.rsplit(".", 1)[0]
-
-    with fsspec.open(gcs_zip_path, mode="rb") as f:
-        zip_bytes = f.read()
-        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
-            with tempfile.NamedTemporaryFile(suffix=".zip") as tmp_zip_file:
-                with zipfile.ZipFile(tmp_zip_file.name, mode="w") as new_zip:
-                    for file in zf.namelist():
-                        if file.startswith(shp_base_name):
-                            new_zip.writestr(file, zf.read(file))
-
-                # Build the correct path into the .shp file inside the zip
-                internal_shp_path = shp_base_name + ".shp"
-                zip_path = f"zip://{tmp_zip_file.name}!{internal_shp_path}"
-                gdf = gpd.read_file(zip_path).pipe(clean_geometries)
-
-    return gdf
-
-
-def adjust_eez_sovereign(eez, parent_country):
-    def eez_location(row, parent_country):
-        loc = row["ISO_TER1"] if isinstance(row["ISO_TER1"], str) else row["ISO_SOV1"]
-        return parent_country[loc] if loc in parent_country else loc
-
-    eez_adj = eez[["GEONAME", "ISO_TER1", "ISO_SOV1", "AREA_KM2", "geometry"]]
-    eez_adj["location"] = eez_adj.apply(eez_location, axis=1, args=(parent_country,))
-
-    return eez_adj
-
-
-def get_protected_areas(
-    bucket: str = BUCKET, wdpa_file_name: str = WDPA_FILE_NAME, verbose: bool = True
-):
-    fs = gcsfs.GCSFileSystem()
-    gcs_path = f"gs://{bucket}/{wdpa_file_name}"
-
-    if verbose:
-        print(f"downloading {gcs_path}")
-    with tempfile.TemporaryDirectory() as tmpdir:
-        local_zip_path = Path(tmpdir) / "gdb.zip"
-        local_extract_path = Path(tmpdir) / "gdb_extracted"
-
-        # Download zip from GCS
-        with fs.open(gcs_path, "rb") as remote_file, open(local_zip_path, "wb") as local_file:
-            shutil.copyfileobj(remote_file, local_file)
-
-        # Extract the zip file
-        shutil.unpack_archive(local_zip_path, local_extract_path)
-
-        # Find the GDB folder inside
-        gdb_dirs = list(local_extract_path.glob("*.gdb"))
-        if not gdb_dirs:
-            raise FileNotFoundError("No .gdb directory found after extraction.")
-        gdb_path = gdb_dirs[0]  # Assuming only one .gdb folder
-
-        if verbose:
-            print("loading layers")
-
-        layers = fiona.listlayers(gdb_path)
-        wdpa = gpd.GeoDataFrame()
-        for layer in layers:
-            print(layer)
-            wdpa = pd.concat((wdpa, gpd.read_file(gdb_path, layer=layer)), axis=0)
-
-    return wdpa
 
 
 def download_mpatlas_zone(
@@ -978,95 +879,6 @@ def create_habitat_subtable(
     return pd.concat(marine_habitats_group, axis=0, ignore_index=True)
 
 
-def create_seamounts_subtable(
-    seamounts_zipfile_name,
-    seamounts_shapefile_name,
-    bucket,
-    eez_params,
-    parent_country,
-    marine_protected_areas,
-    combined_regions,
-    verbose,
-):
-    def get_group_stats(df_eez, df_pa, loc, relations, global_seamount_area, hs_seamount_area):
-        if loc == "GLOB":
-            df_pa_group = df_pa[["PEAKID", "AREA2D"]].drop_duplicates()
-            total_area = global_seamount_area
-        else:
-            df_pa_group = df_pa[df_pa["location"].isin(relations[loc])][
-                ["PEAKID", "AREA2D"]
-            ].drop_duplicates()
-            if loc == "ABNJ":
-                total_area = hs_seamount_area
-            else:
-                df_eez_group = df_eez[df_eez["location"].isin(relations[loc])][
-                    ["PEAKID", "AREA2D"]
-                ].drop_duplicates()
-                total_area = df_eez_group["AREA2D"].sum()
-
-        protected_area = min(df_pa_group["AREA2D"].sum(), total_area)
-
-        return {
-            "location": loc,
-            "habitat": "seamounts",
-            "environment": "marine",
-            "protected_area": protected_area,
-            "total_area": total_area,
-            # "percent_protected": 100 * protected_area / total_area if total_area > 0 else np.nan,
-        }
-
-    if verbose:
-        print("loading seamounts")
-
-    seamounts = load_zipped_shapefile_from_gcs(
-        seamounts_zipfile_name, bucket, internal_shapefile_path=seamounts_shapefile_name
-    )
-
-    if verbose:
-        print("loading eezs")
-    eez = load_marine_regions(eez_params, bucket)
-    eez = adjust_eez_sovereign(eez, parent_country)
-
-    if verbose:
-        print("spatially joining seamounts with eezs and marine protected areas")
-
-    global_seamount_area = seamounts["AREA2D"].sum()
-
-    eez_joined = gpd.sjoin(
-        seamounts[["PEAKID", "AREA2D", "geometry"]],
-        eez[["GEONAME", "location", "geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-    high_seas_seamounts = eez_joined[eez_joined["index_right"].isna()]
-    eez_seamounts = eez_joined[eez_joined["index_right"].notna()]
-
-    marine_pa_joined = gpd.sjoin(
-        seamounts[["PEAKID", "AREA2D", "geometry"]],
-        marine_protected_areas[["wdpa_id", "location", "geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-    marine_pa_seamounts = marine_pa_joined[marine_pa_joined["index_right"].notna()]
-
-    global_seamount_area = seamounts["AREA2D"].sum()
-    hs_seamount_area = high_seas_seamounts["AREA2D"].sum()
-
-    return pd.DataFrame(
-        [
-            get_group_stats(
-                eez_seamounts,
-                marine_pa_seamounts,
-                cnt,
-                combined_regions,
-                global_seamount_area,
-                hs_seamount_area,
-            )
-            for cnt in combined_regions
-        ]
-    )
-
-
 def dissolve_multipolygons_only(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
     counts = gdf[key].value_counts()
 
@@ -1080,123 +892,6 @@ def dissolve_multipolygons_only(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> g
     return result
 
 
-def create_mangroves_subtable(
-    mpa,
-    combined_regions,
-    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
-    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
-    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
-    bucket: str = BUCKET,
-    verbose: bool = True,
-):
-    def get_group_stats(df, loc, relations, global_mangrove_area):
-        if loc == "GLOB":
-            df_group = df
-            total_area = global_mangrove_area
-        else:
-            df_group = df[df["location"].isin(relations[loc])]
-
-            # Ensure numeric conversion
-            total_area = df_group["total_mangrove_area_km2"].sum()
-
-        protected_area = df_group["protected_mangrove_area_km2"].sum()
-
-        return {
-            "location": loc,
-            "habitat": "mangroves",
-            "environment": "marine",
-            "protected_area": protected_area,
-            "total_area": total_area,
-            # "percent_protected": 100 * protected_area / total_area if total_area else None,
-        }
-
-    # TODO: using eez/land union instead of eez, which may miss some coastal regions where
-    # mangroves are. However, several regions are listed under ISO_TER1 = None, most notably,
-    # Alaska, which doesn't matter for mangroves, but there are also tropical areas missing
-    # including Hawaii. Need to find a way to stick them together
-    if verbose:
-        print("loading eez/land union")
-    country_union = (
-        load_marine_regions(eez_land_union_params, bucket)[["ISO_TER1", "geometry"]]
-        .rename(columns={"ISO_TER1": "location"})
-        .pipe(clean_geometries)
-    )
-
-    if verbose:
-        print("loading pre-processed mangroves")
-    mangroves_by_country = read_json_df(bucket, mangroves_by_country_file_name, verbose=True).pipe(
-        clean_geometries
-    )
-    global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)["global_area"]
-
-    if verbose:
-        print("Updating CRS to EPSG:6933 (equal-area for geometry ops)")
-    crs = "EPSG:6933"
-    country_union_reproj = country_union.to_crs(crs).pipe(clean_geometries)
-    mpa_reproj = mpa.to_crs(crs).pipe(clean_geometries)
-
-    if verbose:
-        print("getting protected mangrove area by country")
-    protected_mangroves = []
-    for cnt in tqdm(list(sorted(set(country_union_reproj["location"].dropna())))):
-        country_geom = make_valid(
-            extract_polygons(
-                unary_union(country_union_reproj[country_union_reproj["location"] == cnt].geometry)
-            )
-        )
-
-        country_mangroves = mangroves_by_country[mangroves_by_country["country"] == cnt]
-        if len(country_mangroves) > 0:
-            mangrove_geom = country_mangroves.iloc[0]["geometry"]
-            country_mangrove_area_km2 = country_mangroves.iloc[0]["mangrove_area_km2"]
-
-            # Get MPA features in country and clip
-            country_pas = mpa_reproj[mpa_reproj["location"] == cnt]
-            country_pas = gpd.clip(country_pas, country_geom)
-            country_pas = country_pas[
-                ~country_pas.geometry.is_empty & country_pas.geometry.is_valid
-            ]
-            geom_list = [g for g in country_pas.geometry if isinstance(g, (Polygon, MultiPolygon))]
-
-            if not geom_list:
-                pa_geom = None
-            else:
-                pa_geom = make_valid(unary_union(geom_list))
-            pa_geom = make_valid(unary_union(country_pas.geometry))
-
-            pa_mangrove_area_km2 = mangrove_geom.intersection(pa_geom).area / 1e6
-
-            protected_mangroves.append(
-                {
-                    "location": cnt,
-                    "total_mangrove_area_km2": country_mangrove_area_km2,
-                    "protected_mangrove_area_km2": pa_mangrove_area_km2,
-                }
-            )
-
-    protected_mangroves = pd.DataFrame(protected_mangroves)
-    protected_mangroves["percent_protected"] = (
-        100
-        * protected_mangroves["protected_mangrove_area_km2"]
-        / protected_mangroves["total_mangrove_area_km2"]
-    )
-
-    mangrove_habitat = pd.DataFrame(
-        [
-            stat
-            for loc in combined_regions
-            if (
-                stat := get_group_stats(
-                    protected_mangroves, loc, combined_regions, global_mangrove_area
-                )
-            )
-            is not None
-        ]
-    )
-
-    return mangrove_habitat[mangrove_habitat["total_area"] > 0]
-
-
 def generate_habitat_protection_table(
     eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
     habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
@@ -1204,6 +899,7 @@ def generate_habitat_protection_table(
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
+    wdpa_file_name: str = WDPA_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
     eez_params: dict = EEZ_PARAMS,
     bucket: str = BUCKET,
@@ -1217,7 +913,7 @@ def generate_habitat_protection_table(
     if verbose:
         print("getting protected areas (this may take a few minutes)")
 
-    protected_areas = get_protected_areas()
+    protected_areas = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
 
     if verbose:
         print("dissolving over protected areas")
