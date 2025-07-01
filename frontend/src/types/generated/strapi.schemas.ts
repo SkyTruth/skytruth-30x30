@@ -1802,6 +1802,7 @@ export interface ProtectionCoverageStat {
   oecms?: number;
   is_last_year?: boolean;
   global_contribution?: number;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: ProtectionCoverageStatCreatedBy;
@@ -2371,6 +2372,7 @@ export type ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsD
     oecms?: number;
     is_last_year?: boolean;
     global_contribution?: number;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: ProtectionCoverageStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy;
@@ -2382,6 +2384,7 @@ export type ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStats
   area?: number;
   percentage?: number;
   location?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: ProtectionCoverageStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
@@ -2550,6 +2553,7 @@ export type ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelSt
     fishing_protection_level?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel;
     area?: number;
     pct?: number;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: ProtectionCoverageStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy;
@@ -3247,6 +3251,7 @@ export type PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverage
     oecms?: number;
     is_last_year?: boolean;
     global_contribution?: number;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: PaChildrenDataItemAttributesLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy;
@@ -3318,6 +3323,7 @@ export type PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLeve
     area?: number;
     percentage?: number;
     location?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: PaChildrenDataItemAttributesLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
@@ -3473,6 +3479,7 @@ export type PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionL
     fishing_protection_level?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel;
     area?: number;
     pct?: number;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: PaChildrenDataItemAttributesLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy;
@@ -4010,6 +4017,7 @@ export interface MpaaProtectionLevelStat {
   area: number;
   percentage?: number;
   location?: MpaaProtectionLevelStatLocation;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: MpaaProtectionLevelStatCreatedBy;
@@ -4455,6 +4463,7 @@ export type MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStats
     oecms?: number;
     is_last_year?: boolean;
     global_contribution?: number;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: MpaaProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy;
@@ -4582,6 +4591,7 @@ export type MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStat
   area?: number;
   percentage?: number;
   location?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: MpaaProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
@@ -4664,6 +4674,7 @@ export type MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelS
     fishing_protection_level?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel;
     area?: number;
     pct?: number;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: MpaaProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy;
@@ -6441,6 +6452,7 @@ export type LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttri
   oecms?: number;
   is_last_year?: boolean;
   global_contribution?: number;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: LocationGroupsDataItemAttributesProtectionCoverageStatsDataItemAttributesCreatedBy;
@@ -6510,6 +6522,7 @@ export type LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttribut
   area?: number;
   percentage?: number;
   location?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: LocationGroupsDataItemAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
@@ -6657,6 +6670,7 @@ export type LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemA
   fishing_protection_level?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel;
   area?: number;
   pct?: number;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: LocationGroupsDataItemAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy;
@@ -8230,6 +8244,7 @@ export type HabitatStatLocationDataAttributesProtectionCoverageStatsDataItemAttr
   oecms?: number;
   is_last_year?: boolean;
   global_contribution?: number;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: HabitatStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy;
@@ -8241,6 +8256,7 @@ export type HabitatStatLocationDataAttributesMpaaProtectionLevelStatsDataAttribu
   area?: number;
   percentage?: number;
   location?: HabitatStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: HabitatStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
@@ -8402,6 +8418,7 @@ export type HabitatStatLocationDataAttributesFishingProtectionLevelStatsDataItem
   fishing_protection_level?: HabitatStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel;
   area?: number;
   pct?: number;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: HabitatStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy;
@@ -8982,6 +8999,7 @@ export interface FishingProtectionLevelStat {
   fishing_protection_level?: FishingProtectionLevelStatFishingProtectionLevel;
   area: number;
   pct?: number;
+  total_area?: string;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: FishingProtectionLevelStatCreatedBy;
@@ -9466,6 +9484,7 @@ export type FishingProtectionLevelStatLocationDataAttributesProtectionCoverageSt
     oecms?: number;
     is_last_year?: boolean;
     global_contribution?: number;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: FishingProtectionLevelStatLocationDataAttributesProtectionCoverageStatsDataItemAttributesCreatedBy;
@@ -9642,6 +9661,7 @@ export type FishingProtectionLevelStatLocationDataAttributesMpaaProtectionLevelS
     area?: number;
     percentage?: number;
     location?: FishingProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesLocation;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: FishingProtectionLevelStatLocationDataAttributesMpaaProtectionLevelStatsDataAttributesCreatedBy;
@@ -9730,6 +9750,7 @@ export type FishingProtectionLevelStatLocationDataAttributesFishingProtectionLev
     fishing_protection_level?: FishingProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesFishingProtectionLevel;
     area?: number;
     pct?: number;
+    total_area?: string;
     createdAt?: string;
     updatedAt?: string;
     createdBy?: FishingProtectionLevelStatLocationDataAttributesFishingProtectionLevelStatsDataItemAttributesCreatedBy;
@@ -10032,6 +10053,7 @@ export type FishingProtectionLevelStatRequestData = {
   fishing_protection_level?: FishingProtectionLevelStatRequestDataFishingProtectionLevel;
   area: number;
   pct?: number;
+  total_area?: string;
 };
 
 export type FishingProtectionLevelResponseMeta = { [key: string]: any };

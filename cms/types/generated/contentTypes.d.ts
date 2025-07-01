@@ -1306,6 +1306,7 @@ export interface ApiFishingProtectionLevelStatFishingProtectionLevelStat
         min: 0;
       }>;
     pct: Attribute.Float;
+    total_area: Attribute.BigInteger;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1834,6 +1835,7 @@ export interface ApiMpaaProtectionLevelStatMpaaProtectionLevelStat
       'oneToOne',
       'api::location.location'
     >;
+    total_area: Attribute.BigInteger;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1967,6 +1969,7 @@ export interface ApiProtectionCoverageStatProtectionCoverageStat
     oecms: Attribute.Decimal;
     is_last_year: Attribute.Boolean & Attribute.DefaultTo<false>;
     global_contribution: Attribute.Decimal;
+    total_area: Attribute.BigInteger;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<

@@ -695,7 +695,8 @@
           "location",
           "fishing_protection_level",
           "area",
-          "pct"
+          "pct",
+          "total_area"
         ]
       },
       "conditions": [],
@@ -716,7 +717,8 @@
           "location",
           "fishing_protection_level",
           "area",
-          "pct"
+          "pct",
+          "total_area"
         ]
       },
       "conditions": [],
@@ -730,7 +732,8 @@
           "location",
           "fishing_protection_level",
           "area",
-          "pct"
+          "pct",
+          "total_area"
         ]
       },
       "conditions": [],
@@ -1286,7 +1289,8 @@
           "mpaa_protection_level",
           "area",
           "percentage",
-          "location"
+          "location",
+          "total_area"
         ]
       },
       "conditions": [],
@@ -1307,7 +1311,8 @@
           "mpaa_protection_level",
           "area",
           "percentage",
-          "location"
+          "location",
+          "total_area"
         ]
       },
       "conditions": [],
@@ -1321,7 +1326,8 @@
           "mpaa_protection_level",
           "area",
           "percentage",
-          "location"
+          "location",
+          "total_area"
         ]
       },
       "conditions": [],
@@ -1499,7 +1505,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [],
@@ -1526,7 +1533,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [],
@@ -1546,7 +1554,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [],
