@@ -90,8 +90,8 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             }
             
             let { year } = ctx.params;
-            year = +year
-            const errors = []
+            year = +year;
+            const errors = [];
             await strapi.db.transaction(async () => {
                 let locationMap: IDMap = null;
                 let environmentMap: IDMap = null;

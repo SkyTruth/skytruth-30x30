@@ -22,8 +22,8 @@ export default factories
           .getStatsMap();
 
           for  (const stat of data) {
-            const { area, percentage } = stat;
-            const statKey = `${stat.location}-${stat.mpaa_protection_level}`
+            const { area, percentage, total_area } = stat;
+            const statKey = `${stat.location}-${stat.mpaa_protection_level}`;
 
             // No existing record, create a new one
             if (!statsMap[statKey]) {
@@ -55,6 +55,7 @@ export default factories
                   data: {
                     area,
                     percentage,
+                    total_area,
                     location: locationMap[stat.location],
                     mpaa_protection_level: MpaaProtectionLevelMap[stat.mpaa_protection_level],
                   },
@@ -69,6 +70,7 @@ export default factories
                   data: {
                     area,
                     percentage,
+                    total_area,
                   },
                 }
               );
