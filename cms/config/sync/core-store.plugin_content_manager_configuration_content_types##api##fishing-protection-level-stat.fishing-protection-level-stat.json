@@ -78,6 +78,20 @@
           "sortable": true
         }
       },
+      "total_area": {
+        "edit": {
+          "label": "total_area",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "total_area",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -162,6 +176,10 @@
           },
           {
             "name": "pct",
+            "size": 4
+          },
+          {
+            "name": "total_area",
             "size": 4
           }
         ]

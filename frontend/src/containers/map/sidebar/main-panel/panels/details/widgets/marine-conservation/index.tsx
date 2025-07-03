@@ -45,7 +45,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       'pagination[limit]': -1,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      fields: ['year', 'protected_area', 'updatedAt', 'coverage'],
+      fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
       filters: {
         location: {
           code: {
@@ -77,14 +77,16 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       const entries = groupedByYear[year];
       const protectedArea = entries[0].attributes.protected_area;
       const coverage = entries[0].attributes.coverage;
+      const totalArea = entries[0].attributes.total_area ?? location.total_marine_area;
 
       return {
         year: Number(year),
         protectedArea,
         coverage,
+        totalArea,
       };
     });
-  }, [data]);
+  }, [data, location]);
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -116,8 +118,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const stats = useMemo(() => {
     if (!aggregatedData.length) return null;
 
-    const totalArea = Number(location.total_marine_area);
-    const { protectedArea } = aggregatedData[aggregatedData.length - 1];
+    const { protectedArea, totalArea } = aggregatedData[aggregatedData.length - 1];
     const percentage =
       aggregatedData[aggregatedData.length - 1].coverage ?? (protectedArea / totalArea) * 100;
     const percentageFormatted = formatPercentage(locale, percentage, {
@@ -141,7 +142,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
     const data = aggregatedData.map((entry, index) => {
       const isLastYear = index + 1 === aggregatedData.length;
       const { year, protectedArea, coverage } = entry;
-      const percentage = coverage ?? (protectedArea * 100) / Number(location.total_marine_area);
+      const percentage = coverage ?? (protectedArea * 100) / Number(entry.totalArea);
 
       return {
         // We only want to show up to 55%, so we'll cap the percentage here
@@ -149,14 +150,14 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
         percentage: percentage > 55 ? 55 : percentage,
         year,
         active: isLastYear,
-        totalArea: Number(location.total_marine_area),
+        totalArea: Number(entry.totalArea),
         protectedArea,
         future: false,
       };
     });
 
     return data;
-  }, [location, aggregatedData]);
+  }, [aggregatedData]);
 
   const noData = useMemo(() => {
     if (!chartData.length) {

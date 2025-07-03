@@ -22,7 +22,7 @@ export default factories
           .getFishingProtectionLevelStatsMap();
 
         for (const stat of data) {
-          const { area, pct } = stat;
+          const { area, pct, total_area } = stat;
           const statKey = `${stat.location}-${stat.fishing_protection_level}`;
 
           // No existing record, create a new one
@@ -57,6 +57,7 @@ export default factories
                 data: {
                   area,
                   pct,
+                  total_area,
                   location: locationMap[stat.location],
                   fishing_protection_level: fishingProtectionLevelMap[stat.fishing_protection_level],
                 },
@@ -68,7 +69,7 @@ export default factories
               'api::fishing-protection-level-stat.fishing-protection-level-stat',
               statsMap[statKey],
               {
-                data: { area, pct },
+                data: { area, pct, total_area },
               }
             );
           }

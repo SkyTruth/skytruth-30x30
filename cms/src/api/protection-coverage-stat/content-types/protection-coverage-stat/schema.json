@@ -59,6 +59,10 @@
     },
     "global_contribution": {
       "type": "decimal"
+    },
+    "total_area": {
+      "type": "biginteger",
+      "required": false
     }
   }
 }

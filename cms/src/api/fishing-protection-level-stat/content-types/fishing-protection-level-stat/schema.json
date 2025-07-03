@@ -38,6 +38,9 @@
     },
     "pct": {
       "type": "float"
+    },
+    "total_area": {
+      "type": "biginteger"
     }
   }
 }
