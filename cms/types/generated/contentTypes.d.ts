@@ -1216,6 +1216,39 @@ export interface ApiEnvironmentEnvironment extends Schema.CollectionType {
   };
 }
 
+export interface ApiFeatureFlagFeatureFlag extends Schema.CollectionType {
+  collectionName: 'feature_flags';
+  info: {
+    singularName: 'feature-flag';
+    pluralName: 'feature-flags';
+    displayName: 'Feature Flags';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    feature: Attribute.String & Attribute.Required;
+    description: Attribute.Text;
+    date: Attribute.DateTime;
+    payload: Attribute.JSON;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::feature-flag.feature-flag',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::feature-flag.feature-flag',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiFishingProtectionLevelFishingProtectionLevel
   extends Schema.CollectionType {
   collectionName: 'fishing_protection_levels';
@@ -2139,6 +2172,7 @@ declare module '@strapi/types' {
       'api::data-tool-resource-type.data-tool-resource-type': ApiDataToolResourceTypeDataToolResourceType;
       'api::dataset.dataset': ApiDatasetDataset;
       'api::environment.environment': ApiEnvironmentEnvironment;
+      'api::feature-flag.feature-flag': ApiFeatureFlagFeatureFlag;
       'api::fishing-protection-level.fishing-protection-level': ApiFishingProtectionLevelFishingProtectionLevel;
       'api::fishing-protection-level-stat.fishing-protection-level-stat': ApiFishingProtectionLevelStatFishingProtectionLevelStat;
       'api::habitat.habitat': ApiHabitatHabitat;
