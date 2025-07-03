@@ -46,7 +46,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
       'pagination[pageSize]': 1,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      fields: ['year', 'protected_area', 'updatedAt', 'coverage'],
+      fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
       filters: {
         location: {
           code: {
@@ -75,8 +75,9 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
       year: Number(data[0].attributes.year),
       protectedArea: data[0].attributes.protected_area,
       coverage: data[0].attributes.coverage,
+      totalArea: Number(data[0]?.attributes.total_area ?? location.total_terrestrial_area),
     };
-  }, [data]);
+  }, [data, location]);
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -107,22 +108,20 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
 
   const stats = useMemo(() => {
     if (!aggregatedData) return null;
-
-    const totalArea = Number(location.total_terrestrial_area);
     const { protectedArea } = aggregatedData;
-    const percentage = aggregatedData.coverage ?? (protectedArea / totalArea) * 100;
+    const percentage = aggregatedData.coverage ?? (protectedArea / aggregatedData.totalArea) * 100;
     const percentageFormatted = formatPercentage(locale, percentage, {
       displayPercentageSign: false,
     });
     const protectedAreaFormatted = formatKM(locale, protectedArea);
-    const totalAreaFormatted = formatKM(locale, totalArea);
+    const totalAreaFormatted = formatKM(locale, aggregatedData.totalArea);
 
     return {
       protectedPercentage: percentageFormatted,
       protectedArea: protectedAreaFormatted,
       totalArea: totalAreaFormatted,
     };
-  }, [locale, location, aggregatedData]);
+  }, [locale, aggregatedData]);
 
   const noData = useMemo(() => {
     if (!aggregatedData) {
