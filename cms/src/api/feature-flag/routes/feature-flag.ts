@@ -4,4 +4,6 @@
 
 import { factories } from '@strapi/strapi';
 
-export default factories.createCoreRouter('api::feature-flag.feature-flag');
+export default factories.createCoreRouter('api::feature-flag.feature-flag', {
+   only: ['find']
+});

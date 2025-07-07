@@ -15,16 +15,21 @@ import { useSyncMapContentSettings } from '../sync-settings';
 import LayersPanel from './layers-panel';
 import MainPanel, { PANEL_TYPES } from './main-panel/panels';
 
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
+
 type MapSidebarProps = {
   type: (typeof PANEL_TYPES)[keyof typeof PANEL_TYPES];
 };
 
 const MapSidebar: FCWithMessages<MapSidebarProps> = ({ type }) => {
   const t = useTranslations('containers.map-sidebar');
-
+  
   const [{ showDetails }] = useSyncMapContentSettings();
   const [isSidebarOpen, setSidebarOpen] = useAtom(sidebarAtom);
   const [isLayersOpen, setLayersOpen] = useAtom(layersAtom);
+
+  const testDate = useFeatureFlag('test_date');
+  console.log('MapSidebar rendered with testDate:', testDate);
 
   // Visibility (main panel/toggle)
   const showSidebar = true;
