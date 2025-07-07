@@ -10390,8 +10390,9 @@ export type FeatureFlagResponseMeta = { [key: string]: any };
 export interface FeatureFlag {
   feature: string;
   description?: string;
-  date?: string;
   payload?: unknown;
+  active_on?: string;
+  archived?: boolean;
   createdAt?: string;
   updatedAt?: string;
   publishedAt?: string;
