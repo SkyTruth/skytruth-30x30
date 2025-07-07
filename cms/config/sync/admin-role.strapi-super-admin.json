@@ -694,8 +694,9 @@
         "fields": [
           "feature",
           "description",
-          "date",
-          "payload"
+          "payload",
+          "active_on",
+          "archived"
         ]
       },
       "conditions": [],
@@ -722,8 +723,9 @@
         "fields": [
           "feature",
           "description",
-          "date",
-          "payload"
+          "payload",
+          "active_on",
+          "archived"
         ]
       },
       "conditions": [],
@@ -736,8 +738,9 @@
         "fields": [
           "feature",
           "description",
-          "date",
-          "payload"
+          "payload",
+          "active_on",
+          "archived"
         ]
       },
       "conditions": [],

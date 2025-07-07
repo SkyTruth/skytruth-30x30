@@ -48,20 +48,6 @@
           "sortable": true
         }
       },
-      "date": {
-        "edit": {
-          "label": "date",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true
-        },
-        "list": {
-          "label": "date",
-          "searchable": true,
-          "sortable": true
-        }
-      },
       "payload": {
         "edit": {
           "label": "payload",
@@ -74,6 +60,34 @@
           "label": "payload",
           "searchable": false,
           "sortable": false
+        }
+      },
+      "active_on": {
+        "edit": {
+          "label": "active_on",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "active_on",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "archived": {
+        "edit": {
+          "label": "archived",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "archived",
+          "searchable": true,
+          "sortable": true
         }
       },
       "createdAt": {
@@ -140,7 +154,7 @@
         "id",
         "feature",
         "description",
-        "date"
+        "active_on"
       ],
       "edit": [
         [
@@ -155,14 +169,18 @@
         ],
         [
           {
-            "name": "date",
-            "size": 6
+            "name": "payload",
+            "size": 12
           }
         ],
         [
           {
-            "name": "payload",
-            "size": 12
+            "name": "active_on",
+            "size": 6
+          },
+          {
+            "name": "archived",
+            "size": 4
           }
         ]
       ]

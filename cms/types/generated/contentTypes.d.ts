@@ -1227,10 +1227,11 @@ export interface ApiFeatureFlagFeatureFlag extends Schema.CollectionType {
     draftAndPublish: true;
   };
   attributes: {
-    feature: Attribute.String & Attribute.Required;
+    feature: Attribute.String & Attribute.Required & Attribute.Unique;
     description: Attribute.Text;
-    date: Attribute.DateTime;
     payload: Attribute.JSON;
+    active_on: Attribute.DateTime;
+    archived: Attribute.Boolean & Attribute.DefaultTo<false>;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

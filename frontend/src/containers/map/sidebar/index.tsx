@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import Icon from '@/components/ui/icon';
 import { sidebarAtom, layersAtom } from '@/containers/map/store';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { cn } from '@/lib/classnames';
 import LayersIcon from '@/styles/icons/layers.svg';
 import { FCWithMessages } from '@/types';
@@ -15,15 +16,13 @@ import { useSyncMapContentSettings } from '../sync-settings';
 import LayersPanel from './layers-panel';
 import MainPanel, { PANEL_TYPES } from './main-panel/panels';
 
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
-
 type MapSidebarProps = {
   type: (typeof PANEL_TYPES)[keyof typeof PANEL_TYPES];
 };
 
 const MapSidebar: FCWithMessages<MapSidebarProps> = ({ type }) => {
   const t = useTranslations('containers.map-sidebar');
-  
+
   const [{ showDetails }] = useSyncMapContentSettings();
   const [isSidebarOpen, setSidebarOpen] = useAtom(sidebarAtom);
   const [isLayersOpen, setLayersOpen] = useAtom(layersAtom);

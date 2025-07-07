@@ -13,16 +13,21 @@
   "attributes": {
     "feature": {
       "type": "string",
-      "required": true
+      "required": true,
+      "unique": true
     },
     "description": {
       "type": "text"
     },
-    "date": {
-      "type": "datetime"
-    },
     "payload": {
       "type": "json"
+    },
+    "active_on": {
+      "type": "datetime"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
     }
   }
 }
