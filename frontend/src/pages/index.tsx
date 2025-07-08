@@ -34,6 +34,8 @@ import {
   StaticIndicatorListResponse,
   ProtectionCoverageStatListResponse,
 } from '@/types/generated/strapi.schemas';
+import { useGetFeatureFlags } from '@/types/generated/feature-flag';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 
 const STATIC_INDICATOR_MAPPING = {
   biodiversity: 'species-threatened-with-extinction',
@@ -115,11 +117,36 @@ const Home: FCWithMessages = ({
     [extractCoverateStats]
   );
 
+  const flagData = useFeatureFlag('test_date');
+  console.log("flagdata", flagData);
+  const breakky = (options: string[]) => {
+    return (
+      <ul className="list-disc pl-5">
+        {options.map((option, index) => (
+          <li key={index} className="mb-2">
+            {option}
+          </li>
+        ))}
+      </ul>
+    )
+  };
+
   return (
     <Layout theme="dark" hideLogo={true} hero={<Intro onScrollClick={handleIntroScrollClick} />}>
       <Sidebar sections={sections} activeSection={scrollActiveId} arrowColor={'orange'} />
       <Content>
         <Section ref={sections.services.ref}>
+          {flagData?.payload?.cereals ? (
+            <SectionTitle>
+              Breakfasts we reccomend for you!
+            </SectionTitle>
+            
+          ): null } 
+          {flagData?.payload?.cereals ? (
+            <SectionDescription>
+              {breakky(flagData?.payload?.cereals)}
+            </SectionDescription>
+          ) : null}
           <SectionTitle>{t('section-services-title')}</SectionTitle>
           <SectionDescription>{t.rich('section-services-description')}</SectionDescription>
           <SectionContent>

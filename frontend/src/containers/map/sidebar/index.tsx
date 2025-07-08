@@ -28,8 +28,8 @@ const MapSidebar: FCWithMessages<MapSidebarProps> = ({ type }) => {
   const [isLayersOpen, setLayersOpen] = useAtom(layersAtom);
 
   const testDate = useFeatureFlag('test_date');
-  const bad = useFeatureFlag('bad_feature_flag');
-  console.log('MapSidebar rendered with testDate:', testDate, "Bad feature flag:", bad);
+  // const bad = useFeatureFlag('bad_feature_flag');
+  console.log('MapSidebar rendered with testDate:', testDate);
 
   // Visibility (main panel/toggle)
   const showSidebar = true;
