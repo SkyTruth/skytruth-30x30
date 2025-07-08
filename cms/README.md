@@ -152,7 +152,7 @@ Feel free to check out the [Strapi GitHub repository](https://github.com/strapi/
 
 The Feature Flag table is intended to be updated from the cms back office and is meant to be used in the front end and within the API. The `find` endpoint for this resource is set up to return records, mainly a catch-all `payload` json blob, if the record is not `archived` and the date is determined to be active. The payload field can contain any kind of data to help programmatically control resources. Use of feature flags is meant to be temporary: for testing, feature releases, etc and flags should be archived after they are no longer in use.
 
-A note on date validity. If a feature flag record has an `active_on` date that feature will be returned if the current date is after the `active_on` date. This can be tested by spoofing the current date with either a query param of `runAsOf` or a request header of `run-as-of`. The request header is given preference if both are set and the value of either should be a string date of the format: `2026-07-12T21:32:42.532Z`
+A note on date validity. If a feature flag record has an `active_on` date that feature will be returned if the current date is after the `active_on` date. This can be tested by spoofing the current date with either a query param of `run-as-of` or a request header of `run-as-of`. The request header is given preference if both are set and the value of either should be a string date of the format: `2026-07-12T21:32:42.532Z`
 
 [backoffice]: #updating-models-via-the-backoffce
 [build]: #build

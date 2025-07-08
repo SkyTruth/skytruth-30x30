@@ -11,7 +11,7 @@ export default factories.createCoreController('api::feature-flag.feature-flag',
 
       // User defined runAsOf date preferentailly uses the header, then query, then defaults to now
       const runAsOf = header['run-as-of'] ? new Date(header['run-as-of']) 
-        : query.runAsOf ? new Date(query.runAsOf) : new Date();
+        : query['run-as-of'] ? new Date(query['run-as-of']) : new Date();
 
       // Getting all fields here ensures we have access to the active_at date
       query.fields = '*';

@@ -85,7 +85,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const [mapSettings] = useSyncMapSettings();
   const [mapLayers] = useSyncMapLayers();
   const [mapLayerSettings] = useSyncMapLayerSettings();
-  const [runAsOf] = useQueryState('runAsOf');
+  const [runAsOf] = useQueryState('run-as-of');
   const { query } = useRouter();
   const { locationCode = 'GLOB' } = query;
 
@@ -96,7 +96,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         href: {
           pathname: href,
           query: {
-            runAsOf,
+            'run-as-of': runAsOf,
             ...(preserveMapParams && {
               location: locationCode,
               mapParams: JSON.stringify({
@@ -126,7 +126,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
             <Link
               href={{
                 pathname: '/',
-                query: runAsOf ? { runAsOf } : '',
+                query: runAsOf ? { 'run-as-of': runAsOf } : '',
               }}
               className="-my-1.5 inline-block ring-offset-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
             >
