@@ -113,6 +113,10 @@ Tooltips and dictionary values for the dashboard:
 - mpaa-protection-level
 - protection-status
 
+General configurations
+
+- [feature-flag]
+
 ### Updating models via the backoffce
 
 Changes to the database need to be made via the Strapi backoffice locally. To do this, follow the [local config setup instructions][local-config-setup]. Then make your changes in the [local backoffice][local_backoffice]. This will update the corresponding files in the this directory. Merging these changes to the `develop` brach migrate the changes to the staging database and similarly for merges to `main` and the production database
@@ -144,9 +148,16 @@ Examples of configuration under config-sync are user and admin role permissions,
 
 Feel free to check out the [Strapi GitHub repository](https://github.com/strapi/strapi). Your feedback and contributions are welcome!
 
+## Feature Flags
+
+The Feature Flag table is intended to be updated from the cms back office and is meant to be used in the front end and within the API. The `find` endpoint for this resource is set up to return records, mainly a catch-all `payload` json blob, if the record is not `archived` and the date is determined to be active. The payload field can contain any kind of data to help programmatically control resources. Use of feature flags is meant to be temporary: for testing, feature releases, etc and flags should be archived after they are no longer in use.
+
+A note on date validity. If a feature flag record has an `active_on` date that feature will be returned if the current date is after the `active_on` date. This can be tested by spoofing the current date with either a query param of `runAsOf` or a request header of `run-as-of`. The request header is given preference if both are set and the value of either should be a string date of the format: `2026-07-12T21:32:42.532Z`
+
 [backoffice]: #updating-models-via-the-backoffce
 [build]: #build
 [data]: ../data/README.md
+[feature-flag]: #feature-flags
 [infrastructure]: ../infrastructure/README.md
 [local_backoffice]: http://localhost:1337/admin/
 [start]: #start
