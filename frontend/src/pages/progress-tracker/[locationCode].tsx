@@ -39,10 +39,13 @@ ProgressTrackerPage.messages = ['pages.progress-tracker', ...MapLayout.messages]
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { query } = context;
-  const { locationCode = 'GLOB', location, mapParams = null } = query;
+  const { locationCode = 'GLOB', location, mapParams = null, runAsOf } = query;
 
   if (mapParams) {
-    const searchParams = mapParamsToSearchParams(mapParams);
+    let searchParams = mapParamsToSearchParams(mapParams);
+    if (runAsOf) {
+      searchParams += `&runAsOf=${runAsOf}`;
+    }
     const target = `/${context.locale}/${PAGES.progressTracker}/${location}?${searchParams}`;
 
     return {

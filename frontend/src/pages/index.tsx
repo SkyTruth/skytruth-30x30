@@ -16,7 +16,6 @@ import SubSection, {
 } from '@/components/static-pages/sub-section';
 import Intro from '@/containers/homepage/intro';
 import LinkCards from '@/containers/homepage/link-cards';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useScrollSpy from '@/hooks/use-scroll-spy';
 import Layout, { Content, Sidebar } from '@/layouts/static-page';
 import { fetchTranslations } from '@/lib/i18n';
@@ -116,31 +115,11 @@ const Home: FCWithMessages = ({
     [extractCoverateStats]
   );
 
-  const flagData = useFeatureFlag('test_date') as { active: boolean, cereals: string[] } | null;
-  console.log('flagdata', flagData);
-  const breakky = (options: string[]) => {
-    return (
-      <ul className="list-disc pl-5">
-        {options.map((option, index) => (
-          <li key={index} className="mb-2">
-            {option}
-          </li>
-        ))}
-      </ul>
-    );
-  };
-
   return (
     <Layout theme="dark" hideLogo={true} hero={<Intro onScrollClick={handleIntroScrollClick} />}>
       <Sidebar sections={sections} activeSection={scrollActiveId} arrowColor={'orange'} />
       <Content>
         <Section ref={sections.services.ref}>
-          {flagData?.active ? (
-            <SectionTitle>Breakfasts we reccomend for you!</SectionTitle>
-          ) : null}
-          {flagData?.cereals ? (
-            <SectionDescription>{breakky(flagData?.cereals)}</SectionDescription>
-          ) : null}
           <SectionTitle>{t('section-services-title')}</SectionTitle>
           <SectionDescription>{t.rich('section-services-description')}</SectionDescription>
           <SectionContent>

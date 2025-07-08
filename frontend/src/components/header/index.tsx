@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { VariantProps, cva } from 'class-variance-authority';
 import { Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useQueryState } from 'nuqs';
 
 import ActiveLink from '@/components/active-link';
 import Contact from '@/components/header/dropdowns/contact';
@@ -84,6 +85,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const [mapSettings] = useSyncMapSettings();
   const [mapLayers] = useSyncMapLayers();
   const [mapLayerSettings] = useSyncMapLayerSettings();
+  const [runAsOf] = useQueryState('runAsOf');
   const { query } = useRouter();
   const { locationCode = 'GLOB' } = query;
 
@@ -93,16 +95,17 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         name: name,
         href: {
           pathname: href,
-          ...(preserveMapParams && {
-            query: {
+          query: {
+            runAsOf,
+            ...(preserveMapParams && {
               location: locationCode,
               mapParams: JSON.stringify({
                 settings: mapSettings,
                 layers: mapLayers,
                 layerSettings: mapLayerSettings,
               }),
-            },
-          }),
+            }),
+          },
         },
         ...(preserveMapParams && {
           as: href,
@@ -110,7 +113,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         colorClassName: colorClassName,
       };
     });
-  }, [navigationItems, locationCode, mapSettings, mapLayers, mapLayerSettings]);
+  }, [navigationItems, locationCode, mapSettings, mapLayers, mapLayerSettings, runAsOf]);
 
   return (
     <header className={cn('border-b font-mono text-sm', headerVariants({ theme }))}>
@@ -121,7 +124,10 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         <span className="flex">
           {!hideLogo && (
             <Link
-              href="/"
+              href={{
+                pathname: '/',
+                query: runAsOf ? { runAsOf } : '',
+              }}
               className="-my-1.5 inline-block ring-offset-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
             >
               <Image

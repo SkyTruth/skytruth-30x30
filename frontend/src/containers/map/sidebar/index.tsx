@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import Icon from '@/components/ui/icon';
 import { sidebarAtom, layersAtom } from '@/containers/map/store';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { cn } from '@/lib/classnames';
 import LayersIcon from '@/styles/icons/layers.svg';
 import { FCWithMessages } from '@/types';
@@ -26,10 +25,6 @@ const MapSidebar: FCWithMessages<MapSidebarProps> = ({ type }) => {
   const [{ showDetails }] = useSyncMapContentSettings();
   const [isSidebarOpen, setSidebarOpen] = useAtom(sidebarAtom);
   const [isLayersOpen, setLayersOpen] = useAtom(layersAtom);
-
-  const testDate = useFeatureFlag('test_date');
-  // const bad = useFeatureFlag('bad_feature_flag');
-  console.log('MapSidebar rendered with testDate:', testDate);
 
   // Visibility (main panel/toggle)
   const showSidebar = true;
