@@ -35,7 +35,7 @@ export const useFeatureFlag = (flag: string): FeatureFlag['payload'] => {
         },
         queryKey: ['featureFlag', flag, runAsOf],
         staleTime: 'static',
-        refetchOnMount: false
+        refetchOnMount: false,
       },
     }
   );
