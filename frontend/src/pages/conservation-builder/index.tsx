@@ -29,10 +29,14 @@ ConservationBuilderPage.messages = ['pages.conservation-builder', ...MapLayout.m
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { query } = context;
-  const { mapParams = null } = query;
+  const { mapParams = null, 'run-as-of': runAsOf } = query;
 
   if (mapParams) {
-    const searchParams = mapParamsToSearchParams(mapParams);
+    let searchParams = mapParamsToSearchParams(mapParams);
+    if (runAsOf) {
+      searchParams += `&run-as-of=${runAsOf}`;
+    }
+
     const target = `/${context.locale}/${PAGES.conservationBuilder}/?${searchParams}`;
 
     return {
