@@ -20,21 +20,6 @@
           "sortable": true
         }
       },
-      "location": {
-        "edit": {
-          "label": "location",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true,
-          "mainField": "code"
-        },
-        "list": {
-          "label": "location",
-          "searchable": true,
-          "sortable": true
-        }
-      },
       "mpaa_protection_level": {
         "edit": {
           "label": "mpaa_protection_level",
@@ -74,6 +59,35 @@
         },
         "list": {
           "label": "percentage",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "location": {
+        "edit": {
+          "label": "location",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true,
+          "mainField": "code"
+        },
+        "list": {
+          "label": "location",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "total_area": {
+        "edit": {
+          "label": "total_area",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "total_area",
           "searchable": true,
           "sortable": true
         }
@@ -138,6 +152,12 @@
       }
     },
     "layouts": {
+      "list": [
+        "id",
+        "location",
+        "mpaa_protection_level",
+        "area"
+      ],
       "edit": [
         [
           {
@@ -158,13 +178,13 @@
             "name": "percentage",
             "size": 4
           }
+        ],
+        [
+          {
+            "name": "total_area",
+            "size": 4
+          }
         ]
-      ],
-      "list": [
-        "id",
-        "location",
-        "mpaa_protection_level",
-        "area"
       ]
     }
   },

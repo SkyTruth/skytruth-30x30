@@ -87,6 +87,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
     const parseProtectionLevelStats = (protectionLevelStats) => {
       const mpaaProtectionLevel = protectionLevelStats?.mpaa_protection_level?.data?.attributes;
       const location = protectionLevelStats?.location?.data?.attributes;
+      const totalArea = protectionLevelStats?.total_area ?? location?.total_marine_area;
 
       const barColor = PROTECTION_TYPES_CHART_COLORS[mpaaProtectionLevel?.slug];
 
@@ -94,8 +95,9 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
         title: mpaaProtectionLevel?.name,
         slug: mpaaProtectionLevel?.slug,
         background: barColor,
-        totalArea: Number(location?.total_marine_area),
+        totalArea: Number(totalArea),
         protectedArea: protectionLevelStats?.area,
+        percentage: protectionLevelStats?.percentage,
         info: metadata?.info,
         sources: metadata?.sources,
       };

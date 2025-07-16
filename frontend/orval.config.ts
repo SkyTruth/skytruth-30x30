@@ -59,6 +59,7 @@ module.exports = {
           'Static-indicator',
           'Contact-detail',
           'Environment',
+          'Feature-flag'
         ],
       },
     },

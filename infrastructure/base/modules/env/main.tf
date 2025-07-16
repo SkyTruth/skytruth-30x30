@@ -197,6 +197,7 @@ locals {
   cms_service       = "${upper(var.environment)}_CMS_SERVICE"
   client_service    = "${upper(var.environment)}_CLIENT_SERVICE"
   analysis_cf_name  = "${upper(var.environment)}_ANALYSIS_CF_NAME"
+  data_cf_name      = "${upper(var.environment)}_DATA_CF_NAME"
 }
 
 module "github_values" {
@@ -210,6 +211,7 @@ module "github_values" {
     (local.cms_service)       = module.backend_cloudrun.name
     (local.client_service)    = module.frontend_cloudrun.name
     (local.analysis_cf_name)  = module.analysis_cloud_function.function_name
+    (local.data_cf_name)      = module.data_pipes_cloud_function.function_name
     (local.cms_env_file)      = join("\n", [for key, value in local.cms_env : "${key}=${value}"])
     (local.client_env_file)   = join("\n", [for key, value in local.client_env : "${key}=${value}"])
   }
@@ -367,7 +369,7 @@ resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
 
 module "download_mpatlas_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "trigger-mpatlas-download-method"
+  name                     = "${var.project_name}-trigger-mpatlas-download-method"
   schedule                 = "0 8 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
@@ -381,7 +383,7 @@ module "download_mpatlas_scheduler" {
 
 module "download_protected_seas_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "trigger-protected-seas-download-method"
+  name                     = "${var.project_name}-trigger-protected-seas-download-method"
   schedule                 = "0 9 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
@@ -395,7 +397,7 @@ module "download_protected_seas_scheduler" {
 
 module "download_protected_planet_wdpa_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "trigger-wdpa-download-method"
+  name                     = "${var.project_name}-trigger-wdpa-download-method"
   schedule                 = "0 10 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email

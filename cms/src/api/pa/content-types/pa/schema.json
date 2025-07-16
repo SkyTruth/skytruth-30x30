@@ -93,6 +93,12 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::pa.pa"
+    },
+    "zone_id": {
+      "type": "biginteger"
+    },
+    "wdpa_p_id": {
+      "type": "string"
     }
   }
 }

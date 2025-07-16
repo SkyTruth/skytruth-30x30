@@ -12,7 +12,7 @@ import {
 
 import Logger from '../../../utils/Logger';
 
-const PROTECTION_COVERAGE_STAT_NAMESPACE = 'api::protection-coverage-stat.protection-coverage-stat';
+export const PROTECTION_COVERAGE_STAT_NAMESPACE = 'api::protection-coverage-stat.protection-coverage-stat';
 const DEFAULT_PAGE_SIZE = 25;
 
 export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE, ({ strapi }) => ({
@@ -80,6 +80,132 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
         } catch (error) {
             Logger.error('Error fetching protection coverage stat data: ' + error?.message, error);
             return ctx.badRequest('Error fetching protection coverage stat data');
+        }
+    },
+    async bulkUpsert(ctx) {
+        try {
+            const { data } = ctx.request?.body;
+            if (!Array.isArray(data)) {
+                return ctx.badRequest('Data must be an array');
+            }
+            
+            let { year } = ctx.params;
+            year = +year;
+            const errors = [];
+            await strapi.db.transaction(async () => {
+                let locationMap: IDMap = null;
+                let environmentMap: IDMap = null;
+
+                const statsMap: IDMap = await strapi
+                    .service(PROTECTION_COVERAGE_STAT_NAMESPACE)
+                    .getStatsMap(year);
+
+                for (const stat of data) {
+                    const { location, environment, ...attributes } = stat;
+                    if (!location || !environment) {
+                        Logger.error('Skipping stat without location or environment', stat);
+                        errors.push({
+                            message: 'Missing location or environment',
+                            stat
+                        });
+                        continue;
+                    }
+                    if (statsMap[`${stat.location}-${stat.environment}`]) {
+                        // Update existing stat
+                        const id = statsMap[`${location}-${environment}`];
+                        await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                            data: {
+                                ...attributes,
+                            },
+                        });
+                    } else {
+                        // Create new stat
+                        if (!locationMap) {
+                            locationMap = await strapi
+                                .service('api::location.location')
+                                .getLocationMap();
+                        }
+                        if (!locationMap[location]) {
+                            errors.push({
+                                message: `Location ${location} not found`,
+                            })
+                            continue;
+                        }
+                        if (!environmentMap) {
+                            environmentMap = await strapi
+                                .service('api::environment.environment')
+                                .getEnvironmentMap();
+                        }
+                        if (!environmentMap[environment]) {
+                            errors.push({
+                                message: `Environment ${environment} not found`,
+                            })
+                            continue;
+                        }
+                        const locationId = locationMap[location];
+                        const environmentId = environmentMap[environment];
+
+                        const { id } = await strapi.entityService.create(PROTECTION_COVERAGE_STAT_NAMESPACE, {
+                            data: {
+                                ...attributes,
+                                year,
+                                location: locationId,
+                                environment: environmentId
+                            },
+                        });
+                        const prevLastYear = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE, {
+                            filters: {
+                                is_last_year: true,
+                                location: {
+                                    code: {
+                                        $eq: location
+                                    }
+                                },
+                                environment: {
+                                    slug: {
+                                        $eq: environment
+                                    }
+                                }
+                                },
+                            fields: ['id', 'year'],
+                        }) as { id: number, year: number }[];
+
+                        // If multiple records are found taged as last_year, log and alert the user 
+                        if (prevLastYear.length > 1) {
+                            Logger.warn('Multiple last year records found for location and environment', {
+                                location,
+                                environment,
+                                prevLastYear
+                            });
+                            errors.push({
+                                message: `Multiple last year records found for location ${location} and environment ${environment}`,
+                            });
+
+                        } else if (prevLastYear.length === 0 && year === new Date().getFullYear()) {
+                        // If there is no previous last year record, set the new record as last year if it is the current year
+                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                                data: { is_last_year: true }
+                            });
+                        } else if (prevLastYear[0].year < year) {
+                            // If the new record is the most recent set is_last_year to true and unset it for the previous last year
+                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, prevLastYear[0].id, {
+                                data: { is_last_year: false }
+                            });
+
+                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                                data: { is_last_year: true }
+                            });
+                        }
+                    }
+                }  
+            });
+            return ctx.send({
+                message: 'Success',
+                errors: errors.length > 0 ? errors : null
+            });
+        } catch (error) {
+            Logger.error('Error in protection-coverage-stat bulkUpsert:', { error: error?.message });
+            return ctx.internalServerError('An internal error occured in bulkUpsert');
         }
     }
 }));

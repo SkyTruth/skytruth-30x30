@@ -1216,6 +1216,40 @@ export interface ApiEnvironmentEnvironment extends Schema.CollectionType {
   };
 }
 
+export interface ApiFeatureFlagFeatureFlag extends Schema.CollectionType {
+  collectionName: 'feature_flags';
+  info: {
+    singularName: 'feature-flag';
+    pluralName: 'feature-flags';
+    displayName: 'Feature Flags';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    feature: Attribute.String & Attribute.Required & Attribute.Unique;
+    description: Attribute.Text;
+    payload: Attribute.JSON;
+    active_on: Attribute.DateTime;
+    archived: Attribute.Boolean & Attribute.DefaultTo<false>;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::feature-flag.feature-flag',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::feature-flag.feature-flag',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiFishingProtectionLevelFishingProtectionLevel
   extends Schema.CollectionType {
   collectionName: 'fishing_protection_levels';
@@ -1306,6 +1340,7 @@ export interface ApiFishingProtectionLevelStatFishingProtectionLevelStat
         min: 0;
       }>;
     pct: Attribute.Float;
+    total_area: Attribute.BigInteger;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1834,6 +1869,7 @@ export interface ApiMpaaProtectionLevelStatMpaaProtectionLevelStat
       'oneToOne',
       'api::location.location'
     >;
+    total_area: Attribute.BigInteger;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -1918,6 +1954,8 @@ export interface ApiPaPa extends Schema.CollectionType {
         min: 0;
       }>;
     parent: Attribute.Relation<'api::pa.pa', 'oneToOne', 'api::pa.pa'>;
+    zone_id: Attribute.BigInteger;
+    wdpa_p_id: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<'api::pa.pa', 'oneToOne', 'admin::user'> &
@@ -1965,6 +2003,7 @@ export interface ApiProtectionCoverageStatProtectionCoverageStat
     oecms: Attribute.Decimal;
     is_last_year: Attribute.Boolean & Attribute.DefaultTo<false>;
     global_contribution: Attribute.Decimal;
+    total_area: Attribute.BigInteger;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -2134,6 +2173,7 @@ declare module '@strapi/types' {
       'api::data-tool-resource-type.data-tool-resource-type': ApiDataToolResourceTypeDataToolResourceType;
       'api::dataset.dataset': ApiDatasetDataset;
       'api::environment.environment': ApiEnvironmentEnvironment;
+      'api::feature-flag.feature-flag': ApiFeatureFlagFeatureFlag;
       'api::fishing-protection-level.fishing-protection-level': ApiFishingProtectionLevelFishingProtectionLevel;
       'api::fishing-protection-level-stat.fishing-protection-level-stat': ApiFishingProtectionLevelStatFishingProtectionLevelStat;
       'api::habitat.habitat': ApiHabitatHabitat;

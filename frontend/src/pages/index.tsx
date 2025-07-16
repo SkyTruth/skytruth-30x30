@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 import { GetServerSideProps } from 'next';
@@ -9,10 +9,11 @@ import Section, {
   SectionDescription,
   SectionContent,
 } from '@/components/static-pages/section';
-import StatsImage from '@/components/static-pages/stats-image';
-import TwoColSubsection from '@/components/static-pages/two-col-subsection';
-import EarthSurfaceCoverage from '@/containers/homepage/earth-surface-coverage';
-import InteractiveMap from '@/containers/homepage/interactive-map';
+import SubSection, {
+  SubSectionContent,
+  SubSectionDescription,
+  SubSectionTitle,
+} from '@/components/static-pages/sub-section';
 import Intro from '@/containers/homepage/intro';
 import LinkCards from '@/containers/homepage/link-cards';
 import useScrollSpy from '@/hooks/use-scroll-spy';
@@ -64,11 +65,6 @@ const Home: FCWithMessages = ({
       name: t('impact'),
       ref: useRef<HTMLDivElement>(null),
     },
-    context: {
-      id: 'context',
-      name: t('context'),
-      ref: useRef<HTMLDivElement>(null),
-    },
   };
 
   const scrollActiveId = useScrollSpy(Object.values(sections).map(({ id, ref }) => ({ id, ref })));
@@ -92,15 +88,32 @@ const Home: FCWithMessages = ({
     return indicators;
   }, [staticIndicators]);
 
-  const protectedOceanPercentage = useMemo(() => {
-    const protectionCoverageStatsData = protectionCoverageStats?.data;
+  const extractCoverateStats = useCallback(
+    (env: string) => {
+      const protectionCoverageStatsData = protectionCoverageStats?.data;
+      if (!protectionCoverageStatsData?.length) return null;
 
-    if (!protectionCoverageStatsData?.length) return null;
+      const stats = protectionCoverageStatsData.find(
+        (item) => item.attributes.environment?.data?.attributes?.slug === env
+      );
+      if (!stats) return null;
 
-    return formatPercentage(locale, protectionCoverageStatsData[0].attributes.coverage, {
-      displayPercentageSign: false,
-    });
-  }, [locale, protectionCoverageStats]);
+      return formatPercentage(locale, stats?.attributes?.coverage, {
+        displayPercentageSign: false,
+      });
+    },
+    [protectionCoverageStats, locale]
+  );
+
+  const protectedOceanPercentage = useMemo(
+    () => extractCoverateStats('marine'),
+    [extractCoverateStats]
+  );
+
+  const protectedLandPercentage = useMemo(
+    () => extractCoverateStats('terrestrial'),
+    [extractCoverateStats]
+  );
 
   return (
     <Layout theme="dark" hideLogo={true} hero={<Intro onScrollClick={handleIntroScrollClick} />}>
@@ -108,12 +121,7 @@ const Home: FCWithMessages = ({
       <Content>
         <Section ref={sections.services.ref}>
           <SectionTitle>{t('section-services-title')}</SectionTitle>
-          <SectionDescription>
-            {t.rich('section-services-description', {
-              b: (chunks) => <b>{chunks}</b>,
-              i: (chunks) => <i>{chunks}</i>,
-            })}
-          </SectionDescription>
+          <SectionDescription>{t.rich('section-services-description')}</SectionDescription>
           <SectionContent>
             <LinkCards />
           </SectionContent>
@@ -121,21 +129,17 @@ const Home: FCWithMessages = ({
 
         <Section ref={sections.impact.ref}>
           <SectionTitle>{t('section-impact-title')}</SectionTitle>
-
-          <TwoColSubsection
-            title={t('section-impact-subsection-1-title')}
-            itemNum={1}
-            itemTotal={3}
-            description={
+          <SubSection>
+            <SubSectionTitle>{t('section-impact-subsection-1-title')}</SubSectionTitle>
+            <SubSectionDescription>
               <>
                 <p>
                   {t.rich('section-impact-subsection-1-description-1', {
                     a1: (chunks) => (
                       <a
                         className="underline"
-                        href={indicators?.biodiversityTextLand?.source}
+                        href={indicators?.biodiversity?.source}
                         target="_blank"
-                        rel="noopener noreferrer"
                       >
                         {chunks}
                       </a>
@@ -143,102 +147,96 @@ const Home: FCWithMessages = ({
                     a2: (chunks) => (
                       <a
                         className="underline"
-                        href={indicators?.biodiversity?.source}
+                        href={indicators?.biodiversityTextLand?.source}
                         target="_blank"
-                        rel="noopener noreferrer"
                       >
                         {chunks}
                       </a>
                     ),
                     protectedOceanPercentage,
-                    protectedLandPercentage: indicators?.biodiversityTextLand?.value,
+                    protectedLandPercentage,
                     threatenedSpeciesPercentage: indicators?.biodiversity?.value,
                   })}
                 </p>
-                <p className="mt-4 font-bold">{t('section-impact-subsection-1-description-2')}</p>
               </>
-            }
-          />
+            </SubSectionDescription>
+            <SubSectionContent>
+              <p className="mt-4 font-bold">{t('section-impact-subsection-1-description-2')}</p>
+            </SubSectionContent>
+          </SubSection>
 
-          <StatsImage
-            value={indicators?.biodiversity?.value}
-            description={indicators?.biodiversity?.description}
-            sourceLink={indicators?.biodiversity?.source}
-            image="stats1"
-            valueSize="small"
-          />
-
-          <TwoColSubsection
-            title={t('section-impact-subsection-2-title')}
-            itemNum={2}
-            itemTotal={3}
-            description={
+          <SubSection borderTop={true}>
+            <SubSectionTitle>{t('section-impact-subsection-2-title')}</SubSectionTitle>
+            <SubSectionDescription>
               <>
-                <p>{t('section-impact-subsection-2-description-1')}</p>
+                <p>
+                  {t.rich('section-impact-subsection-2-description-1', {
+                    a1: (chunks) => (
+                      <a
+                        className="underline"
+                        href={indicators?.biodiversity?.source}
+                        target="_blank"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                    a2: (chunks) => (
+                      <a
+                        className="underline"
+                        href={indicators?.biodiversityTextLand?.source}
+                        target="_blank"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                  })}
+                </p>
+              </>
+              <SubSectionContent>
                 <p className="mt-4 font-bold">{t('section-impact-subsection-2-description-2')}</p>
-              </>
-            }
-          />
+              </SubSectionContent>
+            </SubSectionDescription>
+          </SubSection>
 
-          <StatsImage
-            value={indicators?.climate?.value}
-            description={indicators?.climate?.description}
-            sourceLink={indicators?.climate?.source}
-            image="stats2"
-          />
-
-          <TwoColSubsection
-            title={t('section-impact-subsection-3-title')}
-            itemNum={3}
-            itemTotal={3}
-            description={
+          <SubSection borderTop={true}>
+            <SubSectionTitle>{t('section-impact-subsection-3-title')}</SubSectionTitle>
+            <SubSectionDescription>
               <>
-                <p>{t('section-impact-subsection-3-description-1')}</p>
-                <p className="mt-4 font-bold">{t('section-impact-subsection-3-description-2')}</p>
+                <p>
+                  {t.rich('section-impact-subsection-3-description-1', {
+                    a1: (chunks) => (
+                      <a
+                        className="underline"
+                        href={indicators?.biodiversity?.source}
+                        target="_blank"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                    a2: (chunks) => (
+                      <a
+                        className="underline"
+                        href={indicators?.biodiversityTextLand?.source}
+                        target="_blank"
+                      >
+                        {chunks}
+                      </a>
+                    ),
+                  })}
+                </p>
               </>
-            }
-          />
-
-          <StatsImage
-            value={indicators?.livesLivelihoods?.value}
-            description={indicators?.livesLivelihoods?.description}
-            sourceLink={indicators?.livesLivelihoods?.source}
-            image="stats3"
-          />
-        </Section>
-
-        <Section ref={sections.context.ref}>
-          <SectionTitle>{t('section-context-title')}</SectionTitle>
-          <SectionContent>
-            <TwoColSubsection
-              title={t('section-context-subsection-1-title')}
-              description={t('section-context-subsection-1-description')}
-            >
-              <EarthSurfaceCoverage />
-            </TwoColSubsection>
-          </SectionContent>
-
-          <TwoColSubsection
-            title={t('section-context-subsection-2-title')}
-            description={t('section-context-subsection-2-description')}
-          />
-
-          <SectionContent className="mt-10">
-            <InteractiveMap />
-          </SectionContent>
+            </SubSectionDescription>
+            <SubSectionContent>
+              <p className="mt-4 font-bold">{t('section-impact-subsection-3-description-2')}</p>
+            </SubSectionContent>
+          </SubSection>
         </Section>
       </Content>
     </Layout>
   );
 };
 
-Home.messages = [
-  'pages.home',
-  ...Layout.messages,
-  ...Intro.messages,
-  ...LinkCards.messages,
-  ...EarthSurfaceCoverage.messages,
-];
+Home.messages = ['pages.home', ...Layout.messages, ...Intro.messages, ...LinkCards.messages];
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const queryClient = new QueryClient();
@@ -251,11 +249,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
       is_last_year: {
         $eq: true,
-      },
-      environment: {
-        slug: {
-          $eq: 'marine',
-        },
       },
     },
     populate: '*',

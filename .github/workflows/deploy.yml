@@ -183,7 +183,7 @@ jobs:
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}
         
-  deploy_cloud_functions:
+  deploy_analysis_cloud_functions:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -220,3 +220,41 @@ jobs:
           --gen2 \
           --region=${{ env.REGION }} \
           --source=./cloud_functions/analysis \
+
+  deploy_data_cloud_functions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
+      - name: Extract environment name
+        env:
+          ENVIRONMENT: ${{ steps.extract_branch.outputs.branch == 'main' && 'PRODUCTION' || 'STAGING' }}
+        run: echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+        id: extract_environment
+
+      - name: Google Auth
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.extract_environment.outputs.environment)] }}"
+          token_format: 'access_token'
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 516.0.0'
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
+      - name: 'Deploy to gen2 cloud function'
+        env:
+          CLOUD_FUNCTION_NAME: ${{ secrets[format('{0}_DATA_CF_NAME', steps.extract_environment.outputs.environment)] }}
+        run:  |
+          gcloud functions deploy  ${{ env.CLOUD_FUNCTION_NAME }} \
+          --gen2 \
+          --region=${{ env.REGION }} \
+          --source=./cloud_functions/data_processing \

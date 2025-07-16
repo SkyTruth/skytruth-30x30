@@ -1,17 +1,12 @@
 import { useMemo } from 'react';
 
-import { useAtom } from 'jotai';
-import { groupBy } from 'lodash-es';
 import { useLocale, useTranslations } from 'next-intl';
 
 import ConservationChart from '@/components/charts/conservation-chart';
 import { Button } from '@/components/ui/button';
-import Icon from '@/components/ui/icon';
 import Widget from '@/components/widget';
-import { terrestrialDataDisclaimerDialogAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { formatKM, formatPercentage } from '@/lib/utils/formats';
-import Notification from '@/styles/icons/notification.svg';
 import { FCWithMessages } from '@/types';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
@@ -32,8 +27,6 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
-  const [, setDisclaimerDialogOpen] = useAtom(terrestrialDataDisclaimerDialogAtom);
-
   const { data, isFetching } = useGetProtectionCoverageStats<
     ProtectionCoverageStatListResponseDataItem[]
   >(
@@ -49,11 +42,11 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
           fields: ['slug'],
         },
       },
-      sort: 'year:asc',
-      'pagination[limit]': -1,
+      sort: 'year:desc',
+      'pagination[pageSize]': 1,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      fields: ['year', 'protected_area', 'updatedAt'],
+      fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
       filters: {
         location: {
           code: {
@@ -77,20 +70,14 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   );
 
   const aggregatedData = useMemo(() => {
-    if (!data.length) return [];
-
-    const groupedByYear = groupBy(data, 'attributes.year');
-
-    return Object.keys(groupedByYear).map((year) => {
-      const entries = groupedByYear[year];
-      const protectedArea = entries[0].attributes.protected_area;
-
-      return {
-        year: Number(year),
-        protectedArea,
-      };
-    });
-  }, [data]);
+    if (!data.length) return null;
+    return {
+      year: Number(data[0].attributes.year),
+      protectedArea: data[0].attributes.protected_area,
+      coverage: data[0].attributes.coverage,
+      totalArea: Number(data[0]?.attributes.total_area ?? location.total_terrestrial_area),
+    };
+  }, [data, location]);
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -120,58 +107,28 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   );
 
   const stats = useMemo(() => {
-    if (!aggregatedData.length) return null;
-
-    const totalArea = Number(location.total_terrestrial_area);
-    const { protectedArea } = aggregatedData[aggregatedData.length - 1];
-    const percentageFormatted = formatPercentage(locale, (protectedArea / totalArea) * 100, {
+    if (!aggregatedData) return null;
+    const { protectedArea } = aggregatedData;
+    const percentage = aggregatedData.coverage ?? (protectedArea / aggregatedData.totalArea) * 100;
+    const percentageFormatted = formatPercentage(locale, percentage, {
       displayPercentageSign: false,
     });
     const protectedAreaFormatted = formatKM(locale, protectedArea);
-    const totalAreaFormatted = formatKM(locale, totalArea);
+    const totalAreaFormatted = formatKM(locale, aggregatedData.totalArea);
 
     return {
       protectedPercentage: percentageFormatted,
       protectedArea: protectedAreaFormatted,
       totalArea: totalAreaFormatted,
     };
-  }, [locale, location, aggregatedData]);
-
-  const chartData = useMemo(() => {
-    if (!aggregatedData.length) return [];
-
-    const data = aggregatedData.map((entry, index) => {
-      const isLastYear = index + 1 === aggregatedData.length;
-      const { year, protectedArea } = entry;
-      const percentage = (protectedArea * 100) / Number(location.total_terrestrial_area);
-
-      return {
-        // We only want to show up to 55%, so we'll cap the percentage here
-        // Some of the data seems incorrect; this is a quick fix in order to not blow the chart
-        percentage: percentage > 55 ? 55 : percentage,
-        year,
-        active: isLastYear,
-        totalArea: Number(location.total_terrestrial_area),
-        protectedArea,
-        future: false,
-      };
-    });
-
-    return data;
-  }, [location, aggregatedData]);
+  }, [locale, aggregatedData]);
 
   const noData = useMemo(() => {
-    if (!chartData.length) {
+    if (!aggregatedData) {
       return true;
     }
-
-    const emptyValues = chartData.every((d) => d.percentage === 0);
-    if (emptyValues) {
-      return true;
-    }
-
     return false;
-  }, [chartData]);
+  }, [aggregatedData]);
 
   return (
     <Widget
@@ -181,19 +138,6 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
       loading={isFetching}
       info={metadata?.info}
       sources={metadata?.sources}
-      tooltipExtraContent={
-        <Button
-          type="button"
-          variant="text-link"
-          size="sm"
-          className="-mt-3 block px-0 py-0 text-left text-xs font-bold normal-case text-red"
-          onClick={() => setDisclaimerDialogOpen(true)}
-        >
-          <Icon icon={Notification} className="mr-1.5 inline-block h-4 w-4" />
-
-          {t('data-disclaimer')}
-        </Button>
-      }
     >
       {stats && (
         <div className="mb-4 mt-6 flex flex-col">
@@ -214,12 +158,6 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
           </span>
         </div>
       )}
-      <ConservationChart
-        className="-ml-8 aspect-[16/10]"
-        tooltipSlug="30x30-terrestrial-target"
-        displayTarget={location?.code === 'GLOB'}
-        data={chartData}
-      />
       {tab !== 'terrestrial' && (
         <Button
           variant="white"

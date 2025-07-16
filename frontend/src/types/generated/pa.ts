@@ -4,10 +4,12 @@
  * DOCUMENTATION
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import type {
   UseQueryOptions,
+  UseMutationOptions,
   QueryFunction,
+  MutationFunction,
   UseQueryResult,
   QueryKey,
 } from '@tanstack/react-query';
@@ -16,10 +18,11 @@ import type {
   Error,
   GetPasParams,
   PaResponse,
+  PaRequest,
   GetPasIdParams,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
-import type { ErrorType } from '../../services/api/index';
+import type { ErrorType, BodyType } from '../../services/api/index';
 
 // eslint-disable-next-line
 type SecondParameter<T extends (...args: any) => any> = T extends (
@@ -84,6 +87,63 @@ export const useGetPas = <TData = Awaited<ReturnType<typeof getPas>>, TError = E
   return query;
 };
 
+export const postPas = (paRequest: BodyType<PaRequest>, options?: SecondParameter<typeof API>) => {
+  return API<PaResponse>(
+    {
+      url: `/pas`,
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' },
+      data: paRequest,
+    },
+    options
+  );
+};
+
+export const getPostPasMutationOptions = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postPas>>,
+    TError,
+    { data: BodyType<PaRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof postPas>>,
+  TError,
+  { data: BodyType<PaRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof postPas>>,
+    { data: BodyType<PaRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return postPas(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PostPasMutationResult = NonNullable<Awaited<ReturnType<typeof postPas>>>;
+export type PostPasMutationBody = BodyType<PaRequest>;
+export type PostPasMutationError = ErrorType<Error>;
+
+export const usePostPas = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postPas>>,
+    TError,
+    { data: BodyType<PaRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getPostPasMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};
 export const getPasId = (
   id: number,
   params?: GetPasIdParams,
@@ -143,4 +203,120 @@ export const useGetPasId = <
   query.queryKey = queryOptions.queryKey;
 
   return query;
+};
+
+export const putPasId = (
+  id: number,
+  paRequest: BodyType<PaRequest>,
+  options?: SecondParameter<typeof API>
+) => {
+  return API<PaResponse>(
+    {
+      url: `/pas/${id}`,
+      method: 'put',
+      headers: { 'Content-Type': 'application/json' },
+      data: paRequest,
+    },
+    options
+  );
+};
+
+export const getPutPasIdMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putPasId>>,
+    TError,
+    { id: number; data: BodyType<PaRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putPasId>>,
+  TError,
+  { id: number; data: BodyType<PaRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putPasId>>,
+    { id: number; data: BodyType<PaRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return putPasId(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PutPasIdMutationResult = NonNullable<Awaited<ReturnType<typeof putPasId>>>;
+export type PutPasIdMutationBody = BodyType<PaRequest>;
+export type PutPasIdMutationError = ErrorType<Error>;
+
+export const usePutPasId = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putPasId>>,
+    TError,
+    { id: number; data: BodyType<PaRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getPutPasIdMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};
+export const deletePasId = (id: number, options?: SecondParameter<typeof API>) => {
+  return API<number>({ url: `/pas/${id}`, method: 'delete' }, options);
+};
+
+export const getDeletePasIdMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePasId>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deletePasId>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePasId>>, { id: number }> = (
+    props
+  ) => {
+    const { id } = props ?? {};
+
+    return deletePasId(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeletePasIdMutationResult = NonNullable<Awaited<ReturnType<typeof deletePasId>>>;
+
+export type DeletePasIdMutationError = ErrorType<Error>;
+
+export const useDeletePasId = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deletePasId>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getDeletePasIdMutationOptions(options);
+
+  return useMutation(mutationOptions);
 };

@@ -38,6 +38,9 @@
       "relation": "oneToOne",
       "target": "api::location.location",
       "mappedBy": "mpaa_protection_level_stats"
+    },
+    "total_area": {
+      "type": "biginteger"
     }
   }
 }

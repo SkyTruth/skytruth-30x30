@@ -1547,7 +1547,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [
@@ -1578,7 +1579,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [
@@ -1600,7 +1602,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [

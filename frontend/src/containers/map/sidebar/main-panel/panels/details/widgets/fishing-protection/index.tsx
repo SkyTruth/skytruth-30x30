@@ -7,7 +7,7 @@ import Widget from '@/components/widget';
 import { FISHING_PROTECTION_CHART_COLORS } from '@/constants/fishing-protection-chart-colors';
 import { FCWithMessages } from '@/types';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import { useGetLocations } from '@/types/generated/location';
+import { useGetFishingProtectionLevelStats } from '@/types/generated/fishing-protection-level-stat';
 import type { LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schemas';
 
 type FishingProtectionWidgetProps = {
@@ -18,30 +18,27 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
 
-  // Get protection levels data for the location
   const {
-    data: { data: protectionLevelsData },
-    isFetching: isFetchingProtectionLevelsData,
-  } = useGetLocations(
+    data: { data: fishingProtectionLevelsData },
+    isFetching,
+  } = useGetFishingProtectionLevelStats(
     {
       filters: {
-        code: location?.code,
+        location: {
+          code: location?.code,
+        },
+        fishing_protection_level: {
+          slug: 'highly',
+        },
       },
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
-        fishing_protection_level_stats: {
-          filters: {
-            fishing_protection_level: {
-              slug: 'highly',
-            },
-          },
-          populate: {
-            fishing_protection_level: '*',
-          },
+        fields: ['area', 'pct', 'total_area', 'updatedAt'],
+        fishing_protection_level: {
+          fields: ['slug'],
         },
       },
-      'pagination[limit]': -1,
     },
     {
       query: {
@@ -82,33 +79,30 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
 
   // Parse data to display in the chart
   const widgetChartData = useMemo(() => {
-    if (!protectionLevelsData.length) return [];
-
+    if (!fishingProtectionLevelsData?.length) return [];
     const parsedProtectionLevel = (label: string, protectionLevel, stats) => {
       return {
         title: label,
-        slug: protectionLevel.slug,
-        background: FISHING_PROTECTION_CHART_COLORS[protectionLevel.slug],
-        totalArea: stats?.totalArea,
-        protectedArea: stats?.area,
+        slug: protectionLevel,
+        background: FISHING_PROTECTION_CHART_COLORS[protectionLevel],
+        totalArea: stats.total_area ?? location?.total_marine_area,
+        protectedArea: stats.area,
+        percentage: stats.pct,
         info: metadata?.info,
         sources: metadata?.sources,
-        updatedAt: stats?.updatedAt,
+        updatedAt: stats.updatedAt,
       };
     };
 
-    const fishingProtectionLevelStats =
-      protectionLevelsData[0]?.attributes?.fishing_protection_level_stats.data;
-
-    const parsedFishingProtectionLevelData = fishingProtectionLevelStats?.map((stats) => {
+    const parsedFishingProtectionLevelData = fishingProtectionLevelsData?.map((stats) => {
       const data = stats?.attributes;
-      data.totalArea = protectionLevelsData[0]?.attributes?.total_marine_area;
-      const protectionLevel = data?.fishing_protection_level?.data.attributes;
+      const protectionLevel = data?.fishing_protection_level?.data.attributes.slug;
+
       return parsedProtectionLevel(t('highly-protected-from-fishing'), protectionLevel, data);
     });
 
     return parsedFishingProtectionLevelData?.filter(Boolean) ?? [];
-  }, [t, protectionLevelsData, metadata]);
+  }, [t, fishingProtectionLevelsData, metadata, location]);
 
   const noData = useMemo(() => {
     if (!widgetChartData.length) {
@@ -128,7 +122,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
       title={t('level-of-fishing-protection')}
       lastUpdated={widgetChartData[0]?.updatedAt}
       noData={noData}
-      loading={isFetchingProtectionLevelsData}
+      loading={isFetching}
     >
       {widgetChartData.map((chartData) => (
         <HorizontalBarChart

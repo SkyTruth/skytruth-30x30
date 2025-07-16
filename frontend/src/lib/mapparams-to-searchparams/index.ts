@@ -1,4 +1,4 @@
-export function mapParamsToSearchParams(mapParams) {
+export function mapParamsToSearchParams(mapParams: string | string[] | null): string {
   const params = JSON.parse(mapParams as string);
   const searchParams = new URLSearchParams();
 
