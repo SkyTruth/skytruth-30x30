@@ -151,6 +151,7 @@ ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 # ------------------------------------------------------------
 
 TERRESTRIAL_HABITATS_URL = "https://storage.cloud.google.com/vector-data-raw/terrestrial/jung_etal_2020/iucn_habitatclassification_composite_lvl1_ver004.tif"
+COUNTRY_HABITATS_SUBTABLE_FILENAME = "habitats/processed_country_stats.csv"
 
 # ------------------------------------------------------------
 #                       Global Areas

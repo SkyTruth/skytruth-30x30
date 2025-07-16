@@ -14,6 +14,7 @@ from rasterio.transform import rowcol
 
 from src.commons import load_marine_regions, adjust_eez_sovereign, extract_polygons
 from src.params import (
+    COUNTRY_HABITATS_SUBTABLE_FILENAME,
     EEZ_LAND_UNION_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     GADM_ZIPFILE_NAME,
@@ -25,6 +26,7 @@ from src.utils.gcp import (
     read_json_from_gcs,
     read_json_df,
     read_zipped_gpkg_from_gcs,
+    upload_dataframe,
 )
 
 from src.utils.processors import clean_geometries
@@ -433,8 +435,10 @@ def preprocess_terrestrial_habitats_by_country(
     gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
     land_cover_classes: dict = LAND_COVER_CLASSES,
     processed_biome_raster_path="../data_processing_tests/processed_biome_raster.tif",
+    country_habitats_subtable_filename: str = COUNTRY_HABITATS_SUBTABLE_FILENAME,
     tile_width: int = 1000,
     tile_height: int = 1000,
+    project: str = PROJECT,
 ):
     def per_country(
         country,
@@ -498,6 +502,14 @@ def preprocess_terrestrial_habitats_by_country(
             f"processed all countries in "
             f"{(end_time - start_time).total_seconds() / 60:0.2f} minutes"
         )
+
+    upload_dataframe(
+        bucket,
+        pd.DataFrame(country_habitats_subtable),
+        country_habitats_subtable_filename,
+        project_id=project,
+        verbose=verbose,
+    )
 
 
 def create_terrestrial_subtable(
