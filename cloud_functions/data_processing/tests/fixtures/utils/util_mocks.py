@@ -32,6 +32,8 @@ class IterableMockBar(MockBar):
 
 
 class MockBlob:
+    """Mock class for gcs blob"""
+
     def __init__(self):
         self.uploaded_data = None
         self.kwargs = None
@@ -43,6 +45,8 @@ class MockBlob:
 
 
 class MockBucket:
+    """Mokc class for GCS Bucket"""
+
     def __init__(self, name, blob):
         self.name = name
         self._blob = blob
@@ -53,9 +57,21 @@ class MockBucket:
 
 
 class MockClient:
+    """Mokc class for GCS client"""
+
     def __init__(self, bucket):
         self._bucket = bucket
 
     def bucket(self, name):
         self.bucket_name = name
         return self._bucket
+
+
+class MockRequest:
+    """Mock flask.Request.get_json(silent=True) behavior."""
+
+    def __init__(self, payload):
+        self._payload = payload
+
+    def get_json(self, silent=True):
+        return self._payload

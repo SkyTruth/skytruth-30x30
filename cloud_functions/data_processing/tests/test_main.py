@@ -1,16 +1,7 @@
 import pytest
 
 import main
-
-
-class MockRequest:
-    """Mimic flask.Request.get_json(silent=True) behavior."""
-
-    def __init__(self, payload):
-        self._payload = payload
-
-    def get_json(self, silent=True):
-        return self._payload
+from tests.fixtures.utils.util_mocks import MockRequest
 
 
 @pytest.fixture(autouse=True)
