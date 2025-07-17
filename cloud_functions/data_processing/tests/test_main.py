@@ -1,6 +1,6 @@
 import pytest
 
-import main  # ← change this to the module where your `main` lives
+import main
 
 
 class MockRequest:
@@ -58,9 +58,8 @@ def test_download_eezs_invokes_download_zip_to_gcs(monkeypatch, capsys):
 
     assert result == ("OK", 200)
     out = capsys.readouterr().out
-    # We only care it printed process complete
-    assert "Process complete!" in out
 
+    assert "Process complete!" in out
     assert len(calls) == 1
     args, kwargs = calls[0]
 
@@ -89,9 +88,8 @@ def test_download_high_seas_invokes_download_zip_to_gcs(monkeypatch, capsys):
 
     assert result == ("OK", 200)
     out = capsys.readouterr().out
-    # We only care it printed process complete
-    assert "Process complete!" in out
 
+    assert "Process complete!" in out
     assert len(calls) == 1
     args, kwargs = calls[0]
 
@@ -119,8 +117,8 @@ def test_download_gadm_invokes_download_zip_to_gcs(monkeypatch, capsys):
     result = main.main(req)
 
     assert result == ("OK", 200)
+    
     out = capsys.readouterr().out
-    # We only care it printed process complete
     assert "Process complete!" in out
 
     assert len(calls) == 1

@@ -1,4 +1,3 @@
-# test_tqdm_bytes_io.py
 import json
 
 import pytest
@@ -77,12 +76,10 @@ def test_TqdmBytesIO_read_updates_bar_and_returns_bytes():
     buffer = TqdmBytesIO(data, total_size=len(data), chunk_size=3)
     bar = buffer.tqdm_bar
 
-    # 1) Read chunk of the data
     chunk1 = buffer.read(3)
     assert chunk1 == b"abc"
     assert bar.updates == [3]
 
-    # 2) read the rest of the data
     chunk2 = buffer.read()
     assert chunk2 == b"def"
     assert bar.updates == [3, 3]
@@ -154,7 +151,6 @@ def test_download_zip_to_gcs_happy_path_GET(monkeypatch, capsys):
 
     # 3) Verify that GCS upload got the full concatenated body
     assert mock_blob.uploaded_data == body
-    # And check kwargs
     assert mock_blob.kwargs["content_type"] == "application/zip"
     assert mock_blob.kwargs["rewind"] is True
     assert mock_blob.kwargs["timeout"] == 600
@@ -246,7 +242,7 @@ def test_download_zip_to_gcsconnection_error_raised(capsys):
 
 @responses.activate
 def test_upload_exception_is_logged_and_raised(monkeypatch, capsys):
-    # Stub a successful GET
+
     url = "https://example.com/archive.zip"
     body = b"a"
     responses.add(
