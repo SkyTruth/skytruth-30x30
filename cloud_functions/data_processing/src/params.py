@@ -102,4 +102,10 @@ SEAMOUNTS_FILE_NAME = "habitats/seamounts.zip"
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
 
+# ------------------------------------------------------------
+#                         GADM
+# ------------------------------------------------------------
+GADM_URL = "https://geodata.ucdavis.edu/gadm/gadm4.1/gadm_410-levels.zip"
+GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
+
 CHUNK_SIZE = 8192

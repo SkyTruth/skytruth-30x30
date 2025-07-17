@@ -13,6 +13,8 @@ from src.params import (
     CHUNK_SIZE,
     EEZ_PARAMS,
     EEZ_ZIPFILE_NAME,
+    GADM_URL,
+    GADM_ZIPFILE_NAME,
     HIGH_SEAS_PARAMS,
     HIGH_SEAS_ZIPFILE_NAME,
     MARINE_REGIONS_BODY,
@@ -100,6 +102,15 @@ def main(request: Request) -> tuple[str, int]:
 
             case "download_protected_planet_wdpa":
                 download_protected_planet(verbose=verbose)
+
+            case "download_gadm":
+                download_zip_to_gcs(
+                    GADM_URL,
+                    BUCKET,
+                    GADM_ZIPFILE_NAME,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=verbose,
+                )
 
             case _:
                 print(f"METHOD: {method} not a valid option")
