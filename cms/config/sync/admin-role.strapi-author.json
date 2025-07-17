@@ -671,13 +671,73 @@
     },
     {
       "action": "plugin::content-manager.explorer.create",
+      "subject": "api::feature-flag.feature-flag",
+      "properties": {
+        "fields": [
+          "feature",
+          "description",
+          "payload",
+          "active_on",
+          "archived"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {}
+    },
+    {
+      "action": "plugin::content-manager.explorer.delete",
+      "subject": "api::feature-flag.feature-flag",
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {}
+    },
+    {
+      "action": "plugin::content-manager.explorer.publish",
+      "subject": "api::feature-flag.feature-flag",
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {}
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "api::feature-flag.feature-flag",
+      "properties": {
+        "fields": [
+          "feature",
+          "description",
+          "payload",
+          "active_on",
+          "archived"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {}
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::feature-flag.feature-flag",
+      "properties": {
+        "fields": [
+          "feature",
+          "description",
+          "payload",
+          "active_on",
+          "archived"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {}
+    },
+    {
+      "action": "plugin::content-manager.explorer.create",
       "subject": "api::fishing-protection-level-stat.fishing-protection-level-stat",
       "properties": {
         "fields": [
           "location",
           "fishing_protection_level",
           "area",
-          "pct"
+          "pct",
+          "total_area"
         ]
       },
       "conditions": [
@@ -702,7 +762,8 @@
           "location",
           "fishing_protection_level",
           "area",
-          "pct"
+          "pct",
+          "total_area"
         ]
       },
       "conditions": [
@@ -718,7 +779,8 @@
           "location",
           "fishing_protection_level",
           "area",
-          "pct"
+          "pct",
+          "total_area"
         ]
       },
       "conditions": [
@@ -1316,7 +1378,8 @@
           "mpaa_protection_level",
           "area",
           "percentage",
-          "location"
+          "location",
+          "total_area"
         ]
       },
       "conditions": [
@@ -1341,7 +1404,8 @@
           "mpaa_protection_level",
           "area",
           "percentage",
-          "location"
+          "location",
+          "total_area"
         ]
       },
       "conditions": [
@@ -1357,7 +1421,8 @@
           "mpaa_protection_level",
           "area",
           "percentage",
-          "location"
+          "location",
+          "total_area"
         ]
       },
       "conditions": [
@@ -1547,7 +1612,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [
@@ -1578,7 +1644,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [
@@ -1600,7 +1667,8 @@
           "pas",
           "oecms",
           "is_last_year",
-          "global_contribution"
+          "global_contribution",
+          "total_area"
         ]
       },
       "conditions": [
