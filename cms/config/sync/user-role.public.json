@@ -55,9 +55,6 @@
       "action": "api::environment.environment.findOne"
     },
     {
-      "action": "api::feature-flag.feature-flag.find"
-    },
-    {
       "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.find"
     },
     {
