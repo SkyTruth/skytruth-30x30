@@ -242,7 +242,6 @@ def test_download_zip_to_gcsconnection_error_raised(capsys):
 
 @responses.activate
 def test_upload_exception_is_logged_and_raised(monkeypatch, capsys):
-
     url = "https://example.com/archive.zip"
     body = b"a"
     responses.add(

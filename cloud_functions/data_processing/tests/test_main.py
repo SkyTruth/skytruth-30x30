@@ -117,7 +117,7 @@ def test_download_gadm_invokes_download_zip_to_gcs(monkeypatch, capsys):
     result = main.main(req)
 
     assert result == ("OK", 200)
-    
+
     out = capsys.readouterr().out
     assert "Process complete!" in out
 

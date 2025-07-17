@@ -37,6 +37,9 @@
       "action": "api::dataset.dataset.update"
     },
     {
+      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.bulkUpsert"
+    },
+    {
       "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.create"
     },
     {
@@ -53,6 +56,9 @@
     },
     {
       "action": "api::fishing-protection-level.fishing-protection-level.findOne"
+    },
+    {
+      "action": "api::habitat-stat.habitat-stat.bulkUpsert"
     },
     {
       "action": "api::habitat-stat.habitat-stat.find"
@@ -82,10 +88,22 @@
       "action": "api::location.location.update"
     },
     {
+      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.bulkUpsert"
+    },
+    {
       "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.find"
     },
     {
       "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.findOne"
+    },
+    {
+      "action": "api::pa.pa.bulkInsert"
+    },
+    {
+      "action": "api::pa.pa.bulkPatch"
+    },
+    {
+      "action": "api::pa.pa.bulkUpdate"
     },
     {
       "action": "api::pa.pa.create"
@@ -101,6 +119,9 @@
     },
     {
       "action": "api::pa.pa.update"
+    },
+    {
+      "action": "api::protection-coverage-stat.protection-coverage-stat.bulkUpsert"
     },
     {
       "action": "api::protection-coverage-stat.protection-coverage-stat.find"
