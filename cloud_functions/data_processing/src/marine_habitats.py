@@ -6,20 +6,20 @@ from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.commons import load_marine_regions, adjust_eez_sovereign, extract_polygons
-from src.params import (
+from commons import load_marine_regions, adjust_eez_sovereign, extract_polygons
+from params import (
     EEZ_LAND_UNION_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
 )
 
-from src.utils.gcp import (
+from utils.gcp import (
     load_zipped_shapefile_from_gcs,
     read_json_from_gcs,
     read_json_df,
 )
 
-from src.utils.processors import clean_geometries
+from utils.processors import clean_geometries
 
 
 verbose = True

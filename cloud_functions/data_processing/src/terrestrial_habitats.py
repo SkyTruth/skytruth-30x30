@@ -12,18 +12,18 @@ import rasterio
 from shapely.geometry import mapping
 from rasterio.transform import rowcol
 
-from src.params import (
+from params import (
     COUNTRY_HABITATS_SUBTABLE_FILENAME,
     GADM_ZIPFILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
 )
 
-from src.utils.gcp import (
+from utils.gcp import (
     read_zipped_gpkg_from_gcs,
     upload_dataframe,
 )
 
-from src.utils.geo import compute_pixel_area_map_km2
+from utils.geo import compute_pixel_area_map_km2
 
 
 verbose = True

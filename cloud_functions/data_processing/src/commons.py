@@ -6,7 +6,7 @@ import zipfile
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon, GeometryCollection
 
-from src.utils.processors import clean_geometries
+from utils.processors import clean_geometries
 
 
 verbose = True

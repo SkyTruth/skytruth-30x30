@@ -15,10 +15,11 @@ from shapely.strtree import STRtree
 from tqdm.auto import tqdm
 from pathlib import Path
 from typing import Tuple, Dict, Callable
+from google.cloud import storage
 import threading
 import concurrent.futures
 
-from src.params import (
+from params import (
     CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
@@ -61,11 +62,11 @@ from src.params import (
     PROCESSED_BIOME_RASTER_PATH,
 )
 
-from src.commons import load_marine_regions, extract_polygons
-from src.marine_habitats import create_seamounts_subtable, create_mangroves_subtable
-from src.terrestrial_habitats import reclass_function
+from commons import load_marine_regions, extract_polygons
+from marine_habitats import create_seamounts_subtable, create_mangroves_subtable
+from terrestrial_habitats import reclass_function
 
-from src.utils.gcp import (
+from utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
     load_gdb_layer_from_gcs,
@@ -79,7 +80,7 @@ from src.utils.gcp import (
     upload_file_to_gcs,
 )
 
-from src.utils.processors import (
+from utils.processors import (
     add_constants,
     add_environment,
     add_protected_from_fishing_area,
@@ -1485,11 +1486,23 @@ def process_terrestrial_biome_raster(
         "blockysize": 512,
     }
 
+    local_biome_raster_path = biome_raster_path.split("/")[-1]
+    if verbose:
+        print(f"downloading {biome_raster_path} to {local_biome_raster_path}")
+    client = storage.Client()
+    bucket = client.bucket(bucket)
+    blob = bucket.blob(biome_raster_path)
+    blob.download_to_filename(local_biome_raster_path)
+
+    if verbose:
+        print(f"uploading raw raster data to {biome_raster_path}")
+    upload_file_to_gcs(bucket, local_biome_raster_path, biome_raster_path)
+
     fn_out = processed_biome_raster_path.split("/")[-1]
 
     if verbose:
         print(f"processing raster and saving to {fn_out}")
-    with rasterio.open(biome_raster_path) as src:
+    with rasterio.open(local_biome_raster_path) as src:
         # Create a destination dataset based on source params. The
         # destination will be tiled, and we'll process the tiles
         # concurrently.

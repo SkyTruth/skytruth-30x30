@@ -16,7 +16,7 @@ from tqdm import tqdm
 from typing import Optional, Dict, Any
 import zipfile
 
-from src.utils.logger import Logger
+from utils.logger import Logger
 
 PROJECT = os.getenv("PROJECT", "")
 logger = Logger()
