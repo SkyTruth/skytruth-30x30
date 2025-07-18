@@ -57,10 +57,13 @@ from src.params import (
     PROTECTION_LEVEL_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
+    BIOME_RASTER_PATH,
+    PROCESSED_BIOME_RASTER_PATH,
 )
 
 from src.commons import load_marine_regions, extract_polygons
 from src.marine_habitats import create_seamounts_subtable, create_mangroves_subtable
+from src.terrestrial_habitats import reclass_function
 
 from src.utils.gcp import (
     download_zip_to_gcs,
@@ -1463,10 +1466,9 @@ def generate_fishing_protection_table(
 
 
 def process_terrestrial_biome_raster(
-    raster_path: Path,
-    output_path: Path,
-    func: Callable,
-    out_data_profile,
+    biome_raster_path: Path = BIOME_RASTER_PATH,
+    processed_biome_raster_path: Path = PROCESSED_BIOME_RASTER_PATH,
+    func: Callable = reclass_function,
     f_args: Tuple = (),
     f_kwargs: Dict = {},
     bucket: str = BUCKET,
@@ -1474,11 +1476,20 @@ def process_terrestrial_biome_raster(
 ) -> None:
     num_workers = 200
 
-    fn_out = output_path.split("/")[-1]
+    out_data_profile = {
+        "dtype": rasterio.uint8,
+        "count": 1,
+        "compress": "lzw",
+        "tiled": True,
+        "blockxsize": 512,
+        "blockysize": 512,
+    }
+
+    fn_out = processed_biome_raster_path.split("/")[-1]
 
     if verbose:
         print(f"processing raster and saving to {fn_out}")
-    with rasterio.open(raster_path) as src:
+    with rasterio.open(biome_raster_path) as src:
         # Create a destination dataset based on source params. The
         # destination will be tiled, and we'll process the tiles
         # concurrently.
@@ -1538,8 +1549,12 @@ def process_terrestrial_biome_raster(
             dst.update_tags(ns="rio_overview", resampling="average")
 
     if verbose:
-        print(f"saving processed raster to {output_path}")
-    upload_file_to_gcs(bucket, fn_out, output_path)
+        print(f"saving processed raster to {processed_biome_raster_path}")
+    upload_file_to_gcs(bucket, fn_out, processed_biome_raster_path)
 
     if verbose:
         print("finished uploading")
+
+
+if __name__ == "__main__":
+    process_terrestrial_biome_raster()
