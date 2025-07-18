@@ -16,7 +16,10 @@ from tqdm import tqdm
 from typing import Optional, Dict, Any
 import zipfile
 
+from src.utils.logger import Logger
+
 PROJECT = os.getenv("PROJECT", "")
+logger = Logger()
 
 
 class TqdmBytesIO(BytesIO):
@@ -172,42 +175,54 @@ def download_zip_to_gcs(
     # Start HTTP download stream
     if verbose:
         print(f"getting data from {url}")
-    if data is not None:
-        response = requests.post(
-            url, params=params, data=data, headers=headers, allow_redirects=True
-        )
-    else:
-        response = requests.get(url, stream=True)
-    response.raise_for_status()
 
-    total_size = int(response.headers.get("content-length", 0))
-    raw_buffer = BytesIO()
+    try:
+        if data is not None:
+            response = requests.post(
+                url, params=params, data=data, headers=headers, allow_redirects=True
+            )
+        else:
+            response = requests.get(url, stream=True)
+        response.raise_for_status()
+    except requests.HTTPError as excep:
+        logger.error({"message": "HTTP error during download", "error": str(excep)})
+        raise excep
+    except Exception as excep:
+        logger.error({"message": "Error during download", "error": str(excep)})
+        raise excep
 
-    if verbose:
-        print("streaming data into buffer")
-    for chunk in tqdm(
-        response.iter_content(chunk_size=chunk_size),
-        total=total_size // chunk_size + 1,
-        unit="B",
-        unit_scale=True,
-        desc="Downloading",
-    ):
-        raw_buffer.write(chunk)
+    try:
+        total_size = int(response.headers.get("content-length", 0))
+        raw_buffer = BytesIO()
 
-    raw_buffer.seek(0)
+        if verbose:
+            print("streaming data into buffer")
+        for chunk in tqdm(
+            response.iter_content(chunk_size=chunk_size),
+            total=total_size // chunk_size + 1,
+            unit="B",
+            unit_scale=True,
+            desc="Downloading",
+        ):
+            raw_buffer.write(chunk)
 
-    # Upload to GCS using TqdmBytesIO
-    tqdm_buffer = TqdmBytesIO(raw_buffer.read(), total_size=total_size, chunk_size=chunk_size)
-    tqdm_buffer.seek(0)
+        raw_buffer.seek(0)
 
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
+        # Upload to GCS using TqdmBytesIO
+        tqdm_buffer = TqdmBytesIO(raw_buffer.read(), total_size=total_size, chunk_size=chunk_size)
+        tqdm_buffer.seek(0)
 
-    if verbose:
-        print(f"Uploading to gs://{bucket_name}/{blob_name}")
-    blob.upload_from_file(tqdm_buffer, content_type="application/zip", rewind=True, timeout=600)
-    tqdm_buffer.close()
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+
+        if verbose:
+            print(f"Uploading to gs://{bucket_name}/{blob_name}")
+        blob.upload_from_file(tqdm_buffer, content_type="application/zip", rewind=True, timeout=600)
+        tqdm_buffer.close()
+    except Exception as excep:
+        logger.error({"message": "Error during upload to GCS", "error": str(excep)})
+        raise excep
 
 
 def upload_dataframe(

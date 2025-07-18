@@ -1,22 +1,7 @@
 import os
-import sys
 import functions_framework
 from flask import Request
-
-from src.params import (
-    CHUNK_SIZE,
-    GADM_URL,
-    GADM_ZIPFILE_NAME,
-    MARINE_REGIONS_URL,
-    MARINE_REGIONS_BODY,
-    MARINE_REGIONS_HEADERS,
-    EEZ_PARAMS,
-    HIGH_SEAS_PARAMS,
-    EEZ_LAND_UNION_PARAMS,
-)
 from src.utils.gcp import download_zip_to_gcs
-
-
 from src.methods import (
     download_habitats,
     download_mpatlas,
@@ -31,7 +16,18 @@ from src.methods import (
     process_terrestrial_biome_raster,
 )
 
-sys.path.append("./src")
+from src.params import (
+    CHUNK_SIZE,
+    GADM_URL,
+    GADM_ZIPFILE_NAME,
+    MARINE_REGIONS_URL,
+    MARINE_REGIONS_BODY,
+    MARINE_REGIONS_HEADERS,
+    EEZ_PARAMS,
+    HIGH_SEAS_PARAMS,
+    EEZ_LAND_UNION_PARAMS,
+)
+
 
 verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
@@ -151,6 +147,14 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
+            case "download_gadm":
+                download_zip_to_gcs(
+                    GADM_URL,
+                    BUCKET,
+                    GADM_ZIPFILE_NAME,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=verbose,
+                )
 
             case _:
                 print(f"METHOD: {method} not a valid option")

@@ -7,11 +7,16 @@ import gcsfs
 import zipfile
 import fiona
 import geopandas as gpd
+import rasterio
 from shapely.geometry import box
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
+from pathlib import Path
+from typing import Tuple, Dict, Callable
+import threading
+import concurrent.futures
 
 from src.params import (
     CHUNK_SIZE,
@@ -68,6 +73,7 @@ from src.utils.gcp import (
     upload_dataframe,
     upload_gdf,
     save_json_to_gcs,
+    upload_file_to_gcs,
 )
 
 from src.utils.processors import (
@@ -1454,3 +1460,86 @@ def generate_fishing_protection_table(
     )
 
     return fishing_protection_table.to_dict(orient="records")
+
+
+def process_terrestrial_biome_raster(
+    raster_path: Path,
+    output_path: Path,
+    func: Callable,
+    out_data_profile,
+    f_args: Tuple = (),
+    f_kwargs: Dict = {},
+    bucket: str = BUCKET,
+    verbose: bool = True,
+) -> None:
+    num_workers = 200
+
+    fn_out = output_path.split("/")[-1]
+
+    if verbose:
+        print(f"processing raster and saving to {fn_out}")
+    with rasterio.open(raster_path) as src:
+        # Create a destination dataset based on source params. The
+        # destination will be tiled, and we'll process the tiles
+        # concurrently.
+        profile = src.profile.copy()
+        profile.update(**out_data_profile)
+
+        with rasterio.open(fn_out, "w", **profile) as dst:
+            windows = [window for ij, window in dst.block_windows()]
+            read_lock = threading.Lock()
+            write_lock = threading.Lock()
+
+            def process(window):
+                status_message = {
+                    "diagnostics": {},
+                    "messages": [f"Processing chunk: {window}"],
+                    "return_val": None,
+                }
+                # read the chunk
+                try:
+                    status_message["messages"].append("reading data")
+
+                    with read_lock:
+                        data = src.read(window=window)
+
+                    status_message["messages"].append("processing data")
+                    result = func(data, *f_args, **f_kwargs)
+
+                    status_message["messages"].append("writing data")
+                    with write_lock:
+                        dst.write(result, window=window)
+
+                    status_message["messages"].append("success in processing chunk")
+
+                except Exception as e:
+                    status_message["diagnostics"]["error"] = e
+                finally:
+                    return status_message
+
+            # We map the process() function over the list of
+            # windows.
+
+            futures = []
+
+            with (
+                concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor,
+                tqdm(total=len(windows), desc="Computing raster stats", unit="chunk") as p_bar,
+            ):
+                for idx, window in enumerate(windows):
+                    futures.append(executor.submit(process, window))
+
+                results = []
+                for f in futures:
+                    results.append(f.result())
+                    p_bar.update(1)
+
+            dst.build_overviews([2, 4, 8, 16, 32, 64], rasterio.enums.Resampling.mode)
+            dst.update_tags(ns="rio_overview", resampling="average")
+
+    if verbose:
+        print(f"saving processed raster to {output_path}")
+    upload_file_to_gcs(bucket, fn_out, output_path)
+
+    if verbose:
+        print("finished uploading")

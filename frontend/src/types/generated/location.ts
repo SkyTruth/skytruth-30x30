@@ -18,8 +18,8 @@ import type {
   Error,
   GetLocationsParams,
   LocationResponse,
-  GetLocationsIdParams,
   LocationRequest,
+  GetLocationsIdParams,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -90,6 +90,69 @@ export const useGetLocations = <
   return query;
 };
 
+export const postLocations = (
+  locationRequest: BodyType<LocationRequest>,
+  options?: SecondParameter<typeof API>
+) => {
+  return API<LocationResponse>(
+    {
+      url: `/locations`,
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' },
+      data: locationRequest,
+    },
+    options
+  );
+};
+
+export const getPostLocationsMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postLocations>>,
+    TError,
+    { data: BodyType<LocationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof postLocations>>,
+  TError,
+  { data: BodyType<LocationRequest> },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof postLocations>>,
+    { data: BodyType<LocationRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return postLocations(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PostLocationsMutationResult = NonNullable<Awaited<ReturnType<typeof postLocations>>>;
+export type PostLocationsMutationBody = BodyType<LocationRequest>;
+export type PostLocationsMutationError = ErrorType<Error>;
+
+export const usePostLocations = <TError = ErrorType<Error>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postLocations>>,
+    TError,
+    { data: BodyType<LocationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof API>;
+}) => {
+  const mutationOptions = getPostLocationsMutationOptions(options);
+
+  return useMutation(mutationOptions);
+};
 export const getLocationsId = (
   id: number,
   params?: GetLocationsIdParams,

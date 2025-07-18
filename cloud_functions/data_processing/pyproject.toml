@@ -1,6 +1,6 @@
 [project]
 name = "data-processing"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cloud function for agregating, processing, and updating data for the 30x30 Progress Tracker"
 authors = [
     {name = "SkyTruth"}

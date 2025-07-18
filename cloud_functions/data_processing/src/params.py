@@ -175,6 +175,11 @@ HABITAT_PROTECTION_FILE_NAME = f"tables/habitat_protection_{today_formatted}.csv
 # ------------------------------------------------------------
 #                            MISC
 # ------------------------------------------------------------
+#                         GADM
+# ------------------------------------------------------------
+GADM_URL = "https://geodata.ucdavis.edu/gadm/gadm4.1/gadm_410-levels.zip"
+GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
+
 CHUNK_SIZE = 8192
 LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
