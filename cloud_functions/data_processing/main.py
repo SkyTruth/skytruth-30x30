@@ -28,6 +28,7 @@ from src.methods import (
     generate_protected_areas_table,
     generate_protection_coverage_stats_table,
     preprocess_mangroves,
+    process_terrestrial_biome_raster,
 )
 
 sys.path.append("./src")
@@ -123,6 +124,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case "download_habitats":
                 download_habitats(verbose=verbose)
+
+            case "process_terrestrial_biomes":
+                process_terrestrial_biome_raster(verbose=verbose)
 
             case "download_mpatlas":
                 download_mpatlas(verbose=verbose)

@@ -151,6 +151,11 @@ ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 # ------------------------------------------------------------
 
 TERRESTRIAL_HABITATS_URL = "https://storage.cloud.google.com/vector-data-raw/terrestrial/jung_etal_2020/iucn_habitatclassification_composite_lvl1_ver004.tif"
+BIOME_RASTER_PATH = (
+    "static/terrestrial_jung_etal_2020_iucn_habitatclassification_composite_lvl1_ver004.tif"
+)
+PROCESSED_BIOME_RASTER_PATH = "static/processed_biome_raster.tif"
+REPROJECTED_BIOME_RASTER_PATH = "static/reprojected_processed_biome_raster.tif"
 COUNTRY_HABITATS_SUBTABLE_FILENAME = "habitats/processed_country_stats.csv"
 
 # ------------------------------------------------------------

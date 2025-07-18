@@ -315,6 +315,13 @@ def upload_gdf(
         print("Upload complete.")
 
 
+def upload_file_to_gcs(bucket, file_name, blob_name):
+    client = storage.Client()
+    bucket = client.bucket(bucket)
+    blob = bucket.blob(blob_name)
+    blob.upload_from_filename(file_name)
+
+
 def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefile_path: str = ""):
     """
     Loads a zipped shapefile from a Google Cloud Storage (GCS) bucket into a GeoDataFrame.
@@ -595,7 +602,7 @@ def download_zipfile_from_gcs(bucket_name: str, zip_filename: str, verbose: bool
 
 
 def load_gdb_layer_from_gcs(
-    zip_filename: str, bucket: str, chunk_size=1024 * 1024
+    zip_filename: str, bucket: str, chunk_size=1024 * 1024, layers=None
 ) -> gpd.GeoDataFrame:
     """
     Loads a layer from a zipped File Geodatabase stored in GCS, with a progress bar.
@@ -638,8 +645,10 @@ def load_gdb_layer_from_gcs(
             gdb_path = gdb_dirs[0]
 
             # List layers
-            layers = fiona.listlayers(gdb_path)
-            print("Available layers:", layers)
+            if layers is None:
+                layers = fiona.listlayers(gdb_path)
+
+            print("Extracting layers:", layers)
 
             gdf = gpd.GeoDataFrame()
             for layer in layers:

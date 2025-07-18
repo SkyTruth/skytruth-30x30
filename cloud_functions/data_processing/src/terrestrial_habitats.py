@@ -2,34 +2,32 @@ import os
 import datetime
 import pandas as pd
 import geopandas as gpd
-from shapely.geometry import box, Point, MultiPoint, Polygon, MultiPolygon
+import requests
+from shapely.geometry import box, Point, MultiPoint
 from shapely.ops import unary_union
-from shapely.validation import make_valid
 from tqdm.auto import tqdm
 import math
 import numpy as np
 import rasterio
 from shapely.geometry import mapping
 from rasterio.transform import rowcol
+from pathlib import Path
+from typing import Tuple, Dict, Callable
+import threading
+import concurrent.futures
 
-from src.commons import load_marine_regions, adjust_eez_sovereign, extract_polygons
 from src.params import (
     COUNTRY_HABITATS_SUBTABLE_FILENAME,
-    EEZ_LAND_UNION_PARAMS,
-    MANGROVES_BY_COUNTRY_FILE_NAME,
     GADM_ZIPFILE_NAME,
-    GLOBAL_MANGROVE_AREA_FILE_NAME,
+    PROCESSED_BIOME_RASTER_PATH,
 )
 
 from src.utils.gcp import (
-    load_zipped_shapefile_from_gcs,
-    read_json_from_gcs,
-    read_json_df,
     read_zipped_gpkg_from_gcs,
+    upload_file_to_gcs,
     upload_dataframe,
 )
 
-from src.utils.processors import clean_geometries
 from src.utils.geo import compute_pixel_area_map_km2
 
 
@@ -40,6 +38,7 @@ PROJECT = os.getenv("PROJECT", "")
 
 GLOBAL_MARINE_AREA_KM2 = 361000000
 GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
+
 
 LAND_COVER_CLASSES = {
     1: "Forest",
@@ -54,210 +53,14 @@ LAND_COVER_CLASSES = {
 }
 
 
-def create_seamounts_subtable(
-    seamounts_zipfile_name,
-    seamounts_shapefile_name,
-    bucket,
-    eez_params,
-    parent_country,
-    marine_protected_areas,
-    combined_regions,
-    verbose,
-):
-    def get_group_stats(df_eez, df_pa, loc, relations, global_seamount_area, hs_seamount_area):
-        if loc == "GLOB":
-            df_pa_group = df_pa[["PEAKID", "AREA2D"]].drop_duplicates()
-            total_area = global_seamount_area
-        else:
-            df_pa_group = df_pa[df_pa["location"].isin(relations[loc])][
-                ["PEAKID", "AREA2D"]
-            ].drop_duplicates()
-            if loc == "ABNJ":
-                total_area = hs_seamount_area
-            else:
-                df_eez_group = df_eez[df_eez["location"].isin(relations[loc])][
-                    ["PEAKID", "AREA2D"]
-                ].drop_duplicates()
-                total_area = df_eez_group["AREA2D"].sum()
+def download_file(url, destination):
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
 
-        protected_area = min(df_pa_group["AREA2D"].sum(), total_area)
-
-        return {
-            "location": loc,
-            "habitat": "seamounts",
-            "environment": "marine",
-            "protected_area": protected_area,
-            "total_area": total_area,
-            # "percent_protected": 100 * protected_area / total_area if total_area > 0 else np.nan,
-        }
-
-    if verbose:
-        print("loading seamounts")
-
-    seamounts = load_zipped_shapefile_from_gcs(
-        seamounts_zipfile_name, bucket, internal_shapefile_path=seamounts_shapefile_name
-    )
-
-    if verbose:
-        print("loading eezs")
-    eez = load_marine_regions(eez_params, bucket)
-    eez = adjust_eez_sovereign(eez, parent_country)
-
-    if verbose:
-        print("spatially joining seamounts with eezs and marine protected areas")
-
-    global_seamount_area = seamounts["AREA2D"].sum()
-
-    eez_joined = gpd.sjoin(
-        seamounts[["PEAKID", "AREA2D", "geometry"]],
-        eez[["GEONAME", "location", "geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-    high_seas_seamounts = eez_joined[eez_joined["index_right"].isna()]
-    eez_seamounts = eez_joined[eez_joined["index_right"].notna()]
-
-    marine_pa_joined = gpd.sjoin(
-        seamounts[["PEAKID", "AREA2D", "geometry"]],
-        marine_protected_areas[["wdpa_id", "location", "geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-    marine_pa_seamounts = marine_pa_joined[marine_pa_joined["index_right"].notna()]
-
-    global_seamount_area = seamounts["AREA2D"].sum()
-    hs_seamount_area = high_seas_seamounts["AREA2D"].sum()
-
-    return pd.DataFrame(
-        [
-            get_group_stats(
-                eez_seamounts,
-                marine_pa_seamounts,
-                cnt,
-                combined_regions,
-                global_seamount_area,
-                hs_seamount_area,
-            )
-            for cnt in combined_regions
-        ]
-    )
-
-
-def create_mangroves_subtable(
-    mpa,
-    combined_regions,
-    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
-    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
-    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
-    bucket: str = BUCKET,
-    verbose: bool = True,
-):
-    def get_group_stats(df, loc, relations, global_mangrove_area):
-        if loc == "GLOB":
-            df_group = df
-            total_area = global_mangrove_area
-        else:
-            df_group = df[df["location"].isin(relations[loc])]
-
-            # Ensure numeric conversion
-            total_area = df_group["total_mangrove_area_km2"].sum()
-
-        protected_area = df_group["protected_mangrove_area_km2"].sum()
-
-        return {
-            "location": loc,
-            "habitat": "mangroves",
-            "environment": "marine",
-            "protected_area": protected_area,
-            "total_area": total_area,
-            # "percent_protected": 100 * protected_area / total_area if total_area else None,
-        }
-
-    # TODO: using eez/land union instead of eez, which may miss some coastal regions where
-    # mangroves are. However, several regions are listed under ISO_TER1 = None, most notably,
-    # Alaska, which doesn't matter for mangroves, but there are also tropical areas missing
-    # including Hawaii. Need to find a way to stick them together
-    if verbose:
-        print("loading eez/land union")
-    country_union = (
-        load_marine_regions(eez_land_union_params, bucket)[["ISO_TER1", "geometry"]]
-        .rename(columns={"ISO_TER1": "location"})
-        .pipe(clean_geometries)
-    )
-
-    if verbose:
-        print("loading pre-processed mangroves")
-    mangroves_by_country = read_json_df(bucket, mangroves_by_country_file_name, verbose=True).pipe(
-        clean_geometries
-    )
-    global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)["global_area"]
-
-    if verbose:
-        print("Updating CRS to EPSG:6933 (equal-area for geometry ops)")
-    crs = "EPSG:6933"
-    country_union_reproj = country_union.to_crs(crs).pipe(clean_geometries)
-    mpa_reproj = mpa.to_crs(crs).pipe(clean_geometries)
-
-    if verbose:
-        print("getting protected mangrove area by country")
-    protected_mangroves = []
-    for cnt in tqdm(list(sorted(set(country_union_reproj["location"].dropna())))):
-        country_geom = make_valid(
-            extract_polygons(
-                unary_union(country_union_reproj[country_union_reproj["location"] == cnt].geometry)
-            )
-        )
-
-        country_mangroves = mangroves_by_country[mangroves_by_country["country"] == cnt]
-        if len(country_mangroves) > 0:
-            mangrove_geom = country_mangroves.iloc[0]["geometry"]
-            country_mangrove_area_km2 = country_mangroves.iloc[0]["mangrove_area_km2"]
-
-            # Get MPA features in country and clip
-            country_pas = mpa_reproj[mpa_reproj["location"] == cnt]
-            country_pas = gpd.clip(country_pas, country_geom)
-            country_pas = country_pas[
-                ~country_pas.geometry.is_empty & country_pas.geometry.is_valid
-            ]
-            geom_list = [g for g in country_pas.geometry if isinstance(g, (Polygon, MultiPolygon))]
-
-            if not geom_list:
-                pa_geom = None
-            else:
-                pa_geom = make_valid(unary_union(geom_list))
-            pa_geom = make_valid(unary_union(country_pas.geometry))
-
-            pa_mangrove_area_km2 = mangrove_geom.intersection(pa_geom).area / 1e6
-
-            protected_mangroves.append(
-                {
-                    "location": cnt,
-                    "total_mangrove_area_km2": country_mangrove_area_km2,
-                    "protected_mangrove_area_km2": pa_mangrove_area_km2,
-                }
-            )
-
-    protected_mangroves = pd.DataFrame(protected_mangroves)
-    protected_mangroves["percent_protected"] = (
-        100
-        * protected_mangroves["protected_mangrove_area_km2"]
-        / protected_mangroves["total_mangrove_area_km2"]
-    )
-
-    mangrove_habitat = pd.DataFrame(
-        [
-            stat
-            for loc in combined_regions
-            if (
-                stat := get_group_stats(
-                    protected_mangroves, loc, combined_regions, global_mangrove_area
-                )
-            )
-            is not None
-        ]
-    )
-
-    return mangrove_habitat[mangrove_habitat["total_area"] > 0]
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
 
 
 def estimate_masked_pixel_count(src, geom):
@@ -440,6 +243,41 @@ def preprocess_terrestrial_habitats_by_country(
     tile_height: int = 1000,
     project: str = PROJECT,
 ):
+    """
+    Processes terrestrial habitat area summaries for each country based on a
+    raster of biome classifications.
+
+    This function reads administrative boundaries from a zipped GeoPackage (GADM),
+    generates a grid of tiles over a preprocessed biome classification raster,
+    intersects those tiles with country geometries, computes the area of each
+    land cover class per country, and uploads a summarized table to Google Cloud Storage.
+
+    Parameters
+    ----------
+    bucket : str
+        The GCS bucket name to read from and upload to.
+    gadm_zipfile_name : str
+        The filename of the zipped GADM GeoPackage in the bucket.
+    land_cover_classes : dict
+        A dictionary mapping class IDs to descriptive names for land cover.
+    processed_biome_raster_path : str
+        Local path to the processed biome raster (GeoTIFF format).
+    country_habitats_subtable_filename : str
+        The name to use when uploading the final CSV summary table.
+    tile_width : int
+        Width (in pixels) of each raster tile for spatial partitioning.
+    tile_height : int
+        Height (in pixels) of each raster tile for spatial partitioning.
+    project : str
+        GCP project ID for the upload operation.
+
+    Returns
+    -------
+    None
+        The function uploads a DataFrame as a CSV to the specified GCS bucket.
+        No object is returned.
+    """
+
     def per_country(
         country,
         gadm,
@@ -512,25 +350,132 @@ def preprocess_terrestrial_habitats_by_country(
     )
 
 
+def reclass_function(ndata: np.ndarray) -> np.ndarray:
+    # Apply the value changes
+    ndata = np.where(ndata < 200, 1, ndata)  # forest
+    ndata = np.where((ndata >= 200) & (ndata < 300), 2, ndata)  # savanna
+    ndata = np.where((ndata >= 300) & (ndata < 400), 3, ndata)  # scrub/shrub
+    ndata = np.where((ndata >= 400) & (ndata < 500), 4, ndata)  # grassland
+    ndata = np.where(ndata == 501, 5, ndata)  # open water - Wetlands/open water
+    ndata = np.where(ndata == 505, 5, ndata)  # open water - Wetlands/open water
+    ndata = np.where((ndata >= 500) & (ndata < 600), 5, ndata)  # wetlands - Wetlands/open water
+    ndata = np.where(ndata == 984, 5, ndata)  # wetlands - Wetlands/open water
+    ndata = np.where(ndata == 910, 5, ndata)  # wetlands - Wetlands/open water
+    ndata = np.where((ndata >= 600) & (ndata < 800), 6, ndata)  # rocky/mountains
+    ndata = np.where((ndata >= 800) & (ndata < 900), 7, ndata)  # desert
+    ndata = np.where((ndata >= 1400) & (ndata < 1500), 8, ndata)  # ag/urban - Artificial
+
+    # Ensure the ndata is within the 8-bit range
+
+    return np.clip(ndata, 0, 255).astype(np.uint8)
+
+
+def process_terrestrial_habitats_raster(
+    raster_path: Path,
+    output_path: Path,
+    func: Callable,
+    out_data_profile,
+    f_args: Tuple = (),
+    f_kwargs: Dict = {},
+    bucket: str = BUCKET,
+    verbose: bool = True,
+) -> None:
+    num_workers = 200
+
+    fn_out = output_path.split("/")[-1]
+
+    if verbose:
+        print(f"processing raster and saving to {fn_out}")
+    with rasterio.open(raster_path) as src:
+        # Create a destination dataset based on source params. The
+        # destination will be tiled, and we'll process the tiles
+        # concurrently.
+        profile = src.profile.copy()
+        profile.update(**out_data_profile)
+
+        with rasterio.open(fn_out, "w", **profile) as dst:
+            windows = [window for ij, window in dst.block_windows()]
+            read_lock = threading.Lock()
+            write_lock = threading.Lock()
+
+            def process(window):
+                status_message = {
+                    "diagnostics": {},
+                    "messages": [f"Processing chunk: {window}"],
+                    "return_val": None,
+                }
+                # read the chunk
+                try:
+                    status_message["messages"].append("reading data")
+
+                    with read_lock:
+                        data = src.read(window=window)
+
+                    status_message["messages"].append("processing data")
+                    result = func(data, *f_args, **f_kwargs)
+
+                    status_message["messages"].append("writing data")
+                    with write_lock:
+                        dst.write(result, window=window)
+
+                    status_message["messages"].append("success in processing chunk")
+
+                except Exception as e:
+                    status_message["diagnostics"]["error"] = e
+                finally:
+                    return status_message
+
+            # We map the process() function over the list of
+            # windows.
+
+            futures = []
+
+            with (
+                concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor,
+                tqdm(total=len(windows), desc="Computing raster stats", unit="chunk") as p_bar,
+            ):
+                for idx, window in enumerate(windows):
+                    futures.append(executor.submit(process, window))
+
+                results = []
+                for f in futures:
+                    results.append(f.result())
+                    p_bar.update(1)
+
+            dst.build_overviews([2, 4, 8, 16, 32, 64], rasterio.enums.Resampling.mode)
+            dst.update_tags(ns="rio_overview", resampling="average")
+
+    if verbose:
+        print(f"saving processed raster to {output_path}")
+    upload_file_to_gcs(bucket, fn_out, output_path)
+
+    if verbose:
+        print("finished uploading")
+
+
 def create_terrestrial_subtable(
     wdpa,
-    processed_biome_raster_path="../data_processing_tests/processed_biome_raster.tif",
-    verbose: bool = True,
+    processed_biome_raster_path=PROCESSED_BIOME_RASTER_PATH,
     land_cover_classes: dict = LAND_COVER_CLASSES,
+    verbose: bool = True,
 ):
-    def per_country(country, wdpa_terr, processed_biome_raster_path, land_cover_classes):
+    def per_country(country, wdpa_terr, raster_path, land_cover_classes):
         gdf = wdpa_terr[wdpa_terr["PARENT_ISO3"] == country].copy()
-        res = compute_land_cover_area_km2(processed_biome_raster_path, gdf, land_cover_classes)
+        res = compute_land_cover_area_km2(raster_path, gdf, land_cover_classes)
         res = pd.DataFrame(res).drop(columns="WDPAID").sum().to_dict()
         res["country"] = country
         return res
 
-    # TODO: 1. update biome path, 2. Add step that generated processed_biome_raster
+    # TODO:
+    # 1. update biome path (done!)
+    # 2. Add step that generated processed_biome_raster (done!)
     # 3. convert output to correct format (one row per land cover class, group by region)
-    # 4. get country habitat area, 5. Dissolve overlapping PAs,
+    # 4. get country habitat area
+    # 5. Dissolve overlapping PAs
     # 6. Some of the PARENT_ISO3 are multiple separated by semicolon - count for both?
     # 7. Also related to PARENT_ISO3 - should we use ISO3 instead? Is it right that the
-    # PAs with ISO3 of ATA have PARENT_ISO3 of AUS?
+    #         PAs with ISO3 of ATA have PARENT_ISO3 of AUS? (I think this is handled with
+    #         the ISO* format but we should switch to ISO3 and wrap like the other stats)
 
     if verbose:
         print("clipping and validifying terrestrial protected areas")
@@ -540,6 +485,12 @@ def create_terrestrial_subtable(
     ]
     wdpa_terr["geometry"] = wdpa_terr["geometry"].make_valid()
 
+    raster_path = "land_cover_raster.tif"
+    if verbose:
+        print(f"downloading land cover raster to {raster_path}")
+
+    download_file(processed_biome_raster_path, raster_path)
+
     if verbose:
         print("creating terrestrial habitats subtable")
 
@@ -548,7 +499,7 @@ def create_terrestrial_subtable(
     for cnt in tqdm(list(sorted(set(wdpa_terr["PARENT_ISO3"])))):
         start = datetime.datetime.now()
         terrestrial_habitats_subtable.append(
-            per_country(cnt, wdpa_terr, processed_biome_raster_path, land_cover_classes)
+            per_country(cnt, wdpa_terr, raster_path, land_cover_classes)
         )
         end = datetime.datetime.now()
         if verbose:

@@ -1,7 +1,6 @@
 from io import BytesIO
 import numpy as np
 import os
-
 import pandas as pd
 import requests
 import gcsfs
@@ -55,6 +54,9 @@ from src.params import (
     GLOBAL_MANGROVE_AREA_FILE_NAME,
 )
 
+from src.commons import load_marine_regions, extract_polygons
+from src.marine_habitats import create_seamounts_subtable, create_mangroves_subtable
+
 from src.utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
@@ -88,10 +90,6 @@ from src.utils.processors import (
     rename_habitats,
     update_mpatlas_asterisk,
 )
-
-from src.commons import load_marine_regions, extract_polygons
-
-from src.habitats import create_seamounts_subtable, create_mangroves_subtable
 
 
 verbose = True
