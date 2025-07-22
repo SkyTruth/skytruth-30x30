@@ -9,7 +9,7 @@ from tqdm.auto import tqdm
 import math
 import numpy as np
 import rasterio
-from shapely.geometry import mapping
+from shapely.geometry import mapping, Polygon, MultiPolygon, GeometryCollection
 from shapely.validation import make_valid
 
 from rasterio.mask import mask
@@ -546,6 +546,18 @@ def generate_terrestrial_biome_stats_pa(
 
         return clipped_geoms
 
+    def extract_valid_polygons(geom):
+        """Return list of polygonal geometries from possibly mixed GeometryCollection."""
+        if geom.is_empty:
+            return []
+        if isinstance(geom, (Polygon, MultiPolygon)):
+            return [geom]
+        if isinstance(geom, GeometryCollection):
+            return [
+                g for g in geom.geoms if isinstance(g, (Polygon, MultiPolygon)) and not g.is_empty
+            ]
+        return []  # Point, LineString, etc.
+
     print("loading and simplifying GADM geometries")
     gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
     gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
@@ -560,7 +572,7 @@ def generate_terrestrial_biome_stats_pa(
     with rasterio.open(raster_path) as src:
         for country in tqdm(gadm["GID_0"].unique()):
             country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
-            polygons_gdf = wdpa[wdpa[country_col] == country]
+            polygons_gdf = wdpa[wdpa[country_col] == country].copy()
             polygons_gdf["geometry"] = polygons_gdf["geometry"].make_valid()
 
             # tile country
@@ -575,8 +587,13 @@ def generate_terrestrial_biome_stats_pa(
             clipped_geoms = clip_geoms(tile_geoms, polygons_gdf)
             print(f"generated {len(clipped_geoms)} tiles within {country}'s PAs")
 
+            clean_geoms = []
+            for geom in clipped_geoms:
+                clean_parts = extract_valid_polygons(geom)
+                clean_geoms.extend(clean_parts)
+
             results = []
-            for tile in clipped_geoms:
+            for tile in clean_geoms:
                 entry = get_cover_areas(src, [mapping(tile)], country, "country")
                 if entry is not None:
                     results.append(entry)
