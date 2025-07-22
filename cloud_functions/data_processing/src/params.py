@@ -159,6 +159,8 @@ BIOME_RASTER_PATH = (
 PROCESSED_BIOME_RASTER_PATH = "static/processed_biome_raster.tif"
 REPROJECTED_BIOME_RASTER_PATH = "static/reprojected_processed_biome_raster.tif"
 COUNTRY_HABITATS_SUBTABLE_FILENAME = "habitats/processed_country_stats.csv"
+COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME = "static/country_terrestrial_stats.json"
+PA_TERRESTRIAL_HABITATS_FILE_NAME = "habitats/pa_terrestrial_stats.json"
 
 # ------------------------------------------------------------
 #                       Global Areas

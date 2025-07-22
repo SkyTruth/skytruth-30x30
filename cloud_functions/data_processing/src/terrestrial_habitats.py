@@ -15,19 +15,19 @@ from shapely.validation import make_valid
 from rasterio.mask import mask
 from rasterio.transform import rowcol
 
-from commons import load_regions
-
 from params import (
     COUNTRY_HABITATS_SUBTABLE_FILENAME,
+    COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     GADM_ZIPFILE_NAME,
+    PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
-    WDPA_FILE_NAME,
+    WDPA_TERRESTRIAL_FILE_NAME,
 )
 
 from utils.gcp import (
     read_zipped_gpkg_from_gcs,
     upload_dataframe,
-    load_gdb_layer_from_gcs,
+    read_json_df,
 )
 
 from utils.geo import compute_pixel_area_map_km2
@@ -457,24 +457,13 @@ def get_cover_areas(src, geom, identifier, id_col, land_cover_classes=LAND_COVER
 
 
 def generate_terrestrial_biome_stats_country(
+    country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     raster_path: str = PROCESSED_BIOME_RASTER_PATH,
     gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
     bucket: str = BUCKET,
+    project: str = PROJECT,
     tolerance: float = 0.001,
 ):
-    def get_group_stats(df, loc, relations):
-        if loc == "GLOB":
-            df_group = df
-        else:
-            df_group = df[df["country"].isin(relations[loc])]
-
-        out = df_group[[c for c in df_group.columns if c != "country"]].sum().to_dict()
-        out["location"] = loc
-
-        return out
-
-    combined_regions, _ = load_regions()
-
     print("loading and simplifying GADM geometries")
     gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
     gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
@@ -500,22 +489,30 @@ def generate_terrestrial_biome_stats_country(
 
     country_stats = pd.DataFrame(country_stats)
 
-    grouped_cnt_stats = pd.DataFrame(
-        [get_group_stats(country_stats, reg, combined_regions) for reg in combined_regions]
+    upload_dataframe(
+        bucket,
+        country_stats,
+        country_stats_filename,
+        project_id=project,
+        verbose=verbose,
     )
 
-    return grouped_cnt_stats
+    return country_stats
 
 
 def generate_terrestrial_biome_stats_pa(
     combined_regions,
+    pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
+    country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     raster_path: str = PROCESSED_BIOME_RASTER_PATH,
     gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
-    wdpa_file_name: str = WDPA_FILE_NAME,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     bucket: str = BUCKET,
+    project: str = PROJECT,
     tolerance: float = 0.001,
     country_col="ISO3",
     tile_size_pixels=8192,
+    verbose: bool = True,
 ):
     def get_group_stats(df, loc, relations):
         if loc == "GLOB":
@@ -558,15 +555,18 @@ def generate_terrestrial_biome_stats_pa(
             ]
         return []  # Point, LineString, etc.
 
-    print("loading and simplifying GADM geometries")
+    if verbose:
+        print(f"loading and simplifying GADM geometries from {gadm_zipfile_name}")
     gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
     gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
 
-    print("loading PAs")
-    wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
-    wdpa = wdpa[wdpa["MARINE"].isin(["0", "1"])]
-    wdpa = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
-    wdpa["geometry"] = wdpa["geometry"].make_valid()
+    if verbose:
+        print(f"loading PAs from {terrestrial_pa_file_name}")
+    wdpa = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
+
+    if verbose:
+        print(f"loading country habitat stats from {country_stats_filename}")
+    country_stats = read_json_df(bucket, country_stats_filename, verbose=verbose)
 
     pa_stats = []
     with rasterio.open(raster_path) as src:
@@ -585,7 +585,8 @@ def generate_terrestrial_biome_stats_pa(
 
             # clip geometries to tiles
             clipped_geoms = clip_geoms(tile_geoms, polygons_gdf)
-            print(f"generated {len(clipped_geoms)} tiles within {country}'s PAs")
+            if verbose:
+                print(f"generated {len(clipped_geoms)} tiles within {country}'s PAs")
 
             clean_geoms = []
             for geom in clipped_geoms:
@@ -606,8 +607,25 @@ def generate_terrestrial_biome_stats_pa(
 
     pa_stats = pd.DataFrame(pa_stats)
 
+    upload_dataframe(
+        bucket,
+        pa_stats,
+        pa_stats_filename,
+        project_id=project,
+        verbose=verbose,
+    )
+
     grouped_pa_stats = pd.DataFrame(
         [get_group_stats(pa_stats, reg, combined_regions) for reg in combined_regions]
     )
 
-    return grouped_pa_stats
+    grouped_cnt_stats = pd.DataFrame(
+        [get_group_stats(country_stats, reg, combined_regions) for reg in combined_regions]
+    )
+
+    cols = [c for c in grouped_cnt_stats.columns if c != "location"]
+    pct = 100 * grouped_pa_stats[cols] / grouped_cnt_stats[cols]
+    pct["location"] = grouped_cnt_stats["location"]
+    pct = pct[["location"] + cols]
+
+    return pct

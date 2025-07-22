@@ -710,7 +710,7 @@ def preprocess_mangroves(
 
     mangroves_by_country = gpd.GeoDataFrame(mangroves_by_country, crs="EPSG:6933")
     upload_gdf(
-        BUCKET, mangroves_by_country, mangroves_by_country_file_name, PROJECT, True, timeout=600
+        bucket, mangroves_by_country, mangroves_by_country_file_name, project, True, timeout=600
     )
 
 
