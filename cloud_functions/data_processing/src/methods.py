@@ -539,17 +539,29 @@ def process_protected_area_geoms(
     wdpa_file_name: str = WDPA_FILE_NAME,
     bucket: str = BUCKET,
     tolerance: float = 0.001,
+    verbose: bool = True,
 ):
+    if verbose:
+        print(f"loading PAs from gs://{bucket}/{wdpa_file_name}")
     wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
+
+    if verbose:
+        print("cleaning and simplifying geometries")
     wdpa = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
     wdpa["geometry"] = wdpa["geometry"].simplify(tolerance=tolerance).make_valid()
 
+    if verbose:
+        print("separating marine and terrestrial PAs")
     wdpa_ter = wdpa[wdpa["MARINE"].isin(["0", "1"])].copy()
     wdpa_ter = wdpa_ter.dropna(axis=1, how="all")
     wdpa_mar = wdpa[wdpa["MARINE"].eq("2")].copy()
     wdpa_mar = wdpa_mar.dropna(axis=1, how="all")
 
+    if verbose:
+        print(f"saving terrestrial PAs to {terrestrial_pa_file_name}")
     upload_gdf(bucket, wdpa_ter, terrestrial_pa_file_name)
+    if verbose:
+        print(f"saving marine PAs to {marine_pa_file_name}")
     upload_gdf(bucket, wdpa_mar, marine_pa_file_name)
 
     return wdpa_ter, wdpa_mar
