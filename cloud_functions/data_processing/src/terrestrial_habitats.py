@@ -10,6 +10,8 @@ import math
 import numpy as np
 import rasterio
 from shapely.geometry import mapping
+from shapely.validation import make_valid
+
 from rasterio.mask import mask
 from rasterio.transform import rowcol
 
@@ -559,11 +561,15 @@ def generate_terrestrial_biome_stats_pa(
         for country in tqdm(gadm["GID_0"].unique()):
             country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
             polygons_gdf = wdpa[wdpa[country_col] == country]
+            polygons_gdf["geometry"] = polygons_gdf["geometry"].make_valid()
 
             # tile country
-            tile_geoms = tile_geometry(
-                country_poly, src.transform, tile_size_pixels=tile_size_pixels
-            )
+            tile_geoms = [
+                make_valid(tile)
+                for tile in tile_geometry(
+                    country_poly, src.transform, tile_size_pixels=tile_size_pixels
+                )
+            ]
 
             # clip geometries to tiles
             clipped_geoms = clip_geoms(tile_geoms, polygons_gdf)
