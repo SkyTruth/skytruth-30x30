@@ -13,6 +13,7 @@ from src.methods import (
     generate_protected_areas_table,
     generate_protection_coverage_stats_table,
     preprocess_mangroves,
+    process_protected_area_geoms,
     process_terrestrial_biome_raster,
 )
 
@@ -132,6 +133,7 @@ def main(request: Request) -> tuple[str, int]:
 
             case "download_protected_planet_wdpa":
                 download_protected_planet(verbose=verbose)
+                _ = process_protected_area_geoms(verbose=verbose)
 
             case "generate_protected_areas_table":
                 _ = generate_protected_areas_table(verbose=verbose)

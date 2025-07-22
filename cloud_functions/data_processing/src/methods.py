@@ -8,7 +8,7 @@ import zipfile
 import fiona
 import geopandas as gpd
 import rasterio
-from shapely.geometry import box
+from shapely.geometry import box, Point, MultiPoint
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from shapely.strtree import STRtree
@@ -60,6 +60,8 @@ from params import (
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     BIOME_RASTER_PATH,
     PROCESSED_BIOME_RASTER_PATH,
+    WDPA_TERRESTRIAL_FILE_NAME,
+    WDPA_MARINE_FILE_NAME,
 )
 
 from commons import load_marine_regions, extract_polygons, load_regions
@@ -529,6 +531,28 @@ def download_protected_planet(
         per_page=50,
         verbose=verbose,
     )
+
+
+def process_protected_area_geoms(
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    wdpa_file_name: str = WDPA_FILE_NAME,
+    bucket: str = BUCKET,
+    tolerance: float = 0.001,
+):
+    wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
+    wdpa = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
+    wdpa["geometry"] = wdpa["geometry"].simplify(tolerance=tolerance).make_valid()
+
+    wdpa_ter = wdpa[wdpa["MARINE"].isin(["0", "1"])].copy()
+    wdpa_ter = wdpa_ter.dropna(axis=1, how="all")
+    wdpa_mar = wdpa[wdpa["MARINE"].eq("2")].copy()
+    wdpa_mar = wdpa_mar.dropna(axis=1, how="all")
+
+    upload_gdf(bucket, wdpa_ter, terrestrial_pa_file_name)
+    upload_gdf(bucket, wdpa_mar, marine_pa_file_name)
+
+    return wdpa_ter, wdpa_mar
 
 
 def download_habitats(
