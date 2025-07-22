@@ -62,7 +62,7 @@ from params import (
     PROCESSED_BIOME_RASTER_PATH,
 )
 
-from commons import load_marine_regions, extract_polygons
+from commons import load_marine_regions, extract_polygons, load_regions
 from marine_habitats import create_seamounts_subtable, create_mangroves_subtable
 from terrestrial_habitats import reclass_function
 
@@ -796,28 +796,6 @@ def generate_protected_areas_table(
     return protected_areas.to_dict(orient="records")
 
 
-def load_regions(
-    bucket: str = BUCKET,
-    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
-    regions_file_name: str = REGIONS_FILE_NAME,
-    verbose: bool = True,
-):
-    # Load related countries and regions
-    related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
-    regions = read_json_from_gcs(bucket, regions_file_name, verbose=verbose)
-
-    combined_regions = related_countries | regions
-    combined_regions["GLOB"] = []
-
-    parent_country = {}
-    for cnt in combined_regions:
-        if len(cnt) == 3:
-            for c in combined_regions[cnt]:
-                parent_country[c] = cnt
-
-    return combined_regions, parent_country
-
-
 def create_habitat_subtable(
     bucket: str, habitats_file_name: str, combined_regions: dict, verbose: bool
 ):
@@ -1494,10 +1472,6 @@ def process_terrestrial_biome_raster(
     blob = bucket.blob(biome_raster_path)
     blob.download_to_filename(local_biome_raster_path)
 
-    if verbose:
-        print(f"uploading raw raster data to {biome_raster_path}")
-    upload_file_to_gcs(bucket, local_biome_raster_path, biome_raster_path)
-
     fn_out = processed_biome_raster_path.split("/")[-1]
 
     if verbose:
@@ -1567,7 +1541,3 @@ def process_terrestrial_biome_raster(
 
     if verbose:
         print("finished uploading")
-
-
-if __name__ == "__main__":
-    process_terrestrial_biome_raster()

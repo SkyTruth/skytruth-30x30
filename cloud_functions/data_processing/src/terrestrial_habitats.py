@@ -10,17 +10,22 @@ import math
 import numpy as np
 import rasterio
 from shapely.geometry import mapping
+from rasterio.mask import mask
 from rasterio.transform import rowcol
+
+from commons import load_regions
 
 from params import (
     COUNTRY_HABITATS_SUBTABLE_FILENAME,
     GADM_ZIPFILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
+    WDPA_FILE_NAME,
 )
 
 from utils.gcp import (
     read_zipped_gpkg_from_gcs,
     upload_dataframe,
+    load_gdb_layer_from_gcs,
 )
 
 from utils.geo import compute_pixel_area_map_km2
@@ -425,3 +430,161 @@ def create_terrestrial_subtable(
         )
 
     return terrestrial_habitats_subtable
+
+
+def get_cover_areas(src, geom, identifier, id_col, land_cover_classes=LAND_COVER_CLASSES):
+    out_image, out_transform = mask(src, geom, crop=True)
+
+    if np.all(out_image[0] <= 0):
+        return None
+
+    # Compute area per pixel using latitude-varying resolution
+    pixel_area_map = compute_pixel_area_map_km2(
+        out_transform, width=out_image.shape[2], height=out_image.shape[1]
+    )
+
+    cover_areas = {}
+    for value in np.unique(out_image[0]):
+        if value <= 0:
+            continue
+        mask_value = out_image[0] == value
+        area_sum = pixel_area_map[mask_value].sum()
+        cover_areas[land_cover_classes.get(int(value), f"class_{value}")] = area_sum
+
+    return {id_col: identifier, **cover_areas}
+
+
+def generate_terrestrial_biome_stats_country(
+    raster_path: str = PROCESSED_BIOME_RASTER_PATH,
+    gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
+    bucket: str = BUCKET,
+    tolerance: float = 0.001,
+):
+    def get_group_stats(df, loc, relations):
+        if loc == "GLOB":
+            df_group = df
+        else:
+            df_group = df[df["country"].isin(relations[loc])]
+
+        out = df_group[[c for c in df_group.columns if c != "country"]].sum().to_dict()
+        out["location"] = loc
+
+        return out
+
+    combined_regions, _ = load_regions()
+
+    print("loading and simplifying GADM geometries")
+    gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
+    gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
+
+    country_stats = []
+    with rasterio.open(raster_path) as src:
+        for country in tqdm(gadm["GID_0"].unique()):
+            country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
+            tile_geoms = tile_geometry(country_poly, src.transform)
+            print(f"generated {len(tile_geoms)} tiles within {country}")
+
+            results = []
+            for tile in tile_geoms:
+                entry = get_cover_areas(src, [mapping(tile)], country, "country")
+                if entry is not None:
+                    results.append(entry)
+
+            results = pd.DataFrame(results)
+            cs = results[[c for c in results.columns if c != "country"]].agg("sum").to_dict()
+            cs["country"] = country
+
+            country_stats.append(cs)
+
+    country_stats = pd.DataFrame(country_stats)
+
+    grouped_cnt_stats = pd.DataFrame(
+        [get_group_stats(country_stats, reg, combined_regions) for reg in combined_regions]
+    )
+
+    return grouped_cnt_stats
+
+
+def generate_terrestrial_biome_stats_pa(
+    combined_regions,
+    raster_path: str = PROCESSED_BIOME_RASTER_PATH,
+    gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
+    wdpa_file_name: str = WDPA_FILE_NAME,
+    bucket: str = BUCKET,
+    tolerance: float = 0.001,
+    country_col="ISO3",
+    tile_size_pixels=8192,
+):
+    def get_group_stats(df, loc, relations):
+        if loc == "GLOB":
+            df_group = df
+        else:
+            df_group = df[df["country"].isin(relations[loc])]
+
+        out = df_group[[c for c in df_group.columns if c != "country"]].sum().to_dict()
+        out["location"] = loc
+
+        return out
+
+    def clip_geoms(tile_geoms, polygons_gdf):
+        clipped_geoms = []
+
+        for tile in tile_geoms:
+            # Find only polygons in gdf that intersect the tile
+            subset = polygons_gdf[polygons_gdf.intersects(tile)]
+
+            if not subset.empty:
+                # Union the overlapping geometries
+                unioned = unary_union(subset.geometry)
+
+                # Clip the unioned geometry to the tile
+                clipped = tile.intersection(unioned)
+
+                clipped_geoms.append(clipped)
+
+        return clipped_geoms
+
+    print("loading and simplifying GADM geometries")
+    gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
+    gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
+
+    print("loading PAs")
+    wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
+    wdpa = wdpa[wdpa["MARINE"].isin(["0", "1"])]
+    wdpa = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
+    wdpa["geometry"] = wdpa["geometry"].make_valid()
+
+    pa_stats = []
+    with rasterio.open(raster_path) as src:
+        for country in tqdm(gadm["GID_0"].unique()):
+            country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
+            polygons_gdf = wdpa[wdpa[country_col] == country]
+
+            # tile country
+            tile_geoms = tile_geometry(
+                country_poly, src.transform, tile_size_pixels=tile_size_pixels
+            )
+
+            # clip geometries to tiles
+            clipped_geoms = clip_geoms(tile_geoms, polygons_gdf)
+            print(f"generated {len(clipped_geoms)} tiles within {country}'s PAs")
+
+            results = []
+            for tile in clipped_geoms:
+                entry = get_cover_areas(src, [mapping(tile)], country, "country")
+                if entry is not None:
+                    results.append(entry)
+
+            results = pd.DataFrame(results)
+            ps = results[[c for c in results.columns if c != "country"]].agg("sum").to_dict()
+            ps["country"] = country
+
+            pa_stats.append(ps)
+
+    pa_stats = pd.DataFrame(pa_stats)
+
+    grouped_pa_stats = pd.DataFrame(
+        [get_group_stats(pa_stats, reg, combined_regions) for reg in combined_regions]
+    )
+
+    return grouped_pa_stats

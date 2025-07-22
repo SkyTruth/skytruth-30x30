@@ -6,7 +6,10 @@ import zipfile
 import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon, GeometryCollection
 
+from utils.gcp import read_json_from_gcs
 from utils.processors import clean_geometries
+
+from params import RELATED_COUNTRIES_FILE_NAME, REGIONS_FILE_NAME
 
 
 verbose = True
@@ -58,3 +61,25 @@ def extract_polygons(geom):
         return MultiPolygon(polys) if polys else None
     else:
         return None
+
+
+def load_regions(
+    bucket: str = BUCKET,
+    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
+    regions_file_name: str = REGIONS_FILE_NAME,
+    verbose: bool = True,
+):
+    # Load related countries and regions
+    related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
+    regions = read_json_from_gcs(bucket, regions_file_name, verbose=verbose)
+
+    combined_regions = related_countries | regions
+    combined_regions["GLOB"] = []
+
+    parent_country = {}
+    for cnt in combined_regions:
+        if len(cnt) == 3:
+            for c in combined_regions[cnt]:
+                parent_country[c] = cnt
+
+    return combined_regions, parent_country
