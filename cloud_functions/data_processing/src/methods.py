@@ -552,9 +552,9 @@ def process_protected_area_geoms(
 
     if verbose:
         print("separating marine and terrestrial PAs")
-    wdpa_ter = wdpa[wdpa["MARINE"].isin(["0", "1"])].copy()
+    wdpa_ter = wdpa[wdpa["MARINE"].eq("0")].copy()
     wdpa_ter = wdpa_ter.dropna(axis=1, how="all")
-    wdpa_mar = wdpa[wdpa["MARINE"].eq("2")].copy()
+    wdpa_mar = wdpa[wdpa["MARINE"].isin(["1", "2"])].copy()
     wdpa_mar = wdpa_mar.dropna(axis=1, how="all")
 
     if verbose:
