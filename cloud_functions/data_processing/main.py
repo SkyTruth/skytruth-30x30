@@ -15,6 +15,7 @@ from src.methods import (
     preprocess_mangroves,
     process_protected_area_geoms,
     process_terrestrial_biome_raster,
+    process_gadm_geoms,
 )
 
 from src.params import (
@@ -82,6 +83,7 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
+                _ = process_gadm_geoms(verbose=verbose)
 
             case "download_eezs":
                 download_zip_to_gcs(
@@ -122,9 +124,6 @@ def main(request: Request) -> tuple[str, int]:
             case "download_habitats":
                 download_habitats(verbose=verbose)
 
-            case "process_terrestrial_biomes":
-                process_terrestrial_biome_raster(verbose=verbose)
-
             case "download_mpatlas":
                 download_mpatlas(verbose=verbose)
 
@@ -134,6 +133,9 @@ def main(request: Request) -> tuple[str, int]:
             case "download_protected_planet_wdpa":
                 download_protected_planet(verbose=verbose)
                 _ = process_protected_area_geoms(verbose=verbose)
+
+            case "process_terrestrial_biomes":
+                process_terrestrial_biome_raster(verbose=verbose)
 
             case "generate_protected_areas_table":
                 _ = generate_protected_areas_table(verbose=verbose)
@@ -149,14 +151,6 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
-            case "download_gadm":
-                download_zip_to_gcs(
-                    GADM_URL,
-                    BUCKET,
-                    GADM_ZIPFILE_NAME,
-                    chunk_size=CHUNK_SIZE,
-                    verbose=verbose,
-                )
 
             case _:
                 print(f"METHOD: {method} not a valid option")

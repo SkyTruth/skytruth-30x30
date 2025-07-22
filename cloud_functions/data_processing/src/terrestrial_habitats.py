@@ -19,12 +19,14 @@ from params import (
     COUNTRY_HABITATS_SUBTABLE_FILENAME,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     GADM_ZIPFILE_NAME,
+    GADM_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 
 from utils.gcp import (
+    download_file_from_gcs,
     read_zipped_gpkg_from_gcs,
     upload_dataframe,
     read_json_df,
@@ -505,11 +507,11 @@ def generate_terrestrial_biome_stats_pa(
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     raster_path: str = PROCESSED_BIOME_RASTER_PATH,
-    gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
+    gadm_file_name: str = GADM_FILE_NAME,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
-    tolerance: float = 0.001,
+    tolerance: float = None,
     country_col="ISO3",
     tile_size_pixels=8192,
     verbose: bool = True,
@@ -556,18 +558,29 @@ def generate_terrestrial_biome_stats_pa(
         return []  # Point, LineString, etc.
 
     if verbose:
-        print(f"loading and simplifying GADM geometries from {gadm_zipfile_name}")
-    gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
-    gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
+        print(f"loading and simplifying GADM geometries from {gadm_file_name}")
+
+    gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
+    if tolerance is not None:
+        gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
 
     if verbose:
         print(f"loading PAs from {terrestrial_pa_file_name}")
     wdpa = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
+    if tolerance is not None:
+        wdpa["geometry"] = wdpa["geometry"].simplify(tolerance=tolerance)
 
     if verbose:
         print(f"loading country habitat stats from {country_stats_filename}")
     country_stats = read_json_df(bucket, country_stats_filename, verbose=verbose)
 
+    if verbose:
+        print(f"downloading raster from {raster_path}")
+    local_raster_path = raster_path.split("/")[-1]
+    download_file_from_gcs(bucket, raster_path, local_raster_path, verbose=False)
+
+    if verbose:
+        print("calculating terrestrial habitat area within PAs")
     pa_stats = []
     with rasterio.open(raster_path) as src:
         for country in tqdm(gadm["GID_0"].unique()):

@@ -395,7 +395,7 @@ def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefil
 
 
 def read_zipped_gpkg_from_gcs(
-    bucket: str, zip_blob_name: str, chunk_size: int = 8192
+    bucket: str, zip_blob_name: str, chunk_size: int = 8192, layer=None
 ) -> gpd.GeoDataFrame:
     """
     Downloads a zipped .gpkg from GCS, extracts it locally, reads the geopackage,
@@ -445,7 +445,10 @@ def read_zipped_gpkg_from_gcs(
             if not gpkg_files:
                 raise FileNotFoundError("No .gpkg file found in the zip archive.")
 
-            return gpd.read_file(gpkg_files[0])
+            if layer is None:
+                return gpd.read_file(gpkg_files[0])
+            else:
+                return gpd.read_file(gpkg_files[0], layer=layer)
 
 
 def read_dataframe(
@@ -673,3 +676,24 @@ def load_gdb_layer_from_gcs(
                 gdf = pd.concat((gdf, gdf0), axis=0)
 
             return gdf
+
+
+def download_file_from_gcs(bucket_name: str, blob_name: str, destination_file_name: str) -> None:
+    """
+    Downloads a file from a GCS bucket to the local filesystem.
+
+    Parameters
+    ----------
+    bucket_name : str
+        Name of the GCS bucket (e.g., 'my-bucket').
+    blob_name : str
+        Full path of the object in the bucket (e.g., 'data/my_file.txt').
+    destination_file_name : str
+        Local path to save the file (e.g., './my_file.txt').
+    """
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    blob.download_to_filename(destination_file_name)
+    print(f"Downloaded '{blob_name}' from bucket '{bucket_name}' to '{destination_file_name}'.")

@@ -63,6 +63,8 @@ from params import (
     PROCESSED_BIOME_RASTER_PATH,
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
+    GADM_ZIPFILE_NAME,
+    GADM_FILE_NAME,
 )
 
 from commons import load_marine_regions, extract_polygons, load_regions
@@ -81,6 +83,7 @@ from utils.gcp import (
     upload_gdf,
     save_json_to_gcs,
     upload_file_to_gcs,
+    read_zipped_gpkg_from_gcs,
 )
 
 from utils.processors import (
@@ -571,7 +574,10 @@ def process_protected_area_geoms(
     poly_pas = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
     wdpa = pd.concat((poly_pas, buffered_point_pas), axis=0)
 
-    wdpa["geometry"] = wdpa["geometry"].simplify(tolerance=tolerance).make_valid()
+    if tolerance is not None:
+        wdpa["geometry"] = wdpa["geometry"].simplify(tolerance=tolerance)
+
+    wdpa["geometry"] = wdpa["geometry"].make_valid()
 
     if verbose:
         print("separating marine and terrestrial PAs")
@@ -588,6 +594,31 @@ def process_protected_area_geoms(
     upload_gdf(bucket, wdpa_mar, marine_pa_file_name)
 
     return wdpa_ter, wdpa_mar
+
+
+def process_gadm_geoms(
+    gadm_file_name: str = GADM_FILE_NAME,
+    gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
+    bucket: str = BUCKET,
+    tolerance: float = 0.001,
+    verbose: bool = True,
+):
+    if verbose:
+        print(f"loading gadm gpkg from {gadm_zipfile_name}")
+    gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name, layer="ADM_0")
+
+    if tolerance is not None:
+        if verbose:
+            print("simplifying geometries")
+        gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
+
+    gadm["geometry"] = gadm["geometry"].make_valid()
+
+    if verbose:
+        print(f"uploading simplified GADM countries to {gadm_file_name}")
+    upload_gdf(bucket, gadm, gadm_file_name)
+
+    return gadm
 
 
 def download_habitats(
