@@ -20,6 +20,7 @@ import threading
 import concurrent.futures
 
 from params import (
+    today_formatted,
     CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
@@ -541,13 +542,35 @@ def process_protected_area_geoms(
     tolerance: float = 0.001,
     verbose: bool = True,
 ):
+    def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        def calculate_radius(rep_area: float) -> float:
+            return ((rep_area * 1e6) / np.pi) ** 0.5
+
+        df = df[df["REP_AREA"] > 0].copy()
+        df["geometry"] = df.to_crs("ESRI:54009").apply(
+            lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+            axis=1,
+        )
+        return df.to_crs("EPSG:4326").copy()
+
     if verbose:
         print(f"loading PAs from gs://{bucket}/{wdpa_file_name}")
-    wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
+    wdpa = load_gdb_layer_from_gcs(
+        wdpa_file_name,
+        bucket,
+        layers=[f"WDPA_poly_{today_formatted}", f"WDPA_point_{today_formatted}"],
+    )
 
     if verbose:
         print("cleaning and simplifying geometries")
-    wdpa = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
+
+    # TODO: This eliminates point PAs that have REP_AREA=0, is this what we want?
+    buffered_point_pas = create_buffer(
+        wdpa[wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
+    )
+    poly_pas = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
+    wdpa = pd.concat((poly_pas, buffered_point_pas), axis=0)
+
     wdpa["geometry"] = wdpa["geometry"].simplify(tolerance=tolerance).make_valid()
 
     if verbose:
