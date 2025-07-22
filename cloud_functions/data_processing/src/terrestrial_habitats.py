@@ -241,7 +241,7 @@ def preprocess_terrestrial_habitats_by_country(
     bucket: str = BUCKET,
     gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
     land_cover_classes: dict = LAND_COVER_CLASSES,
-    processed_biome_raster_path="../data_processing_tests/processed_biome_raster.tif",
+    processed_biome_raster_path=PROCESSED_BIOME_RASTER_PATH,
     country_habitats_subtable_filename: str = COUNTRY_HABITATS_SUBTABLE_FILENAME,
     tile_width: int = 1000,
     tile_height: int = 1000,
@@ -249,7 +249,8 @@ def preprocess_terrestrial_habitats_by_country(
 ):
     """
     Processes terrestrial habitat area summaries for each country based on a
-    raster of biome classifications.
+    raster of biome classifications. This is only done when either GADM or
+    the raster biome is updated
 
     This function reads administrative boundaries from a zipped GeoPackage (GADM),
     generates a grid of tiles over a preprocessed biome classification raster,
@@ -322,9 +323,14 @@ def preprocess_terrestrial_habitats_by_country(
     gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
 
     if verbose:
+        print(f"downloading raster from {processed_biome_raster_path}")
+    local_raster_path = processed_biome_raster_path.split("/")[-1]
+    download_file_from_gcs(bucket, processed_biome_raster_path, local_raster_path, verbose=False)
+
+    if verbose:
         print("creating boundary polygons")
     boundary_polys = generate_raster_tiles(
-        processed_biome_raster_path, tile_width=tile_width, tile_height=tile_height
+        local_raster_path, tile_width=tile_width, tile_height=tile_height
     )
 
     start_time = datetime.datetime.now()
@@ -332,7 +338,7 @@ def preprocess_terrestrial_habitats_by_country(
     for cnt in tqdm(list(sorted(set(gadm["GID_0"])))):
         start = datetime.datetime.now()
         country_habitats_subtable.append(
-            per_country(cnt, gadm, boundary_polys, processed_biome_raster_path, land_cover_classes)
+            per_country(cnt, gadm, boundary_polys, local_raster_path, land_cover_classes)
         )
         end = datetime.datetime.now()
         if verbose:
