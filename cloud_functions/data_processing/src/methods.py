@@ -64,6 +64,8 @@ from params import (
     WDPA_MARINE_FILE_NAME,
     GADM_ZIPFILE_NAME,
     GADM_FILE_NAME,
+    PA_TERRESTRIAL_HABITATS_FILE_NAME,
+    COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
 )
 
 from commons import load_marine_regions, extract_polygons, load_regions
@@ -72,7 +74,7 @@ from marine_habitats import (
     create_mangroves_subtable,
     create_marine_habitat_subtable,
 )
-from terrestrial_habitats import reclass_function
+from terrestrial_habitats import reclass_function, create_terrestrial_habitats_subtable
 
 from utils.gcp import (
     download_zip_to_gcs,
@@ -87,6 +89,7 @@ from utils.gcp import (
     save_json_to_gcs,
     upload_file_to_gcs,
     read_zipped_gpkg_from_gcs,
+    read_json_df,
 )
 
 from utils.processors import (
@@ -545,7 +548,7 @@ def process_protected_area_geoms(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     wdpa_file_name: str = WDPA_FILE_NAME,
     bucket: str = BUCKET,
-    tolerance: float = 0.001,
+    tolerance: float = 0.0001,
     verbose: bool = True,
 ):
     def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -575,7 +578,7 @@ def process_protected_area_geoms(
         wdpa[wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
     )
     poly_pas = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
-    wdpa = pd.concat((poly_pas, buffered_point_pas), axis=0)
+    wdpa = pd.concat((poly_pas, buffered_point_pas), axis=0).pipe(clean_geometries)
 
     if tolerance is not None:
         wdpa["geometry"] = wdpa["geometry"].simplify(tolerance=tolerance)
@@ -589,12 +592,15 @@ def process_protected_area_geoms(
     wdpa_mar = wdpa[wdpa["MARINE"].isin(["1", "2"])].copy()
     wdpa_mar = wdpa_mar.dropna(axis=1, how="all")
 
+    ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
     if verbose:
-        print(f"saving terrestrial PAs to {terrestrial_pa_file_name}")
-    upload_gdf(bucket, wdpa_ter, terrestrial_pa_file_name)
+        print(f"saving terrestrial PAs to {ter_out_fn}")
+    upload_gdf(bucket, wdpa_ter, ter_out_fn)
+
+    mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
     if verbose:
-        print(f"saving marine PAs to {marine_pa_file_name}")
-    upload_gdf(bucket, wdpa_mar, marine_pa_file_name)
+        print(f"saving marine PAs to {mar_out_fn}")
+    upload_gdf(bucket, wdpa_mar, mar_out_fn)
 
     return wdpa_ter, wdpa_mar
 
@@ -603,7 +609,7 @@ def process_gadm_geoms(
     gadm_file_name: str = GADM_FILE_NAME,
     gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
     bucket: str = BUCKET,
-    tolerance: float = 0.001,
+    tolerance: float = 0.0001,
     verbose: bool = True,
 ):
     if verbose:
@@ -617,9 +623,10 @@ def process_gadm_geoms(
 
     gadm["geometry"] = gadm["geometry"].make_valid()
 
+    out_fn = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
     if verbose:
-        print(f"uploading simplified GADM countries to {gadm_file_name}")
-    upload_gdf(bucket, gadm, gadm_file_name)
+        print(f"uploading simplified GADM countries to {out_fn}")
+    upload_gdf(bucket, gadm, out_fn)
 
     return gadm
 
@@ -889,7 +896,7 @@ def generate_protected_areas_table(
     return protected_areas.to_dict(orient="records")
 
 
-def dissolve_multipolygons_only(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
+def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
     counts = gdf[key].value_counts()
 
     singles = gdf[gdf[key].isin(counts[counts == 1].index)]
@@ -909,40 +916,51 @@ def generate_habitat_protection_table(
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
-    wdpa_file_name: str = WDPA_FILE_NAME,
+    pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
+    country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
+    processed_biome_raster_path: str = PROCESSED_BIOME_RASTER_PATH,
+    gadm_file_name: str = GADM_FILE_NAME,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
     eez_params: dict = EEZ_PARAMS,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
+    marine_tolerance = 0.0001
+    terrestrial_tolerance = 0.001
+
+    marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
+    terrestrial_pa_file_name = terrestrial_pa_file_name.replace(
+        ".geojson", f"_{terrestrial_tolerance}.geojson"
+    )
+    gadm_file_name = gadm_file_name.replace(".geojson", f"_{terrestrial_tolerance}.geojson")
+
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
+    if verbose:
+        print("loading regions")
     combined_regions, parent_country = load_regions()
+
+    if verbose:
+        print(f"loading and simplifying GADM geometries from {gadm_file_name}")
+
+    gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
 
     if verbose:
         print("getting protected areas (this may take a few minutes)")
 
-    protected_areas = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
+    marine_protected_areas = read_json_df(bucket, marine_pa_file_name, verbose=verbose)
+    terrestrial_protected_areas = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
 
     if verbose:
         print("dissolving over protected areas")
 
     marine_protected_areas = (
-        dissolve_multipolygons_only(
-            protected_areas[protected_areas["MARINE"].isin(["1", "2"])][
-                ["PARENT_ISO3", "WDPAID", "geometry"]
-            ]
-        )
-        .rename(columns={"PARENT_ISO3": "location", "WDPAID": "wdpa_id"})
+        dissolve_multipolygons(marine_protected_areas[["ISO3", "WDPAID", "geometry"]])
+        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
         .pipe(clean_geometries)
-    )
-
-    if verbose:
-        print("making MPA geometries valid")
-
-    marine_protected_areas["geometry"] = marine_protected_areas["geometry"].progress_apply(
-        make_valid
     )
 
     if verbose:
@@ -980,6 +998,20 @@ def generate_habitat_protection_table(
     marine_habitats = pd.concat(
         (marine_habitats_subtable, seamounts_subtable, mangroves_subtable), axis=0
     )
+
+    terrestrial_habitats = create_terrestrial_habitats_subtable(
+        combined_regions,
+        terrestrial_protected_areas,
+        gadm,
+        pa_stats_filename=pa_stats_filename,
+        country_stats_filename=country_stats_filename,
+        raster_path=processed_biome_raster_path,
+        bucket=bucket,
+        project=project,
+        verbose=verbose,
+    )
+
+    print(terrestrial_habitats.head())
 
     # TODO: combine with terrestrial
     habitats = marine_habitats.copy()

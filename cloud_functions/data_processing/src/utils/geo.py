@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from rasterio.transform import Affine
+from shapely.geometry import box
 
 # Constants
 EARTH_RADIUS_KM = 6371.0088
@@ -42,3 +43,41 @@ def compute_pixel_area_map_km2(transform: Affine, width: int, height: int) -> np
     area_per_pixel = np.outer(pixel_width_km, np.full(width, pixel_height_km))
 
     return area_per_pixel
+
+
+def tile_geometry(geom, transform, tile_size_pixels=1000):
+    """
+    Splits the geometry’s bounding box into smaller square tiles
+    and intersects them with the geometry.
+
+    Parameters
+    ----------
+    geom : shapely.Geometry
+        Input polygon.
+    transform : Affine
+        Raster affine transform.
+    tile_size_pixels : int
+        Number of pixels per tile edge (e.g., 1000x1000 pixels).
+
+    Returns
+    -------
+    List[shapely.Geometry]
+        List of clipped tile geometries.
+    """
+    res_x, res_y = transform.a, -transform.e
+    bounds = geom.bounds
+    xmin, ymin, xmax, ymax = bounds
+
+    tiles = []
+    x = xmin
+    while x < xmax:
+        y = ymin
+        while y < ymax:
+            tile = box(x, y, x + res_x * tile_size_pixels, y + res_y * tile_size_pixels)
+            clipped = geom.intersection(tile)
+            if not clipped.is_empty:
+                tiles.append(clipped)
+            y += res_y * tile_size_pixels
+        x += res_x * tile_size_pixels
+
+    return tiles

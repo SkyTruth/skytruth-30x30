@@ -253,7 +253,9 @@ def upload_dataframe(
     bucket = client.get_bucket(bucket_name)
     if verbose:
         print(f"Uploading dataframe to gs://{bucket_name}/{destination_blob_name}.")
-    bucket.blob(destination_blob_name).upload_from_string(df.to_csv(index=None), "csv")
+    bucket.blob(destination_blob_name).upload_from_string(
+        df.to_csv(index=False, float_format="%.10f"), "csv"
+    )
 
 
 def save_json_to_gcs(
