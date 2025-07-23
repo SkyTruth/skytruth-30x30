@@ -1,6 +1,10 @@
 import os
+from io import BytesIO
 import pandas as pd
 import geopandas as gpd
+import numpy as np
+import gcsfs
+import zipfile
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
 from shapely.validation import make_valid
@@ -26,9 +30,6 @@ verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
 BUCKET = os.getenv("BUCKET", "")
 PROJECT = os.getenv("PROJECT", "")
-
-GLOBAL_MARINE_AREA_KM2 = 361000000
-GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
 
 
 def create_seamounts_subtable(
@@ -235,3 +236,73 @@ def create_mangroves_subtable(
     )
 
     return mangrove_habitat[mangrove_habitat["total_area"] > 0]
+
+
+def create_marine_habitat_subtable(
+    bucket: str, habitats_file_name: str, combined_regions: dict, verbose: bool
+):
+    def get_group_stats(df, loc, relations, habitat):
+        if loc == "GLOB":
+            df_group = df[df["habitat"] == habitat].replace("-", np.nan)
+        else:
+            df_group = df[(df["ISO3"].isin(relations[loc])) & (df["habitat"] == habitat)].replace(
+                "-", np.nan
+            )
+
+        # Ensure numeric conversion
+        df_group["total_area"] = pd.to_numeric(df_group["total_area"], errors="coerce")
+        total_area = df_group["total_area"].sum()
+
+        df_group["protected_area"] = pd.to_numeric(df_group["protected_area"], errors="coerce")
+        protected_area = df_group["protected_area"].sum()
+
+        return {
+            "location": loc,
+            "habitat": habitat,
+            "environment": "marine",
+            "protected_area": protected_area,
+            "total_area": total_area,
+            # "percent_protected": 100 * protected_area / total_area if total_area else None,
+        }
+
+    habitats = ["warmwatercorals", "coldwatercorals", "seagrasses", "saltmarshes"]
+
+    if verbose:
+        print("downloading habitats zipfile into memory")
+
+    fs = gcsfs.GCSFileSystem()
+    with fs.open(f"gs://{bucket}/{habitats_file_name}", "rb") as f:
+        zip_bytes = f.read()
+
+    dfs = {}
+    with zipfile.ZipFile(BytesIO(zip_bytes)) as zf:
+        for name in habitats:
+            with zf.open(f"Ocean+HabitatsDownload_Global/{name}.csv") as csv_file:
+                dfs[name] = pd.read_csv(csv_file)
+
+    if verbose:
+        print("generating habitats table")
+
+    marine_habitats = pd.DataFrame()
+    for habitat in habitats:
+        tmp = dfs[habitat][["ISO3", "protected_area", "total_area"]].copy()
+        tmp["environment"] = "marine"
+        tmp["habitat"] = habitat
+        marine_habitats = pd.concat((marine_habitats, tmp))
+
+    if verbose:
+        print("Grouping by sovereign country and region")
+
+    marine_habitats_group = []
+    for habitat in habitats:
+        df = pd.DataFrame(
+            [
+                stat
+                for loc in combined_regions
+                if (stat := get_group_stats(marine_habitats, loc, combined_regions, habitat))
+                is not None
+            ]
+        )
+        marine_habitats_group.append(df)
+
+    return pd.concat(marine_habitats_group, axis=0, ignore_index=True)

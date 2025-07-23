@@ -678,7 +678,9 @@ def load_gdb_layer_from_gcs(
             return gdf
 
 
-def download_file_from_gcs(bucket_name: str, blob_name: str, destination_file_name: str) -> None:
+def download_file_from_gcs(
+    bucket_name: str, blob_name: str, destination_file_name: str, verbose: bool = True
+) -> None:
     """
     Downloads a file from a GCS bucket to the local filesystem.
 
@@ -696,4 +698,5 @@ def download_file_from_gcs(bucket_name: str, blob_name: str, destination_file_na
     blob = bucket.blob(blob_name)
 
     blob.download_to_filename(destination_file_name)
-    print(f"Downloaded '{blob_name}' from bucket '{bucket_name}' to '{destination_file_name}'.")
+    if verbose:
+        print(f"Downloaded '{blob_name}' from bucket '{bucket_name}' to '{destination_file_name}'.")

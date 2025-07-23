@@ -3,7 +3,7 @@ import datetime
 import pandas as pd
 import geopandas as gpd
 import requests
-from shapely.geometry import box, Point, MultiPoint
+from shapely.geometry import box
 from shapely.ops import unary_union
 from tqdm.auto import tqdm
 import math
@@ -16,9 +16,7 @@ from rasterio.mask import mask
 from rasterio.transform import rowcol
 
 from params import (
-    COUNTRY_HABITATS_SUBTABLE_FILENAME,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
-    GADM_ZIPFILE_NAME,
     GADM_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
@@ -27,7 +25,6 @@ from params import (
 
 from utils.gcp import (
     download_file_from_gcs,
-    read_zipped_gpkg_from_gcs,
     upload_dataframe,
     read_json_df,
 )
@@ -39,10 +36,6 @@ verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
 BUCKET = os.getenv("BUCKET", "")
 PROJECT = os.getenv("PROJECT", "")
-
-GLOBAL_MARINE_AREA_KM2 = 361000000
-GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
-
 
 LAND_COVER_CLASSES = {
     1: "Forest",
@@ -120,72 +113,6 @@ def tile_geometry(geom, transform, tile_size_pixels=1000):
     return tiles
 
 
-def compute_land_cover_area_km2(
-    raster_path, polygons_gdf, land_cover_classes, id_col="WDPAID", max_pixels=5e7
-):
-    """
-    Computes land cover area (in km²) by class for each polygon.
-
-    Parameters
-    ----------
-    raster_path : str
-        Path to the reprojected raster (in equal-area CRS, e.g., EPSG:6933).
-    polygons_gdf : GeoDataFrame
-        Polygons (must be reprojected to match raster CRS).
-    id_col : str
-        Column name in polygons_gdf to use as identifier.
-
-    Returns
-    -------
-    list of dicts
-        Each dict contains polygon ID and area per land cover class in km².
-    """
-
-    def get_cover_areas(src, geom, identifier, id_col):
-        out_image, out_transform = rasterio.mask(src, geom, crop=True)
-
-        if np.all(out_image[0] <= 0):
-            return None
-
-        # Compute area per pixel using latitude-varying resolution
-        pixel_area_map = compute_pixel_area_map_km2(
-            out_transform, width=out_image.shape[2], height=out_image.shape[1]
-        )
-
-        cover_areas = {}
-        for value in np.unique(out_image[0]):
-            if value <= 0:
-                continue
-            mask_value = out_image[0] == value
-            area_sum = pixel_area_map[mask_value].sum()
-            cover_areas[land_cover_classes.get(int(value), f"class_{value}")] = area_sum
-
-        return {id_col: identifier, **cover_areas}
-
-    results = []
-
-    with rasterio.open(raster_path) as src:
-        for _, row in polygons_gdf.iterrows():
-            try:
-                estimated_pixels = estimate_masked_pixel_count(src, row.geometry)
-                if estimated_pixels < max_pixels:
-                    tile_geoms = [row.geometry]
-                else:
-                    print(f"Tiling WDPAID {row[id_col]} (~{int(estimated_pixels):,} pixels)")
-                    tile_geoms = tile_geometry(row.geometry, src.transform)
-                    print(f"generated {len(tile_geoms)} tiles")
-
-                for tile in tile_geoms:
-                    entry = get_cover_areas(src, [mapping(tile)], row[id_col], id_col)
-                    if entry is not None:
-                        results.append(entry)
-
-            except Exception as e:
-                print(f"Error with polygon {row[id_col]}: {e}")
-
-    return results
-
-
 def generate_raster_tiles(
     raster_path: str, tile_width: int = 1000, tile_height: int = 1000
 ) -> gpd.GeoDataFrame:
@@ -237,129 +164,6 @@ def generate_raster_tiles(
     return gpd.GeoDataFrame(records, crs=crs)
 
 
-def preprocess_terrestrial_habitats_by_country(
-    bucket: str = BUCKET,
-    gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
-    land_cover_classes: dict = LAND_COVER_CLASSES,
-    processed_biome_raster_path=PROCESSED_BIOME_RASTER_PATH,
-    country_habitats_subtable_filename: str = COUNTRY_HABITATS_SUBTABLE_FILENAME,
-    tile_width: int = 1000,
-    tile_height: int = 1000,
-    project: str = PROJECT,
-):
-    """
-    Processes terrestrial habitat area summaries for each country based on a
-    raster of biome classifications. This is only done when either GADM or
-    the raster biome is updated
-
-    This function reads administrative boundaries from a zipped GeoPackage (GADM),
-    generates a grid of tiles over a preprocessed biome classification raster,
-    intersects those tiles with country geometries, computes the area of each
-    land cover class per country, and uploads a summarized table to Google Cloud Storage.
-
-    Parameters
-    ----------
-    bucket : str
-        The GCS bucket name to read from and upload to.
-    gadm_zipfile_name : str
-        The filename of the zipped GADM GeoPackage in the bucket.
-    land_cover_classes : dict
-        A dictionary mapping class IDs to descriptive names for land cover.
-    processed_biome_raster_path : str
-        Local path to the processed biome raster (GeoTIFF format).
-    country_habitats_subtable_filename : str
-        The name to use when uploading the final CSV summary table.
-    tile_width : int
-        Width (in pixels) of each raster tile for spatial partitioning.
-    tile_height : int
-        Height (in pixels) of each raster tile for spatial partitioning.
-    project : str
-        GCP project ID for the upload operation.
-
-    Returns
-    -------
-    None
-        The function uploads a DataFrame as a CSV to the specified GCS bucket.
-        No object is returned.
-    """
-
-    def per_country(
-        country,
-        gadm,
-        boundary_polys,
-        processed_biome_raster_path,
-        land_cover_classes,
-        id_col="tile_id",
-        country_col="GID_0",
-    ):
-        country_pas = gadm[gadm[country_col] == cnt][["GID_0", "geometry"]]
-
-        overlap = gpd.sjoin(boundary_polys, country_pas, how="inner", predicate="intersects")
-        overlap = overlap.rename(columns={"geometry": "tile_geom"})
-        overlap["country_geom"] = country_pas.loc[overlap["index_right"], "geometry"].values
-        overlap["country_geom"] = overlap.apply(
-            lambda row: row["country_geom"].intersection(row["tile_geom"]), axis=1
-        )
-        grouped = (
-            overlap.groupby(["tile_id", "row", "col"])
-            .country_geom.apply(unary_union)
-            .reset_index()
-            .rename(columns={"country_geom": "geometry"})
-        )
-        country_geom_dissolved = gpd.GeoDataFrame(grouped, geometry="geometry", crs=country_pas.crs)
-        res = compute_land_cover_area_km2(
-            processed_biome_raster_path,
-            country_geom_dissolved,
-            land_cover_classes,
-            id_col=id_col,
-            max_pixels=5e7,
-        )
-        res = pd.DataFrame(res).drop(columns=id_col).sum().to_dict()
-        res["country"] = country
-        return res
-
-    if verbose:
-        print("loading gadm")
-    gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
-
-    if verbose:
-        print(f"downloading raster from {processed_biome_raster_path}")
-    local_raster_path = processed_biome_raster_path.split("/")[-1]
-    download_file_from_gcs(bucket, processed_biome_raster_path, local_raster_path, verbose=False)
-
-    if verbose:
-        print("creating boundary polygons")
-    boundary_polys = generate_raster_tiles(
-        local_raster_path, tile_width=tile_width, tile_height=tile_height
-    )
-
-    start_time = datetime.datetime.now()
-    country_habitats_subtable = []
-    for cnt in tqdm(list(sorted(set(gadm["GID_0"])))):
-        start = datetime.datetime.now()
-        country_habitats_subtable.append(
-            per_country(cnt, gadm, boundary_polys, local_raster_path, land_cover_classes)
-        )
-        end = datetime.datetime.now()
-        if verbose:
-            print(f"processed {cnt} in {(end - start).total_seconds():0.1f} seconds")
-
-    end_time = datetime.datetime.now()
-    if verbose:
-        print(
-            f"processed all countries in "
-            f"{(end_time - start_time).total_seconds() / 60:0.2f} minutes"
-        )
-
-    upload_dataframe(
-        bucket,
-        pd.DataFrame(country_habitats_subtable),
-        country_habitats_subtable_filename,
-        project_id=project,
-        verbose=verbose,
-    )
-
-
 def reclass_function(ndata: np.ndarray) -> np.ndarray:
     # Apply the value changes
     ndata = np.where(ndata < 200, 1, ndata)  # forest
@@ -380,68 +184,6 @@ def reclass_function(ndata: np.ndarray) -> np.ndarray:
     return np.clip(ndata, 0, 255).astype(np.uint8)
 
 
-def create_terrestrial_subtable(
-    wdpa,
-    processed_biome_raster_path=PROCESSED_BIOME_RASTER_PATH,
-    land_cover_classes: dict = LAND_COVER_CLASSES,
-    verbose: bool = True,
-):
-    def per_country(country, wdpa_terr, raster_path, land_cover_classes):
-        gdf = wdpa_terr[wdpa_terr["PARENT_ISO3"] == country].copy()
-        res = compute_land_cover_area_km2(raster_path, gdf, land_cover_classes)
-        res = pd.DataFrame(res).drop(columns="WDPAID").sum().to_dict()
-        res["country"] = country
-        return res
-
-    # TODO:
-    # 1. update biome path (done!)
-    # 2. Add step that generated processed_biome_raster (done!)
-    # 3. convert output to correct format (one row per land cover class, group by region)
-    # 4. get country habitat area
-    # 5. Dissolve overlapping PAs
-    # 6. Some of the PARENT_ISO3 are multiple separated by semicolon - count for both?
-    # 7. Also related to PARENT_ISO3 - should we use ISO3 instead? Is it right that the
-    #         PAs with ISO3 of ATA have PARENT_ISO3 of AUS? (I think this is handled with
-    #         the ISO* format but we should switch to ISO3 and wrap like the other stats)
-
-    if verbose:
-        print("clipping and validifying terrestrial protected areas")
-    wdpa_terr = wdpa[wdpa["MARINE"].isin(["0", "1"])].copy()
-    wdpa_terr = wdpa_terr[
-        ~wdpa_terr.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))
-    ]
-    wdpa_terr["geometry"] = wdpa_terr["geometry"].make_valid()
-
-    raster_path = "land_cover_raster.tif"
-    if verbose:
-        print(f"downloading land cover raster to {raster_path}")
-
-    download_file(processed_biome_raster_path, raster_path)
-
-    if verbose:
-        print("creating terrestrial habitats subtable")
-
-    terrestrial_habitats_subtable = []
-    start_time = datetime.datetime.now()
-    for cnt in tqdm(list(sorted(set(wdpa_terr["PARENT_ISO3"])))):
-        start = datetime.datetime.now()
-        terrestrial_habitats_subtable.append(
-            per_country(cnt, wdpa_terr, raster_path, land_cover_classes)
-        )
-        end = datetime.datetime.now()
-        if verbose:
-            print(f"processed {cnt} in {(end - start).total_seconds():0.1f} seconds")
-
-    end_time = datetime.datetime.now()
-    if verbose:
-        print(
-            f"processed all countries in "
-            f"{(end_time - start_time).total_seconds() / 60:0.2f} minutes"
-        )
-
-    return terrestrial_habitats_subtable
-
-
 def get_cover_areas(src, geom, identifier, id_col, land_cover_classes=LAND_COVER_CLASSES):
     out_image, out_transform = mask(src, geom, crop=True)
 
@@ -453,7 +195,7 @@ def get_cover_areas(src, geom, identifier, id_col, land_cover_classes=LAND_COVER
         out_transform, width=out_image.shape[2], height=out_image.shape[1]
     )
 
-    cover_areas = {}
+    cover_areas = {"total": pixel_area_map.sum()}
     for value in np.unique(out_image[0]):
         if value <= 0:
             continue
@@ -467,21 +209,29 @@ def get_cover_areas(src, geom, identifier, id_col, land_cover_classes=LAND_COVER
 def generate_terrestrial_biome_stats_country(
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     raster_path: str = PROCESSED_BIOME_RASTER_PATH,
-    gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
+    gadm_file_name: str = GADM_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
-    tolerance: float = 0.001,
+    tolerance: float = None,
 ):
     print("loading and simplifying GADM geometries")
-    gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name)
-    gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
+    gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
+    if tolerance is not None:
+        gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
 
+    if verbose:
+        print(f"downloading raster from {raster_path}")
+    local_raster_path = raster_path.split("/")[-1]
+    download_file_from_gcs(bucket, raster_path, local_raster_path, verbose=False)
+
+    if verbose:
+        print("getting country habitat stats")
     country_stats = []
-    with rasterio.open(raster_path) as src:
+    with rasterio.open(local_raster_path) as src:
         for country in tqdm(gadm["GID_0"].unique()):
+            st = datetime.datetime.now()
             country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
             tile_geoms = tile_geometry(country_poly, src.transform)
-            print(f"generated {len(tile_geoms)} tiles within {country}")
 
             results = []
             for tile in tile_geoms:
@@ -494,6 +244,13 @@ def generate_terrestrial_biome_stats_country(
             cs["country"] = country
 
             country_stats.append(cs)
+            fn = datetime.datetime.now()
+            if verbose:
+                elapsed_seconds = round((fn - st).total_seconds())
+                print(
+                    f"processed {len(tile_geoms)} tiles within {country}'s PAs "
+                    f"in {elapsed_seconds} seconds"
+                )
 
     country_stats = pd.DataFrame(country_stats)
 
@@ -508,7 +265,7 @@ def generate_terrestrial_biome_stats_country(
     return country_stats
 
 
-def generate_terrestrial_biome_stats_pa(
+def create_terrestrial_habitats_subtable(
     combined_regions,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
@@ -590,6 +347,7 @@ def generate_terrestrial_biome_stats_pa(
     pa_stats = []
     with rasterio.open(raster_path) as src:
         for country in tqdm(gadm["GID_0"].unique()):
+            st = datetime.datetime.now()
             country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
             polygons_gdf = wdpa[wdpa[country_col] == country].copy()
             polygons_gdf["geometry"] = polygons_gdf["geometry"].make_valid()
@@ -604,9 +362,6 @@ def generate_terrestrial_biome_stats_pa(
 
             # clip geometries to tiles
             clipped_geoms = clip_geoms(tile_geoms, polygons_gdf)
-            if verbose:
-                print(f"generated {len(clipped_geoms)} tiles within {country}'s PAs")
-
             clean_geoms = []
             for geom in clipped_geoms:
                 clean_parts = extract_valid_polygons(geom)
@@ -623,6 +378,13 @@ def generate_terrestrial_biome_stats_pa(
             ps["country"] = country
 
             pa_stats.append(ps)
+            fn = datetime.datetime.now()
+            if verbose:
+                elapsed_seconds = round((fn - st).total_seconds())
+                print(
+                    f"processed {len(clipped_geoms)} tiles within {country}'s PAs "
+                    f"in {elapsed_seconds} seconds"
+                )
 
     pa_stats = pd.DataFrame(pa_stats)
 
