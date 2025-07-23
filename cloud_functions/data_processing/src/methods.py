@@ -6,17 +6,8 @@ import requests
 import gcsfs
 import fiona
 import geopandas as gpd
-import rasterio
-from shapely.geometry import box, Point, MultiPoint
-from shapely.ops import unary_union
-from shapely.validation import make_valid
-from shapely.strtree import STRtree
+from shapely.geometry import Point, MultiPoint
 from tqdm.auto import tqdm
-from pathlib import Path
-from typing import Tuple, Dict, Callable
-from google.cloud import storage
-import threading
-import concurrent.futures
 
 from params import (
     today_formatted,
@@ -42,53 +33,39 @@ from params import (
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
-    HABITATS_URL,
     HABITAT_PROTECTION_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
-    ARCHIVE_HABITATS_FILE_NAME,
-    MANGROVES_ZIPFILE_NAME,
     MANGROVES_BY_COUNTRY_FILE_NAME,
-    SEAMOUNTS_URL,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
-    ARCHIVE_SEAMOUNTS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     REGIONS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
-    BIOME_RASTER_PATH,
-    PROCESSED_BIOME_RASTER_PATH,
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
-    GADM_ZIPFILE_NAME,
-    GADM_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
 )
 
-from commons import load_marine_regions, extract_polygons, load_regions
+from commons import load_marine_regions, load_regions, download_and_duplicate_zipfile
 from marine_habitats import (
     create_seamounts_subtable,
     create_mangroves_subtable,
     create_marine_habitat_subtable,
 )
-from terrestrial_habitats import reclass_function, create_terrestrial_habitats_subtable
+from terrestrial_habitats import create_terrestrial_habitats_subtable
 
 from utils.gcp import (
-    download_zip_to_gcs,
     duplicate_blob,
     load_gdb_layer_from_gcs,
-    load_zipped_shapefile_from_gcs,
     read_dataframe,
     read_json_from_gcs,
     save_file_bucket,
     upload_dataframe,
     upload_gdf,
-    save_json_to_gcs,
-    upload_file_to_gcs,
-    read_zipped_gpkg_from_gcs,
     read_json_df,
 )
 
@@ -121,19 +98,6 @@ PROJECT = os.getenv("PROJECT", "")
 
 GLOBAL_MARINE_AREA_KM2 = 361000000
 GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
-
-
-def safe_union(df, batch_size=1000, simplify_tolerance=1000):
-    parts = []
-    for i in range(0, len(df), batch_size):
-        chunk = df.iloc[i : i + batch_size]
-        if simplify_tolerance is None:
-            parts.append(unary_union(chunk.geometry))
-        else:
-            parts.append(
-                unary_union(chunk.geometry).simplify(simplify_tolerance, preserve_topology=False)
-            )
-    return unary_union(parts)
 
 
 def load_mpatlas_country(
@@ -192,40 +156,6 @@ def read_mpatlas_from_gcs(
         gdf.set_crs(src.crs, inplace=True)
 
     return gdf
-
-
-def download_and_duplicate_zipfile(
-    url: str,
-    bucket: str,
-    blob_name: str,
-    archive_blob_name: str,
-    chunk_size: int = CHUNK_SIZE,
-    verbose: bool = True,
-) -> None:
-    """
-    Downloads a ZIP file from a URL and stores it in Google Cloud Storage,
-    then creates a duplicate of the uploaded blob within the same GCS bucket.
-
-    Parameters:
-    ----------
-    url : str
-        Public or authenticated URL pointing to the ZIP file to download.
-    bucket : str
-        Name of the GCS bucket where the file will be stored.
-    blob_name : str
-        Name of the target blob to be created as a duplicate.
-    archive_blob_name : str
-        Name of the original blob that receives the downloaded ZIP content.
-    chunk_size : int, optional
-        Size (in bytes) of each chunk used during the download/upload process.
-    verbose : bool, optional
-        If True, prints progress messages. Default is True.
-
-    """
-    if verbose:
-        print(f"downloading {url} to gs://{bucket}/{archive_blob_name}")
-    download_zip_to_gcs(url, bucket, archive_blob_name, chunk_size=chunk_size, verbose=verbose)
-    duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
 
 
 def download_mpatlas_zone(
@@ -548,7 +478,7 @@ def process_protected_area_geoms(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     wdpa_file_name: str = WDPA_FILE_NAME,
     bucket: str = BUCKET,
-    tolerance: float = 0.0001,
+    tolerances: list = [0.001, 0.0001],
     verbose: bool = True,
 ):
     def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -571,7 +501,7 @@ def process_protected_area_geoms(
     )
 
     if verbose:
-        print("cleaning and simplifying geometries")
+        print("buffering and simplifying geometries")
 
     # TODO: This eliminates point PAs that have REP_AREA=0, is this what we want?
     buffered_point_pas = create_buffer(
@@ -580,202 +510,34 @@ def process_protected_area_geoms(
     poly_pas = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
     wdpa = pd.concat((poly_pas, buffered_point_pas), axis=0).pipe(clean_geometries)
 
-    if tolerance is not None:
-        wdpa["geometry"] = wdpa["geometry"].simplify(tolerance=tolerance)
+    for tolerance in tolerances:
+        df = wdpa.copy()
 
-    wdpa["geometry"] = wdpa["geometry"].make_valid()
-
-    if verbose:
-        print("separating marine and terrestrial PAs")
-    wdpa_ter = wdpa[wdpa["MARINE"].eq("0")].copy()
-    wdpa_ter = wdpa_ter.dropna(axis=1, how="all")
-    wdpa_mar = wdpa[wdpa["MARINE"].isin(["1", "2"])].copy()
-    wdpa_mar = wdpa_mar.dropna(axis=1, how="all")
-
-    ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    if verbose:
-        print(f"saving terrestrial PAs to {ter_out_fn}")
-    upload_gdf(bucket, wdpa_ter, ter_out_fn)
-
-    mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    if verbose:
-        print(f"saving marine PAs to {mar_out_fn}")
-    upload_gdf(bucket, wdpa_mar, mar_out_fn)
-
-    return wdpa_ter, wdpa_mar
-
-
-def process_gadm_geoms(
-    gadm_file_name: str = GADM_FILE_NAME,
-    gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
-    bucket: str = BUCKET,
-    tolerance: float = 0.0001,
-    verbose: bool = True,
-):
-    if verbose:
-        print(f"loading gadm gpkg from {gadm_zipfile_name}")
-    gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name, layer="ADM_0")
-
-    if tolerance is not None:
         if verbose:
-            print("simplifying geometries")
-        gadm["geometry"] = gadm["geometry"].simplify(tolerance=tolerance)
+            print(f"simplifying PAs with tolerance = {tolerance}")
+        if tolerance is not None:
+            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
 
-    gadm["geometry"] = gadm["geometry"].make_valid()
+        df["geometry"] = df["geometry"].make_valid()
 
-    out_fn = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    if verbose:
-        print(f"uploading simplified GADM countries to {out_fn}")
-    upload_gdf(bucket, gadm, out_fn)
+        if verbose:
+            print("separating marine and terrestrial PAs")
+        wdpa_ter = df[df["MARINE"].eq("0")].copy()
+        wdpa_ter = wdpa_ter.dropna(axis=1, how="all")
+        wdpa_mar = df[df["MARINE"].isin(["1", "2"])].copy()
+        wdpa_mar = wdpa_mar.dropna(axis=1, how="all")
 
-    return gadm
+        ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"saving terrestrial PAs to {ter_out_fn}")
+        upload_gdf(bucket, wdpa_ter, ter_out_fn)
 
+        mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"saving marine PAs to {mar_out_fn}")
+        upload_gdf(bucket, wdpa_mar, mar_out_fn)
 
-def download_habitats(
-    habitats_url: str = HABITATS_URL,
-    habitats_file_name: str = HABITATS_ZIP_FILE_NAME,
-    archive_habitats_file_name: str = ARCHIVE_HABITATS_FILE_NAME,
-    seamounts_url: str = SEAMOUNTS_URL,
-    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
-    archive_seamounts_file_name: str = ARCHIVE_SEAMOUNTS_FILE_NAME,
-    bucket: str = BUCKET,
-    chunk_size: int = CHUNK_SIZE,
-    verbose: bool = True,
-) -> None:
-    """
-    Downloads habitat-related datasets (habitats and seamounts) and uploads them to GCS
-    as both current and archived versions.
-
-    Parameters:
-    ----------
-    habitats_url : str
-        URL to download the general habitat ZIP file.
-    habitats_file_name : str
-        GCS blob name for the current habitat dataset.
-    archive_habitats_file_name : str
-        GCS blob name for the archived habitat dataset.
-    seamounts_url : str
-        URL to download the seamounts ZIP file.
-    seamounts_zipfile_name : str
-        GCS blob name for the current seamounts dataset.
-    archive_seamounts_file_name : str
-        GCS blob name for the archived seamounts dataset.
-    bucket : str
-        Name of the GCS bucket where all files will be uploaded.
-    chunk_size : int, optional
-        Size in bytes of each chunk used during download.
-    verbose : bool, optional
-        If True, prints progress messages. Default is True.
-    """
-    # download habitats
-    download_and_duplicate_zipfile(
-        habitats_url,
-        bucket,
-        habitats_file_name,
-        archive_habitats_file_name,
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
-
-    # download mangroves
-    # TODO: Add this
-
-    # download seamounts
-    download_and_duplicate_zipfile(
-        seamounts_url,
-        bucket,
-        seamounts_zipfile_name,
-        archive_seamounts_file_name,
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
-
-
-def preprocess_mangroves(
-    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
-    mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
-    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
-    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
-    bucket: str = BUCKET,
-    project: str = PROJECT,
-    verbose: bool = True,
-    simplify_tolerance=100,
-    batch_size=3000,
-):
-    # Pre-process - this should be done only when a new
-    # country_union_reproj or mangrove is downloaded
-
-    tqdm.pandas()
-
-    if verbose:
-        print("loading mangroves")
-    mangrove = load_zipped_shapefile_from_gcs(mangroves_zipfile_name, bucket).pipe(clean_geometries)
-    mangrove["index"] = range(len(mangrove))
-
-    if verbose:
-        print("loading eez/land union")
-    country_union = (
-        load_marine_regions(eez_land_union_params, bucket)[["ISO_TER1", "geometry"]]
-        .rename(columns={"ISO_TER1": "location"})
-        .pipe(clean_geometries)
-    )
-
-    if verbose:
-        print("re-projecting data")
-    mangrove_reproj = mangrove.to_crs("EPSG:6933").pipe(clean_geometries)
-    country_union_reproj = country_union.to_crs("EPSG:6933").pipe(clean_geometries)
-
-    if verbose:
-        print(f"saving global mangrove area to gs://{bucket}/{global_mangrove_area_file_name}")
-    mangrove_reproj["area_km2"] = mangrove_reproj.geometry.area / 1e6
-    global_mangrove_area = mangrove_reproj["area_km2"].sum()
-
-    save_json_to_gcs(
-        bucket,
-        {"global_area_km2": global_mangrove_area},
-        global_mangrove_area_file_name,
-        project,
-        verbose,
-    )
-
-    if verbose:
-        print("generating mangrove polygons by country")
-    mangroves_by_country = []
-    for cnt in tqdm(list(sorted(set(country_union_reproj["location"].dropna())))):
-        country_geom = make_valid(
-            extract_polygons(
-                unary_union(country_union_reproj[country_union_reproj["location"] == cnt].geometry)
-            )
-        )
-
-        # clip mangroves to country bounding box
-        xmin, ymin, xmax, ymax = country_geom.bounds
-        mangroves_clipped = mangrove_reproj[mangrove_reproj.intersects(box(xmin, ymin, xmax, ymax))]
-
-        # Build STRtree index
-        mangrove_geoms = list(mangroves_clipped.geometry)
-        tree = STRtree(mangrove_geoms)
-
-        indices = tree.query(country_geom, predicate="intersects")
-        country_mangroves = mangroves_clipped.iloc[indices]
-        if len(country_mangroves) > 0:
-            mangrove_geom = safe_union(
-                country_mangroves, batch_size=batch_size, simplify_tolerance=simplify_tolerance
-            )
-            mangroves_by_country.append(
-                {
-                    "country": cnt,
-                    "n_mangrove_polygons": len(country_mangroves),
-                    "bbox": country_geom.bounds,
-                    "mangrove_area_km2": mangrove_geom.area / 1e6,
-                    "geometry": mangrove_geom,
-                }
-            )
-
-    mangroves_by_country = gpd.GeoDataFrame(mangroves_by_country, crs="EPSG:6933")
-    upload_gdf(
-        bucket, mangroves_by_country, mangroves_by_country_file_name, project, True, timeout=600
-    )
+    return wdpa
 
 
 def generate_protected_areas_table(
@@ -810,7 +572,11 @@ def generate_protected_areas_table(
 
     if verbose:
         print(f"loading gs://{bucket}/{wdpa_file_name}")
-    wdpa = load_gdb_layer_from_gcs(wdpa_file_name, bucket)
+    wdpa = load_gdb_layer_from_gcs(
+        wdpa_file_name,
+        bucket,
+        layers=[f"WDPA_poly_{today_formatted}", f"WDPA_point_{today_formatted}"],
+    )
 
     if verbose:
         print(f"loading gs://{bucket}/{mpatlas_file_name}")
@@ -918,9 +684,6 @@ def generate_habitat_protection_table(
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
-    processed_biome_raster_path: str = PROCESSED_BIOME_RASTER_PATH,
-    gadm_file_name: str = GADM_FILE_NAME,
-    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
     eez_params: dict = EEZ_PARAMS,
@@ -929,13 +692,8 @@ def generate_habitat_protection_table(
     verbose: bool = True,
 ):
     marine_tolerance = 0.0001
-    terrestrial_tolerance = 0.001
 
     marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
-    terrestrial_pa_file_name = terrestrial_pa_file_name.replace(
-        ".geojson", f"_{terrestrial_tolerance}.geojson"
-    )
-    gadm_file_name = gadm_file_name.replace(".geojson", f"_{terrestrial_tolerance}.geojson")
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
@@ -944,15 +702,9 @@ def generate_habitat_protection_table(
     combined_regions, parent_country = load_regions()
 
     if verbose:
-        print(f"loading and simplifying GADM geometries from {gadm_file_name}")
-
-    gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
-
-    if verbose:
         print("getting protected areas (this may take a few minutes)")
 
     marine_protected_areas = read_json_df(bucket, marine_pa_file_name, verbose=verbose)
-    terrestrial_protected_areas = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
 
     if verbose:
         print("dissolving over protected areas")
@@ -1001,20 +753,13 @@ def generate_habitat_protection_table(
 
     terrestrial_habitats = create_terrestrial_habitats_subtable(
         combined_regions,
-        terrestrial_protected_areas,
-        gadm,
         pa_stats_filename=pa_stats_filename,
         country_stats_filename=country_stats_filename,
-        raster_path=processed_biome_raster_path,
         bucket=bucket,
-        project=project,
         verbose=verbose,
     )
 
-    print(terrestrial_habitats.head())
-
-    # TODO: combine with terrestrial
-    habitats = marine_habitats.copy()
+    habitats = pd.concat((marine_habitats, terrestrial_habitats), axis=0)
 
     habitats = habitats[habitats["total_area"] > 0].pipe(rename_habitats)
 
@@ -1387,11 +1132,6 @@ def generate_fishing_protection_table(
 
         return return_stats(df_group, total_area, fishing_protection_level, loc)
 
-    bucket = BUCKET
-    regions_file_name = REGIONS_FILE_NAME
-    protected_seas_file_name = PROTECTED_SEAS_FILE_NAME
-    protection_coverage_file_name = PROTECTION_COVERAGE_FILE_NAME
-
     # Load related countries and regions
     if verbose:
         print("loading country and region groupings")
@@ -1497,102 +1237,3 @@ def generate_fishing_protection_table(
     )
 
     return fishing_protection_table.to_dict(orient="records")
-
-
-def process_terrestrial_biome_raster(
-    biome_raster_path: Path = BIOME_RASTER_PATH,
-    processed_biome_raster_path: Path = PROCESSED_BIOME_RASTER_PATH,
-    func: Callable = reclass_function,
-    f_args: Tuple = (),
-    f_kwargs: Dict = {},
-    bucket: str = BUCKET,
-    verbose: bool = True,
-) -> None:
-    num_workers = 200
-
-    out_data_profile = {
-        "dtype": rasterio.uint8,
-        "count": 1,
-        "compress": "lzw",
-        "tiled": True,
-        "blockxsize": 512,
-        "blockysize": 512,
-    }
-
-    local_biome_raster_path = biome_raster_path.split("/")[-1]
-    if verbose:
-        print(f"downloading {biome_raster_path} to {local_biome_raster_path}")
-    client = storage.Client()
-    bucket = client.bucket(bucket)
-    blob = bucket.blob(biome_raster_path)
-    blob.download_to_filename(local_biome_raster_path)
-
-    fn_out = processed_biome_raster_path.split("/")[-1]
-
-    if verbose:
-        print(f"processing raster and saving to {fn_out}")
-    with rasterio.open(local_biome_raster_path) as src:
-        # Create a destination dataset based on source params. The
-        # destination will be tiled, and we'll process the tiles
-        # concurrently.
-        profile = src.profile.copy()
-        profile.update(**out_data_profile)
-
-        with rasterio.open(fn_out, "w", **profile) as dst:
-            windows = [window for ij, window in dst.block_windows()]
-            read_lock = threading.Lock()
-            write_lock = threading.Lock()
-
-            def process(window):
-                status_message = {
-                    "diagnostics": {},
-                    "messages": [f"Processing chunk: {window}"],
-                    "return_val": None,
-                }
-                # read the chunk
-                try:
-                    status_message["messages"].append("reading data")
-
-                    with read_lock:
-                        data = src.read(window=window)
-
-                    status_message["messages"].append("processing data")
-                    result = func(data, *f_args, **f_kwargs)
-
-                    status_message["messages"].append("writing data")
-                    with write_lock:
-                        dst.write(result, window=window)
-
-                    status_message["messages"].append("success in processing chunk")
-
-                except Exception as e:
-                    status_message["diagnostics"]["error"] = e
-                finally:
-                    return status_message
-
-            # We map the process() function over the list of
-            # windows.
-
-            futures = []
-
-            with (
-                concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor,
-                tqdm(total=len(windows), desc="Computing raster stats", unit="chunk") as p_bar,
-            ):
-                for idx, window in enumerate(windows):
-                    futures.append(executor.submit(process, window))
-
-                results = []
-                for f in futures:
-                    results.append(f.result())
-                    p_bar.update(1)
-
-            dst.build_overviews([2, 4, 8, 16, 32, 64], rasterio.enums.Resampling.mode)
-            dst.update_tags(ns="rio_overview", resampling="average")
-
-    if verbose:
-        print(f"saving processed raster to {processed_biome_raster_path}")
-    upload_file_to_gcs(bucket, fn_out, processed_biome_raster_path)
-
-    if verbose:
-        print("finished uploading")

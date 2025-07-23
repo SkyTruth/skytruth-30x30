@@ -2,8 +2,14 @@ import os
 import functions_framework
 from flask import Request
 from src.utils.gcp import download_zip_to_gcs
+from src.static_methods import (
+    preprocess_mangroves,
+    download_marine_habitats,
+    process_terrestrial_biome_raster,
+    process_gadm_geoms,
+    generate_terrestrial_biome_stats_country,
+)
 from src.methods import (
-    download_habitats,
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
@@ -12,10 +18,11 @@ from src.methods import (
     generate_marine_protection_level_stats_table,
     generate_protected_areas_table,
     generate_protection_coverage_stats_table,
-    preprocess_mangroves,
     process_protected_area_geoms,
-    process_terrestrial_biome_raster,
-    process_gadm_geoms,
+)
+
+from src.terrestrial_habitats import (
+    generate_terrestrial_biome_stats_pa,
 )
 
 from src.params import (
@@ -121,8 +128,8 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=True,
                 )
 
-            case "download_habitats":
-                download_habitats(verbose=verbose)
+            case "download_marine_habitats":
+                download_marine_habitats(verbose=verbose)
 
             case "download_mpatlas":
                 download_mpatlas(verbose=verbose)
@@ -137,8 +144,14 @@ def main(request: Request) -> tuple[str, int]:
             case "process_terrestrial_biomes":
                 process_terrestrial_biome_raster(verbose=verbose)
 
+            case "generate_terrestrial_biome_stats_country":
+                generate_terrestrial_biome_stats_country(verbose=verbose)
+
             case "generate_protected_areas_table":
                 _ = generate_protected_areas_table(verbose=verbose)
+
+            case "generate_terrestrial_biome_stats_pa":
+                _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
 
             case "generate_habitat_protection_table":
                 _ = generate_habitat_protection_table(verbose=verbose)

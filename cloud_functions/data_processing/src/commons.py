@@ -4,12 +4,20 @@ import io
 import tempfile
 import zipfile
 import geopandas as gpd
+import numpy as np
+from rasterio.mask import mask
 from shapely.geometry import Polygon, MultiPolygon, GeometryCollection
+from shapely.ops import unary_union
 
-from utils.gcp import read_json_from_gcs
+from utils.gcp import read_json_from_gcs, download_zip_to_gcs, duplicate_blob
+from utils.geo import compute_pixel_area_map_km2
 from utils.processors import clean_geometries
 
-from params import RELATED_COUNTRIES_FILE_NAME, REGIONS_FILE_NAME
+from params import (
+    RELATED_COUNTRIES_FILE_NAME,
+    REGIONS_FILE_NAME,
+    CHUNK_SIZE,
+)
 
 
 verbose = True
@@ -83,3 +91,72 @@ def load_regions(
                 parent_country[c] = cnt
 
     return combined_regions, parent_country
+
+
+def download_and_duplicate_zipfile(
+    url: str,
+    bucket: str,
+    blob_name: str,
+    archive_blob_name: str,
+    chunk_size: int = CHUNK_SIZE,
+    verbose: bool = True,
+) -> None:
+    """
+    Downloads a ZIP file from a URL and stores it in Google Cloud Storage,
+    then creates a duplicate of the uploaded blob within the same GCS bucket.
+
+    Parameters:
+    ----------
+    url : str
+        Public or authenticated URL pointing to the ZIP file to download.
+    bucket : str
+        Name of the GCS bucket where the file will be stored.
+    blob_name : str
+        Name of the target blob to be created as a duplicate.
+    archive_blob_name : str
+        Name of the original blob that receives the downloaded ZIP content.
+    chunk_size : int, optional
+        Size (in bytes) of each chunk used during the download/upload process.
+    verbose : bool, optional
+        If True, prints progress messages. Default is True.
+
+    """
+
+    if verbose:
+        print(f"downloading {url} to gs://{bucket}/{archive_blob_name}")
+    download_zip_to_gcs(url, bucket, archive_blob_name, chunk_size=chunk_size, verbose=verbose)
+    duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
+
+
+def safe_union(df, batch_size=1000, simplify_tolerance=1000):
+    parts = []
+    for i in range(0, len(df), batch_size):
+        chunk = df.iloc[i : i + batch_size]
+        if simplify_tolerance is None:
+            parts.append(unary_union(chunk.geometry))
+        else:
+            parts.append(
+                unary_union(chunk.geometry).simplify(simplify_tolerance, preserve_topology=False)
+            )
+    return unary_union(parts)
+
+
+def get_cover_areas(src, geom, identifier, id_col, land_cover_classes):
+    out_image, out_transform = mask(src, geom, crop=True, filled=False)
+    valid_mask = ~out_image.mask[0]
+
+    if np.all(out_image[0] <= 0):
+        return None
+
+    # Compute area per pixel using latitude-varying resolution
+    pixel_area_map = compute_pixel_area_map_km2(
+        out_transform, width=out_image.shape[2], height=out_image.shape[1]
+    )
+
+    cover_areas = {"total": pixel_area_map[valid_mask].sum()}
+    for value in np.unique(out_image[0].compressed()):
+        mask_value = (out_image[0].data == value) & valid_mask
+        area_sum = pixel_area_map[mask_value].sum()
+        cover_areas[land_cover_classes.get(int(value), f"class_{value}")] = area_sum
+
+    return {id_col: identifier, **cover_areas}

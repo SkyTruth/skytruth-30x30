@@ -164,6 +164,7 @@ def rename_habitats(df):
     }
 
     df = df.copy()
+    df = df[df["habitat"].isin(naming_conventions)]
     df["habitat"] = df["habitat"].apply(lambda x: naming_conventions[x])
     return df
 

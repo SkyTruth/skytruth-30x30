@@ -158,6 +158,17 @@ BIOME_RASTER_PATH = (
 )
 PROCESSED_BIOME_RASTER_PATH = "static/processed_biome_raster.tif"
 REPROJECTED_BIOME_RASTER_PATH = "static/reprojected_processed_biome_raster.tif"
+LAND_COVER_CLASSES = {
+    1: "Forest",
+    2: "Savanna",
+    3: "Shrubland",
+    4: "Grassland",
+    5: "Wetlands/open water",
+    6: "Rocky/mountains",
+    7: "Desert",
+    8: "Artificial",
+    255: "Other",
+}
 COUNTRY_HABITATS_SUBTABLE_FILENAME = "habitats/processed_country_stats.csv"
 COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME = "static/country_terrestrial_stats.json"
 PA_TERRESTRIAL_HABITATS_FILE_NAME = "habitats/pa_terrestrial_stats.json"
@@ -187,5 +198,5 @@ GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
 CHUNK_SIZE = 8192
 LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
-RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
+RELATED_COUNTRIES_FILE_NAME = "processing/related_countries_v2.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"

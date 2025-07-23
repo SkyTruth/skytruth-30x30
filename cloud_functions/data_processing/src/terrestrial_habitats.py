@@ -7,12 +7,10 @@ from shapely.geometry import box
 from shapely.ops import unary_union
 from tqdm.auto import tqdm
 import math
-import numpy as np
 import rasterio
 from shapely.geometry import mapping, Polygon, MultiPolygon, GeometryCollection
 from shapely.validation import make_valid
 
-from rasterio.mask import mask
 from rasterio.transform import rowcol
 
 from params import (
@@ -20,29 +18,21 @@ from params import (
     GADM_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
+    WDPA_TERRESTRIAL_FILE_NAME,
+    LAND_COVER_CLASSES,
 )
+
+from commons import get_cover_areas
 
 from utils.gcp import download_file_from_gcs, upload_dataframe, read_json_df, read_dataframe
 
-from utils.geo import compute_pixel_area_map_km2, tile_geometry
+from utils.geo import tile_geometry
 
 
 verbose = True
 PP_API_KEY = os.getenv("PP_API_KEY", "")
 BUCKET = os.getenv("BUCKET", "")
 PROJECT = os.getenv("PROJECT", "")
-
-LAND_COVER_CLASSES = {
-    1: "Forest",
-    2: "Savanna",
-    3: "Shrubland",
-    4: "Grassland",
-    5: "Wetlands/open water",
-    6: "Rocky/mountains",
-    7: "Desert",
-    8: "Artificial",
-    255: "Other",
-}
 
 
 def download_file(url, destination):
@@ -121,116 +111,18 @@ def generate_raster_tiles(
     return gpd.GeoDataFrame(records, crs=crs)
 
 
-def reclass_function(ndata: np.ndarray) -> np.ndarray:
-    # Apply the value changes
-    ndata = np.where(ndata < 200, 1, ndata)  # forest
-    ndata = np.where((ndata >= 200) & (ndata < 300), 2, ndata)  # savanna
-    ndata = np.where((ndata >= 300) & (ndata < 400), 3, ndata)  # scrub/shrub
-    ndata = np.where((ndata >= 400) & (ndata < 500), 4, ndata)  # grassland
-    ndata = np.where(ndata == 501, 5, ndata)  # open water - Wetlands/open water
-    ndata = np.where(ndata == 505, 5, ndata)  # open water - Wetlands/open water
-    ndata = np.where((ndata >= 500) & (ndata < 600), 5, ndata)  # wetlands - Wetlands/open water
-    ndata = np.where(ndata == 984, 5, ndata)  # wetlands - Wetlands/open water
-    ndata = np.where(ndata == 910, 5, ndata)  # wetlands - Wetlands/open water
-    ndata = np.where((ndata >= 600) & (ndata < 800), 6, ndata)  # rocky/mountains
-    ndata = np.where((ndata >= 800) & (ndata < 900), 7, ndata)  # desert
-    ndata = np.where((ndata >= 1400) & (ndata < 1500), 8, ndata)  # ag/urban - Artificial
-
-    # Ensure the ndata is within the 8-bit range
-
-    return np.clip(ndata, 0, 255).astype(np.uint8)
-
-
-def get_cover_areas(src, geom, identifier, id_col, land_cover_classes=LAND_COVER_CLASSES):
-    out_image, out_transform = mask(src, geom, crop=True, filled=False)
-    valid_mask = ~out_image.mask[0]
-
-    if np.all(out_image[0] <= 0):
-        return None
-
-    # Compute area per pixel using latitude-varying resolution
-    pixel_area_map = compute_pixel_area_map_km2(
-        out_transform, width=out_image.shape[2], height=out_image.shape[1]
-    )
-
-    cover_areas = {"total": pixel_area_map[valid_mask].sum()}
-    for value in np.unique(out_image[0].compressed()):
-        mask_value = (out_image[0].data == value) & valid_mask
-        area_sum = pixel_area_map[mask_value].sum()
-        cover_areas[land_cover_classes.get(int(value), f"class_{value}")] = area_sum
-
-    return {id_col: identifier, **cover_areas}
-
-
-def generate_terrestrial_biome_stats_country(
-    country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
-    raster_path: str = PROCESSED_BIOME_RASTER_PATH,
-    gadm_file_name: str = GADM_FILE_NAME,
-    bucket: str = BUCKET,
-    project: str = PROJECT,
-    tolerance=0.0001,
-):
-    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
-
-    print("loading and simplifying GADM geometries")
-    gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
-
-    if verbose:
-        print(f"downloading raster from {raster_path}")
-    local_raster_path = raster_path.split("/")[-1]
-    download_file_from_gcs(bucket, raster_path, local_raster_path, verbose=False)
-
-    if verbose:
-        print("getting country habitat stats")
-    country_stats = []
-    with rasterio.open(local_raster_path) as src:
-        for country in tqdm(gadm["GID_0"].unique()):
-            st = datetime.datetime.now()
-            country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
-            tile_geoms = tile_geometry(country_poly, src.transform)
-
-            results = []
-            for tile in tile_geoms:
-                entry = get_cover_areas(src, [mapping(tile)], country, "country")
-                if entry is not None:
-                    results.append(entry)
-
-            results = pd.DataFrame(results)
-            cs = results[[c for c in results.columns if c != "country"]].agg("sum").to_dict()
-            cs["country"] = country
-
-            country_stats.append(cs)
-            fn = datetime.datetime.now()
-            if verbose:
-                elapsed_seconds = round((fn - st).total_seconds())
-                print(
-                    f"processed {len(tile_geoms)} tiles within {country}'s PAs "
-                    f"in {elapsed_seconds} seconds"
-                )
-
-    country_stats = pd.DataFrame(country_stats)
-
-    upload_dataframe(
-        bucket,
-        country_stats,
-        country_stats_filename,
-        project_id=project,
-        verbose=verbose,
-    )
-
-    return country_stats
-
-
 def generate_terrestrial_biome_stats_pa(
-    terrestrial_pas,
-    gadm,
+    land_cover_classes: dict = LAND_COVER_CLASSES,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     raster_path: str = PROCESSED_BIOME_RASTER_PATH,
+    gadm_file_name: str = GADM_FILE_NAME,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     country_col="ISO3",
     tile_size_pixels=8192,
     verbose: bool = True,
+    tolerance: float = 0.001,
 ):
     def clip_geoms(tile_geoms, polygons_gdf):
         clipped_geoms = []
@@ -261,6 +153,19 @@ def generate_terrestrial_biome_stats_pa(
                 g for g in geom.geoms if isinstance(g, (Polygon, MultiPolygon)) and not g.is_empty
             ]
         return []  # Point, LineString, etc.
+
+    terrestrial_pa_file_name = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+
+    if verbose:
+        print(f"loading GADM geometries from {gadm_file_name}")
+
+    gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
+
+    if verbose:
+        print("loading protected areas (this may take a few minutes)")
+
+    terrestrial_pas = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
 
     if verbose:
         print(f"downloading raster from {raster_path}")
@@ -296,7 +201,9 @@ def generate_terrestrial_biome_stats_pa(
             # get area of each land cover type inside of PAs per tile
             results = []
             for tile in clean_geoms:
-                entry = get_cover_areas(src, [mapping(tile)], country, "country")
+                entry = get_cover_areas(
+                    src, [mapping(tile)], country, "country", land_cover_classes
+                )
                 if entry is not None:
                     results.append(entry)
 
@@ -330,15 +237,9 @@ def generate_terrestrial_biome_stats_pa(
 
 def create_terrestrial_habitats_subtable(
     combined_regions,
-    terrestrial_pas,
-    gadm,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
-    raster_path: str = PROCESSED_BIOME_RASTER_PATH,
     bucket: str = BUCKET,
-    project: str = PROJECT,
-    country_col="ISO3",
-    tile_size_pixels=8192,
     verbose: bool = True,
 ):
     def get_group_stats(df, loc, relations):
@@ -357,17 +258,10 @@ def create_terrestrial_habitats_subtable(
     country_stats = read_dataframe(bucket, country_stats_filename, verbose=verbose)
     country_stats = country_stats.apply(pd.to_numeric, errors="ignore")
 
-    pa_stats = generate_terrestrial_biome_stats_pa(
-        terrestrial_pas,
-        gadm,
-        pa_stats_filename=pa_stats_filename,
-        raster_path=raster_path,
-        bucket=bucket,
-        project=project,
-        country_col=country_col,
-        tile_size_pixels=tile_size_pixels,
-        verbose=verbose,
-    )
+    if verbose:
+        print(f"loading country habitat stats from {pa_stats_filename}")
+    pa_stats = read_dataframe(bucket, pa_stats_filename, verbose=verbose)
+    pa_stats = pa_stats.apply(pd.to_numeric, errors="ignore")
 
     # wrap up pa stats by sovereign country
     grouped_pa_stats = pd.DataFrame(
@@ -380,9 +274,35 @@ def create_terrestrial_habitats_subtable(
     )
 
     # calculate percent land cover within PA of total land cover per country
-    cols = [c for c in grouped_cnt_stats.columns if c != "location"]
-    pct = 100 * grouped_pa_stats[cols] / grouped_cnt_stats[cols]
-    pct["location"] = grouped_cnt_stats["location"]
-    pct = pct[["location"] + cols]
+    cnt = (
+        pd.melt(
+            grouped_cnt_stats.rename(columns={"total": "total_land_area", "country": "location"}),
+            id_vars="location",  # Keep 'location' as identifier
+            var_name="habitat",  # Name of the new column for cover type
+            value_name="total_area",  # Name of the values column (optional)
+        )
+        .sort_values(["location", "habitat"])
+        .reset_index(drop=True)
+    )
 
-    return pct
+    pa = (
+        pd.melt(
+            grouped_pa_stats.rename(columns={"total": "total_land_area", "country": "location"}),
+            id_vars="location",  # Keep 'location' as identifier
+            var_name="habitat",  # Name of the new column for cover type
+            value_name="protected_area",  # Name of the values column (optional)
+        )
+        .sort_values(["location", "habitat"])
+        .reset_index(drop=True)
+    )
+
+    pa["environment"] = "terrestrial"
+
+    terrestrial_habitats = pd.merge(
+        pa[["location", "habitat", "environment", "protected_area"]],
+        cnt[["location", "habitat", "total_area"]],
+        on=["location", "habitat"],
+        how="right",
+    )
+
+    return terrestrial_habitats
