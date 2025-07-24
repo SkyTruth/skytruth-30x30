@@ -1135,8 +1135,7 @@ def generate_fishing_protection_table(
     # Load related countries and regions
     if verbose:
         print("loading country and region groupings")
-    regions = read_json_from_gcs(bucket, regions_file_name)
-    regions["GLOB"] = ""
+    combined_regions, _ = load_regions()
 
     if verbose:
         print(f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}")
@@ -1192,30 +1191,12 @@ def generate_fishing_protection_table(
                 fishing_protection_table,
                 pd.DataFrame(
                     stat
-                    for loc in sorted(set(ps_cl_fp["location"]))
-                    if (
-                        stat := get_group_stats(
-                            ps_cl_fp,
-                            loc,
-                            fishing_protection_level=level,
-                        )
-                    )
-                    is not None
-                ),
-            ),
-            axis=0,
-        )
-        fishing_protection_table = pd.concat(
-            (
-                fishing_protection_table,
-                pd.DataFrame(
-                    stat
-                    for loc in regions
+                    for loc in combined_regions
                     if (
                         stat := get_region_stats(
                             ps_cl_fp,
                             loc,
-                            regions,
+                            combined_regions,
                             fishing_protection_level=level,
                         )
                     )
