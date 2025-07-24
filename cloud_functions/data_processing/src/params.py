@@ -54,10 +54,6 @@ EEZ_LAND_UNION_PARAMS = {
     "shapefile_name": "EEZ_land_union_v4_202410.shp",
 }
 
-# HIGH_SEAS_ZIPFILE_NAME = "static/high_seas.zip"
-# HIGH_SEAS_SHAPEFILE_NAME = "High_Seas_v2.shp"
-# HIGH_SEAS_PARAMS = {"name": "World_High_Seas_v2_20241010.zip"}
-
 MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"
 
 # ------------------------------------------------------------

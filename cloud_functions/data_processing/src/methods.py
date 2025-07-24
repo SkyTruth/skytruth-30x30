@@ -51,11 +51,7 @@ from params import (
 )
 
 from commons import load_marine_regions, load_regions, download_and_duplicate_zipfile
-from marine_habitats import (
-    create_seamounts_subtable,
-    create_mangroves_subtable,
-    create_marine_habitat_subtable,
-)
+from marine_habitats import create_marine_habitat_subtable
 from terrestrial_habitats import create_terrestrial_habitats_subtable
 
 from utils.gcp import (
@@ -66,7 +62,6 @@ from utils.gcp import (
     save_file_bucket,
     upload_dataframe,
     upload_gdf,
-    read_json_df,
 )
 
 from utils.processors import (
@@ -692,7 +687,6 @@ def generate_habitat_protection_table(
     verbose: bool = True,
 ):
     marine_tolerance = 0.0001
-
     marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
@@ -701,54 +695,19 @@ def generate_habitat_protection_table(
         print("loading regions")
     combined_regions, parent_country = load_regions()
 
-    if verbose:
-        print("getting protected areas (this may take a few minutes)")
-
-    marine_protected_areas = read_json_df(bucket, marine_pa_file_name, verbose=verbose)
-
-    if verbose:
-        print("dissolving over protected areas")
-
-    marine_protected_areas = (
-        dissolve_multipolygons(marine_protected_areas[["ISO3", "WDPAID", "geometry"]])
-        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
-        .pipe(clean_geometries)
-    )
-
-    if verbose:
-        print("getting marine habitats subtable")
-    marine_habitats_subtable = create_marine_habitat_subtable(
-        bucket, habitats_zipfile_name, combined_regions, verbose
-    )
-
-    if verbose:
-        print("getting seamounts subtable")
-    seamounts_subtable = create_seamounts_subtable(
-        seamounts_zipfile_name,
-        seamounts_shapefile_name,
-        bucket,
-        eez_params,
+    marine_habitats = create_marine_habitat_subtable(
+        combined_regions,
         parent_country,
-        marine_protected_areas,
-        combined_regions,
-        verbose,
-    )
-
-    if verbose:
-        print("getting mangroves subtable")
-
-    mangroves_subtable = create_mangroves_subtable(
-        marine_protected_areas,
-        combined_regions,
-        eez_land_union_params,
-        mangroves_by_country_file_name,
-        global_mangrove_area_file_name,
-        bucket,
-        verbose,
-    )
-
-    marine_habitats = pd.concat(
-        (marine_habitats_subtable, seamounts_subtable, mangroves_subtable), axis=0
+        eez_land_union_params=eez_land_union_params,
+        habitats_zipfile_name=habitats_zipfile_name,
+        seamounts_zipfile_name=seamounts_zipfile_name,
+        seamounts_shapefile_name=seamounts_shapefile_name,
+        mangroves_by_country_file_name=mangroves_by_country_file_name,
+        global_mangrove_area_file_name=global_mangrove_area_file_name,
+        marine_pa_file_name=marine_pa_file_name,
+        eez_params=eez_params,
+        bucket=bucket,
+        verbose=verbose,
     )
 
     terrestrial_habitats = create_terrestrial_habitats_subtable(

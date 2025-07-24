@@ -15,6 +15,11 @@ from params import (
     EEZ_LAND_UNION_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
+    HABITATS_ZIP_FILE_NAME,
+    SEAMOUNTS_ZIPFILE_NAME,
+    SEAMOUNTS_SHAPEFILE_NAME,
+    WDPA_MARINE_FILE_NAME,
+    EEZ_PARAMS,
 )
 
 from utils.gcp import (
@@ -238,7 +243,7 @@ def create_mangroves_subtable(
     return mangrove_habitat[mangrove_habitat["total_area"] > 0]
 
 
-def create_marine_habitat_subtable(
+def create_ocean_habitat_subtable(
     bucket: str, habitats_file_name: str, combined_regions: dict, verbose: bool
 ):
     def get_group_stats(df, loc, relations, habitat):
@@ -306,3 +311,83 @@ def create_marine_habitat_subtable(
         marine_habitats_group.append(df)
 
     return pd.concat(marine_habitats_group, axis=0, ignore_index=True)
+
+
+def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
+    counts = gdf[key].value_counts()
+
+    singles = gdf[gdf[key].isin(counts[counts == 1].index)]
+    multiples = gdf[gdf[key].isin(counts[counts > 1].index)]
+
+    dissolved = multiples.dissolve(by=key)
+    dissolved = dissolved.reset_index()
+    result = pd.concat([singles, dissolved], ignore_index=True)
+
+    return result
+
+
+def create_marine_habitat_subtable(
+    combined_regions,
+    parent_country,
+    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
+    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
+    seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
+    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    eez_params: dict = EEZ_PARAMS,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    if verbose:
+        print("getting protected areas (this may take a few minutes)")
+
+    marine_protected_areas = read_json_df(bucket, marine_pa_file_name, verbose=verbose)
+
+    if verbose:
+        print("dissolving over protected areas")
+
+    marine_protected_areas = (
+        dissolve_multipolygons(marine_protected_areas[["ISO3", "WDPAID", "geometry"]])
+        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
+        .pipe(clean_geometries)
+    )
+
+    if verbose:
+        print("getting marine habitats subtable")
+    marine_habitats_subtable = create_ocean_habitat_subtable(
+        bucket, habitats_zipfile_name, combined_regions, verbose
+    )
+
+    if verbose:
+        print("getting seamounts subtable")
+    seamounts_subtable = create_seamounts_subtable(
+        seamounts_zipfile_name,
+        seamounts_shapefile_name,
+        bucket,
+        eez_params,
+        parent_country,
+        marine_protected_areas,
+        combined_regions,
+        verbose,
+    )
+
+    if verbose:
+        print("getting mangroves subtable")
+
+    mangroves_subtable = create_mangroves_subtable(
+        marine_protected_areas,
+        combined_regions,
+        eez_land_union_params,
+        mangroves_by_country_file_name,
+        global_mangrove_area_file_name,
+        bucket,
+        verbose,
+    )
+
+    marine_habitats = pd.concat(
+        (marine_habitats_subtable, seamounts_subtable, mangroves_subtable), axis=0
+    )
+
+    return marine_habitats
