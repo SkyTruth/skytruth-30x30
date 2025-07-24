@@ -1106,16 +1106,6 @@ def generate_fishing_protection_table(
             "total_area": total_area,
         }
 
-    def get_group_stats(
-        df,
-        loc,
-        fishing_protection_level="highly",
-    ):
-        df_group = df[df["location"] == loc]
-        total_area = df_group["area"].sum()
-
-        return return_stats(df_group, total_area, fishing_protection_level, loc)
-
     def get_region_stats(
         df,
         loc,
