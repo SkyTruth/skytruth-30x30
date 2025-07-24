@@ -3,8 +3,6 @@ import numpy as np
 import os
 import pandas as pd
 import requests
-import gcsfs
-import fiona
 import geopandas as gpd
 from shapely.geometry import Point, MultiPoint
 from tqdm.auto import tqdm
@@ -50,7 +48,15 @@ from params import (
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
 )
 
-from commons import load_marine_regions, load_regions, download_and_duplicate_zipfile
+from commons import (
+    download_mpatlas_zone,
+    read_mpatlas_from_gcs,
+    load_wdpa_global,
+    load_mpatlas_country,
+    load_marine_regions,
+    load_regions,
+    download_and_duplicate_zipfile,
+)
 from marine_habitats import create_marine_habitat_subtable
 from terrestrial_habitats import create_terrestrial_habitats_subtable
 
@@ -59,7 +65,6 @@ from utils.gcp import (
     load_gdb_layer_from_gcs,
     read_dataframe,
     read_json_from_gcs,
-    save_file_bucket,
     upload_dataframe,
     upload_gdf,
 )
@@ -93,106 +98,6 @@ PROJECT = os.getenv("PROJECT", "")
 
 GLOBAL_MARINE_AREA_KM2 = 361000000
 GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
-
-
-def load_mpatlas_country(
-    bucket: str = BUCKET, mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME
-):
-    df = read_dataframe(bucket, mpatlas_country_level_file_name).copy()
-
-    df["wdpa_marine_km2"] = df["wdpa_marine_km2"].replace("", np.nan)
-    df["wdpa_marine_km2"] = df["wdpa_marine_km2"].apply(pd.to_numeric, errors="coerce")
-
-    return df
-
-
-def load_wdpa_global(
-    bucket: str = BUCKET, wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME
-):
-    wdpa_global = read_dataframe(bucket, wdpa_global_level_file_name)
-    wdpa_global = wdpa_global[wdpa_global["value"] != ""]
-    wdpa_global["value"] = wdpa_global["value"].astype(float)
-
-    return wdpa_global
-
-
-def read_mpatlas_from_gcs(
-    bucket: str = BUCKET, filename: str = MPATLAS_FILE_NAME
-) -> gpd.GeoDataFrame:
-    """
-    Reads a GeoJSON file from GCS and preserves the top-level 'id' field
-    as zone_id
-
-    Parameters
-    ----------
-    bucket : str
-        The name of the GCS bucket.
-    filename : str
-        Path to the GeoJSON file in the bucket.
-
-    Returns
-    -------
-    gpd.GeoDataFrame
-        A GeoDataFrame that includes top-level 'id' and all properties.
-    """
-    fs = gcsfs.GCSFileSystem()
-    with fs.open(f"gs://{bucket}/{filename}", "rb") as f:
-        raw_bytes = f.read()
-
-    # Open the GeoJSON from in-memory bytes
-    with fiona.open(BytesIO(raw_bytes), driver="GeoJSON") as src:
-        features = list(src)
-
-        # Extract top-level 'id' and merge with properties
-        for feature in features:
-            feature["properties"]["zone_id"] = feature.get("id")
-
-        gdf = gpd.GeoDataFrame.from_features(features)
-        gdf.set_crs(src.crs, inplace=True)
-
-    return gdf
-
-
-def download_mpatlas_zone(
-    url: str = MPATLAS_URL,
-    bucket: str = BUCKET,
-    filename: str = MPATLAS_FILE_NAME,
-    archive_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
-    verbose: bool = True,
-) -> None:
-    """
-    Downloads the MPAtlas Zone Assessment dataset from a specified URL,
-    saves it to a Google Cloud Storage bucket, and duplicates the blob.
-
-    Parameters:
-    ----------
-    url : str
-        URL of the MPAtlas Zone Assessment file to download.
-    bucket : str
-        Name of the GCS bucket where the file should be stored.
-    filename : str
-        GCS blob name for the primary reference copy of the file.
-    archive_filename : str
-        GCS blob name for the archived/original version of the file.
-    verbose : bool, optional
-        If True, prints progress messages. Default is True.
-    """
-    if verbose:
-        print(f"downloading MPAtlas Zone Assessment from {url}")
-
-    response = requests.get(url)
-    response.raise_for_status()
-
-    if verbose:
-        print(f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}")
-    save_file_bucket(
-        response.content,
-        response.headers.get("Content-Type"),
-        archive_filename,
-        bucket,
-        verbose=verbose,
-    )
-    duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
 def download_mpatlas_country(

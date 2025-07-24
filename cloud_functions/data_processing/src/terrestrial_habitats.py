@@ -19,8 +19,9 @@ from params import (
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     WDPA_TERRESTRIAL_FILE_NAME,
-    LAND_COVER_CLASSES,
 )
+
+from land_cover_params import LAND_COVER_CLASSES, terrestrial_tolerance
 
 from commons import get_cover_areas
 
@@ -122,7 +123,7 @@ def generate_terrestrial_biome_stats_pa(
     country_col="ISO3",
     tile_size_pixels=8192,
     verbose: bool = True,
-    tolerance: float = 0.001,
+    tolerance: float = terrestrial_tolerance,
 ):
     def clip_geoms(tile_geoms, polygons_gdf):
         clipped_geoms = []

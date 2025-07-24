@@ -148,23 +148,8 @@ ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 #                     Terrestrial Habitats
 # ------------------------------------------------------------
 
-TERRESTRIAL_HABITATS_URL = "https://storage.cloud.google.com/vector-data-raw/terrestrial/jung_etal_2020/iucn_habitatclassification_composite_lvl1_ver004.tif"
-BIOME_RASTER_PATH = (
-    "static/terrestrial_jung_etal_2020_iucn_habitatclassification_composite_lvl1_ver004.tif"
-)
 PROCESSED_BIOME_RASTER_PATH = "static/processed_biome_raster.tif"
 REPROJECTED_BIOME_RASTER_PATH = "static/reprojected_processed_biome_raster.tif"
-LAND_COVER_CLASSES = {
-    1: "Forest",
-    2: "Savanna",
-    3: "Shrubland",
-    4: "Grassland",
-    5: "Wetlands/open water",
-    6: "Rocky/mountains",
-    7: "Desert",
-    8: "Artificial",
-    255: "Other",
-}
 COUNTRY_HABITATS_SUBTABLE_FILENAME = "habitats/processed_country_stats.csv"
 COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME = "static/country_terrestrial_stats.json"
 PA_TERRESTRIAL_HABITATS_FILE_NAME = "habitats/pa_terrestrial_stats.json"
