@@ -1,4 +1,13 @@
 import datetime
+import os
+
+verbose = True
+PP_API_KEY = os.getenv("PP_API_KEY", "")
+BUCKET = os.getenv("BUCKET", "")
+PROJECT = os.getenv("PROJECT", "")
+
+GLOBAL_MARINE_AREA_KM2 = 361000000
+GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
 
 today_formatted = datetime.datetime.today().strftime("%b%Y")
 

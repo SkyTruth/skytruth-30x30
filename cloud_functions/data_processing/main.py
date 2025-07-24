@@ -1,31 +1,7 @@
-import os
 import functions_framework
 from flask import Request
-from src.utils.gcp import download_zip_to_gcs
-from src.static_methods import (
-    process_mangroves,
-    download_marine_habitats,
-    process_terrestrial_biome_raster,
-    process_gadm_geoms,
-    generate_terrestrial_biome_stats_country,
-)
-from src.methods import (
-    download_mpatlas,
-    download_protected_planet,
-    download_protected_seas,
-    generate_fishing_protection_table,
-    generate_habitat_protection_table,
-    generate_marine_protection_level_stats_table,
-    generate_protected_areas_table,
-    generate_protection_coverage_stats_table,
-    process_protected_area_geoms,
-)
 
-from src.terrestrial_habitats import (
-    generate_terrestrial_biome_stats_pa,
-)
-
-from src.params import (
+from src.core.params import (
     CHUNK_SIZE,
     GADM_URL,
     GADM_ZIPFILE_NAME,
@@ -35,13 +11,38 @@ from src.params import (
     EEZ_PARAMS,
     HIGH_SEAS_PARAMS,
     EEZ_LAND_UNION_PARAMS,
+    BUCKET,
+    verbose,
 )
 
+from src.methods.download_and_process import (
+    download_mpatlas,
+    download_protected_planet,
+    download_protected_seas,
+    process_protected_area_geoms,
+)
 
-verbose = True
-PP_API_KEY = os.getenv("PP_API_KEY", "")
-BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "BAD!")
+from src.methods.generate_tables import (
+    generate_fishing_protection_table,
+    generate_habitat_protection_table,
+    generate_marine_protection_level_stats_table,
+    generate_protected_areas_table,
+    generate_protection_coverage_stats_table,
+)
+
+from src.methods.static_processes import (
+    process_mangroves,
+    download_marine_habitats,
+    process_terrestrial_biome_raster,
+    process_gadm_geoms,
+    generate_terrestrial_biome_stats_country,
+)
+
+from src.methods.terrestrial_habitats import (
+    generate_terrestrial_biome_stats_pa,
+)
+
+from src.utils.gcp import download_zip_to_gcs
 
 
 @functions_framework.http

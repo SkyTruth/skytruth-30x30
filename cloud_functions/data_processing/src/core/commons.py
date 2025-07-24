@@ -1,5 +1,4 @@
 import fsspec
-import os
 import io
 from io import BytesIO
 import requests
@@ -14,17 +13,7 @@ from rasterio.mask import mask
 from shapely.geometry import Polygon, MultiPolygon, GeometryCollection
 from shapely.ops import unary_union
 
-from utils.gcp import (
-    download_zip_to_gcs,
-    duplicate_blob,
-    read_dataframe,
-    read_json_from_gcs,
-    save_file_bucket,
-)
-from utils.geo import compute_pixel_area_map_km2
-from utils.processors import clean_geometries
-
-from params import (
+from src.core.params import (
     RELATED_COUNTRIES_FILE_NAME,
     REGIONS_FILE_NAME,
     CHUNK_SIZE,
@@ -33,13 +22,19 @@ from params import (
     MPATLAS_URL,
     MPATLAS_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
+    BUCKET,
 )
 
+from src.core.processors import clean_geometries
 
-verbose = True
-PP_API_KEY = os.getenv("PP_API_KEY", "")
-BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "")
+from src.utils.gcp import (
+    download_zip_to_gcs,
+    duplicate_blob,
+    read_dataframe,
+    read_json_from_gcs,
+    save_file_bucket,
+)
+from src.utils.geo import compute_pixel_area_map_km2
 
 
 def adjust_eez_sovereign(eez, parent_country):

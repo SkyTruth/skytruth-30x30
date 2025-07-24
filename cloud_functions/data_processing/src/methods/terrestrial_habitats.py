@@ -1,4 +1,3 @@
-import os
 import datetime
 import pandas as pd
 import geopandas as gpd
@@ -13,27 +12,23 @@ from shapely.validation import make_valid
 
 from rasterio.transform import rowcol
 
-from params import (
+from src.core.commons import get_cover_areas
+
+from src.core.land_cover_params import LAND_COVER_CLASSES, terrestrial_tolerance
+
+from src.core.params import (
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     GADM_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     WDPA_TERRESTRIAL_FILE_NAME,
+    BUCKET,
+    PROJECT,
 )
 
-from land_cover_params import LAND_COVER_CLASSES, terrestrial_tolerance
+from src.utils.gcp import download_file_from_gcs, upload_dataframe, read_json_df, read_dataframe
 
-from commons import get_cover_areas
-
-from utils.gcp import download_file_from_gcs, upload_dataframe, read_json_df, read_dataframe
-
-from utils.geo import tile_geometry
-
-
-verbose = True
-PP_API_KEY = os.getenv("PP_API_KEY", "")
-BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "")
+from src.utils.geo import tile_geometry
 
 
 def download_file(url, destination):

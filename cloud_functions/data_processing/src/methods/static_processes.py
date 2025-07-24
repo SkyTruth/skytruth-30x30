@@ -1,5 +1,4 @@
 import datetime
-import os
 import pandas as pd
 import geopandas as gpd
 import rasterio
@@ -14,7 +13,22 @@ from google.cloud import storage
 import threading
 import concurrent.futures
 
-from params import (
+from src.core.commons import (
+    load_marine_regions,
+    extract_polygons,
+    safe_union,
+    download_and_duplicate_zipfile,
+    get_cover_areas,
+)
+
+from src.core.land_cover_params import (
+    reclass_function,
+    BIOME_RASTER_PATH,
+    LAND_COVER_CLASSES,
+    terrestrial_tolerance,
+)
+
+from src.core.params import (
     CHUNK_SIZE,
     EEZ_LAND_UNION_PARAMS,
     HABITATS_URL,
@@ -30,24 +44,13 @@ from params import (
     GADM_ZIPFILE_NAME,
     GADM_FILE_NAME,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
+    BUCKET,
+    PROJECT,
 )
 
-from land_cover_params import (
-    reclass_function,
-    BIOME_RASTER_PATH,
-    LAND_COVER_CLASSES,
-    terrestrial_tolerance,
-)
+from src.core.processors import clean_geometries
 
-from commons import (
-    load_marine_regions,
-    extract_polygons,
-    safe_union,
-    download_and_duplicate_zipfile,
-    get_cover_areas,
-)
-
-from utils.gcp import (
+from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,
     upload_dataframe,
     upload_gdf,
@@ -58,15 +61,7 @@ from utils.gcp import (
     download_file_from_gcs,
 )
 
-from utils.geo import tile_geometry
-
-from utils.processors import clean_geometries
-
-
-verbose = True
-PP_API_KEY = os.getenv("PP_API_KEY", "")
-BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "")
+from src.utils.geo import tile_geometry
 
 
 def process_gadm_geoms(
@@ -378,6 +373,7 @@ def generate_terrestrial_biome_stats_country(
     bucket: str = BUCKET,
     project: str = PROJECT,
     tolerance: float = terrestrial_tolerance,
+    verbose: bool = True,
 ):
     gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
 

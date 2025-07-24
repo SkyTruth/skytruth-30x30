@@ -5,7 +5,7 @@ from datetime import datetime
 
 import requests
 
-from utils.logger import Logger
+from src.utils.logger import Logger
 
 
 class Strapi:

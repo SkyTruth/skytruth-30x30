@@ -1,4 +1,3 @@
-import os
 from io import BytesIO
 import pandas as pd
 import geopandas as gpd
@@ -10,8 +9,9 @@ from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from commons import load_marine_regions, adjust_eez_sovereign, extract_polygons
-from params import (
+from src.core.commons import load_marine_regions, adjust_eez_sovereign, extract_polygons
+
+from src.core.params import (
     EEZ_LAND_UNION_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
@@ -20,21 +20,16 @@ from params import (
     SEAMOUNTS_SHAPEFILE_NAME,
     WDPA_MARINE_FILE_NAME,
     EEZ_PARAMS,
+    BUCKET,
 )
 
-from utils.gcp import (
+from src.core.processors import clean_geometries
+
+from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,
     read_json_from_gcs,
     read_json_df,
 )
-
-from utils.processors import clean_geometries
-
-
-verbose = True
-PP_API_KEY = os.getenv("PP_API_KEY", "")
-BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "")
 
 
 def create_seamounts_subtable(
