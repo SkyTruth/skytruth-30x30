@@ -3,7 +3,7 @@ import functions_framework
 from flask import Request
 from src.utils.gcp import download_zip_to_gcs
 from src.static_methods import (
-    preprocess_mangroves,
+    process_mangroves,
     download_marine_habitats,
     process_terrestrial_biome_raster,
     process_gadm_geoms,
@@ -54,14 +54,25 @@ def main(request: Request) -> tuple[str, int]:
     The function expects a JSON body with a `METHOD` key. Supported METHOD values include:
 
     - "dry_run": Simple test mode, prints confirmation only
+
+    Static (infrequent updates, done manually)
+    - "download_gadm": Downloads GADM country shapefiles from UC Davis
     - "download_eezs": Downloads EEZ shapefiles from Marine Regions API
+    - "download_eez_land_union": Downloads EEZ/land union shapefiles from Marine Regions API
     - "download_high_seas": Downloads high seas shapefiles from Marine Regions API
     - "download_habitats": Downloads and stores habitat and seamount shapefiles
+    - "process_terrestrial_biomes": Processes biome raster --> done once after raster download
+    - "process_mangroves": Process mangroves --> done only after new mangroves data download or
+            updated eez/land union raster
+    - "generate_terrestrial_biome_stats_country": Calculates area of each biome in country
+            --> only run after gadm or biome raster is updated
+
+    Regularly Updated (automated)
     - "download_mpatlas": Downloads MPAtlas dataset and stores current + archive versions
     - "download_protected_seas": Downloads Protected Seas JSON data and uploads it
-    - "download_protected_planet_wdpa": Downloads full Protected Planet suite (WDPA ZIP + stats)
-
-    Unsupported methods will trigger a warning message.
+    - "download_protected_planet_wdpa": Downloads full Protected Planet suite
+            (WDPA ZIP + stats) and processes/simplifies polygons
+    - "generate_protected_areas_table": Updates protected areas table
 
     Parameters:
     ----------
@@ -81,7 +92,9 @@ def main(request: Request) -> tuple[str, int]:
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
-
+            # ------------------------------------------------------
+            #                    Nearly Static
+            # ------------------------------------------------------
             case "download_gadm":
                 download_zip_to_gcs(
                     GADM_URL,
@@ -131,6 +144,22 @@ def main(request: Request) -> tuple[str, int]:
             case "download_marine_habitats":
                 download_marine_habitats(verbose=verbose)
 
+            case "process_terrestrial_biomes":
+                process_terrestrial_biome_raster(verbose=verbose)
+
+            case "process_mangroves":
+                process_mangroves(verbose=verbose)
+
+            case "generate_terrestrial_biome_stats_country":
+                generate_terrestrial_biome_stats_country(verbose=verbose)
+
+            # ------------------------------------------------------
+            #                    Update monthly
+            # ------------------------------------------------------
+
+            # ------------------
+            #     Downloads
+            # ------------------
             case "download_mpatlas":
                 download_mpatlas(verbose=verbose)
 
@@ -141,22 +170,18 @@ def main(request: Request) -> tuple[str, int]:
                 download_protected_planet(verbose=verbose)
                 _ = process_protected_area_geoms(verbose=verbose)
 
-            case "process_terrestrial_biomes":
-                process_terrestrial_biome_raster(verbose=verbose)
-
-            case "generate_terrestrial_biome_stats_country":
-                generate_terrestrial_biome_stats_country(verbose=verbose)
-
+            # ------------------
+            #   Table updates
+            # ------------------
             case "generate_protected_areas_table":
+                # TODO: incomplete!
                 _ = generate_protected_areas_table(verbose=verbose)
-
-            case "generate_terrestrial_biome_stats_pa":
-                _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
 
             case "generate_habitat_protection_table":
                 _ = generate_habitat_protection_table(verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
+                _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
                 _ = generate_protection_coverage_stats_table(verbose=verbose)
 
             case "generate_marine_protection_level_stats_table":
@@ -167,11 +192,6 @@ def main(request: Request) -> tuple[str, int]:
 
             case _:
                 print(f"METHOD: {method} not a valid option")
-
-        # TODO: should this be a triggered cloudrun or is this ok? Also
-        # there is no download_mangroves yet, may add eventually
-        if method in ["download_eez_land_union", "download_mangroves"]:
-            preprocess_mangroves()
 
         print("Process complete!")
 

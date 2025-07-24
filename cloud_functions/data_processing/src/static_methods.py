@@ -158,7 +158,7 @@ def download_marine_habitats(
     )
 
 
-def preprocess_mangroves(
+def process_mangroves(
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
     mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
     eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
