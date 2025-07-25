@@ -393,6 +393,9 @@ def generate_protection_coverage_stats_table(
             "global_contribution": get_value(
                 global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
             ),
+            "area": GLOBAL_MARINE_AREA_KM2
+            if environment2 == "ocean"
+            else GLOBAL_TERRESTRIAL_AREA_KM2,
         }
 
         df = pd.concat((df, pd.DataFrame([global_dict])), axis=0, ignore_index=True)
@@ -401,17 +404,27 @@ def generate_protection_coverage_stats_table(
             return df
         else:
             total_area = get_value(global_stats, "high_seas_pa_coverage_area")
+            oecms = get_value(wdpa_global, "total_ocean_area_oecms") - get_value(
+                wdpa_global, "national_waters_oecms_coverage_area"
+            )
+            oecms_pas = get_value(wdpa_global, "total_ocean_area_oecms_pas") - get_value(
+                wdpa_global, "national_waters_oecms_pas_coverage_area"
+            )
+            pas = oecms_pas - oecms
             high_seas_dict = {
                 "location": "ABNJ",
                 "environment": environment,
                 "protected_area": total_area,
-                "protected_areas_count": None,  # get_value(
+                "protected_areas_count": -9999,  # get_value(
                 #     global_stats, f"total_{environment}_oecms_pas"
                 # ),
                 "coverage": get_value(global_stats, "high_seas_pa_coverage_percentage"),
-                "pas": None,  # 100 * pas / oecms_pas,
-                "oecms": None,  # 100 * oecms / oecms_pas,
+                "pas": 100 * pas / oecms_pas,
+                "oecms": 100 * oecms / oecms_pas,
                 "global_contribution": 100 * total_area / GLOBAL_MARINE_AREA_KM2,
+                "area": GLOBAL_MARINE_AREA_KM2
+                * get_value(wdpa_global, "global_ocean_percentage")
+                / 100,
             }
 
             df = pd.concat((df, pd.DataFrame([high_seas_dict])), axis=0, ignore_index=True)
