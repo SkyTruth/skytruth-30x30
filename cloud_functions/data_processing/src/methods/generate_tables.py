@@ -282,7 +282,7 @@ def generate_protection_coverage_stats_table(
         }
 
         stats_dict = {
-            f"{environment}_area": "area",
+            f"{environment}_area": "total_area",
             f"oecms_pa_{environment}_area": "protected_area",
             f"percentage_oecms_pa_{environment}_cover": "coverage",
             f"pa_{environment}_area": "pa_protected_area",
@@ -318,7 +318,7 @@ def generate_protection_coverage_stats_table(
         """
         if loc != "GLOB":
             df_group = df[df["location"].isin(relations[loc])]
-            total_area = df_group["area"].sum()
+            total_area = df_group["total_area"].sum()
         else:
             return None
 
@@ -354,7 +354,7 @@ def generate_protection_coverage_stats_table(
                 "pas": pas,
                 "oecms": oecm,
                 "global_contribution": 100 * total_protected_area / global_area,
-                "area": total_area,
+                "total_area": total_area,
             }
         else:
             return None
@@ -393,7 +393,7 @@ def generate_protection_coverage_stats_table(
             "global_contribution": get_value(
                 global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
             ),
-            "area": GLOBAL_MARINE_AREA_KM2
+            "total_area": GLOBAL_MARINE_AREA_KM2
             if environment2 == "ocean"
             else GLOBAL_TERRESTRIAL_AREA_KM2,
         }
@@ -415,14 +415,12 @@ def generate_protection_coverage_stats_table(
                 "location": "ABNJ",
                 "environment": environment,
                 "protected_area": total_area,
-                "protected_areas_count": -9999,  # get_value(
-                #     global_stats, f"total_{environment}_oecms_pas"
-                # ),
+                "protected_areas_count": -9999,
                 "coverage": get_value(global_stats, "high_seas_pa_coverage_percentage"),
                 "pas": 100 * pas / oecms_pas,
                 "oecms": 100 * oecms / oecms_pas,
                 "global_contribution": 100 * total_area / GLOBAL_MARINE_AREA_KM2,
-                "area": GLOBAL_MARINE_AREA_KM2
+                "total_area": GLOBAL_MARINE_AREA_KM2
                 * get_value(wdpa_global, "global_ocean_percentage")
                 / 100,
             }
@@ -465,13 +463,13 @@ def generate_protection_coverage_stats_table(
     reg_m = group_by_region(wdpa_cl_m, combined_regions)
 
     protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
-    protection_coverage_table = protection_coverage_table[protection_coverage_table["area"] > 0]
-    sov_country_area = protection_coverage_table[["location", "environment", "area"]]
-    protection_coverage_table = (
-        protection_coverage_table.pipe(add_global_stats, wdpa_global, "marine").pipe(
-            add_global_stats, wdpa_global, "terrestrial"
-        )
-    ).drop(columns="area")
+    protection_coverage_table = protection_coverage_table[
+        protection_coverage_table["total_area"] > 0
+    ]
+    sov_country_area = protection_coverage_table[["location", "environment", "total_area"]]
+    protection_coverage_table = protection_coverage_table.pipe(
+        add_global_stats, wdpa_global, "marine"
+    ).pipe(add_global_stats, wdpa_global, "terrestrial")
 
     upload_dataframe(
         bucket,
@@ -541,9 +539,7 @@ def generate_marine_protection_level_stats_table(
     # TODO: verify this is right - MPAtlas leaves wdpa_marine_km2 blank for high
     # seas so this just fills in with Marine Regions estimate
     mpatlas_country = mpatlas_country.copy()
-    mpatlas_country.loc[
-        mpatlas_country["id"].isin(["ABNJ", "ATA", "HS"]), "wdpa_marine_km2"
-    ] = high_seas_area_km2
+    mpatlas_country.loc[mpatlas_country["id"] == "HS", "wdpa_marine_km2"] = high_seas_area_km2
 
     if verbose:
         print("Calculating Marine Protection Level Statistics")
@@ -580,7 +576,6 @@ def generate_marine_protection_level_stats_table(
     )
 
     protection_level_table = protection_level_table[protection_level_table["total_area"] > 0]
-    protection_level_table = protection_level_table.drop(columns="total_area")
 
     upload_dataframe(
         bucket,

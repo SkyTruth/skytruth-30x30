@@ -172,7 +172,7 @@ def rename_habitats(df):
 def update_mpatlas_asterisk(df: pd.DataFrame, asterisk: bool = False) -> pd.DataFrame:
     """
     If `asterisk` is True, updates 'protected_area' using values from rows with
-    asterisks in 'location'Returns a filtered or modified DataFrame in all cases.
+    asterisks in 'location' Returns a filtered or modified DataFrame in all cases.
     """
 
     # Separate rows with and without asterisk
