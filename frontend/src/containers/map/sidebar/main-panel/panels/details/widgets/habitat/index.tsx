@@ -1,8 +1,13 @@
+import { useMemo } from 'react';
+
 import { useLocale, useTranslations } from 'next-intl';
 
 import HorizontalBarChart from '@/components/charts/horizontal-bar-chart';
 import Widget from '@/components/widget';
-import { HABITAT_CHART_COLORS } from '@/constants/habitat-chart-colors';
+import {
+  MARINE_HABITAT_CHART_COLORS,
+  TERRESTRIAL_HABITAT_CHART_COLORS,
+} from '@/constants/habitat-chart-colors';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { FCWithMessages } from '@/types';
 import { useGetDataInfos } from '@/types/generated/data-info';
@@ -21,6 +26,15 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
   const locale = useLocale();
 
   const [{ tab }] = useSyncMapContentSettings();
+
+  const [HABITAT_CHART_COLORS, total_habitats] = useMemo(() => {
+    const total =
+      tab === 'marine'
+        ? Object.keys(MARINE_HABITAT_CHART_COLORS).length
+        : Object.keys(TERRESTRIAL_HABITAT_CHART_COLORS).length;
+
+    return [{ ...MARINE_HABITAT_CHART_COLORS, ...TERRESTRIAL_HABITAT_CHART_COLORS }, total];
+  }, [tab]);
 
   const { data: habitatMetadatas } = useGetDataInfos<
     { slug: string; info: string; sources?: { id: number; title: string; url: string }[] }[]
@@ -84,7 +98,8 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
           },
         },
       },
-      'pagination[limit]': -1,
+      'sort[year]': 'desc',
+      'pagination[limit]': total_habitats,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['protected_area', 'total_area', 'updatedAt'],
