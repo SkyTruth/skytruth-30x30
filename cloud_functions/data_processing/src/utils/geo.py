@@ -1,7 +1,9 @@
 import math
 import numpy as np
 from rasterio.transform import Affine
-from shapely.geometry import box
+from shapely.geometry import box, Polygon, MultiPolygon
+from shapely.ops import unary_union, transform
+import pyproj
 
 # Constants
 EARTH_RADIUS_KM = 6371.0088
@@ -81,3 +83,20 @@ def tile_geometry(geom, transform, tile_size_pixels=1000):
         x += res_x * tile_size_pixels
 
     return tiles
+
+
+def fill_polygon_holes(geom):
+    if isinstance(geom, Polygon):
+        return Polygon(geom.exterior)
+    elif isinstance(geom, MultiPolygon):
+        return unary_union([Polygon(p.exterior) for p in geom.geoms])
+    else:
+        return geom
+
+
+def get_area_km2(poly):
+    wgs84 = pyproj.CRS("EPSG:4326")
+    projected_crs = pyproj.CRS("EPSG:6933")
+    transformer = pyproj.Transformer.from_crs(wgs84, projected_crs, always_xy=True)
+    projected_polygon = transform(transformer.transform, poly)
+    return projected_polygon.area / 1e6

@@ -4,7 +4,6 @@ import geopandas as gpd
 import rasterio
 from shapely.geometry import box, mapping
 from shapely.ops import unary_union
-from shapely.validation import make_valid
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
 from pathlib import Path
@@ -15,7 +14,6 @@ import concurrent.futures
 
 from src.core.commons import (
     load_marine_regions,
-    extract_polygons,
     safe_union,
     download_and_duplicate_zipfile,
     get_cover_areas,
@@ -30,7 +28,7 @@ from src.core.land_cover_params import (
 
 from src.core.params import (
     CHUNK_SIZE,
-    EEZ_LAND_UNION_PARAMS,
+    GADM_EEZ_UNION_FILE_NAME,
     HABITATS_URL,
     HABITATS_ZIP_FILE_NAME,
     ARCHIVE_HABITATS_FILE_NAME,
@@ -44,6 +42,8 @@ from src.core.params import (
     GADM_ZIPFILE_NAME,
     GADM_FILE_NAME,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
+    EEZ_FILE_NAME,
+    EEZ_PARAMS,
     BUCKET,
     PROJECT,
 )
@@ -61,7 +61,7 @@ from src.utils.gcp import (
     download_file_from_gcs,
 )
 
-from src.utils.geo import tile_geometry
+from src.utils.geo import tile_geometry, fill_polygon_holes
 
 
 def process_gadm_geoms(
@@ -73,17 +73,21 @@ def process_gadm_geoms(
 ):
     if verbose:
         print(f"loading gadm gpkg from {gadm_zipfile_name}")
-    gadm = read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name, layer="ADM_0")
+    gadm = (
+        read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name, layer="ADM_0")[["GID_0", "geometry"]]
+        .rename(columns={"GID_0": "location"})
+        .pipe(clean_geometries)
+    )
 
     for tolerance in tolerances:
         df = gadm.copy()
 
         if tolerance is not None:
             if verbose:
-                print("simplifying geometries")
+                print(f"simplifying geometries with tolerance {tolerance}")
             df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
 
-        df["geometry"] = df["geometry"].make_valid()
+        df = df.pipe(clean_geometries)
 
         out_fn = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
@@ -91,6 +95,77 @@ def process_gadm_geoms(
         upload_gdf(bucket, df, out_fn)
 
     return gadm
+
+
+def process_eez_geoms(
+    eez_file_name: str = EEZ_FILE_NAME,
+    eez_params: dict = EEZ_PARAMS,
+    bucket: str = BUCKET,
+    tolerances: float = [0.001, 0.0001],
+    verbose: bool = True,
+):
+    if verbose:
+        print("loading eezs from")
+
+    eez = (
+        load_marine_regions(eez_params, bucket)[["ISO_TER1", "geometry"]]
+        .rename(columns={"ISO_TER1": "location"})
+        .pipe(clean_geometries)
+    )
+
+    for tolerance in tolerances:
+        df = eez.copy()
+        if tolerance is not None:
+            if verbose:
+                print(f"simplifying geometries with tolerance {tolerance}")
+            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
+
+        if verbose:
+            print("dissolving by country")
+        df = df.dissolve("location").reset_index().copy()
+        df = df.pipe(clean_geometries)
+
+        out_fn = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"uploading simplified GADM countries to {out_fn}")
+        upload_gdf(bucket, df, out_fn)
+
+    return eez
+
+
+def process_eez_gadm_unions(
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    eez_file_name: str = EEZ_FILE_NAME,
+    gadm_file_name: str = GADM_FILE_NAME,
+    tolerance: float = 0.0001,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    eez_file_name = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+
+    eez = read_json_df(bucket, eez_file_name, verbose=verbose)
+    gadm = read_json_df(bucket, gadm_file_name, verbose=verbose).to_crs(eez.crs)
+
+    print("getting eez/gadm unions")
+    eez_gadm_union = []
+    for loc in tqdm(eez["location"].dropna().unique()):
+        geom = fill_polygon_holes(
+            unary_union(
+                [
+                    gadm[gadm["location"] == loc].iloc[0]["geometry"],
+                    eez[eez["location"] == loc].iloc[0]["geometry"],
+                ]
+            )
+        )
+        eez_gadm_union.append({"location": loc, "geometry": geom})
+
+    eez_gadm_union = gpd.GeoDataFrame(eez_gadm_union, geometry="geometry", crs=eez.crs)
+
+    if verbose:
+        print(f"uploading GADM/eez union geometries to {gadm_eez_union_file_name}")
+    upload_gdf(bucket, eez_gadm_union, gadm_eez_union_file_name)
 
 
 def download_marine_habitats(
@@ -156,12 +231,12 @@ def download_marine_habitats(
 def process_mangroves(
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
     mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
-    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    gadm_eez_union_file_name: dict = GADM_EEZ_UNION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
-    simplify_tolerance=100,
+    tolerance=0.001,
     batch_size=3000,
 ):
     # Pre-process - this should be done only when a new
@@ -175,17 +250,14 @@ def process_mangroves(
     mangrove["index"] = range(len(mangrove))
 
     if verbose:
-        print("loading eez/land union")
-    country_union = (
-        load_marine_regions(eez_land_union_params, bucket)[["ISO_TER1", "geometry"]]
-        .rename(columns={"ISO_TER1": "location"})
-        .pipe(clean_geometries)
-    )
+        print("loading eezs/gadm union")
+
+    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_eez_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
     if verbose:
-        print("re-projecting data")
+        print("re-projecting mangroves for global area calculation")
     mangrove_reproj = mangrove.to_crs("EPSG:6933").pipe(clean_geometries)
-    country_union_reproj = country_union.to_crs("EPSG:6933").pipe(clean_geometries)
 
     if verbose:
         print(f"saving global mangrove area to gs://{bucket}/{global_mangrove_area_file_name}")
@@ -203,38 +275,36 @@ def process_mangroves(
     if verbose:
         print("generating mangrove polygons by country")
     mangroves_by_country = []
-    for cnt in tqdm(list(sorted(set(country_union_reproj["location"].dropna())))):
-        country_geom = make_valid(
-            extract_polygons(
-                unary_union(country_union_reproj[country_union_reproj["location"] == cnt].geometry)
-            )
-        )
+    for cnt in tqdm(list(sorted(set(gadm_eez_union["location"].dropna())))):
+        country_geom = gadm_eez_union[gadm_eez_union["location"] == cnt].iloc[0].geometry
 
         # clip mangroves to country bounding box
         xmin, ymin, xmax, ymax = country_geom.bounds
-        mangroves_clipped = mangrove_reproj[mangrove_reproj.intersects(box(xmin, ymin, xmax, ymax))]
+        mangroves_clipped = mangrove[mangrove.intersects(box(xmin, ymin, xmax, ymax))]
 
         # Build STRtree index
         mangrove_geoms = list(mangroves_clipped.geometry)
         tree = STRtree(mangrove_geoms)
 
         indices = tree.query(country_geom, predicate="intersects")
-        country_mangroves = mangroves_clipped.iloc[indices]
+        country_mangroves = mangroves_clipped.iloc[indices].copy().buffer(0)
         if len(country_mangroves) > 0:
             mangrove_geom = safe_union(
-                country_mangroves, batch_size=batch_size, simplify_tolerance=simplify_tolerance
+                country_mangroves, batch_size=batch_size, simplify_tolerance=tolerance
             )
             mangroves_by_country.append(
                 {
                     "country": cnt,
                     "n_mangrove_polygons": len(country_mangroves),
                     "bbox": country_geom.bounds,
-                    "mangrove_area_km2": mangrove_geom.area / 1e6,
+                    "mangrove_area_km2": country_mangroves.to_crs("EPSG:6933").area.sum() / 1e6,
                     "geometry": mangrove_geom,
                 }
             )
 
-    mangroves_by_country = gpd.GeoDataFrame(mangroves_by_country, crs="EPSG:6933")
+    mangroves_by_country = gpd.GeoDataFrame(
+        mangroves_by_country, geometry="geometry", crs="EPSG:4326"
+    )
     upload_gdf(
         bucket, mangroves_by_country, mangroves_by_country_file_name, project, True, timeout=600
     )

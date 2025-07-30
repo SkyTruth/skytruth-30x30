@@ -4,21 +4,20 @@ import geopandas as gpd
 import numpy as np
 import gcsfs
 import zipfile
-from shapely.geometry import Polygon, MultiPolygon
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import load_marine_regions, adjust_eez_sovereign, extract_polygons
+from src.core.commons import load_marine_regions
 
 from src.core.params import (
-    EEZ_LAND_UNION_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     WDPA_MARINE_FILE_NAME,
+    GADM_EEZ_UNION_FILE_NAME,
     EEZ_PARAMS,
     BUCKET,
 )
@@ -31,13 +30,14 @@ from src.utils.gcp import (
     read_json_df,
 )
 
+from src.utils.geo import get_area_km2
+
 
 def create_seamounts_subtable(
     seamounts_zipfile_name,
     seamounts_shapefile_name,
     bucket,
     eez_params,
-    parent_country,
     marine_protected_areas,
     combined_regions,
     verbose,
@@ -69,6 +69,9 @@ def create_seamounts_subtable(
             # "percent_protected": 100 * protected_area / total_area if total_area > 0 else np.nan,
         }
 
+    def eez_location(row):
+        return row["ISO_TER1"] if isinstance(row["ISO_TER1"], str) else row["ISO_SOV1"]
+
     if verbose:
         print("loading seamounts")
 
@@ -79,12 +82,11 @@ def create_seamounts_subtable(
     if verbose:
         print("loading eezs")
     eez = load_marine_regions(eez_params, bucket)
-    eez = adjust_eez_sovereign(eez, parent_country)
+    # eez = adjust_eez_sovereign(eez, parent_country)
+    eez["location"] = eez.apply(eez_location, axis=1)
 
     if verbose:
         print("spatially joining seamounts with eezs and marine protected areas")
-
-    global_seamount_area = seamounts["AREA2D"].sum()
 
     eez_joined = gpd.sjoin(
         seamounts[["PEAKID", "AREA2D", "geometry"]],
@@ -124,9 +126,10 @@ def create_seamounts_subtable(
 def create_mangroves_subtable(
     mpa,
     combined_regions,
-    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
+    tolerance: float = 0.001,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -151,61 +154,37 @@ def create_mangroves_subtable(
             # "percent_protected": 100 * protected_area / total_area if total_area else None,
         }
 
-    # TODO: using eez/land union instead of eez, which may miss some coastal regions where
-    # mangroves are. However, several regions are listed under ISO_TER1 = None, most notably,
-    # Alaska, which doesn't matter for mangroves, but there are also tropical areas missing
-    # including Hawaii. Need to find a way to stick them together
     if verbose:
         print("loading eez/land union")
-    country_union = (
-        load_marine_regions(eez_land_union_params, bucket)[["ISO_TER1", "geometry"]]
-        .rename(columns={"ISO_TER1": "location"})
-        .pipe(clean_geometries)
-    )
+    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    country_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
     if verbose:
         print("loading pre-processed mangroves")
     mangroves_by_country = read_json_df(bucket, mangroves_by_country_file_name, verbose=True).pipe(
         clean_geometries
     )
-    global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)["global_area"]
-
-    if verbose:
-        print("Updating CRS to EPSG:6933 (equal-area for geometry ops)")
-    crs = "EPSG:6933"
-    country_union_reproj = country_union.to_crs(crs).pipe(clean_geometries)
-    mpa_reproj = mpa.to_crs(crs).pipe(clean_geometries)
+    global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)[
+        "global_area_km2"
+    ]
 
     if verbose:
         print("getting protected mangrove area by country")
     protected_mangroves = []
-    for cnt in tqdm(list(sorted(set(country_union_reproj["location"].dropna())))):
-        country_geom = make_valid(
-            extract_polygons(
-                unary_union(country_union_reproj[country_union_reproj["location"] == cnt].geometry)
-            )
-        )
+    for cnt in tqdm(list(sorted(set(country_union["location"].dropna())))):
+        country_geom = country_union[country_union["location"] == cnt].iloc[0].geometry
 
         country_mangroves = mangroves_by_country[mangroves_by_country["country"] == cnt]
         if len(country_mangroves) > 0:
             mangrove_geom = country_mangroves.iloc[0]["geometry"]
             country_mangrove_area_km2 = country_mangroves.iloc[0]["mangrove_area_km2"]
 
-            # Get MPA features in country and clip
-            country_pas = mpa_reproj[mpa_reproj["location"] == cnt]
+            country_pas = mpa[mpa["location"] == cnt].make_valid()
             country_pas = gpd.clip(country_pas, country_geom)
-            country_pas = country_pas[
-                ~country_pas.geometry.is_empty & country_pas.geometry.is_valid
-            ]
-            geom_list = [g for g in country_pas.geometry if isinstance(g, (Polygon, MultiPolygon))]
 
-            if not geom_list:
-                pa_geom = None
-            else:
-                pa_geom = make_valid(unary_union(geom_list))
             pa_geom = make_valid(unary_union(country_pas.geometry))
 
-            pa_mangrove_area_km2 = mangrove_geom.intersection(pa_geom).area / 1e6
+            pa_mangrove_area_km2 = get_area_km2(mangrove_geom.intersection(pa_geom))
 
             protected_mangroves.append(
                 {
@@ -283,29 +262,29 @@ def create_ocean_habitat_subtable(
     if verbose:
         print("generating habitats table")
 
-    marine_habitats = pd.DataFrame()
+    ocean_habitats = pd.DataFrame()
     for habitat in habitats:
         tmp = dfs[habitat][["ISO3", "protected_area", "total_area"]].copy()
         tmp["environment"] = "marine"
         tmp["habitat"] = habitat
-        marine_habitats = pd.concat((marine_habitats, tmp))
+        ocean_habitats = pd.concat((ocean_habitats, tmp))
 
     if verbose:
         print("Grouping by sovereign country and region")
 
-    marine_habitats_group = []
+    ocean_habitats_group = []
     for habitat in habitats:
         df = pd.DataFrame(
             [
                 stat
                 for loc in combined_regions
-                if (stat := get_group_stats(marine_habitats, loc, combined_regions, habitat))
+                if (stat := get_group_stats(ocean_habitats, loc, combined_regions, habitat))
                 is not None
             ]
         )
-        marine_habitats_group.append(df)
+        ocean_habitats_group.append(df)
 
-    return pd.concat(marine_habitats_group, axis=0, ignore_index=True)
+    return pd.concat(ocean_habitats_group, axis=0, ignore_index=True)
 
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
@@ -323,8 +302,7 @@ def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.Ge
 
 def create_marine_habitat_subtable(
     combined_regions,
-    parent_country,
-    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
@@ -351,7 +329,7 @@ def create_marine_habitat_subtable(
 
     if verbose:
         print("getting marine habitats subtable")
-    marine_habitats_subtable = create_ocean_habitat_subtable(
+    ocean_habitats_subtable = create_ocean_habitat_subtable(
         bucket, habitats_zipfile_name, combined_regions, verbose
     )
 
@@ -362,7 +340,6 @@ def create_marine_habitat_subtable(
         seamounts_shapefile_name,
         bucket,
         eez_params,
-        parent_country,
         marine_protected_areas,
         combined_regions,
         verbose,
@@ -374,15 +351,13 @@ def create_marine_habitat_subtable(
     mangroves_subtable = create_mangroves_subtable(
         marine_protected_areas,
         combined_regions,
-        eez_land_union_params,
+        gadm_eez_union_file_name,
         mangroves_by_country_file_name,
         global_mangrove_area_file_name,
-        bucket,
-        verbose,
     )
 
     marine_habitats = pd.concat(
-        (marine_habitats_subtable, seamounts_subtable, mangroves_subtable), axis=0
+        (ocean_habitats_subtable, seamounts_subtable, mangroves_subtable), axis=0
     )
 
     return marine_habitats

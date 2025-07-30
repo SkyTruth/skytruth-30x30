@@ -10,7 +10,6 @@ from src.core.params import (
     MARINE_REGIONS_HEADERS,
     EEZ_PARAMS,
     HIGH_SEAS_PARAMS,
-    EEZ_LAND_UNION_PARAMS,
     BUCKET,
     verbose,
 )
@@ -35,7 +34,9 @@ from src.methods.static_processes import (
     download_marine_habitats,
     process_terrestrial_biome_raster,
     process_gadm_geoms,
+    process_eez_geoms,
     generate_terrestrial_biome_stats_country,
+    process_eez_gadm_unions,
 )
 
 from src.methods.terrestrial_habitats import (
@@ -117,6 +118,7 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
+                _ = process_eez_geoms(verbose=verbose)
 
             case "download_high_seas":
                 download_zip_to_gcs(
@@ -130,17 +132,8 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
 
-            case "download_eez_land_union":
-                download_zip_to_gcs(
-                    MARINE_REGIONS_URL,
-                    BUCKET,
-                    EEZ_LAND_UNION_PARAMS["zipfile_name"],
-                    data=MARINE_REGIONS_BODY,
-                    params=EEZ_LAND_UNION_PARAMS,
-                    headers=MARINE_REGIONS_HEADERS,
-                    chunk_size=CHUNK_SIZE,
-                    verbose=True,
-                )
+            case "process_eez_gadm_unions":
+                process_eez_gadm_unions(verbose=verbose)
 
             case "download_marine_habitats":
                 download_marine_habitats(verbose=verbose)
@@ -179,10 +172,10 @@ def main(request: Request) -> tuple[str, int]:
                 _ = generate_protected_areas_table(verbose=verbose)
 
             case "generate_habitat_protection_table":
+                _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
                 _ = generate_habitat_protection_table(verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
-                _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
                 _ = generate_protection_coverage_stats_table(verbose=verbose)
 
             case "generate_marine_protection_level_stats_table":

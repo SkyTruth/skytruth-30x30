@@ -47,9 +47,7 @@ EEZ_PARAMS = {
     "zipfile_name": "static/eezs.zip",
     "shapefile_name": "eez_v12.shp",
 }
-# EEZ_ZIPFILE_NAME = "static/eezs.zip"
-# EEZ_SHAPEFILE_NAME = "eez_v12.shp"
-# EEZ_PARAMS = {"name": "World_EEZ_v12_20231025.zip"}
+EEZ_FILE_NAME = "static/eez_processed.geojson"
 
 HIGH_SEAS_PARAMS = {
     "name": "World_High_Seas_v2_20241010.zip",
@@ -73,6 +71,11 @@ GADM_URL = "https://geodata.ucdavis.edu/gadm/gadm4.1/gadm_410-levels.zip"
 GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
 GADM_FILE_NAME = "static/GADM_processed.geojson"
 
+# ------------------------------------------------------------
+#                      GADM/EEZ union
+# ------------------------------------------------------------
+
+GADM_EEZ_UNION_FILE_NAME = "static/GADM_eez_union.geojson"
 
 # ------------------------------------------------------------
 #        Locations (combined Marine Regions and GADM)

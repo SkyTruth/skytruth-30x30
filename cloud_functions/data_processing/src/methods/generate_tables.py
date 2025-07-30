@@ -14,7 +14,7 @@ from src.core.params import (
     today_formatted,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     EEZ_PARAMS,
-    EEZ_LAND_UNION_PARAMS,
+    GADM_EEZ_UNION_FILE_NAME,
     HIGH_SEAS_PARAMS,
     MPATLAS_FILE_NAME,
     PROTECTED_SEAS_FILE_NAME,
@@ -27,7 +27,6 @@ from src.core.params import (
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
-    REGIONS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
@@ -48,7 +47,7 @@ from src.core.processors import (
     add_protected_from_fishing_percent,
     add_parent,
     add_pas_oecm,
-    add_percentage_protection_mp,
+    add_total_area_mp,
     add_year,
     calculate_area,
     convert_type,
@@ -209,7 +208,7 @@ def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.Ge
 
 
 def generate_habitat_protection_table(
-    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
@@ -231,12 +230,11 @@ def generate_habitat_protection_table(
 
     if verbose:
         print("loading regions")
-    combined_regions, parent_country = load_regions()
+    combined_regions, _ = load_regions()
 
     marine_habitats = create_marine_habitat_subtable(
         combined_regions,
-        parent_country,
-        eez_land_union_params=eez_land_union_params,
+        gadm_eez_union_file_name=gadm_eez_union_file_name,
         habitats_zipfile_name=habitats_zipfile_name,
         seamounts_zipfile_name=seamounts_zipfile_name,
         seamounts_shapefile_name=seamounts_shapefile_name,
@@ -504,7 +502,7 @@ def generate_marine_protection_level_stats_table(
             total_area = GLOBAL_MARINE_AREA_KM2
         else:
             df_group = df[df["location"].isin(relations[loc])]
-            total_area = df_group["area"].sum()
+            total_area = df_group["total_area"].sum()
 
         if len(df_group) > 0:
             total_protected_area = df_group["protected_area"].sum()
@@ -548,16 +546,21 @@ def generate_marine_protection_level_stats_table(
     mpa_dict = {
         "id": "location",
         "highly_protected_km2": "protected_area",
-        "wdpa_marine_km2": "area",
+        "highly_protected_percent": "percentage",
+        "wdpa_marine_km2": "wdpa_marine_km2",
     }
     cols = [i for i in mpa_dict]
+
+    # TODO: We calculate total area from protected area / protected percent and
+    # fill in 0 percent MPAs with wdpa_marine_km2, which doesn't match MPAtlas's
+    # total area, but they don't provide theirs. Make sure this is the right way...
     mpa_cl_mps = (
         mpatlas_country[cols]
         .rename(columns=mpa_dict)
         .pipe(update_mpatlas_asterisk, asterisk=False)
         .pipe(add_constants, {"mpaa_protection_level": protection_level})
-        .pipe(add_percentage_protection_mp)
-    )
+        .pipe(add_total_area_mp)
+    ).drop(columns="wdpa_marine_km2")
 
     if verbose:
         print("Grouping by sovereign country and region")
@@ -593,8 +596,6 @@ def generate_fishing_protection_table(
     project: str = PROJECT,
     protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
     fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
-    protection_coverage_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
-    regions_file_name: str = REGIONS_FILE_NAME,
     verbose: bool = True,
 ):
     def return_stats(df_group, total_area, fishing_protection_level, loc):
@@ -619,11 +620,11 @@ def generate_fishing_protection_table(
         fishing_protection_level="highly",
     ):
         if loc == "GLOB":
-            df_group = df
+            df_group = df[df["iso_ter"] == ""]
             total_area = global_marine_area
         elif loc in regions:
             df_group = df[df["location"].isin(regions[loc])]
-            total_area = df_group["area"].sum()
+            total_area = df_group["total_area"].sum()
 
         return return_stats(df_group, total_area, fishing_protection_level, loc)
 
@@ -638,18 +639,12 @@ def generate_fishing_protection_table(
     protected_seas["iso_sov"] = protected_seas["iso_sov"].replace("CRV", "HRV")
 
     if verbose:
-        print("loading Protected Planet country level data for Marine Area")
-
-    marine_area = read_dataframe(bucket, protection_coverage_file_name)
-    marine_area = marine_area[(marine_area["environment"] == "marine")]
-
-    if verbose:
         print("processing fishing level protection")
 
     ps_dict = {
         "iso_ter": "iso_ter",
         "iso_sov": "iso_sov",
-        "total_area": "area",
+        "total_area": "total_area",
         "lfp5_area": "lfp5_area",
         "lfp4_area": "lfp4_area",
         "lfp3_area": "lfp3_area",
@@ -675,7 +670,7 @@ def generate_fishing_protection_table(
         .pipe(add_protected_from_fishing_percent, fishing_protection_levels)
         .pipe(
             remove_columns,
-            ["iso_ter", "iso_sov", "lfp5_area", "lfp4_area", "lfp3_area", "lfp2_area", "lfp1_area"],
+            ["lfp5_area", "lfp4_area", "lfp3_area", "lfp2_area", "lfp1_area"],
         )
     )
 
@@ -701,9 +696,8 @@ def generate_fishing_protection_table(
             axis=0,
         )
 
-    fishing_protection_table = fishing_protection_table[
-        fishing_protection_table["total_area"] > 0
-    ].drop(columns="total_area")
+    fishing_protection_table = fishing_protection_table[fishing_protection_table["total_area"] > 0]
+
     upload_dataframe(
         bucket,
         fishing_protection_table,

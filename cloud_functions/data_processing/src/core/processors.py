@@ -27,7 +27,7 @@ def add_protected_from_fishing_area(df, fishing_protection_levels):
 def add_protected_from_fishing_percent(df, fishing_protection_levels):
     df = df.copy()
     for level in fishing_protection_levels:
-        df[f"{level}_pct"] = 100 * df[f"{level}_protected_area"] / df["area"]
+        df[f"{level}_pct"] = 100 * df[f"{level}_protected_area"] / df["total_area"]
     return df
 
 
@@ -49,6 +49,13 @@ def add_pas_oecm(df):
 def add_percentage_protection_mp(df):
     df = df.copy()
     df["percentage"] = df["protected_area"] / df["area"]
+    return df
+
+
+def add_total_area_mp(df):
+    df = df.copy()
+    df["total_area"] = df["protected_area"] / (df["percentage"] / 100.0)
+    df.loc[df["percentage"] == 0, "total_area"] = df["wdpa_marine_km2"]
     return df
 
 
