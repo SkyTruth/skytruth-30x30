@@ -620,7 +620,7 @@ def generate_fishing_protection_table(
         fishing_protection_level="highly",
     ):
         if loc == "GLOB":
-            df_group = df[df["iso_ter"] == ""]
+            df_group = df
             total_area = global_marine_area
         elif loc in regions:
             df_group = df[df["location"].isin(regions[loc])]

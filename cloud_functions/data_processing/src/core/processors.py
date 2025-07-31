@@ -125,14 +125,18 @@ def extract_column_dict_str(df, column_dict, column):
 
 
 def fp_location(df):
+    def _process_one_country(df):
+        if len(df) == 1 and df.iloc[0]["iso_ter"] == "":
+            df["location"] = df["iso_sov"]
+            return df.drop(columns=["iso_ter"])
+
+        df = df[df["iso_ter"] != ""]
+        df.loc[df["iso_ter"] == "NAT", "iso_ter"] = df.loc[df["iso_ter"] == "NAT", "iso_sov"]
+        df["location"] = df["iso_ter"]
+        return df.drop(columns=["iso_ter"])
+
     df = df.copy()
-    df["location"] = df.apply(
-        lambda x: x["iso_ter"]
-        if isinstance(x["iso_ter"], str) and x["iso_ter"] != ""
-        else x["iso_sov"],
-        axis=1,
-    )
-    return df
+    return df.groupby("iso_sov", group_keys=False).apply(_process_one_country)
 
 
 def get_highly_protected_from_fishing_area(df):

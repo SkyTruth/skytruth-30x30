@@ -102,7 +102,7 @@ PROTECTED_SEAS_URL = "https://map.navigatormap.org/api/regionStats/"
 # TODO: should this be static?
 PROTECTED_SEAS_GEOM_ZIPFILE = "static/Protected_seas_geom.zip"
 PROTECTED_SEAS_FILE_NAME = "raw/protected_seas.csv"
-ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted}.zip"
+ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted}.csv"
 
 
 # ------------------------------------------------------------
