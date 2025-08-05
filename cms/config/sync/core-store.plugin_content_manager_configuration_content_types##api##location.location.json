@@ -264,6 +264,34 @@
           "sortable": false
         }
       },
+      "name_pt": {
+        "edit": {
+          "label": "name_pt",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "name_pt",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "has_shared_marine_area": {
+        "edit": {
+          "label": "has_shared_marine_area",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "has_shared_marine_area",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -324,12 +352,6 @@
       }
     },
     "layouts": {
-      "list": [
-        "id",
-        "code",
-        "name",
-        "total_marine_area"
-      ],
       "edit": [
         [
           {
@@ -354,6 +376,10 @@
         [
           {
             "name": "name_fr",
+            "size": 6
+          },
+          {
+            "name": "name_pt",
             "size": 6
           }
         ],
@@ -420,7 +446,19 @@
             "name": "pas",
             "size": 6
           }
+        ],
+        [
+          {
+            "name": "has_shared_marine_area",
+            "size": 4
+          }
         ]
+      ],
+      "list": [
+        "id",
+        "code",
+        "name",
+        "total_marine_area"
       ]
     }
   },

@@ -1640,6 +1640,8 @@ export interface ApiLocationLocation extends Schema.CollectionType {
       'oneToMany',
       'api::pa.pa'
     >;
+    name_pt: Attribute.String & Attribute.Required;
+    has_shared_marine_area: Attribute.Boolean;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<

@@ -127,7 +127,7 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
               return parsed;
             }
             parsedHabitats.add(entry.attributes.habitat.data.attributes.slug);
-            
+
             const stats = entry?.attributes;
 
             let habitat = stats?.habitat?.data.attributes;
@@ -150,7 +150,7 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
               updatedAt: stats.updatedAt,
             });
             return parsed;
-          },[]);
+          }, []);
 
           return parsedData
             .sort((d1, d2) => {
