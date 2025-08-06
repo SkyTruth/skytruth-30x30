@@ -454,3 +454,47 @@ def test_upsert_habitat_stats_failure(mock_req, mock_error, mock_authenticate):
 
     mock_error.assert_called_once()
     assert "Failed to upsert habitat stats" in mock_error.call_args[0][0]["message"]
+
+
+@responses.activate
+def test_upsert_locations_success(mock_authenticate):
+    api = Strapi()
+    locations = [
+        {
+            "code": "USA",
+            "name": "United States",
+            "name_es": "Estados Unidos",
+            "name_fr": "États-Unis",
+            "name_pt": "Estados Unidos",
+            "total_marine_area": 1000,
+            "total_land_area": 9000,
+            "type": "country",
+        }
+    ]
+    payload = {"data": locations}
+    responses.add(
+        responses.POST,
+        BASE_URL + "locations",
+        json=payload,
+        status=200,
+    )
+
+    result = api.upsert_locations(locations)
+    assert result == payload
+
+    assert len(responses.calls) == 1
+    call = responses.calls[0].request
+    assert call.method == "POST"
+    assert call.url == BASE_URL + "locations"
+
+
+@patch("src.strapi.Logger.error")
+@patch("src.strapi.requests.post", side_effect=HTTPError("locations-fail"))
+def test_upsert_locations_failure(mock_req, mock_error, mock_authenticate):
+    api = Strapi()
+    locations = [{"code": "CAN"}]
+    with pytest.raises(HTTPError):
+        api.upsert_locations(locations)
+
+    mock_error.assert_called_once()
+    assert "Failed to upsert locations" in mock_error.call_args[0][0]["message"]
