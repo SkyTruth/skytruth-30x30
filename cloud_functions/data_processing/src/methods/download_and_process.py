@@ -351,7 +351,8 @@ def process_protected_area_geoms(
     if verbose:
         print("buffering and simplifying geometries")
 
-    # TODO: This eliminates point PAs that have REP_AREA=0, is this what we want?
+    # TODO: This eliminates point PAs that have REP_AREA=0,
+    # is this what we want?: TECH-3163
     point_pas = wdpa[wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
     point_pas = point_pas[point_pas["REP_AREA"] > 0].copy()
     buffered_point_pas = create_buffer(point_pas)
