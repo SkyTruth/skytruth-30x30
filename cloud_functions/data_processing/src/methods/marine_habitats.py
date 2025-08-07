@@ -299,7 +299,7 @@ def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.Ge
     return result
 
 
-def create_marine_habitat_subtable(
+def process_marine_habitats(
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,

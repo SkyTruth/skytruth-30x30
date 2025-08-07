@@ -59,9 +59,9 @@ from src.core.processors import (
     update_mpatlas_asterisk,
 )
 
-from src.methods.marine_habitats import create_marine_habitat_subtable
+from src.methods.marine_habitats import process_marine_habitats
 
-from src.methods.terrestrial_habitats import create_terrestrial_habitats_subtable
+from src.methods.terrestrial_habitats import process_terrestrial_habitats
 
 from src.utils.gcp import (
     load_gdb_layer_from_gcs,
@@ -231,7 +231,7 @@ def generate_habitat_protection_table(
         print("loading regions")
     combined_regions, _ = load_regions()
 
-    marine_habitats = create_marine_habitat_subtable(
+    marine_habitats = process_marine_habitats(
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
         habitats_zipfile_name=habitats_zipfile_name,
@@ -245,7 +245,7 @@ def generate_habitat_protection_table(
         verbose=verbose,
     )
 
-    terrestrial_habitats = create_terrestrial_habitats_subtable(
+    terrestrial_habitats = process_terrestrial_habitats(
         combined_regions,
         pa_stats_filename=pa_stats_filename,
         country_stats_filename=country_stats_filename,

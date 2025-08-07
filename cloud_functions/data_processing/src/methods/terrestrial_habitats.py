@@ -231,7 +231,7 @@ def generate_terrestrial_biome_stats_pa(
     return pa_stats
 
 
-def create_terrestrial_habitats_subtable(
+def process_terrestrial_habitats(
     combined_regions,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
