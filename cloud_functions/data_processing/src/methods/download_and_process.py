@@ -1,120 +1,94 @@
-import os
 from io import BytesIO
-
+import numpy as np
 import pandas as pd
 import requests
+import geopandas as gpd
+from shapely.geometry import Point, MultiPoint
 
-from src.params import (
-    ARCHIVE_HABITATS_FILE_NAME,
-    ARCHIVE_MPATLAS_FILE_NAME,
-    ARCHIVE_PROTECTED_SEAS_FILE_NAME,
-    ARCHIVE_SEAMOUNTS_FILE_NAME,
-    ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
-    ARCHIVE_WDPA_FILE_NAME,
-    ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
+from src.core.commons import (
+    download_mpatlas_zone,
+    download_and_duplicate_zipfile,
+)
+
+from src.core.params import (
+    today_formatted,
     CHUNK_SIZE,
-    HABITATS_FILE_NAME,
-    HABITATS_URL,
-    MPATLAS_FILE_NAME,
+    MPATLAS_COUNTRY_LEVEL_API_URL,
+    MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_URL,
-    PROTECTED_SEAS_FILE_NAME,
+    MPATLAS_FILE_NAME,
+    ARCHIVE_MPATLAS_FILE_NAME,
     PROTECTED_SEAS_URL,
-    SEAMOUNTS_FILE_NAME,
-    SEAMOUNTS_URL,
+    PROTECTED_SEAS_FILE_NAME,
+    ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     WDPA_API_URL,
-    WDPA_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_FILE_NAME,
-    WDPA_GLOBAL_LEVEL_FILE_NAME,
-    WDPA_GLOBAL_LEVEL_URL,
     WDPA_URL,
+    WDPA_FILE_NAME,
+    ARCHIVE_WDPA_FILE_NAME,
+    WDPA_COUNTRY_LEVEL_FILE_NAME,
+    WDPA_GLOBAL_LEVEL_URL,
+    WDPA_GLOBAL_LEVEL_FILE_NAME,
+    ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
+    ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
+    WDPA_TERRESTRIAL_FILE_NAME,
+    WDPA_MARINE_FILE_NAME,
+    PROJECT,
+    BUCKET,
+    PP_API_KEY,
 )
+
+from src.core.processors import clean_geometries
+
 from src.utils.gcp import (
-    download_zip_to_gcs,
     duplicate_blob,
-    save_file_bucket,
+    load_gdb_layer_from_gcs,
     upload_dataframe,
+    upload_gdf,
 )
 
-verbose = True
-PP_API_KEY = os.getenv("PP_API_KEY", "")
-BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "")
 
+def download_mpatlas_country(
+    bucket: str = BUCKET,
+    project: str = PROJECT,
+    url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
+    current_filename: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    archive_filename: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+):
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
 
-def download_and_duplicate_zipfile(
-    url: str,
-    bucket: str,
-    blob_name: str,
-    archive_blob_name: str,
-    chunk_size: int = CHUNK_SIZE,
-    verbose: bool = True,
-) -> None:
-    """
-    Downloads a ZIP file from a URL and stores it in Google Cloud Storage,
-    then creates a duplicate of the uploaded blob within the same GCS bucket.
-
-    Parameters:
-    ----------
-    url : str
-        Public or authenticated URL pointing to the ZIP file to download.
-    bucket : str
-        Name of the GCS bucket where the file will be stored.
-    blob_name : str
-        Name of the target blob to be created as a duplicate.
-    archive_blob_name : str
-        Name of the original blob that receives the downloaded ZIP content.
-    chunk_size : int, optional
-        Size (in bytes) of each chunk used during the download/upload process.
-    verbose : bool, optional
-        If True, prints progress messages. Default is True.
-
-    """
-    if verbose:
-        print(f"downloading {url} to gs://{bucket}/{archive_blob_name}")
-    download_zip_to_gcs(url, bucket, archive_blob_name, chunk_size=chunk_size, verbose=verbose)
-    duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
+    upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
+    duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
 
 
 def download_mpatlas(
     url: str = MPATLAS_URL,
     bucket: str = BUCKET,
-    filename: str = MPATLAS_FILE_NAME,
-    archive_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
+    project: str = PROJECT,
+    mpatlas_filename: str = MPATLAS_FILE_NAME,
+    archive_mpatlas_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
+    mpatlas_country_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
+    mpatlas_country_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     verbose: bool = True,
 ) -> None:
-    """
-    Downloads the MPAtlas Zone Assessment dataset from a specified URL,
-    saves it to a Google Cloud Storage bucket, and duplicates the blob.
-
-    Parameters:
-    ----------
-    url : str
-        URL of the MPAtlas Zone Assessment file to download.
-    bucket : str
-        Name of the GCS bucket where the file should be stored.
-    filename : str
-        GCS blob name for the primary reference copy of the file.
-    archive_filename : str
-        GCS blob name for the archived/original version of the file.
-    verbose : bool, optional
-        If True, prints progress messages. Default is True.
-    """
-    if verbose:
-        print(f"downloading MPAtlas Zone Assessment from {url}")
-
-    response = requests.get(url)
-    response.raise_for_status()
-
-    if verbose:
-        print(f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}")
-    save_file_bucket(
-        response.content,
-        response.headers.get("Content-Type"),
-        archive_filename,
+    download_mpatlas_country(
         bucket,
-        verbose=verbose,
+        project,
+        mpatlas_country_url,
+        mpatlas_country_file_name,
+        archive_mpatlas_country_file_name,
     )
-    duplicate_blob(bucket, archive_filename, filename, verbose=True)
+
+    download_mpatlas_zone(
+        url,
+        bucket,
+        mpatlas_filename,
+        archive_mpatlas_filename,
+        verbose,
+    )
 
 
 def download_protected_seas(
@@ -347,61 +321,70 @@ def download_protected_planet(
     )
 
 
-def download_habitats(
-    habitats_url: str = HABITATS_URL,
-    habitats_file_name: str = HABITATS_FILE_NAME,
-    archive_habitats_file_name: str = ARCHIVE_HABITATS_FILE_NAME,
-    seamounts_url: str = SEAMOUNTS_URL,
-    seamounts_file_name: str = SEAMOUNTS_FILE_NAME,
-    archive_seamounts_file_name: str = ARCHIVE_SEAMOUNTS_FILE_NAME,
+def process_protected_area_geoms(
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    wdpa_file_name: str = WDPA_FILE_NAME,
     bucket: str = BUCKET,
-    chunk_size: int = CHUNK_SIZE,
+    tolerances: list = [0.001, 0.0001],
     verbose: bool = True,
-) -> None:
-    """
-    Downloads habitat-related datasets (habitats and seamounts) and uploads them to GCS
-    as both current and archived versions.
+):
+    def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        def calculate_radius(rep_area: float) -> float:
+            return ((rep_area * 1e6) / np.pi) ** 0.5
 
-    Parameters:
-    ----------
-    habitats_url : str
-        URL to download the general habitat ZIP file.
-    habitats_file_name : str
-        GCS blob name for the current habitat dataset.
-    archive_habitats_file_name : str
-        GCS blob name for the archived habitat dataset.
-    seamounts_url : str
-        URL to download the seamounts ZIP file.
-    seamounts_file_name : str
-        GCS blob name for the current seamounts dataset.
-    archive_seamounts_file_name : str
-        GCS blob name for the archived seamounts dataset.
-    bucket : str
-        Name of the GCS bucket where all files will be uploaded.
-    chunk_size : int, optional
-        Size in bytes of each chunk used during download.
-    verbose : bool, optional
-        If True, prints progress messages. Default is True.
-    """
-    # download habitats
-    download_and_duplicate_zipfile(
-        habitats_url,
+        df = df.to_crs("ESRI:54009")
+        df["geometry"] = df.apply(
+            lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+            axis=1,
+        )
+        return df.to_crs("EPSG:4326").copy()
+
+    if verbose:
+        print(f"loading PAs from gs://{bucket}/{wdpa_file_name}")
+    wdpa = load_gdb_layer_from_gcs(
+        wdpa_file_name,
         bucket,
-        habitats_file_name,
-        archive_habitats_file_name,
-        chunk_size=chunk_size,
-        verbose=verbose,
+        layers=[f"WDPA_poly_{today_formatted}", f"WDPA_point_{today_formatted}"],
     )
 
-    # download mangroves
-    # TODO: Add this
+    if verbose:
+        print("buffering and simplifying geometries")
 
-    # download seamounts
-    download_and_duplicate_zipfile(
-        seamounts_url,
-        bucket,
-        seamounts_file_name,
-        archive_seamounts_file_name,
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
+    # TODO: This eliminates point PAs that have REP_AREA=0,
+    # is this what we want?: TECH-3163
+    point_pas = wdpa[wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
+    point_pas = point_pas[point_pas["REP_AREA"] > 0].copy()
+    buffered_point_pas = create_buffer(point_pas)
+    buffered_point_pas = buffered_point_pas[buffered_point_pas.geometry.is_valid]
+    poly_pas = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
+    wdpa = pd.concat((poly_pas, buffered_point_pas), axis=0).pipe(clean_geometries)
+
+    for tolerance in tolerances:
+        df = wdpa.copy()
+
+        if verbose:
+            print(f"simplifying PAs with tolerance = {tolerance}")
+        if tolerance is not None:
+            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
+
+        df["geometry"] = df["geometry"].make_valid()
+
+        if verbose:
+            print("separating marine and terrestrial PAs")
+        wdpa_ter = df[df["MARINE"].eq("0")].copy()
+        wdpa_ter = wdpa_ter.dropna(axis=1, how="all")
+        wdpa_mar = df[df["MARINE"].isin(["1", "2"])].copy()
+        wdpa_mar = wdpa_mar.dropna(axis=1, how="all")
+
+        ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"saving terrestrial PAs to {ter_out_fn}")
+        upload_gdf(bucket, wdpa_ter, ter_out_fn)
+
+        mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"saving marine PAs to {mar_out_fn}")
+        upload_gdf(bucket, wdpa_mar, mar_out_fn)
+
+    return wdpa
