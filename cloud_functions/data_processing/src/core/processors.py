@@ -65,15 +65,6 @@ def add_year(df):
     return df
 
 
-def calculate_area(
-    df: gpd.GeoDataFrame, output_area_column="area_km2", round: None | int = 2
-) -> gpd.GeoDataFrame:
-    col = df.geometry.to_crs("ESRI:53009").area / 1e6  # convert to km2
-    if round:
-        col = col.round(round)
-    return df.assign(**{output_area_column: col})
-
-
 def clean_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     gdf.geometry = gdf.geometry.make_valid()
     return gdf

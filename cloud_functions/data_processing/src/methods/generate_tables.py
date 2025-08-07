@@ -49,7 +49,6 @@ from src.core.processors import (
     add_pas_oecm,
     add_total_area_mp,
     add_year,
-    calculate_area,
     convert_type,
     extract_column_dict_str,
     fp_location,
@@ -75,6 +74,7 @@ from src.utils.gcp import (
 def generate_protected_areas_table(
     wdpa_file_name: str = WDPA_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_FILE_NAME,
+    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -114,7 +114,7 @@ def generate_protected_areas_table(
         print(f"loading gs://{bucket}/{mpatlas_file_name}")
     mpatlas = read_mpatlas_from_gcs(bucket, mpatlas_file_name)
 
-    related_countries = read_json_from_gcs(BUCKET, RELATED_COUNTRIES_FILE_NAME, verbose=True)
+    related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=True)
     parent_dict = {}
     for cnt in related_countries:
         for c in related_countries[cnt]:
@@ -168,7 +168,6 @@ def generate_protected_areas_table(
         .pipe(add_year)
         .pipe(add_constants, {"environment": "marine", "data_source": "MPATLAS"})
         .pipe(remove_columns, "designated_date")
-        .pipe(calculate_area)
         .pipe(add_parent, parent_dict, location_name="location")
         .pipe(convert_type, {"wdpa_id": [pd.Int64Dtype(), str], "wdpa_pid": [str]})
     )
