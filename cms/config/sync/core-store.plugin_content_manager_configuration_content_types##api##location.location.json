@@ -352,6 +352,12 @@
       }
     },
     "layouts": {
+      "list": [
+        "id",
+        "code",
+        "name",
+        "total_marine_area"
+      ],
       "edit": [
         [
           {
@@ -376,10 +382,6 @@
         [
           {
             "name": "name_fr",
-            "size": 6
-          },
-          {
-            "name": "name_pt",
             "size": 6
           }
         ],
@@ -445,6 +447,10 @@
           {
             "name": "pas",
             "size": 6
+          },
+          {
+            "name": "name_pt",
+            "size": 6
           }
         ],
         [
@@ -453,12 +459,6 @@
             "size": 4
           }
         ]
-      ],
-      "list": [
-        "id",
-        "code",
-        "name",
-        "total_marine_area"
       ]
     }
   },
