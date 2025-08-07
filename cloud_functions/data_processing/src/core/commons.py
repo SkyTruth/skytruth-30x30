@@ -37,17 +37,6 @@ from src.utils.gcp import (
 from src.utils.geo import compute_pixel_area_map_km2
 
 
-def adjust_eez_sovereign(eez, parent_country):
-    def eez_location(row, parent_country):
-        loc = row["ISO_TER1"] if isinstance(row["ISO_TER1"], str) else row["ISO_SOV1"]
-        return parent_country[loc] if loc in parent_country else loc
-
-    eez_adj = eez[["GEONAME", "ISO_TER1", "ISO_SOV1", "AREA_KM2", "geometry"]]
-    eez_adj["location"] = eez_adj.apply(eez_location, axis=1, args=(parent_country,))
-
-    return eez_adj
-
-
 def load_marine_regions(params: dict, bucket: str = BUCKET):
     zipfile_name = params["zipfile_name"]
     shp_filename = f"{params['name'].rsplit('.',1)[0]}/{params['shapefile_name']}"

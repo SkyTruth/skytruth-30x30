@@ -82,7 +82,6 @@ def create_seamounts_subtable(
     if verbose:
         print("loading eezs")
     eez = load_marine_regions(eez_params, bucket)
-    # eez = adjust_eez_sovereign(eez, parent_country)
     eez["location"] = eez.apply(eez_location, axis=1)
 
     if verbose:
