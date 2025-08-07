@@ -333,8 +333,8 @@ def process_protected_area_geoms(
         def calculate_radius(rep_area: float) -> float:
             return ((rep_area * 1e6) / np.pi) ** 0.5
 
-        df = df[df["REP_AREA"] > 0].copy()
-        df["geometry"] = df.to_crs("ESRI:54009").apply(
+        df = df.to_crs("ESRI:54009")
+        df["geometry"] = df.apply(
             lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
             axis=1,
         )
@@ -352,9 +352,10 @@ def process_protected_area_geoms(
         print("buffering and simplifying geometries")
 
     # TODO: This eliminates point PAs that have REP_AREA=0, is this what we want?
-    buffered_point_pas = create_buffer(
-        wdpa[wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
-    )
+    point_pas = wdpa[wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
+    point_pas = point_pas[point_pas["REP_AREA"] > 0].copy()
+    buffered_point_pas = create_buffer(point_pas)
+    buffered_point_pas = buffered_point_pas[buffered_point_pas.geometry.is_valid]
     poly_pas = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
     wdpa = pd.concat((poly_pas, buffered_point_pas), axis=0).pipe(clean_geometries)
 
