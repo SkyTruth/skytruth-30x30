@@ -56,7 +56,7 @@ def estimate_masked_pixel_count(src, geom):
     return width * height
 
 
-def generate_raster_tiles(
+def generate_raster_tile_gdf(
     raster_path: str, tile_width: int = 1000, tile_height: int = 1000
 ) -> gpd.GeoDataFrame:
     """
