@@ -1,32 +1,49 @@
-import os
-
 import functions_framework
 from flask import Request
 
-from src.methods import (
-    download_habitats,
+from src.core.params import (
+    CHUNK_SIZE,
+    GADM_URL,
+    GADM_ZIPFILE_NAME,
+    MARINE_REGIONS_URL,
+    MARINE_REGIONS_BODY,
+    MARINE_REGIONS_HEADERS,
+    EEZ_PARAMS,
+    HIGH_SEAS_PARAMS,
+    BUCKET,
+    verbose,
+)
+
+from src.methods.download_and_process import (
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
+    process_protected_area_geoms,
 )
-from src.params import (
-    CHUNK_SIZE,
-    EEZ_PARAMS,
-    EEZ_ZIPFILE_NAME,
-    GADM_URL,
-    GADM_ZIPFILE_NAME,
-    HIGH_SEAS_PARAMS,
-    HIGH_SEAS_ZIPFILE_NAME,
-    MARINE_REGIONS_BODY,
-    MARINE_REGIONS_HEADERS,
-    MARINE_REGIONS_URL,
-)
-from src.utils.gcp import download_zip_to_gcs
 
-verbose = True
-PP_API_KEY = os.getenv("PP_API_KEY", "")
-BUCKET = os.getenv("BUCKET", "")
-PROJECT = os.getenv("PROJECT", "BAD!")
+from src.methods.generate_tables import (
+    generate_fishing_protection_table,
+    generate_habitat_protection_table,
+    generate_marine_protection_level_stats_table,
+    generate_protected_areas_table,
+    generate_protection_coverage_stats_table,
+)
+
+from src.methods.static_processes import (
+    process_mangroves,
+    download_marine_habitats,
+    process_terrestrial_biome_raster,
+    process_gadm_geoms,
+    process_eez_geoms,
+    generate_terrestrial_biome_stats_country,
+    process_eez_gadm_unions,
+)
+
+from src.methods.terrestrial_habitats import (
+    generate_terrestrial_biome_stats_pa,
+)
+
+from src.utils.gcp import download_zip_to_gcs
 
 
 @functions_framework.http
@@ -39,14 +56,25 @@ def main(request: Request) -> tuple[str, int]:
     The function expects a JSON body with a `METHOD` key. Supported METHOD values include:
 
     - "dry_run": Simple test mode, prints confirmation only
+
+    Static (infrequent updates, done manually)
+    - "download_gadm": Downloads GADM country shapefiles from UC Davis
     - "download_eezs": Downloads EEZ shapefiles from Marine Regions API
+    - "download_eez_land_union": Downloads EEZ/land union shapefiles from Marine Regions API
     - "download_high_seas": Downloads high seas shapefiles from Marine Regions API
     - "download_habitats": Downloads and stores habitat and seamount shapefiles
+    - "process_terrestrial_biomes": Processes biome raster --> done once after raster download
+    - "process_mangroves": Process mangroves --> done only after new mangroves data download or
+            updated eez/land union raster
+    - "generate_terrestrial_biome_stats_country": Calculates area of each biome in country
+            --> only run after gadm or biome raster is updated
+
+    Regularly Updated (automated)
     - "download_mpatlas": Downloads MPAtlas dataset and stores current + archive versions
     - "download_protected_seas": Downloads Protected Seas JSON data and uploads it
-    - "download_protected_planet_wdpa": Downloads full Protected Planet suite (WDPA ZIP + stats)
-
-    Unsupported methods will trigger a warning message.
+    - "download_protected_planet_wdpa": Downloads full Protected Planet suite
+            (WDPA ZIP + stats) and processes/simplifies polygons
+    - "generate_protected_areas_table": Updates protected areas table
 
     Parameters:
     ----------
@@ -66,43 +94,9 @@ def main(request: Request) -> tuple[str, int]:
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
-
-            case "download_eezs":
-                download_zip_to_gcs(
-                    MARINE_REGIONS_URL,
-                    BUCKET,
-                    EEZ_ZIPFILE_NAME,
-                    data=MARINE_REGIONS_BODY,
-                    params=EEZ_PARAMS,
-                    headers=MARINE_REGIONS_HEADERS,
-                    chunk_size=CHUNK_SIZE,
-                    verbose=verbose,
-                )
-
-            case "download_high_seas":
-                download_zip_to_gcs(
-                    MARINE_REGIONS_URL,
-                    BUCKET,
-                    HIGH_SEAS_ZIPFILE_NAME,
-                    data=MARINE_REGIONS_BODY,
-                    params=HIGH_SEAS_PARAMS,
-                    headers=MARINE_REGIONS_HEADERS,
-                    chunk_size=CHUNK_SIZE,
-                    verbose=verbose,
-                )
-
-            case "download_habitats":
-                download_habitats(verbose=verbose)
-
-            case "download_mpatlas":
-                download_mpatlas(verbose=verbose)
-
-            case "download_protected_seas":
-                download_protected_seas(verbose=verbose)
-
-            case "download_protected_planet_wdpa":
-                download_protected_planet(verbose=verbose)
-
+            # ------------------------------------------------------
+            #                    Nearly Static
+            # ------------------------------------------------------
             case "download_gadm":
                 download_zip_to_gcs(
                     GADM_URL,
@@ -111,6 +105,84 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
+                _ = process_gadm_geoms(verbose=verbose)
+
+            case "download_eezs":
+                download_zip_to_gcs(
+                    MARINE_REGIONS_URL,
+                    BUCKET,
+                    EEZ_PARAMS["zipfile_name"],
+                    data=MARINE_REGIONS_BODY,
+                    params=EEZ_PARAMS,
+                    headers=MARINE_REGIONS_HEADERS,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=verbose,
+                )
+                _ = process_eez_geoms(verbose=verbose)
+
+            case "download_high_seas":
+                download_zip_to_gcs(
+                    MARINE_REGIONS_URL,
+                    BUCKET,
+                    HIGH_SEAS_PARAMS["zipfile_name"],
+                    data=MARINE_REGIONS_BODY,
+                    params=HIGH_SEAS_PARAMS,
+                    headers=MARINE_REGIONS_HEADERS,
+                    chunk_size=CHUNK_SIZE,
+                    verbose=verbose,
+                )
+
+            case "process_eez_gadm_unions":
+                process_eez_gadm_unions(verbose=verbose)
+
+            case "download_marine_habitats":
+                download_marine_habitats(verbose=verbose)
+
+            case "process_terrestrial_biomes":
+                process_terrestrial_biome_raster(verbose=verbose)
+
+            case "process_mangroves":
+                process_mangroves(verbose=verbose)
+
+            case "generate_terrestrial_biome_stats_country":
+                generate_terrestrial_biome_stats_country(verbose=verbose)
+
+            # ------------------------------------------------------
+            #                    Update monthly
+            # ------------------------------------------------------
+
+            # ------------------
+            #     Downloads
+            # ------------------
+            case "download_mpatlas":
+                download_mpatlas(verbose=verbose)
+
+            case "download_protected_seas":
+                download_protected_seas(verbose=verbose)
+
+            case "download_protected_planet_wdpa":
+                download_protected_planet(verbose=verbose)
+                _ = process_protected_area_geoms(verbose=verbose)
+
+            # ------------------
+            #   Table updates
+            # ------------------
+            case "generate_protected_areas_table":
+                # TODO: incomplete!
+                _ = generate_protected_areas_table(verbose=verbose)
+
+            case "generate_habitat_protection_table":
+                _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
+                _ = generate_habitat_protection_table(verbose=verbose)
+
+            case "generate_protection_coverage_stats_table":
+                _ = generate_protection_coverage_stats_table(verbose=verbose)
+
+            case "generate_marine_protection_level_stats_table":
+                _ = generate_marine_protection_level_stats_table(verbose=verbose)
+
+            case "generate_fishing_protection_table":
+                _ = generate_fishing_protection_table(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")
