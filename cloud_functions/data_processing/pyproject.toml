@@ -19,6 +19,9 @@ dependencies = [
     "google-api-core (>=2.24.2,<3.0.0)",
     "flask (>=3.1.1,<4.0.0)",
     "functions-framework (>=3.8.2,<4.0.0)",
+    "gcsfs (>=2025.5.1,<2026.0.0)",
+    "rasterio (>=1.4.3,<2.0.0)",
+    "numpy (>=2.3.2,<3.0.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]
@@ -34,11 +37,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 package-mode = false
 
-[tool.ruff.lint]
-select = ["E", "F", "UP", "B", "SIM", "I"]
-
 [tool.ruff]
 line-length = 100
+select = ["E", "F", "UP", "B", "SIM", "I"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
