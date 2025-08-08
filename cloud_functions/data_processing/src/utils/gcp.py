@@ -397,7 +397,7 @@ def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefil
 
 
 def read_zipped_gpkg_from_gcs(
-    bucket: str, zip_blob_name: str, chunk_size: int = 8192, layer=None
+    bucket: str, zip_blob_name: str, chunk_size: int = 8192, layers: str | list[str]=None
 ) -> gpd.GeoDataFrame:
     """
     Downloads a zipped .gpkg from GCS, extracts it locally, reads the geopackage,
@@ -447,10 +447,16 @@ def read_zipped_gpkg_from_gcs(
             if not gpkg_files:
                 raise FileNotFoundError("No .gpkg file found in the zip archive.")
 
-            if layer is None:
+            if layers is None:
                 return gpd.read_file(gpkg_files[0])
-            else:
+            elif type(layers).__name__ == 'str':
                 return gpd.read_file(gpkg_files[0], layer=layer)
+            else:
+                response = []
+                for layer in layers:
+                    response.append(gpd.read_file(gpkg_files[0], layer=layer))
+                
+                return response
 
 
 def read_dataframe(

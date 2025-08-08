@@ -73,8 +73,8 @@ def process_gadm_geoms(
 ):
     if verbose:
         print(f"loading gadm gpkg from {gadm_zipfile_name}")
-    gadm = (
-        read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name, layer="ADM_0")[["GID_0", "geometry"]]
+    countires, sub_countries = (
+        read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name, layer=["ADM_0", "ADM_1"])[["GID_0", "geometry"]]
         .rename(columns={"GID_0": "location"})
         .pipe(clean_geometries)
     )
