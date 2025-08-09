@@ -1,5 +1,6 @@
 import concurrent.futures
 import datetime
+import gc
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -91,6 +92,8 @@ def process_gadm_geoms(
         if verbose:
             print(f"uploading simplified GADM countries to {out_fn}")
         upload_gdf(bucket, df, out_fn)
+
+    gc.collect()
 
     return gadm
 

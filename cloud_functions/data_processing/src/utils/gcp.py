@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 import zipfile
+import gc
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -190,6 +191,7 @@ def download_zip_to_gcs(
         raise excep
     except Exception as excep:
         logger.error({"message": "Error during download", "error": str(excep)})
+        gc.collect()
         raise excep
 
     try:
@@ -221,8 +223,10 @@ def download_zip_to_gcs(
             print(f"Uploading to gs://{bucket_name}/{blob_name}")
         blob.upload_from_file(tqdm_buffer, content_type="application/zip", rewind=True, timeout=600)
         tqdm_buffer.close()
+        gc.collect()
     except Exception as excep:
         logger.error({"message": "Error during upload to GCS", "error": str(excep)})
+        gc.collect()
         raise excep
 
 
