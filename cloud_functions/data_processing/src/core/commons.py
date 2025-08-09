@@ -1,32 +1,31 @@
-import fsspec
 import io
-from io import BytesIO
-import requests
-import gcsfs
-import fiona
 import tempfile
 import zipfile
+from io import BytesIO
+
+import fiona
+import fsspec
+import gcsfs
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import requests
 from rasterio.mask import mask
-from shapely.geometry import Polygon, MultiPolygon, GeometryCollection
+from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
 
 from src.core.params import (
-    RELATED_COUNTRIES_FILE_NAME,
-    REGIONS_FILE_NAME,
-    CHUNK_SIZE,
-    MPATLAS_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_GLOBAL_LEVEL_FILE_NAME,
-    MPATLAS_URL,
-    MPATLAS_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
     BUCKET,
+    CHUNK_SIZE,
+    MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    MPATLAS_FILE_NAME,
+    MPATLAS_URL,
+    REGIONS_FILE_NAME,
+    RELATED_COUNTRIES_FILE_NAME,
+    WDPA_GLOBAL_LEVEL_FILE_NAME,
 )
-
 from src.core.processors import clean_geometries
-
 from src.utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
@@ -39,24 +38,26 @@ from src.utils.geo import compute_pixel_area_map_km2
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
     zipfile_name = params["zipfile_name"]
-    shp_filename = f"{params['name'].rsplit('.',1)[0]}/{params['shapefile_name']}"
+    shp_filename = f"{params['name'].rsplit('.', 1)[0]}/{params['shapefile_name']}"
 
     gcs_zip_path = f"gs://{bucket}/{zipfile_name}"
     shp_base_name = shp_filename.rsplit(".", 1)[0]
 
     with fsspec.open(gcs_zip_path, mode="rb") as f:
         zip_bytes = f.read()
-        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
-            with tempfile.NamedTemporaryFile(suffix=".zip") as tmp_zip_file:
-                with zipfile.ZipFile(tmp_zip_file.name, mode="w") as new_zip:
-                    for file in zf.namelist():
-                        if file.startswith(shp_base_name):
-                            new_zip.writestr(file, zf.read(file))
+        with (
+            zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf,
+            tempfile.NamedTemporaryFile(suffix=".zip") as tmp_zip_file,
+            zipfile.ZipFile(tmp_zip_file.name, mode="w") as new_zip,
+        ):
+            for file in zf.namelist():
+                if file.startswith(shp_base_name):
+                    new_zip.writestr(file, zf.read(file))
 
-                # Build the correct path into the .shp file inside the zip
-                internal_shp_path = shp_base_name + ".shp"
-                zip_path = f"zip://{tmp_zip_file.name}!{internal_shp_path}"
-                gdf = gpd.read_file(zip_path).pipe(clean_geometries)
+        # Build the correct path into the .shp file inside the zip
+        internal_shp_path = shp_base_name + ".shp"
+        zip_path = f"zip://{tmp_zip_file.name}!{internal_shp_path}"
+        gdf = gpd.read_file(zip_path).pipe(clean_geometries)
 
     return gdf
 

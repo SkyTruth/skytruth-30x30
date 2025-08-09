@@ -1,35 +1,32 @@
+import zipfile
 from io import BytesIO
-import pandas as pd
+
+import gcsfs
 import geopandas as gpd
 import numpy as np
-import gcsfs
-import zipfile
+import pandas as pd
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import load_marine_regions
-
 from src.core.params import (
-    MANGROVES_BY_COUNTRY_FILE_NAME,
+    BUCKET,
+    EEZ_PARAMS,
+    GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
-    SEAMOUNTS_ZIPFILE_NAME,
+    MANGROVES_BY_COUNTRY_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
+    SEAMOUNTS_ZIPFILE_NAME,
     WDPA_MARINE_FILE_NAME,
-    GADM_EEZ_UNION_FILE_NAME,
-    EEZ_PARAMS,
-    BUCKET,
 )
-
 from src.core.processors import clean_geometries
-
 from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,
-    read_json_from_gcs,
     read_json_df,
+    read_json_from_gcs,
 )
-
 from src.utils.geo import get_area_km2
 
 

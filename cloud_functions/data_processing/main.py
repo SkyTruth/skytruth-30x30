@@ -2,25 +2,23 @@ import functions_framework
 from flask import Request
 
 from src.core.params import (
+    BUCKET,
     CHUNK_SIZE,
+    EEZ_PARAMS,
     GADM_URL,
     GADM_ZIPFILE_NAME,
-    MARINE_REGIONS_URL,
+    HIGH_SEAS_PARAMS,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
-    EEZ_PARAMS,
-    HIGH_SEAS_PARAMS,
-    BUCKET,
+    MARINE_REGIONS_URL,
     verbose,
 )
-
 from src.methods.download_and_process import (
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
     process_protected_area_geoms,
 )
-
 from src.methods.generate_tables import (
     generate_fishing_protection_table,
     generate_habitat_protection_table,
@@ -28,21 +26,18 @@ from src.methods.generate_tables import (
     generate_protected_areas_table,
     generate_protection_coverage_stats_table,
 )
-
 from src.methods.static_processes import (
-    process_mangroves,
     download_marine_habitats,
-    process_terrestrial_biome_raster,
-    process_gadm_geoms,
-    process_eez_geoms,
     generate_terrestrial_biome_stats_country,
     process_eez_gadm_unions,
+    process_eez_geoms,
+    process_gadm_geoms,
+    process_mangroves,
+    process_terrestrial_biome_raster,
 )
-
 from src.methods.terrestrial_habitats import (
     generate_terrestrial_biome_stats_pa,
 )
-
 from src.utils.gcp import download_zip_to_gcs
 
 

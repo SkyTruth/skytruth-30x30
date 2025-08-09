@@ -1,33 +1,28 @@
 import datetime
-import pandas as pd
-import geopandas as gpd
-import requests
-from shapely.geometry import box
-from shapely.ops import unary_union
-from tqdm.auto import tqdm
 import math
-import rasterio
-from shapely.geometry import mapping, Polygon, MultiPolygon, GeometryCollection
-from shapely.validation import make_valid
 
+import geopandas as gpd
+import pandas as pd
+import rasterio
+import requests
 from rasterio.transform import rowcol
+from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, box, mapping
+from shapely.ops import unary_union
+from shapely.validation import make_valid
+from tqdm.auto import tqdm
 
 from src.core.commons import get_cover_areas
-
 from src.core.land_cover_params import LAND_COVER_CLASSES, terrestrial_tolerance
-
 from src.core.params import (
+    BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     GADM_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
-    WDPA_TERRESTRIAL_FILE_NAME,
-    BUCKET,
     PROJECT,
+    WDPA_TERRESTRIAL_FILE_NAME,
 )
-
-from src.utils.gcp import download_file_from_gcs, upload_dataframe, read_json_df, read_dataframe
-
+from src.utils.gcp import download_file_from_gcs, read_dataframe, read_json_df, upload_dataframe
 from src.utils.geo import tile_geometry
 
 
@@ -146,7 +141,7 @@ def generate_terrestrial_biome_stats_pa(
             return [geom]
         if isinstance(geom, GeometryCollection):
             return [
-                g for g in geom.geoms if isinstance(g, (Polygon, MultiPolygon)) and not g.is_empty
+                g for g in geom.geoms if isinstance(g, Polygon | MultiPolygon) and not g.is_empty
             ]
         return []  # Point, LineString, etc.
 
@@ -239,10 +234,7 @@ def process_terrestrial_habitats(
     verbose: bool = True,
 ):
     def get_group_stats(df, loc, relations):
-        if loc == "GLOB":
-            df_group = df
-        else:
-            df_group = df[df["country"].isin(relations[loc])]
+        df_group = df if loc == "GLOB" else df[df["country"].isin(relations[loc])]
 
         out = df_group[[c for c in df_group.columns if c != "country"]].sum().to_dict()
         out["location"] = loc

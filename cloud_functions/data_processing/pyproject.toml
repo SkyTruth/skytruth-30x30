@@ -39,7 +39,11 @@ package-mode = false
 
 [tool.ruff]
 line-length = 100
-select = ["E", "F", "UP", "B", "SIM", "I"]
+
+[tool.ruff.lint]
+select=["E", "F", "UP", "B", "SIM", "I"]
+ignore=["UP038"]
+
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
