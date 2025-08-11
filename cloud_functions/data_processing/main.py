@@ -100,6 +100,8 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
+
+            case "process_gadm":
                 _ = process_gadm_geoms(verbose=verbose)
 
             case "download_eezs":

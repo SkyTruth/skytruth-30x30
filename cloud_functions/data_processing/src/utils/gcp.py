@@ -1,9 +1,9 @@
+import gc
 import json
 import os
 import shutil
 import tempfile
 import zipfile
-import gc
 from io import BytesIO
 from pathlib import Path
 from typing import Any
