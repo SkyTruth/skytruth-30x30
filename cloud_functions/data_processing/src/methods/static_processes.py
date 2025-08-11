@@ -1,74 +1,72 @@
+import concurrent.futures
 import datetime
-import pandas as pd
+import gc
+import threading
+from collections.abc import Callable
+from pathlib import Path
+
 import geopandas as gpd
+import pandas as pd
 import rasterio
+from google.cloud import storage
 from shapely.geometry import box, mapping
 from shapely.ops import unary_union
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
-from pathlib import Path
-from typing import Tuple, Dict, Callable
-from google.cloud import storage
-import threading
-import concurrent.futures
 
 from src.core.commons import (
-    load_marine_regions,
-    safe_union,
     download_and_duplicate_zipfile,
     get_cover_areas,
+    load_marine_regions,
+    safe_union,
 )
-
 from src.core.land_cover_params import (
-    reclass_function,
     BIOME_RASTER_PATH,
     LAND_COVER_CLASSES,
+    reclass_function,
     terrestrial_tolerance,
 )
-
 from src.core.params import (
-    CHUNK_SIZE,
-    GADM_EEZ_UNION_FILE_NAME,
-    HABITATS_URL,
-    HABITATS_ZIP_FILE_NAME,
     ARCHIVE_HABITATS_FILE_NAME,
-    MANGROVES_ZIPFILE_NAME,
-    MANGROVES_BY_COUNTRY_FILE_NAME,
-    SEAMOUNTS_URL,
-    SEAMOUNTS_ZIPFILE_NAME,
     ARCHIVE_SEAMOUNTS_FILE_NAME,
-    GLOBAL_MANGROVE_AREA_FILE_NAME,
-    PROCESSED_BIOME_RASTER_PATH,
-    GADM_ZIPFILE_NAME,
-    GADM_FILE_NAME,
+    BUCKET,
+    CHUNK_SIZE,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
     EEZ_PARAMS,
-    BUCKET,
+    GADM_EEZ_UNION_FILE_NAME,
+    GADM_FILE_NAME,
+    GADM_ZIPFILE_NAME,
+    GLOBAL_MANGROVE_AREA_FILE_NAME,
+    HABITATS_URL,
+    HABITATS_ZIP_FILE_NAME,
+    MANGROVES_BY_COUNTRY_FILE_NAME,
+    MANGROVES_ZIPFILE_NAME,
+    PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
+    SEAMOUNTS_URL,
+    SEAMOUNTS_ZIPFILE_NAME,
+    TOLERANCES,
 )
-
 from src.core.processors import clean_geometries
-
 from src.utils.gcp import (
-    load_zipped_shapefile_from_gcs,
-    upload_dataframe,
-    upload_gdf,
-    save_json_to_gcs,
-    upload_file_to_gcs,
-    read_zipped_gpkg_from_gcs,
-    read_json_df,
     download_file_from_gcs,
+    load_zipped_shapefile_from_gcs,
+    read_json_df,
+    read_zipped_gpkg_from_gcs,
+    save_json_to_gcs,
+    upload_dataframe,
+    upload_file_to_gcs,
+    upload_gdf,
 )
-
-from src.utils.geo import tile_geometry, fill_polygon_holes
+from src.utils.geo import fill_polygon_holes, tile_geometry
 
 
 def process_gadm_geoms(
     gadm_file_name: str = GADM_FILE_NAME,
     gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
     bucket: str = BUCKET,
-    tolerances: list = [0.001, 0.0001],
+    tolerances: list | tuple = TOLERANCES,
     verbose: bool = True,
 ):
     if verbose:
@@ -93,6 +91,8 @@ def process_gadm_geoms(
         if verbose:
             print(f"uploading simplified GADM countries to {out_fn}")
         upload_gdf(bucket, df, out_fn)
+
+    gc.collect()
 
     return gadm
 
@@ -314,8 +314,8 @@ def process_terrestrial_biome_raster(
     biome_raster_path: Path = BIOME_RASTER_PATH,
     processed_biome_raster_path: Path = PROCESSED_BIOME_RASTER_PATH,
     func: Callable = reclass_function,
-    f_args: Tuple = (),
-    f_kwargs: Dict = {},
+    f_args: tuple = None,
+    f_kwargs: dict = None,
     bucket: str = BUCKET,
     verbose: bool = True,
 ) -> None:
@@ -394,7 +394,7 @@ def process_terrestrial_biome_raster(
                         data = src.read(window=window)
 
                     status_message["messages"].append("processing data")
-                    result = func(data, *f_args, **f_kwargs)
+                    result = func(data, *f_args or (), **f_kwargs or {})
 
                     status_message["messages"].append("writing data")
                     with write_lock:
@@ -404,8 +404,8 @@ def process_terrestrial_biome_raster(
 
                 except Exception as e:
                     status_message["diagnostics"]["error"] = e
-                finally:
-                    return status_message
+
+                return status_message
 
             # We map the process() function over the list of
             # windows.
@@ -416,7 +416,7 @@ def process_terrestrial_biome_raster(
                 concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor,
                 tqdm(total=len(windows), desc="Computing raster stats", unit="chunk") as p_bar,
             ):
-                for idx, window in enumerate(windows):
+                for _, window in enumerate(windows):
                     futures.append(executor.submit(process, window))
 
                 results = []
