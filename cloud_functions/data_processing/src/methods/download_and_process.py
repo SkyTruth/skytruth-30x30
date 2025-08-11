@@ -1,45 +1,44 @@
 from io import BytesIO
+
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
-import geopandas as gpd
-from shapely.geometry import Point, MultiPoint
+from shapely.geometry import MultiPoint, Point
 
 from src.core.commons import (
-    download_mpatlas_zone,
     download_and_duplicate_zipfile,
+    download_mpatlas_zone,
 )
-
 from src.core.params import (
-    today_formatted,
+    ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    ARCHIVE_MPATLAS_FILE_NAME,
+    ARCHIVE_PROTECTED_SEAS_FILE_NAME,
+    ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
+    ARCHIVE_WDPA_FILE_NAME,
+    ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
+    BUCKET,
     CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
-    ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
-    MPATLAS_URL,
     MPATLAS_FILE_NAME,
-    ARCHIVE_MPATLAS_FILE_NAME,
-    PROTECTED_SEAS_URL,
-    PROTECTED_SEAS_FILE_NAME,
-    ARCHIVE_PROTECTED_SEAS_FILE_NAME,
-    WDPA_API_URL,
-    WDPA_URL,
-    WDPA_FILE_NAME,
-    ARCHIVE_WDPA_FILE_NAME,
-    WDPA_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_GLOBAL_LEVEL_URL,
-    WDPA_GLOBAL_LEVEL_FILE_NAME,
-    ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
-    ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_TERRESTRIAL_FILE_NAME,
-    WDPA_MARINE_FILE_NAME,
-    PROJECT,
-    BUCKET,
+    MPATLAS_URL,
     PP_API_KEY,
+    PROJECT,
+    PROTECTED_SEAS_FILE_NAME,
+    PROTECTED_SEAS_URL,
+    TOLERANCES,
+    WDPA_API_URL,
+    WDPA_COUNTRY_LEVEL_FILE_NAME,
+    WDPA_FILE_NAME,
+    WDPA_GLOBAL_LEVEL_FILE_NAME,
+    WDPA_GLOBAL_LEVEL_URL,
+    WDPA_MARINE_FILE_NAME,
+    WDPA_TERRESTRIAL_FILE_NAME,
+    WDPA_URL,
+    today_formatted,
 )
-
 from src.core.processors import clean_geometries
-
 from src.utils.gcp import (
     duplicate_blob,
     load_gdb_layer_from_gcs,
@@ -326,7 +325,7 @@ def process_protected_area_geoms(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     wdpa_file_name: str = WDPA_FILE_NAME,
     bucket: str = BUCKET,
-    tolerances: list = [0.001, 0.0001],
+    tolerances: list | tuple = TOLERANCES,
     verbose: bool = True,
 ):
     def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -342,6 +341,7 @@ def process_protected_area_geoms(
 
     if verbose:
         print(f"loading PAs from gs://{bucket}/{wdpa_file_name}")
+
     wdpa = load_gdb_layer_from_gcs(
         wdpa_file_name,
         bucket,
