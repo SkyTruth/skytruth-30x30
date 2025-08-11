@@ -1,13 +1,14 @@
 import pytest
 
-
 import main
 from tests.fixtures.utils.util_mocks import MockRequest
+
 
 @pytest.fixture
 def call_log():
     """Shared accumulator of (name, args, kwargs) across patched functions."""
     return []
+
 
 def make_recorder(call_log, name, return_value=None, side_effect=None):
     """
@@ -15,11 +16,13 @@ def make_recorder(call_log, name, return_value=None, side_effect=None):
     - If side_effect is provided, it will be raised when called.
     - Otherwise returns return_value.
     """
+
     def _recorder(*args, **kwargs):
         call_log.append((name, args, kwargs))
         if side_effect:
             raise side_effect
         return return_value
+
     return _recorder
 
 
@@ -81,7 +84,10 @@ def patched_all(monkeypatch, call_log):
         ("download_protected_seas", "download_protected_seas"),
         ("generate_protected_areas_table", "generate_protected_areas_table"),
         ("generate_protection_coverage_stats_table", "generate_protection_coverage_stats_table"),
-        ("generate_marine_protection_level_stats_table", "generate_marine_protection_level_stats_table"),
+        (
+            "generate_marine_protection_level_stats_table",
+            "generate_marine_protection_level_stats_table",
+        ),
         ("generate_fishing_protection_table", "generate_fishing_protection_table"),
     ],
 )
@@ -95,12 +101,15 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     name, args, kwargs = patched_all[0]
     assert name == expected_call
     assert args == ()
-    assert "verbose" in kwargs 
+    assert "verbose" in kwargs
 
 
 # Multi-function call methods
 def test_download_protected_planet_wdpa_calls_two(patched_all):
-    """download_protected_planet_wdpa should call download_protected_planet then process_protected_area_geoms."""
+    """
+    download_protected_planet_wdpa should call download_protected_planet then
+    process_protected_area_geoms.
+    """
     resp = main.main(MockRequest({"METHOD": "download_protected_planet_wdpa"}))
     assert resp == ("OK", 200)
 
@@ -128,8 +137,11 @@ def test_generate_habitat_protection_table_calls_both(patched_all):
         assert args == ()
         assert "verbose" in kwargs
 
+
 # Tests for functions that directly call download_zip_to_gcs
-def _assert_download_zip_call_kwargs(call, *, url, bucket_name, blob_name, chunk_size, extra_kwargs=None):
+def _assert_download_zip_call_kwargs(
+    call, *, url, bucket_name, blob_name, chunk_size, extra_kwargs=None
+):
     """Validate that download_zip_to_gcs was called with ONLY kwargs and expected values."""
     name, args, kwargs = call
     assert name == "download_zip_to_gcs"
@@ -167,8 +179,8 @@ def _assert_download_zip_call_kwargs(call, *, url, bucket_name, blob_name, chunk
                 chunk_size=lambda m: m.CHUNK_SIZE,
             ),
             {
-                "data":    lambda m: m.MARINE_REGIONS_BODY,
-                "params":  lambda m: m.EEZ_PARAMS,
+                "data": lambda m: m.MARINE_REGIONS_BODY,
+                "params": lambda m: m.EEZ_PARAMS,
                 "headers": lambda m: m.MARINE_REGIONS_HEADERS,
             },
             id="eezs",
@@ -182,8 +194,8 @@ def _assert_download_zip_call_kwargs(call, *, url, bucket_name, blob_name, chunk
                 chunk_size=lambda m: m.CHUNK_SIZE,
             ),
             {
-                "data":    lambda m: m.MARINE_REGIONS_BODY,
-                "params":  lambda m: m.HIGH_SEAS_PARAMS,
+                "data": lambda m: m.MARINE_REGIONS_BODY,
+                "params": lambda m: m.HIGH_SEAS_PARAMS,
                 "headers": lambda m: m.MARINE_REGIONS_HEADERS,
             },
             id="high_seas",
@@ -229,7 +241,8 @@ def test_unknown_method_returns_ok_and_calls_nothing(patched_all):
 def test_error_bubbles_to_500(monkeypatch, call_log):
     """If any called function raises, handler should catch and return 500."""
     monkeypatch.setattr(
-        main, "process_gadm_geoms",
+        main,
+        "process_gadm_geoms",
         make_recorder(call_log, "process_gadm_geoms", side_effect=RuntimeError("boom")),
         raising=True,
     )

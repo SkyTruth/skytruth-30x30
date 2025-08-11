@@ -1,11 +1,10 @@
 # tests/test_process_gadm_geoms.py
-import io
 import gc
-import json
-import pandas as pd
+
 import geopandas as gpd
+import pandas as pd
 import pytest
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 
 from src.methods import static_processes
 from src.methods.static_processes import process_gadm_geoms
@@ -249,7 +248,9 @@ def test_process_gadm_geoms_raises_on_reader_failure(
     assert calls == []
 
 
-def test_process_gadm_geoms_bad_input_columns(monkeypatch, related_countries_map, uploads_recorder, sample_layers):
+def test_process_gadm_geoms_bad_input_columns(
+    monkeypatch, related_countries_map, uploads_recorder, sample_layers
+):
     """
     If ADM_0 is missing expected columns, we should see a KeyError (or similar)
     before any upload is attempted.
