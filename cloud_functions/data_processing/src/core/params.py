@@ -48,6 +48,7 @@ EEZ_PARAMS = {
     "shapefile_name": "eez_v12.shp",
 }
 EEZ_FILE_NAME = "static/eez_processed.geojson"
+EEZ_MULTIPLE_SOV_FILE_NAME = "static/eez_multi_sov_processed.geojson"
 
 HIGH_SEAS_PARAMS = {
     "name": "World_High_Seas_v2_20241010.zip",
@@ -60,6 +61,8 @@ EEZ_LAND_UNION_PARAMS = {
     "zipfile_name": "static/eez_land_union.zip",
     "shapefile_name": "EEZ_land_union_v4_202410.shp",
 }
+
+EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 
 MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"
 
@@ -183,10 +186,6 @@ HABITAT_PROTECTION_FILE_NAME = f"tables/habitat_protection_{today_formatted}.csv
 # ------------------------------------------------------------
 #                            MISC
 # ------------------------------------------------------------
-#                         GADM
-# ------------------------------------------------------------
-GADM_URL = "https://geodata.ucdavis.edu/gadm/gadm4.1/gadm_410-levels.zip"
-GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
 
 CHUNK_SIZE = 8192
 TOLERANCES = (0.001, 0.0001)

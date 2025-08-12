@@ -35,9 +35,7 @@ from src.methods.static_processes import (
     process_mangroves,
     process_terrestrial_biome_raster,
 )
-from src.methods.terrestrial_habitats import (
-    generate_terrestrial_biome_stats_pa,
-)
+from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.utils.gcp import download_zip_to_gcs
 
 
@@ -94,34 +92,34 @@ def main(request: Request) -> tuple[str, int]:
             # ------------------------------------------------------
             case "download_gadm":
                 download_zip_to_gcs(
-                    GADM_URL,
-                    BUCKET,
-                    GADM_ZIPFILE_NAME,
+                    url=GADM_URL,
+                    bucket_name=BUCKET,
+                    blob_name=GADM_ZIPFILE_NAME,
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
 
             case "process_gadm":
-                _ = process_gadm_geoms(verbose=verbose)
+                # NOTE: download_gadm must have been run first
+                process_gadm_geoms(verbose=verbose)
 
             case "download_eezs":
                 download_zip_to_gcs(
-                    MARINE_REGIONS_URL,
-                    BUCKET,
-                    EEZ_PARAMS["zipfile_name"],
+                    url=MARINE_REGIONS_URL,
+                    bucket_name=BUCKET,
+                    blob_name=EEZ_PARAMS["zipfile_name"],
                     data=MARINE_REGIONS_BODY,
                     params=EEZ_PARAMS,
                     headers=MARINE_REGIONS_HEADERS,
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-                _ = process_eez_geoms(verbose=verbose)
 
             case "download_high_seas":
                 download_zip_to_gcs(
-                    MARINE_REGIONS_URL,
-                    BUCKET,
-                    HIGH_SEAS_PARAMS["zipfile_name"],
+                    url=MARINE_REGIONS_URL,
+                    bucket_name=BUCKET,
+                    blob_name=HIGH_SEAS_PARAMS["zipfile_name"],
                     data=MARINE_REGIONS_BODY,
                     params=HIGH_SEAS_PARAMS,
                     headers=MARINE_REGIONS_HEADERS,
@@ -129,7 +127,13 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
 
+            case "process_eezs":
+                # NOTE: download_eezs and download_high_seas must have been run first
+                process_eez_geoms(verbose=verbose)
+
             case "process_eez_gadm_unions":
+                # NOTE: Must be run after download_gadm,
+                # process_gadm, download_high_seas, download_eezs, and process_eezs
                 process_eez_gadm_unions(verbose=verbose)
 
             case "download_marine_habitats":

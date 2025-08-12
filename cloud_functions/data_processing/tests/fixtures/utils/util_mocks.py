@@ -57,7 +57,7 @@ class MockBucket:
 
 
 class MockClient:
-    """Mokc class for GCS client"""
+    """Mock class for GCS client"""
 
     def __init__(self, bucket):
         self._bucket = bucket

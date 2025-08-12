@@ -48,16 +48,16 @@ def load_marine_regions(params: dict, bucket: str = BUCKET):
         with (
             zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf,
             tempfile.NamedTemporaryFile(suffix=".zip") as tmp_zip_file,
-            zipfile.ZipFile(tmp_zip_file.name, mode="w") as new_zip,
         ):
-            for file in zf.namelist():
-                if file.startswith(shp_base_name):
-                    new_zip.writestr(file, zf.read(file))
+            with zipfile.ZipFile(tmp_zip_file.name, mode="w") as new_zip:
+                for file in zf.namelist():
+                    if file.startswith(shp_base_name):
+                        new_zip.writestr(file, zf.read(file))
 
-        # Build the correct path into the .shp file inside the zip
-        internal_shp_path = shp_base_name + ".shp"
-        zip_path = f"zip://{tmp_zip_file.name}!{internal_shp_path}"
-        gdf = gpd.read_file(zip_path).pipe(clean_geometries)
+            # Build the correct path into the .shp file inside the zip
+            internal_shp_path = shp_base_name + ".shp"
+            zip_path = f"zip://{tmp_zip_file.name}!{internal_shp_path}"
+            gdf = gpd.read_file(zip_path).pipe(clean_geometries)
 
     return gdf
 

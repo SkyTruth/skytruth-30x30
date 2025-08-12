@@ -1,3 +1,4 @@
+import contextlib
 import gc
 import json
 import os
@@ -401,7 +402,7 @@ def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefil
 
 
 def read_zipped_gpkg_from_gcs(
-    bucket: str, zip_blob_name: str, chunk_size: int = 8192, layer=None
+    bucket: str, zip_blob_name: str, chunk_size: int = 8192, layers: str | list[str] = None
 ) -> gpd.GeoDataFrame:
     """
     Downloads a zipped .gpkg from GCS, extracts it locally, reads the geopackage,
@@ -448,10 +449,17 @@ def read_zipped_gpkg_from_gcs(
         if not gpkg_files:
             raise FileNotFoundError("No .gpkg file found in the zip archive.")
 
-        if layer is None:
+        if layers is None:
             return gpd.read_file(gpkg_files[0])
+        elif isinstance(layers, str):
+            return gpd.read_file(gpkg_files[0], layer=layers)
         else:
-            return gpd.read_file(gpkg_files[0], layer=layer)
+            response = []
+            for layer in layers:
+                print("Adding layers to response!")
+                response.append(gpd.read_file(gpkg_files[0], layer=layer))
+
+            return response
 
 
 def read_dataframe(
@@ -528,11 +536,20 @@ def read_json_df(
     if verbose:
         print(f"Loading from gs://{bucket_name}/{filename} (type: {file_type})")
 
-    fs = gcsfs.GCSFileSystem()
+    fs = gcsfs.GCSFileSystem(cache_timeout=0)
 
-    with fs.open(f"gs://{bucket_name}/{filename}", "r") as f:
+    with fs.open(f"gs://{bucket_name}/{filename}", "rb") as f:
         if file_type == "geojson":
-            return gpd.read_file(f)
+            with tempfile.NamedTemporaryFile(suffix=".geojson", delete=False) as tmp:
+                for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):  # 8 MB chucks
+                    tmp.write(chunk)
+                local = tmp.name
+            try:
+                return gpd.read_file(local)
+            finally:
+                with contextlib.suppress(OSError):
+                    os.remove(local)
+
         elif file_type == "json":
             raw = json.load(f)
             if isinstance(raw, dict) and "features" in raw:
