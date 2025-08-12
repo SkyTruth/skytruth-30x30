@@ -134,6 +134,8 @@ def main(request: Request) -> tuple[str, int]:
                 process_eez_geoms(verbose=verbose)
 
             case "process_eez_gadm_unions":
+                # NOTE: Must be run after download_gadm,
+                # process_gadm, download_high_seas, download_eezs, and process_eezs
                 process_eez_gadm_unions(verbose=verbose)
 
             case "download_marine_habitats":

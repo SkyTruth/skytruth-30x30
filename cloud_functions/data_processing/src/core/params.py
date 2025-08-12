@@ -192,6 +192,7 @@ GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
 CHUNK_SIZE = 8192
 TOLERANCES = (0.001, 0.0001)
 LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
+EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
 RELATED_COUNTRIES_FILE_NAME = "processing/related_countries_v2.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
