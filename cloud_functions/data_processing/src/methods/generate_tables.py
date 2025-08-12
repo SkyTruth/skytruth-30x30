@@ -1,52 +1,51 @@
-import pandas as pd
 import geopandas as gpd
+import pandas as pd
 from tqdm.auto import tqdm
 
 from src.core.commons import (
-    read_mpatlas_from_gcs,
-    load_wdpa_global,
-    load_mpatlas_country,
     load_marine_regions,
+    load_mpatlas_country,
     load_regions,
+    load_wdpa_global,
+    read_mpatlas_from_gcs,
 )
-
+from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
-    today_formatted,
-    MPATLAS_COUNTRY_LEVEL_FILE_NAME,
-    EEZ_PARAMS,
-    GADM_EEZ_UNION_FILE_NAME,
-    HIGH_SEAS_PARAMS,
-    MPATLAS_FILE_NAME,
-    PROTECTED_SEAS_FILE_NAME,
-    WDPA_FILE_NAME,
-    WDPA_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_GLOBAL_LEVEL_FILE_NAME,
-    HABITAT_PROTECTION_FILE_NAME,
-    HABITATS_ZIP_FILE_NAME,
-    MANGROVES_BY_COUNTRY_FILE_NAME,
-    SEAMOUNTS_SHAPEFILE_NAME,
-    SEAMOUNTS_ZIPFILE_NAME,
-    RELATED_COUNTRIES_FILE_NAME,
-    PROTECTION_COVERAGE_FILE_NAME,
-    PROTECTION_LEVEL_FILE_NAME,
-    FISHING_PROTECTION_FILE_NAME,
-    GLOBAL_MANGROVE_AREA_FILE_NAME,
-    WDPA_MARINE_FILE_NAME,
-    PA_TERRESTRIAL_HABITATS_FILE_NAME,
+    BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
+    EEZ_FILE_NAME,
+    FISHING_PROTECTION_FILE_NAME,
+    GADM_EEZ_UNION_FILE_NAME,
+    GLOBAL_MANGROVE_AREA_FILE_NAME,
     GLOBAL_MARINE_AREA_KM2,
     GLOBAL_TERRESTRIAL_AREA_KM2,
-    BUCKET,
+    HABITAT_PROTECTION_FILE_NAME,
+    HABITATS_ZIP_FILE_NAME,
+    HIGH_SEAS_PARAMS,
+    MANGROVES_BY_COUNTRY_FILE_NAME,
+    MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    MPATLAS_FILE_NAME,
+    PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROJECT,
+    PROTECTED_SEAS_FILE_NAME,
+    PROTECTION_COVERAGE_FILE_NAME,
+    PROTECTION_LEVEL_FILE_NAME,
+    RELATED_COUNTRIES_FILE_NAME,
+    SEAMOUNTS_SHAPEFILE_NAME,
+    SEAMOUNTS_ZIPFILE_NAME,
+    WDPA_COUNTRY_LEVEL_FILE_NAME,
+    WDPA_FILE_NAME,
+    WDPA_GLOBAL_LEVEL_FILE_NAME,
+    WDPA_MARINE_FILE_NAME,
+    today_formatted,
 )
-
 from src.core.processors import (
     add_constants,
     add_environment,
-    add_protected_from_fishing_area,
-    add_protected_from_fishing_percent,
     add_parent,
     add_pas_oecm,
+    add_protected_from_fishing_area,
+    add_protected_from_fishing_percent,
     add_total_area_mp,
     add_year,
     convert_type,
@@ -58,11 +57,8 @@ from src.core.processors import (
     rename_habitats,
     update_mpatlas_asterisk,
 )
-
 from src.methods.marine_habitats import process_marine_habitats
-
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
-
 from src.utils.gcp import (
     load_gdb_layer_from_gcs,
     read_dataframe,
@@ -217,12 +213,11 @@ def generate_habitat_protection_table(
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
-    eez_params: dict = EEZ_PARAMS,
+    eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    marine_tolerance = 0.0001
     marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
@@ -240,8 +235,9 @@ def generate_habitat_protection_table(
         mangroves_by_country_file_name=mangroves_by_country_file_name,
         global_mangrove_area_file_name=global_mangrove_area_file_name,
         marine_pa_file_name=marine_pa_file_name,
-        eez_params=eez_params,
+        eez_file=eez_file,
         bucket=bucket,
+        tolerance=marine_tolerance,
         verbose=verbose,
     )
 
@@ -257,7 +253,7 @@ def generate_habitat_protection_table(
 
     habitats = habitats[habitats["total_area"] > 0].pipe(rename_habitats)
 
-    upload_dataframe(bucket, habitats, file_name_out, project_id=project, verbose=True)
+    upload_dataframe(bucket, habitats, "test_" + file_name_out, project_id=project, verbose=True)
 
     return habitats.to_dict(orient="records")
 
@@ -599,7 +595,7 @@ def generate_fishing_protection_table(
 ):
     def return_stats(df_group, total_area, fishing_protection_level, loc):
         protected_area = df_group[f"{fishing_protection_level}_protected_area"].sum()
-        assessed = True if len(df_group) > 0 else False
+        assessed = len(df_group) > 0
 
         return {
             "location": loc,

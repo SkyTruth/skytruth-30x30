@@ -1,8 +1,10 @@
 import ast
+from collections.abc import Mapping, Sequence
+from typing import Any
+
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import MultiPolygon, Polygon
-from typing import Any, Mapping, Sequence, Union
 
 
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
@@ -95,7 +97,7 @@ def add_parent(
         Column whose values are looked up in parent_dict.
     """
     df = df.copy()
-    df["parent_id"] = df[location_name].apply(lambda x: parent_dict[x] if x in parent_dict else x)
+    df["parent_id"] = df[location_name].apply(lambda loc: parent_dict.get(loc, loc))
     return df
 
 
@@ -196,7 +198,7 @@ def convert_poly_to_multi(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 def convert_type(
     df: pd.DataFrame,
-    conversion: Mapping[str, Sequence[Union[str, type]]],
+    conversion: Mapping[str, Sequence[str | type]],
 ) -> pd.DataFrame:
     """
     Convert column dtypes using a mapping of column -> sequence of dtypes.
@@ -218,7 +220,7 @@ def convert_type(
 
 def extract_column_dict_str(
     df: pd.DataFrame,
-    column_dict: Union[Mapping[str, str], Sequence[str]],
+    column_dict: Mapping[str, str] | Sequence[str],
     column: str,
 ) -> pd.DataFrame:
     """
@@ -247,12 +249,12 @@ def extract_column_dict_str(
     if isinstance(column_dict, dict):
         for d in column_dict:
             df[column_dict[d]] = parsed_col.apply(
-                lambda x: x.get(d) if isinstance(x, dict) else None
+                lambda x, d=d: x.get(d) if isinstance(x, dict) else None
             )
 
     elif isinstance(column_dict, list):
         for d in column_dict:
-            df[d] = parsed_col.apply(lambda x: x.get(d) if isinstance(x, dict) else None)
+            df[d] = parsed_col.apply(lambda x, d=d: x.get(d) if isinstance(x, dict) else None)
 
     return df
 

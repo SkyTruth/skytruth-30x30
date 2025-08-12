@@ -1,86 +1,141 @@
+import concurrent.futures
 import datetime
-import pandas as pd
+import gc
+import threading
+from collections.abc import Callable
+from pathlib import Path
+
 import geopandas as gpd
+import pandas as pd
 import rasterio
+from google.cloud import storage
 from shapely.geometry import box, mapping
 from shapely.ops import unary_union
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
-from pathlib import Path
-from typing import Tuple, Dict, Callable
-from google.cloud import storage
-import threading
-import concurrent.futures
 
 from src.core.commons import (
-    load_marine_regions,
-    safe_union,
     download_and_duplicate_zipfile,
     get_cover_areas,
+    load_marine_regions,
+    safe_union,
 )
-
 from src.core.land_cover_params import (
-    reclass_function,
     BIOME_RASTER_PATH,
     LAND_COVER_CLASSES,
+    marine_tolerance,
+    reclass_function,
     terrestrial_tolerance,
 )
-
 from src.core.params import (
-    CHUNK_SIZE,
-    GADM_EEZ_UNION_FILE_NAME,
-    HABITATS_URL,
-    HABITATS_ZIP_FILE_NAME,
     ARCHIVE_HABITATS_FILE_NAME,
-    MANGROVES_ZIPFILE_NAME,
-    MANGROVES_BY_COUNTRY_FILE_NAME,
-    SEAMOUNTS_URL,
-    SEAMOUNTS_ZIPFILE_NAME,
     ARCHIVE_SEAMOUNTS_FILE_NAME,
-    GLOBAL_MANGROVE_AREA_FILE_NAME,
-    PROCESSED_BIOME_RASTER_PATH,
-    GADM_ZIPFILE_NAME,
-    GADM_FILE_NAME,
+    BUCKET,
+    CHUNK_SIZE,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
+    EEZ_MULTIPLE_SOV_FILE_NAME,
     EEZ_PARAMS,
-    BUCKET,
+    EEZS_TRANSLATED_FILE_NAME,
+    GADM_EEZ_UNION_FILE_NAME,
+    GADM_FILE_NAME,
+    GADM_ZIPFILE_NAME,
+    GLOBAL_MANGROVE_AREA_FILE_NAME,
+    HABITATS_URL,
+    HABITATS_ZIP_FILE_NAME,
+    HIGH_SEAS_PARAMS,
+    MANGROVES_BY_COUNTRY_FILE_NAME,
+    MANGROVES_ZIPFILE_NAME,
+    PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
+    RELATED_COUNTRIES_FILE_NAME,
+    SEAMOUNTS_URL,
+    SEAMOUNTS_ZIPFILE_NAME,
+    TOLERANCES,
 )
-
 from src.core.processors import clean_geometries
-
 from src.utils.gcp import (
-    load_zipped_shapefile_from_gcs,
-    upload_dataframe,
-    upload_gdf,
-    save_json_to_gcs,
-    upload_file_to_gcs,
-    read_zipped_gpkg_from_gcs,
-    read_json_df,
     download_file_from_gcs,
+    load_zipped_shapefile_from_gcs,
+    read_dataframe,
+    read_json_df,
+    read_json_from_gcs,
+    read_zipped_gpkg_from_gcs,
+    save_json_to_gcs,
+    upload_dataframe,
+    upload_file_to_gcs,
+    upload_gdf,
 )
-
-from src.utils.geo import tile_geometry, fill_polygon_holes
+from src.utils.geo import fill_polygon_holes, tile_geometry
 
 
 def process_gadm_geoms(
     gadm_file_name: str = GADM_FILE_NAME,
     gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
     bucket: str = BUCKET,
-    tolerances: list = [0.001, 0.0001],
+    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
+    tolerances: list | tuple = TOLERANCES,
     verbose: bool = True,
-):
+) -> None:
     if verbose:
         print(f"loading gadm gpkg from {gadm_zipfile_name}")
-    gadm = (
-        read_zipped_gpkg_from_gcs(bucket, gadm_zipfile_name, layer="ADM_0")[["GID_0", "geometry"]]
-        .rename(columns={"GID_0": "location"})
+    related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
+
+    # Create an inverse parent child location map excluding sovereign rollups with a trailing '*'
+    inv_map = {
+        child: parent
+        for parent, children in related_countries.items()
+        if parent[-1] != "*"
+        for child in children
+    }
+
+    def get_valid_iso(codes):
+        for code in codes:
+            if code in inv_map:
+                return code
+
+            return pd.NA
+
+    countries, sub_countries = read_zipped_gpkg_from_gcs(
+        bucket, gadm_zipfile_name, layers=["ADM_0", "ADM_1"]
+    )
+    print("layers extracted from res")
+
+    countries.drop(
+        columns=list(set(countries.columns) - set(["GID_0", "COUNTRY", "geometry"])), inplace=True
+    )
+
+    sub_countries.drop(
+        columns=list(set(countries.columns) - set(["GID_0", "COUNTRY", "geometry"])), inplace=True
+    )
+
+    # Some contested areas have invalid ISO codes (e.g. Z01), but have a valid Country name to
+    # they tentatively belong, e.g. parts of Kashmir are mapped to India or Pakistan.
+    # Following the suggested country name appears to be what WDPA does, so we follow that pattern.
+    countries = countries.dissolve(by="COUNTRY", as_index=False, aggfunc={"GID_0": get_valid_iso})
+
+    # Pull Hong Kong from the ADM_1 layer to add it as a territory to our countries map
+    hong_kong = sub_countries[sub_countries["GID_1"] == "CHN.HKG"].copy()
+    hong_kong.loc[:, "GID_0"] = "HKG"
+    hong_kong = hong_kong[["GID_0", "COUNTRY", "geometry"]]
+    abnj = {"GID_0": "ABNJ", "COUNTRY": "Areas Beyond National Jurisdiction", "geometry": None}
+    abnj = gpd.GeoDataFrame([abnj], crs=countries.crs)
+
+    countries = pd.concat([countries, hong_kong, abnj], ignore_index=True, sort=False)
+
+    # Map each code to inv_map[code] if it exists, otherwise leave it unchanged
+    # This catches things like Northern Cyprus being rolled into Cyprus
+    countries["GID_0"] = countries["GID_0"].map(inv_map).fillna(countries["GID_0"])
+    countries = countries.dissolve(by="GID_0", as_index=False)
+
+    countries = (
+        countries.rename(columns={"GID_0": "location"})
+        .drop(columns=["COUNTRY"])
         .pipe(clean_geometries)
     )
 
     for tolerance in tolerances:
-        df = gadm.copy()
+        df = countries.copy()
 
         if tolerance is not None:
             if verbose:
@@ -94,50 +149,189 @@ def process_gadm_geoms(
             print(f"uploading simplified GADM countries to {out_fn}")
         upload_gdf(bucket, df, out_fn)
 
-    return gadm
+    gc.collect()
 
 
 def process_eez_geoms(
     eez_file_name: str = EEZ_FILE_NAME,
     eez_params: dict = EEZ_PARAMS,
     bucket: str = BUCKET,
-    tolerances: float = [0.001, 0.0001],
+    tolerances: list | tuple = TOLERANCES,
     verbose: bool = True,
 ):
-    if verbose:
-        print("loading eezs from")
+    """
+    Method to process the downloaded EEZ shape file from marine regions. This method processes the
+    data in two distinct ways and writes each of these to GCP.
 
-    eez = (
-        load_marine_regions(eez_params, bucket)[["ISO_TER1", "geometry"]]
-        .rename(columns={"ISO_TER1": "location"})
-        .pipe(clean_geometries)
-    )
+    1. EEZ's are processed so each entry in the dataset maps to a single location (excluding ISO*
+        roll ups). These entries contain multipolygons which contain all EEZ's that have the given
+        location as a parent. This data is used for mapping habitat stats to ccountries and for
+        updating the locations table in the database. This data is referred to as eez_by_sov
+        in the code and is written as geojson to EEZ_FILE_NAME
+
+    2. EEZ's are processed so each entry in the dataset is a unique polygon and each EEZ contains
+        properties of ISO_SOV1, ISO_SOV2, ISO_SOV3, which map the EEZ to all locations which
+        have a claim on the EEZ. This structure is used to generate EEZ and Marine regions map
+        tiles. This data is referred to as eez_multiple_sovs in the code and writen as a
+        .geojson file to EEZ_MULTIPLE_SOV_FILE_NAME
+    """
+    if verbose:
+        print(f"loading eezs from {eez_params['zipfile_name']}")
+
+    eez = load_marine_regions(eez_params, bucket)
+
+    eez["parents"] = eez.apply(_pick_eez_parents, axis=1)
+    eez.loc[eez["parents"].apply(lambda parents: len(parents) > 1), "has_shared_marine_area"] = True
+
+    # Load in High Seas Data
+    high_seas = load_marine_regions(HIGH_SEAS_PARAMS, bucket)
+    high_seas[["GID_0"]] = "ABNJ"
+    high_seas[["ISO_SOV1"]] = "ABNJ"
+    high_seas[["POL_TYPE"]] = "High Seas"
+    high_seas[["GEONAME"]] = "High Seas"
+    high_seas[["has_shared_marine_area"]] = False
+    high_seas.rename(columns={"area_km2": "AREA_KM2", "mrgid": "MRGID"}, inplace=True)
+
+    # Load in EEZ translations
+    translations = read_dataframe(bucket, EEZS_TRANSLATED_FILE_NAME)
+
+    eez_by_sov = _process_eez_by_sov(eez.copy(), high_seas.copy())
+    eez_multiple_sovs = _proccess_eez_multiple_sovs(eez.copy(), high_seas.copy(), translations)
 
     for tolerance in tolerances:
-        df = eez.copy()
         if tolerance is not None:
             if verbose:
-                print(f"simplifying geometries with tolerance {tolerance}")
-            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
+                print(f"simplifying eez by sovereign geometries with tolerance {tolerance}")
+            eez_by_sov["geometry"] = eez_by_sov["geometry"].simplify(tolerance=tolerance)
 
-        if verbose:
-            print("dissolving by country")
-        df = df.dissolve("location").reset_index().copy()
-        df = df.pipe(clean_geometries)
+        eez_by_sov = eez_by_sov.pipe(clean_geometries)
 
         out_fn = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
-            print(f"uploading simplified GADM countries to {out_fn}")
-        upload_gdf(bucket, df, out_fn)
+            print(f"uploading eez by sovereign file to {out_fn}")
+        upload_gdf(bucket, eez_by_sov, out_fn)
 
-    return eez
+    if verbose:
+        print(f"simplifying eez with mulit-sovereign geometries with tolerance {TOLERANCES[1]}")
+    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
+    eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
+
+    blob_name = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{tolerance}.geojson")
+    if verbose:
+        print(f"uploading eez with multi-sovereign file to {out_fn}")
+    upload_gdf(bucket, eez_multiple_sovs, blob_name)
+
+
+def _pick_eez_parents(row):
+    """
+    Helper method to assign EEZ parents. Marine regions offeres 3 possible country + territory
+    locations for an EEZ. ISO_TER# is the immediate, independant location and ISO_SOV# is the
+    sovereign for the matching ISO_TER. ISO_TER may be None, e.g. the Alaska EEZ has no ISO_TER1
+    but it does have USA for ISO_SOV1. The guiding logic for assigning countries to EEZ's that we
+    employ is:
+
+    1. Compare each ISO_TER#, ISO_SOV# pair
+    2. If, for a given pair, there is an ISO_TER we take that.
+      2a. If there is no ISO_TER we take the ISO_SOV if it exists
+    3. We dedupe any acrued ISO codes
+
+    This reults in at most 3 potential parent locations and assumes any mapping between defined
+    territories and their sovereigns will occur during sovereign rollups not here.
+
+    Example:
+    The EEZ Around Myotis has:
+    ISO_TER1 = MYT, ISO_TER2 = MYT, ISO_TER3 = None
+    ISO_SOV1 = COM, ISO_SOV2 = FRA, ISO_SOV3 = None
+    In this case it is only assinged the parent of MYT, however MYT is defined as a territory of
+    FRA*, so for roll-up stats, this EEZ will still get included with FRA* when that proccessing
+    occurs.
+    """
+    parents = set()
+    if row.ISO_TER1:
+        parents.add(row.ISO_TER1)
+    else:
+        parents.add(row.ISO_SOV1)
+
+    if row.ISO_TER2:
+        parents.add(row.ISO_TER2)
+    elif row.ISO_SOV2:
+        parents.add(row.ISO_SOV2)
+
+    if row.ISO_TER3:
+        parents.add(row.ISO_TER3)
+    elif row.ISO_SOV3:
+        parents.add(row.ISO_SOV3)
+
+    return list(parents)
+
+
+def _process_eez_by_sov(eez: gpd.GeoDataFrame, high_seas: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    eez_by_sov = eez.explode("parents").rename(columns={"parents": "GID_0"})[
+        ["GID_0", "AREA_KM2", "geometry", "has_shared_marine_area"]
+    ]
+
+    high_seas.drop(
+        columns=list(
+            set(high_seas.columns)
+            - set(
+                [
+                    "GID_0",
+                    "geometry",
+                    "AREA_KM2",
+                    "GEONAME",
+                    "has_shared_marine_area",
+                ]
+            )
+        ),
+        inplace=True,
+    )
+
+    eez_by_sov = pd.concat([eez_by_sov, high_seas], ignore_index=True, sort=False)
+    eez_by_sov = eez_by_sov.dissolve(
+        by="GID_0", as_index=False, aggfunc={"AREA_KM2": "sum", "has_shared_marine_area": "any"}
+    ).reset_index()
+
+    eez_by_sov.rename(columns={"GID_0": "location"}, inplace=True)
+    return eez_by_sov
+
+
+def _proccess_eez_multiple_sovs(
+    eez: gpd.GeoDataFrame, high_seas: gpd.GeoDataFrame, translations: pd.DataFrame
+) -> gpd.GeoDataFrame:
+    eez["ISO_SOV1"] = eez["parents"].apply(
+        lambda parents: parents[0] if len(parents) >= 1 else None
+    )
+    eez["ISO_SOV2"] = eez["parents"].apply(
+        lambda parents: parents[1] if len(parents) >= 2 else None
+    )
+    eez["ISO_SOV3"] = eez["parents"].apply(
+        lambda parents: parents[2] if len(parents) >= 3 else None
+    )
+
+    eez_multiple_sovs = pd.concat([eez, high_seas], ignore_index=True, sort=False)
+
+    eez_multiple_sovs.drop(
+        columns=list(
+            set(eez_multiple_sovs.columns)
+            - set(["ISO_SOV1", "ISO_SOV2", "ISO_SOV3", "geometry", "AREA_KM2", "POL_TYPE", "MRGID"])
+        ),
+        inplace=True,
+    )
+
+    eez_multiple_sovs = eez_multiple_sovs.merge(
+        translations[["MRGID", "name", "name_es", "name_fr", "name_pt"]],
+        left_on="MRGID",
+        right_on="MRGID",
+        how="left",
+    )
+    return eez_multiple_sovs
 
 
 def process_eez_gadm_unions(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     eez_file_name: str = EEZ_FILE_NAME,
     gadm_file_name: str = GADM_FILE_NAME,
-    tolerance: float = 0.0001,
+    tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -148,7 +342,19 @@ def process_eez_gadm_unions(
     eez = read_json_df(bucket, eez_file_name, verbose=verbose)
     gadm = read_json_df(bucket, gadm_file_name, verbose=verbose).to_crs(eez.crs)
 
-    print("getting eez/gadm unions")
+    eez.drop(
+        columns=list(set(eez.columns) - set(["location", "geometry"])),
+        inplace=True,
+    )
+
+    gadm.drop(
+        columns=list(set(gadm.columns) - set(["location", "geometry"])),
+        inplace=True,
+    )
+
+    if verbose:
+        print("Generating eez/gadm unions")
+
     eez_gadm_union = []
     for loc in tqdm(eez["location"].dropna().unique()):
         geom = fill_polygon_holes(
@@ -314,8 +520,8 @@ def process_terrestrial_biome_raster(
     biome_raster_path: Path = BIOME_RASTER_PATH,
     processed_biome_raster_path: Path = PROCESSED_BIOME_RASTER_PATH,
     func: Callable = reclass_function,
-    f_args: Tuple = (),
-    f_kwargs: Dict = {},
+    f_args: tuple = None,
+    f_kwargs: dict = None,
     bucket: str = BUCKET,
     verbose: bool = True,
 ) -> None:
@@ -394,7 +600,7 @@ def process_terrestrial_biome_raster(
                         data = src.read(window=window)
 
                     status_message["messages"].append("processing data")
-                    result = func(data, *f_args, **f_kwargs)
+                    result = func(data, *f_args or (), **f_kwargs or {})
 
                     status_message["messages"].append("writing data")
                     with write_lock:
@@ -404,8 +610,8 @@ def process_terrestrial_biome_raster(
 
                 except Exception as e:
                     status_message["diagnostics"]["error"] = e
-                finally:
-                    return status_message
+
+                return status_message
 
             # We map the process() function over the list of
             # windows.
@@ -416,7 +622,7 @@ def process_terrestrial_biome_raster(
                 concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor,
                 tqdm(total=len(windows), desc="Computing raster stats", unit="chunk") as p_bar,
             ):
-                for idx, window in enumerate(windows):
+                for _, window in enumerate(windows):
                     futures.append(executor.submit(process, window))
 
                 results = []

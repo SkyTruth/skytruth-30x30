@@ -1,20 +1,23 @@
-import gcsfs
-from google.api_core.retry import Retry
-from google.cloud import storage
-import geopandas as gpd
-import fiona
-import fsspec
-from io import BytesIO
+import contextlib
+import gc
 import json
 import os
-import pandas as pd
-from pathlib import Path
-import requests
 import shutil
 import tempfile
-from tqdm import tqdm
-from typing import Optional, Dict, Any
 import zipfile
+from io import BytesIO
+from pathlib import Path
+from typing import Any
+
+import fiona
+import fsspec
+import gcsfs
+import geopandas as gpd
+import pandas as pd
+import requests
+from google.api_core.retry import Retry
+from google.cloud import storage
+from tqdm import tqdm
 
 from src.utils.logger import Logger
 
@@ -189,6 +192,7 @@ def download_zip_to_gcs(
         raise excep
     except Exception as excep:
         logger.error({"message": "Error during download", "error": str(excep)})
+        gc.collect()
         raise excep
 
     try:
@@ -220,8 +224,10 @@ def download_zip_to_gcs(
             print(f"Uploading to gs://{bucket_name}/{blob_name}")
         blob.upload_from_file(tqdm_buffer, content_type="application/zip", rewind=True, timeout=600)
         tqdm_buffer.close()
+        gc.collect()
     except Exception as excep:
         logger.error({"message": "Error during upload to GCS", "error": str(excep)})
+        gc.collect()
         raise excep
 
 
@@ -260,9 +266,9 @@ def upload_dataframe(
 
 def save_json_to_gcs(
     bucket_name: str,
-    data: Dict[str, Any],
+    data: dict[str, Any],
     destination_blob_name: str,
-    project_id: Optional[str] = None,
+    project_id: str | None = None,
     verbose: bool = True,
 ) -> None:
     """
@@ -372,32 +378,31 @@ def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefil
         with fsspec.open(gcs_path, mode="rb") as f:
             zip_bytes = f.read()
 
-        with zipfile.ZipFile(BytesIO(zip_bytes)) as zf:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                # Extract only the files associated with the shapefile
-                base_path = os.path.dirname(internal_shapefile_path)
-                basename = os.path.splitext(os.path.basename(internal_shapefile_path))[0]
+        with zipfile.ZipFile(BytesIO(zip_bytes)) as zf, tempfile.TemporaryDirectory() as tmpdir:
+            # Extract only the files associated with the shapefile
+            base_path = os.path.dirname(internal_shapefile_path)
+            basename = os.path.splitext(os.path.basename(internal_shapefile_path))[0]
 
-                shapefile_parts = [
-                    name
-                    for name in zf.namelist()
-                    if name.startswith(f"{base_path}/{basename}")
-                    and name.split(".")[-1].lower() in {"shp", "shx", "dbf", "prj", "cpg"}
-                ]
+            shapefile_parts = [
+                name
+                for name in zf.namelist()
+                if name.startswith(f"{base_path}/{basename}")
+                and name.split(".")[-1].lower() in {"shp", "shx", "dbf", "prj", "cpg"}
+            ]
 
-                for part in shapefile_parts:
-                    target_path = os.path.join(tmpdir, os.path.basename(part))
-                    with zf.open(part) as source, open(target_path, "wb") as target:
-                        target.write(source.read())
+            for part in shapefile_parts:
+                target_path = os.path.join(tmpdir, os.path.basename(part))
+                with zf.open(part) as source, open(target_path, "wb") as target:
+                    target.write(source.read())
 
-                local_shp_path = os.path.join(tmpdir, f"{basename}.shp")
-                gdf = gpd.read_file(local_shp_path)
+            local_shp_path = os.path.join(tmpdir, f"{basename}.shp")
+            gdf = gpd.read_file(local_shp_path)
 
     return gdf
 
 
 def read_zipped_gpkg_from_gcs(
-    bucket: str, zip_blob_name: str, chunk_size: int = 8192, layer=None
+    bucket: str, zip_blob_name: str, chunk_size: int = 8192, layers: str | list[str] = None
 ) -> gpd.GeoDataFrame:
     """
     Downloads a zipped .gpkg from GCS, extracts it locally, reads the geopackage,
@@ -418,39 +423,43 @@ def read_zipped_gpkg_from_gcs(
     """
     gcs_path = f"gs://{bucket}/{zip_blob_name}"
 
-    with fsspec.open(gcs_path, mode="rb") as remote_file:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            zip_path = os.path.join(tmpdir, "file.zip")
+    with fsspec.open(gcs_path, mode="rb") as remote_file, tempfile.TemporaryDirectory() as tmpdir:
+        zip_path = os.path.join(tmpdir, "file.zip")
 
-            # Get total size for progress bar (if available)
-            total_size = (
-                remote_file.size if hasattr(remote_file, "size") and remote_file.size else 0
-            )
-            raw_data = remote_file.read()
+        # Get total size for progress bar (if available)
+        total_size = remote_file.size if hasattr(remote_file, "size") and remote_file.size else 0
+        raw_data = remote_file.read()
 
-            tqdm_stream = TqdmBytesIO(raw_data, total_size or len(raw_data), chunk_size)
-            with open(zip_path, "wb") as f:
-                while True:
-                    chunk = tqdm_stream.read(chunk_size)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-            tqdm_stream.close()
+        tqdm_stream = TqdmBytesIO(raw_data, total_size or len(raw_data), chunk_size)
+        with open(zip_path, "wb") as f:
+            while True:
+                chunk = tqdm_stream.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+        tqdm_stream.close()
 
-            # Extract and load gpkg
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                zip_ref.extractall(tmpdir)
+        # Extract and load gpkg
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(tmpdir)
 
-            gpkg_files = [
-                os.path.join(tmpdir, f) for f in os.listdir(tmpdir) if f.lower().endswith(".gpkg")
-            ]
-            if not gpkg_files:
-                raise FileNotFoundError("No .gpkg file found in the zip archive.")
+        gpkg_files = [
+            os.path.join(tmpdir, f) for f in os.listdir(tmpdir) if f.lower().endswith(".gpkg")
+        ]
+        if not gpkg_files:
+            raise FileNotFoundError("No .gpkg file found in the zip archive.")
 
-            if layer is None:
-                return gpd.read_file(gpkg_files[0])
-            else:
-                return gpd.read_file(gpkg_files[0], layer=layer)
+        if layers is None:
+            return gpd.read_file(gpkg_files[0])
+        elif isinstance(layers, str):
+            return gpd.read_file(gpkg_files[0], layer=layers)
+        else:
+            response = []
+            for layer in layers:
+                print("Adding layers to response!")
+                response.append(gpd.read_file(gpkg_files[0], layer=layer))
+
+            return response
 
 
 def read_dataframe(
@@ -460,7 +469,7 @@ def read_dataframe(
     skip_empty_val: int = 2,
     keep_default_na=False,
     verbose: bool = False,
-) -> Optional[pd.DataFrame]:
+) -> pd.DataFrame | None:
     """
     Reads a CSV file from Google Cloud Storage into a pandas DataFrame.
 
@@ -527,11 +536,20 @@ def read_json_df(
     if verbose:
         print(f"Loading from gs://{bucket_name}/{filename} (type: {file_type})")
 
-    fs = gcsfs.GCSFileSystem()
+    fs = gcsfs.GCSFileSystem(cache_timeout=0)
 
-    with fs.open(f"gs://{bucket_name}/{filename}", "r") as f:
+    with fs.open(f"gs://{bucket_name}/{filename}", "rb") as f:
         if file_type == "geojson":
-            return gpd.read_file(f)
+            with tempfile.NamedTemporaryFile(suffix=".geojson", delete=False) as tmp:
+                for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):  # 8 MB chucks
+                    tmp.write(chunk)
+                local = tmp.name
+            try:
+                return gpd.read_file(local)
+            finally:
+                with contextlib.suppress(OSError):
+                    os.remove(local)
+
         elif file_type == "json":
             raw = json.load(f)
             if isinstance(raw, dict) and "features" in raw:

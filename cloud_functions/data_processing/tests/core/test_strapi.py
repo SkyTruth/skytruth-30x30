@@ -8,7 +8,7 @@ import pytest
 import responses
 from requests.exceptions import HTTPError
 
-from src.strapi import Strapi
+from src.core.strapi import Strapi
 
 BASE_URL = "https://test.com/api/"
 
@@ -26,7 +26,7 @@ def set_common_env(monkeypatch):
 @pytest.fixture()
 def mock_authenticate():
     """Mock the authenticate method."""
-    with patch("src.strapi.Strapi.authenticate", return_value="jwt") as mock_authenticate:
+    with patch("src.core.strapi.Strapi.authenticate", return_value="jwt") as mock_authenticate:
         yield mock_authenticate
 
 
@@ -49,7 +49,7 @@ def test_login_success():
     assert strapi.token == "test_token"
 
 
-@patch("src.strapi.Logger.error")
+@patch("src.core.strapi.Logger.error")
 def test_login_no_pwd_failure(mock_logger_error, monkeypatch):
     """Test failure to authenticate with no password"""
     monkeypatch.setenv("STRAPI_PASSWORD", "")
@@ -65,7 +65,7 @@ def test_login_no_pwd_failure(mock_logger_error, monkeypatch):
 
 
 @responses.activate
-@patch("src.strapi.Logger.error")
+@patch("src.core.strapi.Logger.error")
 def test_login_failure_bad_auth(mock_logger_error):
     """Test failure to authenticate with bad credentials"""
 
@@ -164,7 +164,7 @@ def test_get_pas_explicit_page_over_next_page(mock_authenticate):
 
 
 @responses.activate
-@patch("src.strapi.Logger.error")
+@patch("src.core.strapi.Logger.error")
 def test_get_pas_raises_and_logs_on_http_error(mock_error, mock_authenticate):
     # simulate a server error
     responses.add(responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), status=500)
@@ -199,8 +199,8 @@ def test_update_pas_success(mock_authenticate):
     assert call.url == BASE_URL + "pas"
 
 
-@patch("src.strapi.Logger.error")
-@patch("src.strapi.requests.put", side_effect=HTTPError("update-fail"))
+@patch("src.core.strapi.Logger.error")
+@patch("src.core.strapi.requests.put", side_effect=HTTPError("update-fail"))
 def test_update_pas_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     with pytest.raises(HTTPError):
@@ -230,8 +230,8 @@ def test_create_pas_success(mock_authenticate):
     assert call.url == BASE_URL + "pas"
 
 
-@patch("src.strapi.Logger.error")
-@patch("src.strapi.requests.post", side_effect=HTTPError("create-fail"))
+@patch("src.core.strapi.Logger.error")
+@patch("src.core.strapi.requests.post", side_effect=HTTPError("create-fail"))
 def test_create_pas_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     with pytest.raises(HTTPError):
@@ -261,8 +261,8 @@ def test_delete_pas_success(mock_authenticate):
     assert call.url == BASE_URL + "pas"
 
 
-@patch("src.strapi.Logger.error")
-@patch("src.strapi.requests.patch", side_effect=HTTPError("delete-fail"))
+@patch("src.core.strapi.Logger.error")
+@patch("src.core.strapi.requests.patch", side_effect=HTTPError("delete-fail"))
 def test_delete_pas_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     with pytest.raises(HTTPError):
@@ -320,8 +320,8 @@ def test_upsert_protection_coverage_stats_no_year_provided(mock_authenticate):
     assert call.url == url
 
 
-@patch("src.strapi.Logger.error")
-@patch("src.strapi.requests.post", side_effect=HTTPError("stats-fail"))
+@patch("src.core.strapi.Logger.error")
+@patch("src.core.strapi.requests.post", side_effect=HTTPError("stats-fail"))
 def test_upsert_protection_coverage_stats_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     with pytest.raises(HTTPError):
@@ -353,8 +353,8 @@ def test_upsert_mpaa_protection_level_stats_success(mock_authenticate):
     assert call.url == BASE_URL + "mpaa-protection-level-stats"
 
 
-@patch("src.strapi.Logger.error")
-@patch("src.strapi.requests.post", side_effect=HTTPError("mpaa-fail"))
+@patch("src.core.strapi.Logger.error")
+@patch("src.core.strapi.requests.post", side_effect=HTTPError("mpaa-fail"))
 def test_upsert_mpaa_protection_level_stats_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     with pytest.raises(HTTPError):
@@ -386,8 +386,8 @@ def test_upsert_fishing_protection_level_stats_success(mock_authenticate):
     assert call.url == BASE_URL + "fishing-protection-level-stats"
 
 
-@patch("src.strapi.Logger.error")
-@patch("src.strapi.requests.post", side_effect=HTTPError("fish-fail"))
+@patch("src.core.strapi.Logger.error")
+@patch("src.core.strapi.requests.post", side_effect=HTTPError("fish-fail"))
 def test_upsert_fishing_protection_level_stats_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     with pytest.raises(HTTPError):
@@ -445,8 +445,8 @@ def test_upsert_habitat_stats_success_no_year_provided(mock_authenticate):
     assert call.url == f"{BASE_URL}habitat-stats/{year}"
 
 
-@patch("src.strapi.Logger.error")
-@patch("src.strapi.requests.post", side_effect=HTTPError("hab-fail"))
+@patch("src.core.strapi.Logger.error")
+@patch("src.core.strapi.requests.post", side_effect=HTTPError("hab-fail"))
 def test_upsert_habitat_stats_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     with pytest.raises(HTTPError):

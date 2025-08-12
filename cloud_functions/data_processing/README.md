@@ -55,6 +55,16 @@ Each method can be run in CLI via a statement like
 gcloud functions call x30-dev-data --data '{"METHOD": "download_habitats"}' --region us-east1
 ```
 
+The gcloud util has an unchangeable timeout of 5 minutes, so it might be necessary to trigger the function using cURL:
+
+```shell
+curl -H "Content-Type: application/json" \
+     -H "Authorization: Bearer $(gcloud auth print-identity-token)" \
+     -d '{"METHOD": "download_habitats"}' \
+     --max-time 3600 \
+     https://us-east1-x30-399415.cloudfunctions.net/x30-dev-data
+```
+
 There are scheduled monthly jobs to download MPATLAS, Protected Seas, and Protected Planet data. The habitat data and Marine Region data is more or less static and can be run with the above statement.
 
 - #TODO: The Marine Region and habitat filenames are currently hardcoded in params.py and we should update this.
