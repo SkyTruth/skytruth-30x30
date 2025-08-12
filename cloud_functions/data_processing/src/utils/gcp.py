@@ -540,9 +540,8 @@ def read_json_df(
 
     with fs.open(f"gs://{bucket_name}/{filename}", "rb") as f:
         if file_type == "geojson":
-            # return gpd.read_file(f)
             with tempfile.NamedTemporaryFile(suffix=".geojson", delete=False) as tmp:
-                for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):
+                for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):  # 8 MB chucks
                     tmp.write(chunk)
                 local = tmp.name
             try:

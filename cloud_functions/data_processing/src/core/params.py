@@ -167,7 +167,7 @@ PROCESSED_BIOME_RASTER_PATH = "static/processed_biome_raster.tif"
 REPROJECTED_BIOME_RASTER_PATH = "static/reprojected_processed_biome_raster.tif"
 COUNTRY_HABITATS_SUBTABLE_FILENAME = "habitats/processed_country_stats.csv"
 COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME = "static/country_terrestrial_stats.json"
-PA_TERRESTRIAL_HABITATS_FILE_NAME = "test_habitats/pa_terrestrial_stats.json"
+PA_TERRESTRIAL_HABITATS_FILE_NAME = "habitats/pa_terrestrial_stats.json"
 
 # ------------------------------------------------------------
 #                       Global Areas
@@ -186,10 +186,6 @@ HABITAT_PROTECTION_FILE_NAME = f"tables/habitat_protection_{today_formatted}.csv
 # ------------------------------------------------------------
 #                            MISC
 # ------------------------------------------------------------
-#                         GADM
-# ------------------------------------------------------------
-GADM_URL = "https://geodata.ucdavis.edu/gadm/gadm4.1/gadm_410-levels.zip"
-GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
 
 CHUNK_SIZE = 8192
 TOLERANCES = (0.001, 0.0001)

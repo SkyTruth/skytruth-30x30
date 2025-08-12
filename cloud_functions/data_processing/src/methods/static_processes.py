@@ -23,6 +23,7 @@ from src.core.commons import (
 from src.core.land_cover_params import (
     BIOME_RASTER_PATH,
     LAND_COVER_CLASSES,
+    marine_tolerance,
     reclass_function,
     terrestrial_tolerance,
 )
@@ -295,7 +296,7 @@ def _process_eez_by_sov(eez: gpd.GeoDataFrame, high_seas: gpd.GeoDataFrame) -> g
 
 
 def _proccess_eez_multiple_sovs(
-    eez: gpd.GeoDataFrame, high_seas: gpd.GeoDataFrame, translations
+    eez: gpd.GeoDataFrame, high_seas: gpd.GeoDataFrame, translations: pd.DataFrame
 ) -> gpd.GeoDataFrame:
     eez["ISO_SOV1"] = eez["parents"].apply(
         lambda parents: parents[0] if len(parents) >= 1 else None
@@ -330,7 +331,7 @@ def process_eez_gadm_unions(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     eez_file_name: str = EEZ_FILE_NAME,
     gadm_file_name: str = GADM_FILE_NAME,
-    tolerance: float = 0.001,
+    tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
