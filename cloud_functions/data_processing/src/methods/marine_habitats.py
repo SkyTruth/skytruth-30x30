@@ -9,10 +9,10 @@ from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import load_marine_regions
+from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
-    EEZ_PARAMS,
+    EEZ_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
@@ -34,12 +34,13 @@ def create_seamounts_subtable(
     seamounts_zipfile_name,
     seamounts_shapefile_name,
     bucket,
-    eez_params,
+    eez_file,
     marine_protected_areas,
     combined_regions,
+    tolerance,
     verbose,
 ):
-    def get_group_stats(df_eez, df_pa, loc, relations, global_seamount_area, hs_seamount_area):
+    def get_group_stats(df_eez, df_pa, loc, relations, global_seamount_area):
         if loc == "GLOB":
             df_pa_group = df_pa[["PEAKID", "AREA2D"]].drop_duplicates()
             total_area = global_seamount_area
@@ -47,13 +48,11 @@ def create_seamounts_subtable(
             df_pa_group = df_pa[df_pa["location"].isin(relations[loc])][
                 ["PEAKID", "AREA2D"]
             ].drop_duplicates()
-            if loc == "ABNJ":
-                total_area = hs_seamount_area
-            else:
-                df_eez_group = df_eez[df_eez["location"].isin(relations[loc])][
-                    ["PEAKID", "AREA2D"]
-                ].drop_duplicates()
-                total_area = df_eez_group["AREA2D"].sum()
+
+            df_eez_group = df_eez[df_eez["location"].isin(relations[loc])][
+                ["PEAKID", "AREA2D"]
+            ].drop_duplicates()
+            total_area = df_eez_group["AREA2D"].sum()
 
         protected_area = min(df_pa_group["AREA2D"].sum(), total_area)
 
@@ -66,9 +65,6 @@ def create_seamounts_subtable(
             # "percent_protected": 100 * protected_area / total_area if total_area > 0 else np.nan,
         }
 
-    def eez_location(row):
-        return row["ISO_TER1"] if isinstance(row["ISO_TER1"], str) else row["ISO_SOV1"]
-
     if verbose:
         print("loading seamounts")
 
@@ -78,19 +74,19 @@ def create_seamounts_subtable(
 
     if verbose:
         print("loading eezs")
-    eez = load_marine_regions(eez_params, bucket)
-    eez["location"] = eez.apply(eez_location, axis=1)
+    eez_file_name = eez_file.replace(".geojson", f"_{tolerance}.geojson")
+    eez = read_json_df(BUCKET, eez_file_name, verbose)
 
     if verbose:
         print("spatially joining seamounts with eezs and marine protected areas")
 
     eez_joined = gpd.sjoin(
         seamounts[["PEAKID", "AREA2D", "geometry"]],
-        eez[["GEONAME", "location", "geometry"]],
+        eez[["location", "geometry"]],
         how="left",
         predicate="intersects",
     )
-    high_seas_seamounts = eez_joined[eez_joined["index_right"].isna()]
+
     eez_seamounts = eez_joined[eez_joined["index_right"].notna()]
 
     marine_pa_joined = gpd.sjoin(
@@ -102,7 +98,6 @@ def create_seamounts_subtable(
     marine_pa_seamounts = marine_pa_joined[marine_pa_joined["index_right"].notna()]
 
     global_seamount_area = seamounts["AREA2D"].sum()
-    hs_seamount_area = high_seas_seamounts["AREA2D"].sum()
 
     return pd.DataFrame(
         [
@@ -112,7 +107,6 @@ def create_seamounts_subtable(
                 cnt,
                 combined_regions,
                 global_seamount_area,
-                hs_seamount_area,
             )
             for cnt in combined_regions
         ]
@@ -305,8 +299,9 @@ def process_marine_habitats(
     mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    eez_params: dict = EEZ_PARAMS,
+    eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
+    tolerance: float = marine_tolerance,
     verbose: bool = True,
 ):
     if verbose:
@@ -335,9 +330,10 @@ def process_marine_habitats(
         seamounts_zipfile_name,
         seamounts_shapefile_name,
         bucket,
-        eez_params,
+        eez_file,
         marine_protected_areas,
         combined_regions,
+        tolerance,
         verbose,
     )
 

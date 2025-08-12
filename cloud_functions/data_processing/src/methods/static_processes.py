@@ -172,8 +172,8 @@ def process_eez_geoms(
 
     2. EEZ's are processed so each entry in the dataset is a unique polygon and each EEZ contains
         properties of ISO_SOV1, ISO_SOV2, ISO_SOV3, which map the EEZ to all locations which
-        have a claim on the EEZ. This structure is used to generate EEZ and Marine regions map 
-        tiles. This data is referred to as eez_multiple_sovs in the code and writen as a 
+        have a claim on the EEZ. This structure is used to generate EEZ and Marine regions map
+        tiles. This data is referred to as eez_multiple_sovs in the code and writen as a
         .geojson file to EEZ_MULTIPLE_SOV_FILE_NAME
     """
     if verbose:

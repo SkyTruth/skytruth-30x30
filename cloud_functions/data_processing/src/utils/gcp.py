@@ -1,3 +1,4 @@
+import contextlib
 import gc
 import json
 import os
@@ -535,11 +536,21 @@ def read_json_df(
     if verbose:
         print(f"Loading from gs://{bucket_name}/{filename} (type: {file_type})")
 
-    fs = gcsfs.GCSFileSystem()
+    fs = gcsfs.GCSFileSystem(cache_timeout=0)
 
-    with fs.open(f"gs://{bucket_name}/{filename}", "r") as f:
+    with fs.open(f"gs://{bucket_name}/{filename}", "rb") as f:
         if file_type == "geojson":
-            return gpd.read_file(f)
+            # return gpd.read_file(f)
+            with tempfile.NamedTemporaryFile(suffix=".geojson", delete=False) as tmp:
+                for chunk in iter(lambda: f.read(8 * 1024 * 1024), b""):
+                    tmp.write(chunk)
+                local = tmp.name
+            try:
+                return gpd.read_file(local)
+            finally:
+                with contextlib.suppress(OSError):
+                    os.remove(local)
+
         elif file_type == "json":
             raw = json.load(f)
             if isinstance(raw, dict) and "features" in raw:

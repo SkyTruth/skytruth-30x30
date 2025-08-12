@@ -167,11 +167,11 @@ def generate_terrestrial_biome_stats_pa(
         print("calculating terrestrial habitat area within PAs")
     pa_stats = []
     with rasterio.open(local_raster_path) as src:
-        for country in tqdm(gadm["GID_0"].unique()):
+        for country in tqdm(gadm["location"].unique()):
             st = datetime.datetime.now()
 
             # get country boundary and PAs in country
-            country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
+            country_poly = gadm[gadm["location"] == country].iloc[0]["geometry"]
             polygons_gdf = terrestrial_pas[terrestrial_pas[country_col] == country]
 
             # tile country

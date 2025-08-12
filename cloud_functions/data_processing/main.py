@@ -35,9 +35,7 @@ from src.methods.static_processes import (
     process_mangroves,
     process_terrestrial_biome_raster,
 )
-from src.methods.terrestrial_habitats import (
-    generate_terrestrial_biome_stats_pa,
-)
+from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.utils.gcp import download_zip_to_gcs
 
 

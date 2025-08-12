@@ -9,10 +9,11 @@ from src.core.commons import (
     load_wdpa_global,
     read_mpatlas_from_gcs,
 )
+from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
-    EEZ_PARAMS,
+    EEZ_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
@@ -212,12 +213,11 @@ def generate_habitat_protection_table(
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
-    eez_params: dict = EEZ_PARAMS,
+    eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    marine_tolerance = 0.0001
     marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
@@ -235,8 +235,9 @@ def generate_habitat_protection_table(
         mangroves_by_country_file_name=mangroves_by_country_file_name,
         global_mangrove_area_file_name=global_mangrove_area_file_name,
         marine_pa_file_name=marine_pa_file_name,
-        eez_params=eez_params,
+        eez_file=eez_file,
         bucket=bucket,
+        tolerance=marine_tolerance,
         verbose=verbose,
     )
 
@@ -252,7 +253,7 @@ def generate_habitat_protection_table(
 
     habitats = habitats[habitats["total_area"] > 0].pipe(rename_habitats)
 
-    upload_dataframe(bucket, habitats, file_name_out, project_id=project, verbose=True)
+    upload_dataframe(bucket, habitats, "test_" + file_name_out, project_id=project, verbose=True)
 
     return habitats.to_dict(orient="records")
 

@@ -62,6 +62,8 @@ EEZ_LAND_UNION_PARAMS = {
     "shapefile_name": "EEZ_land_union_v4_202410.shp",
 }
 
+EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
+
 MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"
 
 # ------------------------------------------------------------
@@ -165,7 +167,7 @@ PROCESSED_BIOME_RASTER_PATH = "static/processed_biome_raster.tif"
 REPROJECTED_BIOME_RASTER_PATH = "static/reprojected_processed_biome_raster.tif"
 COUNTRY_HABITATS_SUBTABLE_FILENAME = "habitats/processed_country_stats.csv"
 COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME = "static/country_terrestrial_stats.json"
-PA_TERRESTRIAL_HABITATS_FILE_NAME = "habitats/pa_terrestrial_stats.json"
+PA_TERRESTRIAL_HABITATS_FILE_NAME = "test_habitats/pa_terrestrial_stats.json"
 
 # ------------------------------------------------------------
 #                       Global Areas
@@ -192,7 +194,6 @@ GADM_ZIPFILE_NAME = "static/gadm_410-levels.zip"
 CHUNK_SIZE = 8192
 TOLERANCES = (0.001, 0.0001)
 LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
-EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
 RELATED_COUNTRIES_FILE_NAME = "processing/related_countries_v2.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
