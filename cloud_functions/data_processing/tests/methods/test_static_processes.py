@@ -2,18 +2,17 @@
 import gc
 
 import geopandas as gpd
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
 from shapely.geometry import Point
 
 from src.methods import static_processes
 from src.methods.static_processes import (
-  process_eez_geoms,
-  process_gadm_geoms,
-  _pick_eez_parents,
-  _proccess_eez_multiple_sovs,
-  _process_eez_by_sov,
+    _pick_eez_parents,
+    _proccess_eez_multiple_sovs,
+    _process_eez_by_sov,
+    process_gadm_geoms,
 )
 
 
@@ -83,6 +82,7 @@ def mock_eez():
     )
     return df
 
+
 @pytest.fixture
 def mock_high_seas():
     """
@@ -101,6 +101,7 @@ def mock_high_seas():
     )
     return df
 
+
 @pytest.fixture
 def mock_related_countries_map():
     """
@@ -113,6 +114,7 @@ def mock_related_countries_map():
         "HKG": ["HKG"],
         "USA*": ["PRI"],
     }
+
 
 @pytest.fixture
 def mock_eez_translations():
@@ -170,18 +172,21 @@ def _mock_read_zipped_gpkg_from_gcs_success(countries, sub_countries):
 
 def _mock_load_marine_regions(eez_gdf, hs_gdf):
     """Return a loader that returns EEZ for EEZ_PARAMS and HS for HIGH_SEAS_PARAMS."""
+
     def _loader(params, bucket):
         if params is static_processes.EEZ_PARAMS:
             return eez_gdf.copy()
         if params is static_processes.HIGH_SEAS_PARAMS:
             return hs_gdf.copy()
         raise ValueError("Unexpected params passed to load_marine_regions")
+
     return _loader
 
 
 def _mock_read_dataframe(translations_df):
     def _reader(bucket, blob_name):
         return translations_df.copy()
+
     return _reader
 
 
@@ -192,7 +197,9 @@ def _mock_read_json_from_gcs(json):
     return _reader
 
 
-def _run_process_gadm(monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerances):
+def _run_process_gadm(
+    monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerances
+):
     countries, sub_countries = mock_gadm_layers
     calls, upload_gdf_mock = uploads_recorder
 
@@ -228,9 +235,11 @@ def _assert_output_df_shape_and_columns(df: gpd.GeoDataFrame):
     assert set(df.columns) == {"location", "geometry"}
     assert df.crs is not None  # CRS preserved (from input)
 
-#-------------------------------
+
+# -------------------------------
 # Tests for process_gadm
-#-------------------------------
+# -------------------------------
+
 
 def test_process_gadm_geoms_happy_path(
     monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder
@@ -368,9 +377,11 @@ def test_process_gadm_geoms_bad_input_columns(
 
     assert calls == []
 
-#-------------------------------
+
+# -------------------------------
 # Tests for process_eezs
-#-------------------------------
+# -------------------------------
+
 
 def test_pick_eez_parents_basic():
     row = pd.Series(
@@ -413,50 +424,73 @@ def test_process_eez_by_sov_happy_path(mock_eez, mock_high_seas):
 
     np.testing.assert_array_equal(out["location"].unique(), out["location"])
 
-    shared_area = out[out["location"]=='AAA']
-    assert shared_area.loc[0, 'AREA_KM2'] == 10 # sum of shared area locations
+    shared_area = out[out["location"] == "AAA"]
+    assert shared_area.loc[0, "AREA_KM2"] == 10  # sum of shared area locations
     assert shared_area.loc[0, "has_shared_marine_area"]
 
+
 def test_proccess_eez_multiple_sovs_happy_path(mock_eez, mock_high_seas, mock_eez_translations):
-  eez = mock_eez.copy()
-  eez["parents"] = eez.apply(_pick_eez_parents, axis=1)
+    eez = mock_eez.copy()
+    eez["parents"] = eez.apply(_pick_eez_parents, axis=1)
 
-  # Standardize HS as process_eez_geoms does
-  hs = mock_high_seas.copy()
-  hs[["GID_0"]] = "ABNJ"
-  hs[["ISO_SOV1"]] = "ABNJ"
-  hs[["POL_TYPE"]] = "High Seas"
-  hs[["GEONAME"]] = "High Seas"
-  hs[["has_shared_marine_area"]] = False
-  hs.rename(columns={"area_km2": "AREA_KM2", "mrgid": "MRGID"}, inplace=True)
+    # Standardize HS as process_eez_geoms does
+    hs = mock_high_seas.copy()
+    hs[["GID_0"]] = "ABNJ"
+    hs[["ISO_SOV1"]] = "ABNJ"
+    hs[["POL_TYPE"]] = "High Seas"
+    hs[["GEONAME"]] = "High Seas"
+    hs[["has_shared_marine_area"]] = False
+    hs.rename(columns={"area_km2": "AREA_KM2", "mrgid": "MRGID"}, inplace=True)
 
-  out = _proccess_eez_multiple_sovs(eez, hs, mock_eez_translations)
+    out = _proccess_eez_multiple_sovs(eez, hs, mock_eez_translations)
 
-  # Structure checks
-  assert isinstance(out, gpd.GeoDataFrame)
-  expect_cols = {"ISO_SOV1", "ISO_SOV2", "ISO_SOV3", "geometry", "AREA_KM2", "POL_TYPE", "MRGID",
-                  "name", "name_es", "name_fr", "name_pt"}
-  assert expect_cols.issubset(out.columns)
-  # First EEZ should have two parents -> ISO_SOV1 & ISO_SOV2 not None
-  row = out[out["MRGID"] == 101].iloc[0]
-  assert row["ISO_SOV1"] is not None
-  assert row["ISO_SOV2"] is not None
+    # Structure checks
+    assert isinstance(out, gpd.GeoDataFrame)
+    expect_cols = {
+        "ISO_SOV1",
+        "ISO_SOV2",
+        "ISO_SOV3",
+        "geometry",
+        "AREA_KM2",
+        "POL_TYPE",
+        "MRGID",
+        "name",
+        "name_es",
+        "name_fr",
+        "name_pt",
+    }
+    assert expect_cols.issubset(out.columns)
+    # First EEZ should have two parents -> ISO_SOV1 & ISO_SOV2 not None
+    row = out[out["MRGID"] == 101].iloc[0]
+    assert row["ISO_SOV1"] is not None
+    assert row["ISO_SOV2"] is not None
 
 
-def test_process_eez_geoms_happy_path(monkeypatch, uploads_recorder, mock_eez, mock_high_seas, mock_eez_translations):
+def test_process_eez_geoms_happy_path(
+    monkeypatch, uploads_recorder, mock_eez, mock_high_seas, mock_eez_translations
+):
     calls, upload_gdf_mock = uploads_recorder
 
     eez = mock_eez.copy()
     hs = mock_high_seas.copy()
 
     # Patch dependencies in the module under test
-    monkeypatch.setattr(static_processes, "load_marine_regions", _mock_load_marine_regions(eez, hs), raising=True)
-    monkeypatch.setattr(static_processes, "read_dataframe", _mock_read_dataframe(mock_eez_translations), raising=True)
+    monkeypatch.setattr(
+        static_processes, "load_marine_regions", _mock_load_marine_regions(eez, hs), raising=True
+    )
+    monkeypatch.setattr(
+        static_processes,
+        "read_dataframe",
+        _mock_read_dataframe(mock_eez_translations),
+        raising=True,
+    )
     monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
     monkeypatch.setattr(static_processes, "TOLERANCES", [None, 0.1, 0.3], raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
-    monkeypatch.setattr(static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True)
+    monkeypatch.setattr(
+        static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True
+    )
     # Ensure gc exists
     monkeypatch.setitem(globals(), "gc", gc)
 
@@ -489,19 +523,28 @@ def test_process_eez_geoms_happy_path(monkeypatch, uploads_recorder, mock_eez, m
         assert df.crs is not None
 
 
-def test_process_eez_geoms_loader_failure(monkeypatch, uploads_recorder, mock_eez, mock_high_seas, mock_eez_translations):
+def test_process_eez_geoms_loader_failure(
+    monkeypatch, uploads_recorder, mock_eez, mock_high_seas, mock_eez_translations
+):
     calls, upload_gdf_mock = uploads_recorder
 
     def failing_loader(params, bucket):
         raise RuntimeError("load failed")
 
     monkeypatch.setattr(static_processes, "load_marine_regions", failing_loader, raising=True)
-    monkeypatch.setattr(static_processes, "read_dataframe", _mock_read_dataframe(mock_eez_translations), raising=True)
+    monkeypatch.setattr(
+        static_processes,
+        "read_dataframe",
+        _mock_read_dataframe(mock_eez_translations),
+        raising=True,
+    )
     monkeypatch.setattr(static_processes, "clean_geometries", lambda g: g, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
     monkeypatch.setattr(static_processes, "TOLERANCES", [None, 0.1], raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
-    monkeypatch.setattr(static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True)
+    monkeypatch.setattr(
+        static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True
+    )
 
     with pytest.raises(RuntimeError, match="load failed"):
         static_processes.process_eez_geoms(verbose=False)
@@ -528,12 +571,28 @@ def test_process_eez_geoms_missing_columns(monkeypatch, uploads_recorder, mock_e
         crs=crs,
     )
     hs = gpd.GeoDataFrame(
-        {"area_km2": [1.0], "mrgid": [2], "POL_TYPE": ["HS"], "GEONAME": ["HS"], "geometry": [Point(1, 1).buffer(1.0)]},
+        {
+            "area_km2": [1.0],
+            "mrgid": [2],
+            "POL_TYPE": ["HS"],
+            "GEONAME": ["HS"],
+            "geometry": [Point(1, 1).buffer(1.0)],
+        },
         crs=crs,
     )
 
-    monkeypatch.setattr(static_processes, "load_marine_regions", _mock_load_marine_regions(bad_eez, hs), raising=True)
-    monkeypatch.setattr(static_processes, "read_dataframe", _mock_read_dataframe(mock_eez_translations), raising=True)
+    monkeypatch.setattr(
+        static_processes,
+        "load_marine_regions",
+        _mock_load_marine_regions(bad_eez, hs),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        static_processes,
+        "read_dataframe",
+        _mock_read_dataframe(mock_eez_translations),
+        raising=True,
+    )
     monkeypatch.setattr(static_processes, "clean_geometries", lambda g: g, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
 
