@@ -204,9 +204,9 @@ def process_eez_geoms(
 
     # Add in High Seas Data
     high_seas = load_zipped_shapefile_from_gcs(
-        filename=HIGH_SEAS_PARAMS.get('zipfile_name'),
+        filename=HIGH_SEAS_PARAMS.get("zipfile_name"),
         bucket=BUCKET,
-        internal_shapefile_path=HIGH_SEAS_PARAMS['shapefile_name'],
+        internal_shapefile_path=HIGH_SEAS_PARAMS["shapefile_name"],
     )
     high_seas[["GID_0"]] = "ABNJ"
     high_seas[["ISO_SOV1"]] = "ABNJ"
