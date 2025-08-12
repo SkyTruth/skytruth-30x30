@@ -33,6 +33,7 @@ from src.core.params import (
     CHUNK_SIZE,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
+    EEZ_MULTIPLE_SOV_FILE_NAME,
     EEZ_PARAMS,
     GADM_EEZ_UNION_FILE_NAME,
     GADM_FILE_NAME,
@@ -40,6 +41,7 @@ from src.core.params import (
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_URL,
     HABITATS_ZIP_FILE_NAME,
+    HIGH_SEAS_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
@@ -156,33 +158,166 @@ def process_eez_geoms(
     tolerances: float = [0.001, 0.0001],
     verbose: bool = True,
 ):
-    if verbose:
-        print("loading eezs from")
+    """
+    Method to process the downloaded EEZ shape file from marine regions. This method process the
+    data in two distinct ways and writes each of these to GCP.
 
-    eez = (
-        load_marine_regions(eez_params, bucket)[["ISO_TER1", "geometry"]]
-        .rename(columns={"ISO_TER1": "location"})
-        .pipe(clean_geometries)
+    1. EEZ's are processed so each entry in the dataset maps to a single location (excluding ISO*
+        roll ups). These entries contain multipolygons which contain all EEZ's that have the given
+        location as a parent. This data is used for mapping habitat stats to ccountries and for
+        generating the locations table in the database. This data is referred to as eez_by_sov
+        in the code and is written as geojson
+
+    2. EEZ's are processed so each entry in the dataset is a unique EEZ and each EEZ contains
+        properties of ISO_SOV1, ISO_SOV2, ISO_SOV3, which map the EEZ to all locations which
+        have a claim on the EEZ. This data is referred to as eez_multiple_sovs in the code and
+        writen as a .shp file
+    """
+    if verbose:
+        print(f"loading eezs from {eez_params['zipfile_name']}")
+
+    # eez = load_zipped_shapefile_from_gcs(
+    #     filename=EEZ_PARAMS.get('zipfile_name'),
+    #     bucket=BUCKET,
+    #     internal_shapefile_path=EEZ_PARAMS['shapefile_name'],
+    # )
+
+    eez = load_marine_regions(eez_params, bucket)
+
+    eez["parents"] = eez.apply(_pick_eez_parents, axis=1)
+    eez.loc[eez["parents"].apply(lambda parents: len(parents) > 1), "has_shared_marine_area"] = True
+
+    eez_by_sov = eez.explode("parents").rename(columns={"parents": "GID_0"})[
+        ["MRGID", "GEONAME", "POL_TYPE", "GID_0", "AREA_KM2", "geometry", "has_shared_marine_area"]
+    ]
+
+    eez_multiple_sovs = eez.copy()
+    eez_multiple_sovs["ISO_SOV1"] = eez_multiple_sovs["parents"].apply(
+        lambda parents: parents[0] if len(parents) >= 1 else None
+    )
+    eez_multiple_sovs["ISO_SOV2"] = eez_multiple_sovs["parents"].apply(
+        lambda parents: parents[1] if len(parents) >= 2 else None
+    )
+    eez_multiple_sovs["ISO_SOV3"] = eez_multiple_sovs["parents"].apply(
+        lambda parents: parents[2] if len(parents) >= 3 else None
     )
 
+    # Add in High Seas Data
+    high_seas = load_zipped_shapefile_from_gcs(
+        filename=HIGH_SEAS_PARAMS.get('zipfile_name'),
+        bucket=BUCKET,
+        internal_shapefile_path=HIGH_SEAS_PARAMS['shapefile_name'],
+    )
+    high_seas[["GID_0"]] = "ABNJ"
+    high_seas[["ISO_SOV1"]] = "ABNJ"
+    high_seas[["POL_TYPE"]] = "High Seas"
+    high_seas[["GEONAME"]] = "High Seas"
+    high_seas[["has_shared_marine_area"]] = False
+    high_seas.rename(columns={"area_km2": "AREA_KM2", "mrgid": "MRGID"}, inplace=True)
+
+    eez_multiple_sovs = pd.concat([eez_multiple_sovs, high_seas], ignore_index=True, sort=False)
+
+    eez_multiple_sovs.drop(
+        columns=list(
+            set(eez_multiple_sovs.columns)
+            - set(["ISO_SOV1", "ISO_SOV2", "ISO_SOV3", "geometry", "AREA_KM2", "POL_TYPE", "MRGID"])
+        ),
+        inplace=True,
+    )
+
+    eez_multiple_sovs = eez_multiple_sovs.rename(columns={"GID_0": "location"}).pipe(
+        clean_geometries
+    )
+
+    high_seas.drop(
+        columns=list(
+            set(high_seas.columns)
+            - set(
+                [
+                    "GID_0",
+                    "geometry",
+                    "AREA_KM2",
+                    "MRGID",
+                    "GEONAME",
+                    "POL_TYPE",
+                    "has_shared_marine_area",
+                ]
+            )
+        ),
+        inplace=True,
+    )
+
+    eez_by_sov = pd.concat([eez_by_sov, high_seas], ignore_index=True, sort=False)
+    eez_by_sov = eez_by_sov.dissolve(
+        by="GID_0", as_index=False, aggfunc={"AREA_KM2": "sum", "has_shared_marine_area": "any"}
+    ).reset_index()
+
     for tolerance in tolerances:
-        df = eez.copy()
+        df = eez_by_sov.copy()
         if tolerance is not None:
             if verbose:
-                print(f"simplifying geometries with tolerance {tolerance}")
+                print(f"simplifying eez by sovereign geometries with tolerance {tolerance}")
             df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
 
-        if verbose:
-            print("dissolving by country")
-        df = df.dissolve("location").reset_index().copy()
         df = df.pipe(clean_geometries)
 
         out_fn = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
-            print(f"uploading simplified GADM countries to {out_fn}")
+            print(f"uploading eez by sovereign file to {out_fn}")
         upload_gdf(bucket, df, out_fn)
 
-    return eez
+    if verbose:
+        print(f"simplifying eez with mulit-sovereign geometries with tolerance {TOLERANCES[0]}")
+    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[0])
+    eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
+
+    out_fn = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{tolerance}.geojson")
+    if verbose:
+        print(f"uploading eez with multi-sovereign file to {out_fn}")
+    upload_gdf(bucket, df, out_fn)
+
+
+def _pick_eez_parents(row):
+    """
+    Helper method to assign EEZ parents. Marine regions offeres 3 possible country/territory
+    locations for an EEZ. ISO_TER# is the immediate, independant location and ISO# is the
+    sovereign for the matching ISO_TER. ISO_TER may be None, e.g. the Alaska EEZ has no ISO_TER1
+    but it does have USA for ISO_SOV1. The guiding logic for assigning countries to EEZ's that we
+    employ is
+
+    1. Compare each ISO_TER#, ISO_SOV#
+    2. If, for a given pair, there is an ISO_TER we take that.
+      2a. If there is no ISO_TER we take the ISO_SOV if it exists
+    3. We dedupe any acrued ISO codes
+
+    This reults in, at most, 3 potential arent locations.
+
+    Example:
+    The EEZ Around Myotis has:
+    ISO_TER1 = MYT, ISO_TER2 = MYT, ISO_TER3 = None
+    ISO_SOV1 = COM, ISO_SOV2 = FRA, ISO_SOV3 = None
+    In this case it is only assinged the parent of MYT, however MYT is defined as a territory of
+    FRA*, so for roll-up stats, this EEZ will still get included with FRA* when that proccessing
+    occurs
+
+    """
+    parents = set()
+    if row.ISO_TER1:
+        parents.add(row.ISO_TER1)
+    else:
+        parents.add(row.ISO_SOV1)
+
+    if row.ISO_TER2:
+        parents.add(row.ISO_TER2)
+    elif row.ISO_SOV2:
+        parents.add(row.ISO_SOV2)
+
+    if row.ISO_TER3:
+        parents.add(row.ISO_TER3)
+    elif row.ISO_SOV3:
+        parents.add(row.ISO_SOV3)
+
+    return list(parents)
 
 
 def process_eez_gadm_unions(

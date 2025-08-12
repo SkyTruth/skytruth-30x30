@@ -117,10 +117,6 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
 
-            case "process_eezs":
-                # NOTE: download_eezs and download_high_seas must have been run first
-                _ = process_eez_geoms(verbose=verbose)
-
             case "download_high_seas":
                 download_zip_to_gcs(
                     url=MARINE_REGIONS_URL,
@@ -132,6 +128,10 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
+
+            case "process_eezs":
+                # NOTE: download_eezs and download_high_seas must have been run first
+                process_eez_geoms(verbose=verbose)
 
             case "process_eez_gadm_unions":
                 process_eez_gadm_unions(verbose=verbose)

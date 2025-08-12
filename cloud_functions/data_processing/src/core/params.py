@@ -48,6 +48,7 @@ EEZ_PARAMS = {
     "shapefile_name": "eez_v12.shp",
 }
 EEZ_FILE_NAME = "static/eez_processed.geojson"
+EEZ_MULTIPLE_SOV_FILE_NAME = "static/eez_multi_sov_processed.geojson"
 
 HIGH_SEAS_PARAMS = {
     "name": "World_High_Seas_v2_20241010.zip",
