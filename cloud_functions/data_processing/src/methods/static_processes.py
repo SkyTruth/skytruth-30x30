@@ -78,10 +78,8 @@ def process_gadm_geoms(
 ) -> None:
     if verbose:
         print(f"loading gadm gpkg from {gadm_zipfile_name}")
-
-    print("We right here")
     related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
-    print("Bu not here??")
+    
     # Create an inverse parent child location map excluding sovereign rollups with a trailing '*'
     inv_map = {
         child: parent
