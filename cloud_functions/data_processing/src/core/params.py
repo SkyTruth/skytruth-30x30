@@ -83,7 +83,7 @@ GADM_EEZ_UNION_FILE_NAME = "static/GADM_eez_union.geojson"
 # ------------------------------------------------------------
 #        Locations (combined Marine Regions and GADM)
 # ------------------------------------------------------------
-LOCATIONS_FILE_NAME = "static/locations_processed.csv"
+LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
 
 
 # ------------------------------------------------------------

@@ -4,6 +4,7 @@ from typing import Any
 
 import geopandas as gpd
 import pandas as pd
+import numpy as np
 from shapely.geometry import MultiPolygon, Polygon
 
 
@@ -386,3 +387,10 @@ def update_mpatlas_asterisk(df: pd.DataFrame, asterisk: bool = False) -> pd.Data
         reg.loc[reg["location"] == loc, "protected_area"] = value
 
     return reg
+
+
+def round_to_list(bounds: pd.DataFrame) -> list[float]:
+    """
+    Convert a dataframe of geometry.bounds to a rounded list of bounds
+    """
+    return list(np.round(bounds, decimals=5))

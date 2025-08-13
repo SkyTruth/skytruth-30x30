@@ -36,6 +36,7 @@ from src.methods.static_processes import (
     process_terrestrial_biome_raster,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
+from src.methods.generate_static_tables import generate_locations_table
 from src.utils.gcp import download_zip_to_gcs
 
 
@@ -184,6 +185,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
+
+            case "generate_locations_table":
+                generate_locations_table(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")
