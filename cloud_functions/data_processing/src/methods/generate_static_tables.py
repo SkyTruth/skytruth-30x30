@@ -80,10 +80,15 @@ def generate_locations_table(
     # Add total areas and bounds where needed
     gadm["total_terrestrial_area"] = gadm["geometry"].apply(get_area_km2).round(0).astype("Int64")
     gadm["terrestrial_bounds"] = gadm.geometry.bounds.apply(round_to_list, axis=1)
+
+    # Marine area is precomputed for countries with unioque EEZ's but for groups and regions
+    # we ned to calculate to avoid duplicating shared EEZ areas
+    marine_area = pd.to_numeric(eez["total_marine_area"], errors="coerce")
+    mask = marine_area.isna()
+    filled = marine_area.copy()
+    filled.loc[mask] = eez.loc[mask, "geometry"].apply(get_area_km2)
+    eez["total_marine_area"] = filled.round(0).astype("Int64")
     eez["marine_bounds"] = eez.geometry.bounds.apply(round_to_list, axis=1)
-    eez["total_marine_area"] = (
-        pd.to_numeric(eez["total_marine_area"], errors="coerce").round(0).astype("Int64")
-    )
 
     # Put it all together
     locs = (
@@ -92,10 +97,13 @@ def generate_locations_table(
             on="GID_0",
             how="outer",
         )
-        .drop(columns=["geometry", "COUNTRY"])
-        .fillna({"has_shared_marine_area": False})
-        .infer_objects(copy=False)  # This handles type inferences with fillna: for future-proofing
         .pipe(_add_translations, translations)
+        .drop(columns=["geometry", "COUNTRY", "GID_0"])
+    )
+
+    # Typesafe default for has_shared_marine_area
+    locs["has_shared_marine_area"] = (
+        locs.get("has_shared_marine_area").astype("boolean").fillna(False)
     )
 
     upload_dataframe(bucket_name=bucket, df=locs, destination_blob_name=output_file_name)
@@ -107,7 +115,7 @@ def _add_groups(gdf: gpd.GeoDataFrame, group_map: dict, group_type: str) -> gpd.
 
     # Ensure 'groups' column exists and contains independent lists
     if "groups" not in gdf.columns:
-        gdf["groups"] = [[] for _ in range(len(gdf))]
+        gdf['groups'] = None
 
     new_rows = []
 
@@ -163,7 +171,6 @@ def _add_translations(gdf: gpd.GeoDataFrame, translations: pd.DataFrame) -> gpd.
         right_on="code",
         how="left",
     )
-    gdf.drop(columns=["GID_0"], inplace=True, errors="ignore")
     return gdf
 
 

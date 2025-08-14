@@ -28,9 +28,10 @@ export default factories.createCoreService('api::location.location', ({ strapi }
         });
       } else {
         mapped.push(relationId);
-        return mapped;
-    };
+      };
+      return mapped;
   }, [] as number[]);
+
     return [mappedRelations, errors];
   }
 }));

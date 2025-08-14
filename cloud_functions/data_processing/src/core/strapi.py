@@ -332,6 +332,12 @@ class Strapi:
 
             If the location is to be updated it must contain the following keys:
             - code: The ISO3 code of the location.
+
+            In either case otional fields are
+            - marine_bounds: list of the bbox of the marine area
+            - terrestiral_bounds: list of the bbox of the terrestrial area
+            - marine_target: int representing the target percent for marine protection
+            - marine_target_year: int represeting the target year for marine protection goal
         Returns
         -------
         dict

@@ -195,7 +195,7 @@ def main(request: Request) -> tuple[str, int]:
             # ------------------
 
             case "update_locations":
-                upload_locations(verbose=verbose)
+                return upload_locations(verbose=verbose)
             case _:
                 print(f"METHOD: {method} not a valid option")
 

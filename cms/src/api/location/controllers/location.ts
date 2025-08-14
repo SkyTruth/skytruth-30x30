@@ -20,7 +20,7 @@ export default factories.createCoreController('api::location.location', ({ strap
         for (const location of data) {
           const { code, name, ...attributes } = location;
 
-          if (attributes.groups){
+          if (attributes.groups) {
             if (!Array.isArray(attributes.groups)) {
                 errors.push({
                   msg: `Invalid groups for location with code ${code}`,
@@ -28,12 +28,12 @@ export default factories.createCoreController('api::location.location', ({ strap
                 });
                 continue
               }
-            const [mappedGroups, neweErors] = strapi
+            const [mappedGroups, newErors] = strapi
             .service('api::location.location')
             .mapRelations(attributes.groups, locationsMap);
 
             attributes.groups = mappedGroups;
-            errors.push(...neweErors);
+            errors.push(...newErors);
           }
 
           if (attributes.members){
@@ -87,7 +87,7 @@ export default factories.createCoreController('api::location.location', ({ strap
       );
       return ctx.send({ message: 'Locations upserted successfully', errors });
     } catch (error) {
-      console.error('Error in bulkUpsert:', error);
+      strapi.log.error('Error in locations bulkUpsert:', {error: error?.message });
       return ctx.internalServerError('An error occurred while upserting locations', error);
     }
   }

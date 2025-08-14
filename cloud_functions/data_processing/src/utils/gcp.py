@@ -468,6 +468,7 @@ def read_dataframe(
     skip_empty: bool = False,
     skip_empty_val: int = 2,
     keep_default_na=False,
+    converters: dict | None = None,
     verbose: bool = False,
 ) -> pd.DataFrame | None:
     """
@@ -503,6 +504,11 @@ def read_dataframe(
             if verbose:
                 print(f"Skipping empty file: {filename}")
             return None
+    if converters is not None:
+        return pd.read_csv(
+            fpath, low_memory=False, keep_default_na=keep_default_na, converters=converters
+        )
+
     return pd.read_csv(fpath, low_memory=False, keep_default_na=keep_default_na)
 
 
