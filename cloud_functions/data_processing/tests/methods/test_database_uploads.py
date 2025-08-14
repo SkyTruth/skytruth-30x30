@@ -57,17 +57,19 @@ def test_upload_locations_happy_path(monkeypatch):
             "terrestrial_bounds": ["[1.1, 2.2, 3.3, 4.4]", "", ""],
             "marine_bounds": ["", "", "[0.0, 0.0, 10.0, 10.0]"],
             "has_shared_marine_area": [True, pd.NA, False],
-            "note": [pd.NA, "keep me", None],
+            "total_marine_area": [pd.NA, 1234, None],
         }
     )
 
     captured_kwargs = {}
 
-    def _mock_read_dataframe(*, bucket_name, filename, converters=None, **kwargs):
+    def _mock_read_dataframe(*, bucket_name, filename, **kwargs):
         captured_kwargs["bucket_name"] = bucket_name
         captured_kwargs["filename"] = filename
-        captured_kwargs["converters"] = converters
+        captured_kwargs["converters"] = kwargs.get("converters")
+        captured_kwargs["dtype"] = kwargs.get("dtype")
 
+        converters = kwargs.get("converters")
         # apply the provided converters column-wise
         df = raw.copy()
         if converters:
@@ -100,6 +102,7 @@ def test_upload_locations_happy_path(monkeypatch):
 
     assert captured_kwargs["bucket_name"] == "test-bucket"
     assert captured_kwargs["filename"] == "locations.csv"
+    assert captured_kwargs["dtype"] == {"total_marine_area": "Int64"}
 
     # The function should request converters for these fields:
     for expected in ["groups", "members", "terrestrial_bounds", "marine_bounds"]:
@@ -120,14 +123,14 @@ def test_upload_locations_happy_path(monkeypatch):
     assert "marine_bounds" not in row0  # empty -> NA -> dropped
     assert row0["terrestrial_bounds"] == [1.1, 2.2, 3.3, 4.4]
     assert row0["has_shared_marine_area"] is True
-    assert "note" not in row0  # NA dropped
+    assert "total_marine_area" not in row0  # NA dropped
 
-    # Row 1: groups NA dropped; members parsed and kept; note kept
+    # Row 1: groups NA dropped; members parsed and kept; total_marine_area kept
     row1 = payload[1]
     assert row1["code"] == "MEX"
     assert row1["members"] == ["M1"]
     assert "groups" not in row1
-    assert row1["note"] == "keep me"
+    assert row1["total_marine_area"] == 1234
     assert "has_shared_marine_area" not in row1
 
     # Row 2: both lists parsed/kept where provided

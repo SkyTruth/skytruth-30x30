@@ -25,7 +25,13 @@ def upload_locations(
     list_fields = ["groups", "members", "terrestrial_bounds", "marine_bounds"]
 
     converters = {field: _parse_list_or_na for field in list_fields}
-    locs_df = read_dataframe(bucket_name=bucket, filename=filename, converters=converters)
+    dtype = {"total_marine_area": "Int64"}
+    locs_df = read_dataframe(
+        bucket_name=bucket, filename=filename, converters=converters, dtype=dtype
+    )
+
+    # Because there are empty values for land locked countries this has to be explicitly typecast
+    locs_df["total_marine_area"] = locs_df["total_marine_area"].astype("Int64")
 
     # Remove keys with NA values, this will allow us ot only upsert data we actually have
     # rather than stubbing defaults

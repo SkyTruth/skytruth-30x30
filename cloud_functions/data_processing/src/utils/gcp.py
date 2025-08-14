@@ -467,9 +467,9 @@ def read_dataframe(
     filename: str,
     skip_empty: bool = False,
     skip_empty_val: int = 2,
-    keep_default_na=False,
-    converters: dict | None = None,
+    keep_default_na: bool = False,
     verbose: bool = False,
+    **kwargs,
 ) -> pd.DataFrame | None:
     """
     Reads a CSV file from Google Cloud Storage into a pandas DataFrame.
@@ -484,6 +484,10 @@ def read_dataframe(
         If True, checks the file size before reading and skips files that are empty.
     skip_empty_val : int, optional
         File size threshold in bytes to consider as empty (default is 2).
+    keep_default_na: bool, optional
+        Determines if the dataframe will keep NA avlues or fill them with. ''
+    kwargs: dict, optional
+        dict mapping out any additional argumetns for pd.read_csv
     verbose : bool, optional
         If True, prints a message when skipping an empty file.
 
@@ -504,10 +508,9 @@ def read_dataframe(
             if verbose:
                 print(f"Skipping empty file: {filename}")
             return None
-    if converters is not None:
-        return pd.read_csv(
-            fpath, low_memory=False, keep_default_na=keep_default_na, converters=converters
-        )
+
+    if kwargs is not None:
+        return pd.read_csv(fpath, low_memory=False, keep_default_na=keep_default_na, **kwargs)
 
     return pd.read_csv(fpath, low_memory=False, keep_default_na=keep_default_na)
 

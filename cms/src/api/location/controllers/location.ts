@@ -15,7 +15,7 @@ export default factories.createCoreController('api::location.location', ({ strap
    */
   async bulkUpsert(ctx) {
     try {
-      const { data, options } = ctx?.request?.body;
+      const { data, options = null } = ctx?.request?.body;
       if (!Array.isArray(data)) {
         return ctx.badRequest('Data must be an array');
       }
@@ -95,7 +95,7 @@ export default factories.createCoreController('api::location.location', ({ strap
       );
       return ctx.send({ message: 'Locations upserted successfully', errors });
     } catch (error) {
-      strapi.log.error('Error in locations bulkUpsert:', {error: error?.message });
+      strapi.log.error('Error in locations bulkUpsert:', error);
       return ctx.internalServerError('An error occurred while upserting locations', error);
     }
   }
