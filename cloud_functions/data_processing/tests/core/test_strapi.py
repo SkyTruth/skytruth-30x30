@@ -488,6 +488,35 @@ def test_upsert_locations_success(mock_authenticate):
     assert call.url == BASE_URL + "locations"
 
 
+@responses.activate
+def test_upsert_locations_with_options(mock_authenticate):
+    api = Strapi()
+    locations = [
+        {
+            "code": "USA",
+            "name": "United States",
+            "type": "country",
+        }
+    ]
+    options = {"fruit": "durian"}
+    payload = {"data": locations, "options": options}
+
+    responses.add(
+        responses.POST,
+        BASE_URL + "locations",
+        json=payload,
+        status=200,
+    )
+
+    result = api.upsert_locations(locations, options)
+    assert result == payload
+
+    assert len(responses.calls) == 1
+    call = responses.calls[0].request
+    assert call.method == "POST"
+    assert call.url == BASE_URL + "locations"
+
+
 @patch("src.core.strapi.Logger.error")
 @patch("src.core.strapi.requests.post", side_effect=HTTPError("locations-fail"))
 def test_upsert_locations_failure(mock_req, mock_error, mock_authenticate):

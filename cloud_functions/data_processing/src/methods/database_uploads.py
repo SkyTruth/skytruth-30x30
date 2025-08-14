@@ -8,7 +8,10 @@ from src.utils.gcp import read_dataframe
 
 
 def upload_locations(
-    bucket: str = BUCKET, filename: str = LOCATIONS_FILE_NAME, verbose: bool = True
+    bucket: str = BUCKET,
+    filename: str = LOCATIONS_FILE_NAME,
+    request: dict = None,
+    verbose: bool = True,
 ):
     """
     Prepares processed locations csv and passes it to Trapi method to update the database
@@ -24,12 +27,18 @@ def upload_locations(
     converters = {field: _parse_list_or_na for field in list_fields}
     locs_df = read_dataframe(bucket_name=bucket, filename=filename, converters=converters)
 
-    # Remove keys with NA values, this will allow us ot only upsert data we actually have rather than
-    # stubbing defaults
+    # Remove keys with NA values, this will allow us ot only upsert data we actually have
+    # rather than stubbing defaults
     locations = _extract_non_na_values(locs_df)
 
+    options = request.get("options") if request else None
+
+    if verbose:
+        print("Writing locations to the database")
+
     client = Strapi()
-    return client.upsert_locations(locations)
+    return client.upsert_locations(locations, options)
+
 
 def _extract_non_na_values(df: pd.DataFrame) -> list[dict]:
     """Converts a dataframe to a dictionary while leaving off any None/NA/NaN values"""
@@ -39,6 +48,7 @@ def _extract_non_na_values(df: pd.DataFrame) -> list[dict]:
     ]
 
     return cleaned
+
 
 def _parse_list_or_na(val):
     """
@@ -52,5 +62,5 @@ def _parse_list_or_na(val):
     try:
         parsed_val = literal_eval(val)
         return parsed_val if isinstance(parsed_val, list) else [parsed_val]
-    except (ValueError, SyntaxError) as e:
+    except (ValueError, SyntaxError):
         return pd.NA  # fallback if bad format

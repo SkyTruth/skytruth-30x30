@@ -115,7 +115,7 @@ def _add_groups(gdf: gpd.GeoDataFrame, group_map: dict, group_type: str) -> gpd.
 
     # Ensure 'groups' column exists and contains independent lists
     if "groups" not in gdf.columns:
-        gdf['groups'] = None
+        gdf["groups"] = None
 
     new_rows = []
 

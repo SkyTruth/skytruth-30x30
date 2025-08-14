@@ -5,9 +5,17 @@
 import { factories } from '@strapi/strapi'
 
 export default factories.createCoreController('api::location.location', ({ strapi }) => ({
+  /**
+   * Bulk upsert controller for POST calls to /locations 
+   * Body must be {"data": [locations]} where locations are json objects of the data to be upserted
+   * If new you want new locations created to have a specific type, for QA, filtering, etc add the 
+   * filed "options" to the body with {"newType"}
+   * @param ctx 
+   * @returns HTTP Response with errors json for any locations that could not be udated or created
+   */
   async bulkUpsert(ctx) {
     try {
-      const { data } = ctx?.request?.body;
+      const { data, options } = ctx?.request?.body;
       if (!Array.isArray(data)) {
         return ctx.badRequest('Data must be an array');
       }
@@ -57,8 +65,8 @@ export default factories.createCoreController('api::location.location', ({ strap
             // Defaulting undesignated new locs as territories since they are not
             // shown on the map search. This gives us time to update any needed map layers
             // before we start showing them.
-            if (!attributes.type) {
-              attributes.type = 'territory'
+            if (options?.newType) {
+              attributes.type = options.newType
             }
             await strapi.entityService.create(
               'api::location.location',

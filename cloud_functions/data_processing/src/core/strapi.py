@@ -311,7 +311,7 @@ class Strapi:
             )
             raise excep
 
-    def upsert_locations(self, locations: list[dict]) -> dict:
+    def upsert_locations(self, locations: list[dict], options: dict | None = None) -> dict:
         """
         Upsert locations.
 
@@ -344,11 +344,14 @@ class Strapi:
             The response from the API.
         """
         try:
+            if options is None:
+                options = {}
+
             response = requests.post(
                 f"{self.BASE_URL}locations",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                json={"data": locations},
+                json={"data": locations, "options": options},
             )
             return response.json()
         except Exception as excep:
