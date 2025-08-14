@@ -100,19 +100,6 @@ def generate_locations_table(
     upload_dataframe(bucket_name=bucket, df=locs, destination_blob_name=output_file_name)
 
 
-def _add_groups(gdf: gpd.GeoDataFrame, group_defs: dict) -> gpd.GeoDataFrame:
-    group_rows = []
-    for grp_iso, children in group_defs.items():
-        subset = gdf[gdf["GID_0"].isin(children)]
-        if subset.empty:
-            continue
-        union_geom = unary_union(subset.geometry.values)
-        group_rows.append({"GID_0": grp_iso, "geometry": union_geom, "type": "country"})
-    df_groups = gpd.GeoDataFrame(group_rows, crs=gdf.crs)
-    gdf = pd.concat([gdf, df_groups], ignore_index=True)
-    return gdf
-
-
 def _add_groups(gdf: gpd.GeoDataFrame, group_map: dict, group_type: str) -> gpd.GeoDataFrame:
     """Add region rows and update member rows' 'groups' lists."""
     gdf = gdf.copy()

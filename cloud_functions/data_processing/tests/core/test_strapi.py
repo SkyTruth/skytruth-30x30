@@ -488,8 +488,8 @@ def test_upsert_locations_success(mock_authenticate):
     assert call.url == BASE_URL + "locations"
 
 
-@patch("src.strapi.Logger.error")
-@patch("src.strapi.requests.post", side_effect=HTTPError("locations-fail"))
+@patch("src.core.strapi.Logger.error")
+@patch("src.core.strapi.requests.post", side_effect=HTTPError("locations-fail"))
 def test_upsert_locations_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     locations = [{"code": "CAN"}]
