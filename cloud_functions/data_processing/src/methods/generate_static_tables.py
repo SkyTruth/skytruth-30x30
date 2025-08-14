@@ -1,7 +1,7 @@
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from shapely.ops import unary_union
-import numpy as np
 
 from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
 from src.core.params import (
@@ -36,7 +36,7 @@ def generate_locations_table(
 
     eez = read_json_df(bucket_name=bucket, filename=eez_file, verbose=verbose)
     gadm = read_json_df(bucket_name=bucket, filename=gadm_file, verbose=verbose)
-    
+
     related_countries = read_json_from_gcs(
         bucket_name=bucket, filename=related_countries_file_name, verbose=verbose
     )
@@ -57,8 +57,8 @@ def generate_locations_table(
 
     # For now we area assuming that all entities that came from GADM or Marine Regions are lumped
     # countries
-    eez['type'] = eez.apply(_add_default_types, axis=1)
-    gadm['type'] = gadm.apply(_add_default_types, axis=1)
+    eez["type"] = eez.apply(_add_default_types, axis=1)
+    gadm["type"] = gadm.apply(_add_default_types, axis=1)
 
     if verbose:
         print("Processing EEZs and their country relation mappings")
@@ -68,7 +68,6 @@ def generate_locations_table(
         .pipe(_add_groups, group_map, "country")
         .pipe(_add_groups, region_map, "region")
     )
-
 
     if verbose:
         print("Processing GADM and its country relation mappings")
@@ -82,7 +81,9 @@ def generate_locations_table(
     gadm["total_terrestrial_area"] = gadm["geometry"].apply(get_area_km2).round(0).astype("Int64")
     gadm["terrestrial_bounds"] = gadm.geometry.bounds.apply(round_to_list, axis=1)
     eez["marine_bounds"] = eez.geometry.bounds.apply(round_to_list, axis=1)
-    eez["total_marine_area"] = pd.to_numeric(eez["total_marine_area"], errors='coerce').round(0).astype("Int64")
+    eez["total_marine_area"] = (
+        pd.to_numeric(eez["total_marine_area"], errors="coerce").round(0).astype("Int64")
+    )
 
     # Put it all together
     locs = (
@@ -93,7 +94,7 @@ def generate_locations_table(
         )
         .drop(columns=["geometry", "COUNTRY"])
         .fillna({"has_shared_marine_area": False})
-        .infer_objects(copy=False) # This handles type inferences with fillna: for future-proofing
+        .infer_objects(copy=False)  # This handles type inferences with fillna: for future-proofing
         .pipe(_add_translations, translations)
     )
 
@@ -118,22 +119,23 @@ def _add_groups(gdf: gpd.GeoDataFrame, group_map: dict, group_type: str) -> gpd.
         geom = unary_union(subset.geometry.values)
 
         # Queue a new region row
-        new_rows.append({
-            "GID_0":  group,
-            "geometry": geom,
-            "type":   group_type,
-            "members": list(members),
-            # currently we have no locations that are a group AND part of a groups. 
-            # This is because soverigns are pollitically grouped and regions are 
-            # geographically grouped
-            "groups": None
-        })
+        new_rows.append(
+            {
+                "GID_0": group,
+                "geometry": geom,
+                "type": group_type,
+                "members": list(members),
+                # currently we have no locations that are a group AND part of a groups.
+                # This is because soverigns are pollitically grouped and regions are
+                # geographically grouped
+                "groups": None,
+            }
+        )
 
         # Append this group code to each member's 'groups' list
         member_mask = gdf["GID_0"].isin(members)
-        gdf.loc[member_mask, "groups"] = (
-            gdf.loc[member_mask, "groups"]
-               .apply(lambda lst: _as_list(lst) + [group])
+        gdf.loc[member_mask, "groups"] = gdf.loc[member_mask, "groups"].apply(
+            lambda lst, group=group: _as_list(lst) + [group]
         )
 
     if new_rows:
@@ -151,6 +153,7 @@ def _as_list(value):
         return []
     return [value]
 
+
 def _add_translations(gdf: gpd.GeoDataFrame, translations: pd.DataFrame) -> gpd.GeoDataFrame:
     gdf = gdf.copy()
 
@@ -165,4 +168,4 @@ def _add_translations(gdf: gpd.GeoDataFrame, translations: pd.DataFrame) -> gpd.
 
 
 def _add_default_types(row):
-    return 'country' if row['location'] != 'ABNJ' else 'highseas'
+    return "country" if row["location"] != "ABNJ" else "highseas"

@@ -13,12 +13,14 @@ from src.core.params import (
     MARINE_REGIONS_URL,
     verbose,
 )
+from src.methods.database_uploads import upload_locations
 from src.methods.download_and_process import (
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
     process_protected_area_geoms,
 )
+from src.methods.generate_static_tables import generate_locations_table
 from src.methods.generate_tables import (
     generate_fishing_protection_table,
     generate_habitat_protection_table,
@@ -36,8 +38,6 @@ from src.methods.static_processes import (
     process_terrestrial_biome_raster,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
-from src.methods.generate_static_tables import generate_locations_table
-from src.methods.database_uploads import upload_locations
 from src.utils.gcp import download_zip_to_gcs
 
 
