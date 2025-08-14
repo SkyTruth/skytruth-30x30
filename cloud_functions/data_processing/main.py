@@ -37,6 +37,7 @@ from src.methods.static_processes import (
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.generate_static_tables import generate_locations_table
+from src.methods.database_uploads import upload_locations
 from src.utils.gcp import download_zip_to_gcs
 
 
@@ -189,6 +190,12 @@ def main(request: Request) -> tuple[str, int]:
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
 
+            # ------------------
+            #   Database updates
+            # ------------------
+
+            case "update_locations":
+                upload_locations(verbose=verbose)
             case _:
                 print(f"METHOD: {method} not a valid option")
 
