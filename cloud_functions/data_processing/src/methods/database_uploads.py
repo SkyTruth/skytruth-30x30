@@ -1,33 +1,44 @@
 from ast import literal_eval
+
 import pandas as pd
 
-from src.core.strapi import Strapi
 from src.core.params import BUCKET, LOCATIONS_FILE_NAME
+from src.core.strapi import Strapi
 from src.utils.gcp import read_dataframe
 
 
 def upload_locations(
     bucket: str = BUCKET, filename: str = LOCATIONS_FILE_NAME, verbose: bool = True
 ):
+    """
+    Prepares processed locations csv and passes it to Trapi method to update the database
+    with data included in the csv.
+
+    Preparation inlcudes:
+    - converting stringified lists to actual lists
+    - removing empty values
+    - converting to a dict
+    """
     list_fields = ["groups", "members", "terrestrial_bounds", "marine_bounds"]
 
     converters = {field: _parse_list_or_na for field in list_fields}
     locs_df = read_dataframe(bucket_name=bucket, filename=filename, converters=converters)
 
-    # locations = locs_df.to_dict(orient="records")
-
     # Remove keys with NA values, this will allow us ot only upsert data we actually have rather than
     # stubbing defaults
-    locations = [
-        {key: val for key, val in row.items() if isinstance(val, list) or pd.notna(val)}
-        for row in locs_df.to_dict(orient="records")
-    ]
-    print(locations[:3])
+    locations = _extract_non_na_values(locs_df)
 
     client = Strapi()
-    # return "Success"
-    return client.upsert_locations(locations[:3])
+    return client.upsert_locations(locations)
 
+def _extract_non_na_values(df: pd.DataFrame) -> list[dict]:
+    """Converts a dataframe to a dictionary while leaving off any None/NA/NaN values"""
+    cleaned = [
+        {key: val for key, val in row.items() if isinstance(val, list) or pd.notna(val)}
+        for row in df.to_dict(orient="records")
+    ]
+
+    return cleaned
 
 def _parse_list_or_na(val):
     """
@@ -40,6 +51,6 @@ def _parse_list_or_na(val):
         return pd.NA
     try:
         parsed_val = literal_eval(val)
-        return parsed_val if isinstance(parsed_val, list) else [val]
-    except (ValueError, SyntaxError):
+        return parsed_val if isinstance(parsed_val, list) else [parsed_val]
+    except (ValueError, SyntaxError) as e:
         return pd.NA  # fallback if bad format
