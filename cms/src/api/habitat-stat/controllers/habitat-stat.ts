@@ -4,8 +4,16 @@
 
 import { factories } from '@strapi/strapi'
 
+import filterSovereigns from '../../../utils/filter-sovereigns';
+
 export default factories.createCoreController('api::habitat-stat.habitat-stat', ({ strapi }) => ({
     async find(ctx) {
+          // TODO TECH-3174: Clean up
+        const { query } = ctx;
+        let locationFilter = query?.filters?.location;
+        if (locationFilter) {
+            query.filters.location = filterSovereigns({...locationFilter})
+        }
         // find the most recently updated record and return its updatedAt date
         const newQuery = {
             ...ctx.query,

@@ -4,9 +4,25 @@
 
 import { factories } from '@strapi/strapi'
 
+import filterSovereigns from '../../../utils/filter-sovereigns';
 
 export default factories
 .createCoreController('api::fishing-protection-level-stat.fishing-protection-level-stat' , ({ strapi }) => ({
+  // TODO TECH-3174: Clean up custom find method
+  async find(ctx) {
+    try {
+      const { query } = ctx;
+
+      let locationFilter = query?.filters?.location;
+      if (locationFilter) {
+          query.filters.location = filterSovereigns({...locationFilter})
+      }
+      return await super.find(ctx)
+    } catch (error) {
+          strapi.log.error('Error fetching ma protection coverage stat data: ' + error?.message, error);
+          return ctx.badRequest('Error fetching protection coverage stat data');
+    }
+  },
   async bulkUpsert(ctx) {
     try {
       const { data } = ctx?.request?.body;

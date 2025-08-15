@@ -11,6 +11,7 @@ import {
 } from '@/types/generated/contentTypes';
 
 import Logger from '../../../utils/Logger';
+import filterSovereigns from '../../../utils/filter-sovereigns';
 
 export const PROTECTION_COVERAGE_STAT_NAMESPACE = 'api::protection-coverage-stat.protection-coverage-stat';
 const DEFAULT_PAGE_SIZE = 25;
@@ -19,6 +20,13 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
     async find(ctx) {
         try {
             const { query } = ctx;
+
+            // TODO TECH-3174: Clean up
+            let locationFilter = query?.filters?.location;
+            if (locationFilter) {
+                query.filters.location = filterSovereigns({...locationFilter})
+            }
+
             // find the most recently updated record and return its updatedAt date
             const updatedAtQuery = {
                 ...query,
