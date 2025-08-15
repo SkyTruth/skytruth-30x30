@@ -310,3 +310,55 @@ class Strapi:
                 }
             )
             raise excep
+
+    def upsert_locations(self, locations: list[dict], options: dict | None = None) -> dict:
+        """
+        Upsert locations.
+
+        Parameters
+        ----------
+        locations : list[dict]
+            List of dictionaries containing all the metadata to be upserted with the locations.
+            If the location is to be created it must contain the following keys:
+            - code: The ISO3 code of the location.
+            - name: The name of the location in Egnlish
+            - name_es: The name of the location in Spanish
+            - name_fr: The name of the location in French
+            - name_pt: The name of the location in Portuguese
+            - total_marine_area: The total marine area of the location in square kilometers.
+            - total_land_area: The total land area of the location in square kilometers.
+            - type: The location type, e.g. "country", "territory", "region", etc. defaults to
+                "territory"
+
+            If the location is to be updated it must contain the following keys:
+            - code: The ISO3 code of the location.
+
+            In either case otional fields are
+            - marine_bounds: list of the bbox of the marine area
+            - terrestiral_bounds: list of the bbox of the terrestrial area
+            - marine_target: int representing the target percent for marine protection
+            - marine_target_year: int represeting the target year for marine protection goal
+        Returns
+        -------
+        dict
+            The response from the API.
+        """
+        try:
+            if options is None:
+                options = {}
+
+            response = requests.post(
+                f"{self.BASE_URL}locations",
+                headers={**self.auth_headers, **self.default_headers},
+                timeout=600,  # Wait ten minutes
+                json={"data": locations, "options": options},
+            )
+            return response.json()
+        except Exception as excep:
+            self.logger.error(
+                {
+                    "message": "Failed to upsert locations",
+                    "exception": str(excep),
+                }
+            )
+            raise excep

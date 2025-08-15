@@ -107,6 +107,13 @@
       "relation": "oneToMany",
       "target": "api::pa.pa",
       "mappedBy": "location"
+    },
+    "name_pt": {
+      "type": "string",
+      "required": true
+    },
+    "has_shared_marine_area": {
+      "type": "boolean"
     }
   }
 }

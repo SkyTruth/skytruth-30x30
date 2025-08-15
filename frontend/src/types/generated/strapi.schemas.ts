@@ -1935,6 +1935,8 @@ export type ProtectionCoverageStatLocationDataAttributes = {
   marine_target?: number;
   marine_target_year?: number;
   pas?: ProtectionCoverageStatLocationDataAttributesPas;
+  name_pt?: string;
+  has_shared_marine_area?: boolean;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: ProtectionCoverageStatLocationDataAttributesCreatedBy;
@@ -3180,6 +3182,8 @@ export type PaChildrenDataItemAttributesLocationDataAttributes = {
   marine_target?: number;
   marine_target_year?: number;
   pas?: PaChildrenDataItemAttributesLocationDataAttributesPas;
+  name_pt?: string;
+  has_shared_marine_area?: boolean;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: PaChildrenDataItemAttributesLocationDataAttributesCreatedBy;
@@ -4160,6 +4164,8 @@ export type MpaaProtectionLevelStatLocationDataAttributes = {
   marine_target?: number;
   marine_target_year?: number;
   pas?: MpaaProtectionLevelStatLocationDataAttributesPas;
+  name_pt?: string;
+  has_shared_marine_area?: boolean;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: MpaaProtectionLevelStatLocationDataAttributesCreatedBy;
@@ -5971,6 +5977,8 @@ export interface Location {
   marine_target?: number;
   marine_target_year?: number;
   pas?: LocationPas;
+  name_pt: string;
+  has_shared_marine_area?: boolean;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: LocationCreatedBy;
@@ -6101,6 +6109,8 @@ export type LocationGroupsDataItemAttributes = {
   marine_target?: number;
   marine_target_year?: number;
   pas?: LocationGroupsDataItemAttributesPas;
+  name_pt?: string;
+  has_shared_marine_area?: boolean;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: LocationGroupsDataItemAttributesCreatedBy;
@@ -7047,6 +7057,8 @@ export type LocationRequestData = {
   marine_target?: number;
   marine_target_year?: number;
   pas?: LocationRequestDataPasItem[];
+  name_pt: string;
+  has_shared_marine_area?: boolean;
 };
 
 export type LegendLegendComponentItemsItem = {
@@ -7814,6 +7826,8 @@ export type HabitatStatLocationDataAttributes = {
   marine_target?: number;
   marine_target_year?: number;
   pas?: HabitatStatLocationDataAttributesPas;
+  name_pt?: string;
+  has_shared_marine_area?: boolean;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: HabitatStatLocationDataAttributesCreatedBy;
@@ -9169,6 +9183,8 @@ export type FishingProtectionLevelStatLocationDataAttributes = {
   marine_target?: number;
   marine_target_year?: number;
   pas?: FishingProtectionLevelStatLocationDataAttributesPas;
+  name_pt?: string;
+  has_shared_marine_area?: boolean;
   createdAt?: string;
   updatedAt?: string;
   createdBy?: FishingProtectionLevelStatLocationDataAttributesCreatedBy;

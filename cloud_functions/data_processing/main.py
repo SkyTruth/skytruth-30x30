@@ -13,12 +13,14 @@ from src.core.params import (
     MARINE_REGIONS_URL,
     verbose,
 )
+from src.methods.database_uploads import upload_locations
 from src.methods.download_and_process import (
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
     process_protected_area_geoms,
 )
+from src.methods.generate_static_tables import generate_locations_table
 from src.methods.generate_tables import (
     generate_fishing_protection_table,
     generate_habitat_protection_table,
@@ -185,6 +187,15 @@ def main(request: Request) -> tuple[str, int]:
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
 
+            case "generate_locations_table":
+                generate_locations_table(verbose=verbose)
+
+            # ------------------
+            #   Database updates
+            # ------------------
+
+            case "update_locations":
+                return upload_locations(request=data, verbose=verbose)
             case _:
                 print(f"METHOD: {method} not a valid option")
 

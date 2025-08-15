@@ -121,7 +121,13 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
             return [];
           }
 
-          const parsedData = data.map((entry) => {
+          const parsedHabitats = new Set();
+          const parsedData = data.reduce((parsed, entry) => {
+            if (parsedHabitats.has(entry.attributes.habitat.data.attributes.slug)) {
+              return parsed;
+            }
+            parsedHabitats.add(entry.attributes.habitat.data.attributes.slug);
+
             const stats = entry?.attributes;
 
             let habitat = stats?.habitat?.data.attributes;
@@ -133,7 +139,7 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
 
             const metadata = habitatMetadatas?.find(({ slug }) => slug === habitat?.slug);
 
-            return {
+            parsed.push({
               title: habitat?.name,
               slug: habitat?.slug,
               background: HABITAT_CHART_COLORS[habitat?.slug],
@@ -142,8 +148,9 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
               info: metadata?.info,
               sources: metadata?.sources,
               updatedAt: stats.updatedAt,
-            };
-          });
+            });
+            return parsed;
+          }, []);
 
           return parsedData
             .sort((d1, d2) => {

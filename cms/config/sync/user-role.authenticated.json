@@ -76,6 +76,9 @@
       "action": "api::layer.layer.update"
     },
     {
+      "action": "api::location.location.bulkUpsert"
+    },
+    {
       "action": "api::location.location.create"
     },
     {

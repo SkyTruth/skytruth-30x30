@@ -1139,7 +1139,9 @@
           "name_fr",
           "marine_target",
           "marine_target_year",
-          "pas"
+          "pas",
+          "name_pt",
+          "has_shared_marine_area"
         ]
       },
       "conditions": [],
@@ -1173,7 +1175,9 @@
           "name_fr",
           "marine_target",
           "marine_target_year",
-          "pas"
+          "pas",
+          "name_pt",
+          "has_shared_marine_area"
         ]
       },
       "conditions": [],
@@ -1200,7 +1204,9 @@
           "name_fr",
           "marine_target",
           "marine_target_year",
-          "pas"
+          "pas",
+          "name_pt",
+          "has_shared_marine_area"
         ]
       },
       "conditions": [],
