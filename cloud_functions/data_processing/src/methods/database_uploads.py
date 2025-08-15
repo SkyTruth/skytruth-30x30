@@ -14,7 +14,7 @@ def upload_locations(
     verbose: bool = True,
 ):
     """
-    Prepares processed locations csv and passes it to Trapi method to update the database
+    Prepares processed locations csv and passes it to Strapi method to update the database
     with data included in the csv.
 
     Preparation inlcudes:

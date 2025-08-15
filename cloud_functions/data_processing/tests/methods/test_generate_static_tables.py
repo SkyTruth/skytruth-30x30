@@ -262,7 +262,7 @@ def test_generate_locations_table_happy(
     )
 
     gen_static_tbl.generate_locations_table(
-        output_file_name="locations.parquet",
+        output_file_name="locations.csv",
         bucket="test-bucket",
         verbose=False,
     )
@@ -270,7 +270,7 @@ def test_generate_locations_table_happy(
     assert len(calls) == 1
     uploaded = calls[0]
     assert uploaded["bucket_name"] == "test-bucket"
-    assert uploaded["destination_blob_name"] == "locations.parquet"
+    assert uploaded["destination_blob_name"] == "locations.csv"
 
     df = uploaded["df"]
 
@@ -287,6 +287,8 @@ def test_generate_locations_table_happy(
     assert str(df["total_terrestrial_area"].dtype) == "Int64"
     assert str(df["total_marine_area"].dtype) == "Int64"
 
+    # Required fields that are present in eez and not gadm so could get lost after merger
+    assert df["total_marine_area"].isna().sum() == 0
     assert df["has_shared_marine_area"].isna().sum() == 0
 
     # make sure regions and soverign roll ups made it in

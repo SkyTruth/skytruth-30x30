@@ -81,13 +81,13 @@ def generate_locations_table(
     gadm["total_terrestrial_area"] = gadm["geometry"].apply(get_area_km2).round(0).astype("Int64")
     gadm["terrestrial_bounds"] = gadm.geometry.bounds.apply(round_to_list, axis=1)
 
-    # Marine area is precomputed for countries with unioque EEZ's but for groups and regions
+    # Marine area is precomputed for countries with unique EEZ's but for groups and regions
     # we ned to calculate to avoid duplicating shared EEZ areas
     marine_area = pd.to_numeric(eez["total_marine_area"], errors="coerce")
     mask = marine_area.isna()
     filled = marine_area.copy()
     filled.loc[mask] = eez.loc[mask, "geometry"].apply(get_area_km2)
-    eez["total_marine_area"] = filled.round(0).astype("Int64")
+    eez["total_marine_area"] = filled
     eez["marine_bounds"] = eez.geometry.bounds.apply(round_to_list, axis=1)
 
     # Put it all together
@@ -101,10 +101,11 @@ def generate_locations_table(
         .drop(columns=["geometry", "COUNTRY", "GID_0"])
     )
 
-    # Typesafe default for has_shared_marine_area
+    # Typesafe defaults that might be missing after merger
     locs["has_shared_marine_area"] = (
         locs.get("has_shared_marine_area").astype("boolean").fillna(False)
     )
+    locs["total_marine_area"] = locs.get("total_marine_area").round(0).fillna(0).astype("Int64")
 
     upload_dataframe(bucket_name=bucket, df=locs, destination_blob_name=output_file_name)
 
