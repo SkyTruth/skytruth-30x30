@@ -253,7 +253,7 @@ def generate_habitat_protection_table(
 
     habitats = habitats[habitats["total_area"] > 0].pipe(rename_habitats)
 
-    upload_dataframe(bucket, habitats, "test_" + file_name_out, project_id=project, verbose=True)
+    upload_dataframe(bucket, habitats, file_name_out, project_id=project, verbose=True)
 
     return habitats.to_dict(orient="records")
 
