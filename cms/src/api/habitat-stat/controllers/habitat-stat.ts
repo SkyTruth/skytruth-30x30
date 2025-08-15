@@ -11,9 +11,14 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
           // TODO TECH-3174: Clean up
         const { query } = ctx;
         let locationFilter = query?.filters?.location;
-        if (locationFilter) {
+        const areTerritoriesActive = await strapi
+            .service('api::feature-flag.feature-flag')
+            .getFeaureFlag(ctx, 'are_territories_active');
+
+        if (locationFilter && !areTerritoriesActive) {
             query.filters.location = filterSovereigns({...locationFilter})
         }
+        
         // find the most recently updated record and return its updatedAt date
         const newQuery = {
             ...ctx.query,

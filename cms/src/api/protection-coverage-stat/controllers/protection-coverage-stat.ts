@@ -23,7 +23,11 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
 
             // TODO TECH-3174: Clean up
             let locationFilter = query?.filters?.location;
-            if (locationFilter) {
+            const areTerritoriesActive = await strapi
+                .service('api::feature-flag.feature-flag')
+                .getFeaureFlag(ctx, 'are_territories_active');
+
+            if (locationFilter && !areTerritoriesActive) {
                 query.filters.location = filterSovereigns({...locationFilter})
             }
 

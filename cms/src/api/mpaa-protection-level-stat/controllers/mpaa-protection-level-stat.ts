@@ -14,7 +14,12 @@ export default factories
         const { query } = ctx;
 
         let locationFilter = query?.filters?.location;
-        if (locationFilter) {
+        
+       const areTerritoriesActive = await strapi
+          .service('api::feature-flag.feature-flag')
+          .getFeaureFlag(ctx, 'are_territories_active');
+
+        if (locationFilter && !areTerritoriesActive) {
             query.filters.location = filterSovereigns({...locationFilter})
         }
         return await super.find(ctx)
