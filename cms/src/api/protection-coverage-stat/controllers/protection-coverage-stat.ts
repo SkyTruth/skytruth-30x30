@@ -20,24 +20,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
     async find(ctx) {
         try {
             const { query } = ctx;
-            console.log("initial", query?.filters?.location)
-            const locationFilter = query?.filter?.location;
-            if (locationFilter) {
-                console.log("Within")
-                const code = locationFilter?.code;
-                if (code && typeof code === 'string' && ALL_TERRITORIES.has(code)) {
-                    query.filter.location = { code: `${code}*` }
-                } else if (code && typeof code === 'object' && code['$eq'] && ALL_TERRITORIES.has(code)) {
-                    query.filter.location = {
-                        code:{
-                            '$eq': `${code}*`
-                        }
-                    }
-                }
-            }
-
             // find the most recently updated record and return its updatedAt date
-            console.log("After", query?.filters?.location)
             const updatedAtQuery = {
                 ...query,
                 fields: ['updatedAt'],
