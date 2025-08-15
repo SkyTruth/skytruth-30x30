@@ -11,7 +11,6 @@ import {
 } from '@/types/generated/contentTypes';
 
 import Logger from '../../../utils/Logger';
-import { ALL_TERRITORIES } from '../../../utils/constants';
 
 export const PROTECTION_COVERAGE_STAT_NAMESPACE = 'api::protection-coverage-stat.protection-coverage-stat';
 const DEFAULT_PAGE_SIZE = 25;
