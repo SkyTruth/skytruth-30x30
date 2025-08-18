@@ -28,6 +28,9 @@ export default factories.createCoreService('api::feature-flag.feature-flag', () 
 
   },
   async getFeaureFlag(ctx, name) {
+    /**
+     * Helper service to extract single feature flag on the backend
+     */
     const { query, request: { header } } = ctx;
     const runAsOf = header['run-as-of'] ?? query['run-as-of']
     const formattedRunAsOf = runAsOf ? new Date(runAsOf) : new Date()

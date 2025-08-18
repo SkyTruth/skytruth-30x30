@@ -77,8 +77,8 @@ const SidebarDetails: FCWithMessages = () => {
     return res;
   }, [locale]);
 
-  const memberCountries = useMemo(() => {
-    const mappedLocs = locationsData?.data[0]?.attributes?.members?.data?.map(({ attributes }) => ({
+  const mapLocationRelations = useCallback((relation: string) => {
+    const mappedLocs = locationsData?.data[0]?.attributes[relation]?.data?.map(({ attributes }) => ({
       code: attributes?.code,
       name: attributes?.[locationNameField],
     }));
@@ -90,18 +90,9 @@ const SidebarDetails: FCWithMessages = () => {
     return mappedLocs?.filter((loc) => !NEW_LOCS.has(loc?.code)); // TODO TECH-3174: Clean up NEW_LOCS filter
   }, [areTerritoriesActive, locationsData?.data, locationNameField]);
 
-  const groupCountries = useMemo(() => {
-    const mappedLocs = locationsData?.data[0]?.attributes?.groups?.data?.map(({ attributes }) => ({
-      code: attributes?.code,
-      name: attributes?.[locationNameField],
-    }));
+  const memberCountries = mapLocationRelations('members');
+  const groupCountries = mapLocationRelations('groups');
 
-    if (areTerritoriesActive) {
-      return mappedLocs;
-    }
-
-    return mappedLocs?.filter((loc) => !NEW_LOCS.has(loc?.code)); // TODO TECH-3174: Clean up NEW_LOCS filter
-  }, [areTerritoriesActive, locationsData?.data, locationNameField]);
 
   const locationName = useMemo(() => {
     const locName = locationsData?.data[0]?.attributes?.[locationNameField];
@@ -111,10 +102,10 @@ const SidebarDetails: FCWithMessages = () => {
       const sovereigns = groupCountries.filter((loc) => loc?.code[loc?.code?.length - 1] === '*');
       const sovLabels = sovereigns.reduce((label, sov, idx) => {
         if (idx === 0) {
-          return label + `Territory of ${locationsState[sov.code.slice(0, -1)][locationNameField]}`;
+          return label + `${t('territory-of')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`;
         }
         return (
-          label + ` also claimed by ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
+          label + ` ${t('also-claimed-by')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
         );
       }, `${locName}, `);
       return sovLabels;
@@ -173,7 +164,7 @@ const SidebarDetails: FCWithMessages = () => {
           onChange={handleLocationSelected}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}
-        {areTerritoriesActive && groupCountries?.length ? 'Related Groups' : ''}
+        {areTerritoriesActive && groupCountries?.length ? t('related-groups') : ''}
         {areTerritoriesActive ? (
           <CountriesList
             className="w-full shrink-0"
@@ -181,7 +172,7 @@ const SidebarDetails: FCWithMessages = () => {
             countries={groupCountries}
           />
         ) : null}
-        {areTerritoriesActive && memberCountries?.length ? 'Territories' : ''}
+        {areTerritoriesActive && memberCountries?.length ? t('related-countries') : ''}
         <CountriesList
           className="w-full shrink-0"
           bgColorClassName="bg-orange"
