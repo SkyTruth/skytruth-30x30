@@ -22,6 +22,10 @@ import { useGetLocations } from '@/types/generated/location';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { ProtectionCoverageStatListResponseMetaPagination } from '@/types/generated/strapi.schemas';
 
+// TODO TECH-3174: Clean up
+import { NEW_LOCS } from '@/constants/territories';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
+
 export type GlobalRegionalTableColumns = {
   location: {
     name: string;
@@ -339,6 +343,42 @@ export const useData = (
   pagination: PaginationState
 ) => {
   const locale = useLocale();
+  // TODO TECH-3174: Clean up,
+  const areTerritoriesActive = useFeatureFlag('are_territories_active')
+  
+
+  // TODO TECH-3174: Clean up, only filter by group code === locationCode
+  const regionLocationFilter = useMemo(() => {
+    console.log("AREETEACT", areTerritoriesActive)
+    if (areTerritoriesActive) {
+
+      return {
+         groups: {
+                code: {
+                  $eq: locationCode,
+
+              },
+            },
+      }
+    }
+  return {
+        $and: [
+          {
+            groups: {
+                code: {
+                  $eq: locationCode,
+
+              },
+            },
+          },
+          {
+            code: {
+              $notIn: [...NEW_LOCS]
+            }
+          }
+        ],
+      }
+}, [locationCode, NEW_LOCS])
 
   const {
     data: locationType,
@@ -417,13 +457,8 @@ export const useData = (
           : {}),
         location: {
           ...(locationType === 'region'
-            ? {
-                groups: {
-                  code: {
-                    $eq: locationCode,
-                  },
-                },
-              }
+
+            ? regionLocationFilter
             : {
                 type: {
                   $in: ['country', 'highseas'],
