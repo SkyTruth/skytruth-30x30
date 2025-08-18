@@ -102,22 +102,22 @@ const SidebarDetails: FCWithMessages = () => {
     const locName = locationsData?.data[0]?.attributes?.[locationNameField];
 
     // TODO TECH-3174: Clean up
-    if (areTerritoriesActive && groupCountries?.length > 0) {
-      const sovereigns = groupCountries.filter((loc) => loc?.code[loc?.code?.length - 1] === '*');
-      const sovLabels = sovereigns.reduce((label, sov, idx) => {
-        if (idx === 0) {
-          return (
-            label +
-            `${t('territory-of')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
-          );
-        }
-        return (
-          label +
-          ` ${t('also-claimed-by')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
-        );
-      }, `${locName}, `);
-      return sovLabels;
-    }
+    // if (areTerritoriesActive && groupCountries?.length > 0) {
+    //   const sovereigns = groupCountries.filter((loc) => loc?.code[loc?.code?.length - 1] === '*');
+    //   const sovLabels = sovereigns.reduce((label, sov, idx) => {
+    //     if (idx === 0) {
+    //       return (
+    //         label +
+    //         `${t('territory-of')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
+    //       );
+    //     }
+    //     return (
+    //       label +
+    //       ` ${t('also-claimed-by')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
+    //     );
+    //   }, `${locName}, `);
+    //   return sovLabels;
+    // }
 
     return locName;
   }, [areTerritoriesActive, groupCountries, locationNameField, t, locationsState, locationsData]);
@@ -172,12 +172,12 @@ const SidebarDetails: FCWithMessages = () => {
           onChange={handleLocationSelected}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}
-        {areTerritoriesActive && groupCountries?.length ? t('related-groups') : ''}
+        {areTerritoriesActive && groupCountries?.length ? "Claimed By" : ''}
         {areTerritoriesActive ? (
           <CountriesList
             className="w-full shrink-0"
             bgColorClassName="bg-orange"
-            countries={groupCountries}
+            countries={groupCountries?.filter((loc) => loc?.code[loc?.code?.length - 1] === '*')}
           />
         ) : null}
         {areTerritoriesActive && memberCountries?.length ? t('related-countries') : ''}
