@@ -371,7 +371,7 @@ export const useData = (
         },
       ],
     };
-  }, [locationCode, NEW_LOCS]);
+  }, [areTerritoriesActive, locationCode]);
 
   const {
     data: locationType,

@@ -77,22 +77,26 @@ const SidebarDetails: FCWithMessages = () => {
     return res;
   }, [locale]);
 
-  const mapLocationRelations = useCallback((relation: string) => {
-    const mappedLocs = locationsData?.data[0]?.attributes[relation]?.data?.map(({ attributes }) => ({
-      code: attributes?.code,
-      name: attributes?.[locationNameField],
-    }));
+  const mapLocationRelations = useCallback(
+    (relation: string) => {
+      const mappedLocs = locationsData?.data[0]?.attributes[relation]?.data?.map(
+        ({ attributes }) => ({
+          code: attributes?.code,
+          name: attributes?.[locationNameField],
+        })
+      );
 
-    if (areTerritoriesActive) {
-      return mappedLocs;
-    }
+      if (areTerritoriesActive) {
+        return mappedLocs;
+      }
 
-    return mappedLocs?.filter((loc) => !NEW_LOCS.has(loc?.code)); // TODO TECH-3174: Clean up NEW_LOCS filter
-  }, [areTerritoriesActive, locationsData?.data, locationNameField]);
+      return mappedLocs?.filter((loc) => !NEW_LOCS.has(loc?.code)); // TODO TECH-3174: Clean up NEW_LOCS filter
+    },
+    [areTerritoriesActive, locationsData?.data, locationNameField]
+  );
 
   const memberCountries = mapLocationRelations('members');
   const groupCountries = mapLocationRelations('groups');
-
 
   const locationName = useMemo(() => {
     const locName = locationsData?.data[0]?.attributes?.[locationNameField];
@@ -102,17 +106,21 @@ const SidebarDetails: FCWithMessages = () => {
       const sovereigns = groupCountries.filter((loc) => loc?.code[loc?.code?.length - 1] === '*');
       const sovLabels = sovereigns.reduce((label, sov, idx) => {
         if (idx === 0) {
-          return label + `${t('territory-of')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`;
+          return (
+            label +
+            `${t('territory-of')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
+          );
         }
         return (
-          label + ` ${t('also-claimed-by')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
+          label +
+          ` ${t('also-claimed-by')} ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
         );
       }, `${locName}, `);
       return sovLabels;
     }
 
     return locName;
-  }, [areTerritoriesActive, groupCountries, locationNameField]);
+  }, [areTerritoriesActive, groupCountries, locationNameField, t, locationsState, locationsData]);
 
   const handleLocationSelected = useCallback(
     (locationCode) => {
