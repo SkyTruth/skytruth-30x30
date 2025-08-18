@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useRouter } from 'next/router';
 
-import { useAtomValue } from 'jotai';
+// import { useAtomValue } from 'jotai';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGES } from '@/constants/pages';
 import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
-import { locationsAtom } from '@/containers/map/store';
+// import { locationsAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
@@ -33,7 +33,7 @@ const SidebarDetails: FCWithMessages = () => {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerScroll = useScrollPosition(containerRef);
-  const locationsState = useAtomValue(locationsAtom);
+  // const locationsState = useAtomValue(locationsAtom);
 
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
@@ -120,7 +120,8 @@ const SidebarDetails: FCWithMessages = () => {
     // }
 
     return locName;
-  }, [areTerritoriesActive, groupCountries, locationNameField, t, locationsState, locationsData]);
+  }, [locationsData, locationNameField]);
+  //[areTerritoriesActive, groupCountries, locationNameField, t, locationsState, locationsData]);
 
   const handleLocationSelected = useCallback(
     (locationCode) => {
@@ -172,7 +173,7 @@ const SidebarDetails: FCWithMessages = () => {
           onChange={handleLocationSelected}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}
-        {areTerritoriesActive && groupCountries?.length ? "Claimed By" : ''}
+        {areTerritoriesActive && groupCountries?.length ? 'Claimed By' : ''}
         {areTerritoriesActive ? (
           <CountriesList
             className="w-full shrink-0"
