@@ -5,7 +5,7 @@ import { atom } from 'jotai';
 import { atomWithReset } from 'jotai/utils';
 
 import { CustomMapProps } from '@/components/map/types';
-import { Layer } from '@/types/generated/strapi.schemas';
+import type { Layer, Location } from '@/types/generated/strapi.schemas';
 import type { ModellingData } from '@/types/modelling';
 
 export const sidebarAtom = atom(true);
@@ -27,6 +27,8 @@ export const drawStateAtom = atomWithReset<{
   status: 'idle',
   feature: null,
 });
+
+export const locationsAtom = atom<Record<string, Location>>({});
 
 // ? modelling state
 export const modellingAtom = atomWithReset<{

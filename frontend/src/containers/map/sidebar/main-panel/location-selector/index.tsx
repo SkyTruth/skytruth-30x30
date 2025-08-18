@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -8,16 +8,20 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { popupAtom } from '@/containers/map/store';
+import { NEW_LOCS } from '@/constants/territories';
+import { locationsAtom, popupAtom } from '@/containers/map/store';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { cn } from '@/lib/classnames';
 import GlobeIcon from '@/styles/icons/globe.svg';
 import MagnifyingGlassIcon from '@/styles/icons/magnifying-glass.svg';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
-import { LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schemas';
+import { Location, LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schemas';
 
 import LocationDropdown from './location-dropdown';
 import LocationTypeToggle from './type-toggle';
+
+// TODO TECH-3174: Clean up
 
 export const FILTERS = {
   all: ['country', 'highseas', 'region', 'worldwide'],
@@ -48,10 +52,14 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     query: { locationCode = 'GLOB' },
   } = useRouter();
 
+  const setLocations = useSetAtom(locationsAtom);
   const setPopup = useSetAtom(popupAtom);
 
   const [locationsFilter, setLocationsFilter] = useState<keyof typeof FILTERS>('all');
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+
+  // TODO TECH-3174: Clean up
+  const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
   const locationNameField = useMemo(() => {
     let res = 'name';
@@ -77,6 +85,19 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       },
     }
   );
+
+  useEffect(() => {
+    if (locationsData?.length) {
+      const mappedLocs = locationsData.reduce(
+        (acc, loc) => {
+          acc[loc.attributes.code] = loc.attributes;
+          return acc;
+        },
+        {} as { code: Location }
+      );
+      setLocations(mappedLocs);
+    }
+  }, [locationsData, setLocations]);
 
   const filtersSearchLabels = useMemo(
     () => ({
@@ -108,12 +129,19 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   }, [locationsData]);
 
   const filteredLocations = useMemo(() => {
-    if (!locationsFilter) return reorderedLocations;
-
-    return reorderedLocations.filter(({ attributes }) =>
-      FILTERS[locationsFilter].includes(attributes.type)
+    if (!locationsFilter) {
+      // TODO TECH-3174: Clean up
+      return areTerritoriesActive
+        ? reorderedLocations
+        : reorderedLocations.filter(({ attributes }) => !NEW_LOCS.has(attributes.code));
+    }
+    return reorderedLocations.filter(
+      ({ attributes }) =>
+        // TODO TECH-3174: Clean up NEW_LOCS filter
+        FILTERS[locationsFilter].includes(attributes.type) &&
+        (areTerritoriesActive || !NEW_LOCS.has(attributes.code))
     );
-  }, [locationsFilter, reorderedLocations]);
+  }, [locationsFilter, reorderedLocations, areTerritoriesActive]);
 
   return (
     <div className={cn('flex gap-3.5', className)}>

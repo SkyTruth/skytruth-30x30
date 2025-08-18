@@ -2,12 +2,16 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useRouter } from 'next/router';
 
+import { useAtomValue } from 'jotai';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGES } from '@/constants/pages';
+import { NEW_LOCS } from '@/constants/territories';
 import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
+import { locationsAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
@@ -23,12 +27,18 @@ import MarineWidgets from './widgets/marine-widgets';
 import SummaryWidgets from './widgets/summary-widgets';
 import TerrestrialWidgets from './widgets/terrestrial-widgets';
 
+// TODO TECH-3174: Clean up
+
 const SidebarDetails: FCWithMessages = () => {
   const locale = useLocale();
   const t = useTranslations('containers.map-sidebar-main-panel');
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerScroll = useScrollPosition(containerRef);
+  const locationsState = useAtomValue(locationsAtom);
+
+  // TODO TECH-3174: Clean up
+  const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
   const {
     push,
@@ -52,6 +62,9 @@ const SidebarDetails: FCWithMessages = () => {
       members: {
         fields: ['code', 'name', 'name_es', 'name_fr'],
       },
+      groups: {
+        fields: ['code', 'name', 'name_es', 'name_fr'],
+      },
     },
   });
 
@@ -67,11 +80,50 @@ const SidebarDetails: FCWithMessages = () => {
   }, [locale]);
 
   const memberCountries = useMemo(() => {
-    return locationsData?.data[0]?.attributes?.members?.data?.map(({ attributes }) => ({
+    const mappedLocs = locationsData?.data[0]?.attributes?.members?.data?.map(({ attributes }) => ({
       code: attributes?.code,
       name: attributes?.[locationNameField],
     }));
-  }, [locationsData?.data, locationNameField]);
+
+    if (areTerritoriesActive) {
+      return mappedLocs;
+    }
+
+    return mappedLocs?.filter((loc) => !NEW_LOCS.has(loc?.code)); // TODO TECH-3174: Clean up NEW_LOCS filter
+  }, [areTerritoriesActive, locationsData?.data, locationNameField]);
+
+  const groupCountries = useMemo(() => {
+    const mappedLocs = locationsData?.data[0]?.attributes?.groups?.data?.map(({ attributes }) => ({
+      code: attributes?.code,
+      name: attributes?.[locationNameField],
+    }));
+
+    if (areTerritoriesActive) {
+      return mappedLocs;
+    }
+
+    return mappedLocs?.filter((loc) => !NEW_LOCS.has(loc?.code)); // TODO TECH-3174: Clean up NEW_LOCS filter
+  }, [areTerritoriesActive, locationsData?.data, locationNameField]);
+
+  const locationName = useMemo(() => {
+    const locName = locationsData?.data[0]?.attributes?.[locationNameField];
+
+    // TODO TECH-3174: Clean up
+    if (areTerritoriesActive && groupCountries?.length > 0) {
+      const sovereigns = groupCountries.filter((loc) => loc?.code[loc?.code?.length - 1] === '*');
+      const sovLabels = sovereigns.reduce((label, sov, idx) => {
+        if (idx === 0) {
+          return label + `Territory of ${locationsState[sov.code.slice(0, -1)][locationNameField]}`;
+        }
+        return (
+          label + ` also claimed by ${locationsState[sov.code.slice(0, -1)][locationNameField]}`
+        );
+      }, `${locName}, `);
+      return sovLabels;
+    }
+
+    return locName;
+  }, [areTerritoriesActive, groupCountries, locationNameField]);
 
   const handleLocationSelected = useCallback(
     (locationCode) => {
@@ -114,7 +166,7 @@ const SidebarDetails: FCWithMessages = () => {
             'text-xl': containerScroll > 0,
           })}
         >
-          {locationsData?.data[0]?.attributes?.[locationNameField]}
+          {locationName}
         </h1>
         <LocationSelector
           className="flex-shrink-0"
@@ -122,6 +174,16 @@ const SidebarDetails: FCWithMessages = () => {
           size={containerScroll > 0 ? 'small' : 'default'}
           onChange={handleLocationSelected}
         />
+        {/* TODO TECH-3174: Clean up Feature flag checks */}
+        {areTerritoriesActive && groupCountries?.length ? 'Related Groups' : ''}
+        {areTerritoriesActive ? (
+          <CountriesList
+            className="w-full shrink-0"
+            bgColorClassName="bg-orange"
+            countries={groupCountries}
+          />
+        ) : null}
+        {areTerritoriesActive && memberCountries?.length ? 'Territories' : ''}
         <CountriesList
           className="w-full shrink-0"
           bgColorClassName="bg-orange"

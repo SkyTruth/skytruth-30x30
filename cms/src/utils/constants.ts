@@ -1,4 +1,5 @@
- export const ALL_TERRITORIES: Set<string> = new Set([
+// TODO TECH-3174: Clean up
+export const ALL_TERRITORIES: Set<string> = new Set([
   "ARG",
   "AUS",
   "CHN",
