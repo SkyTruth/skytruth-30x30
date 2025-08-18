@@ -7,11 +7,11 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGES } from '@/constants/pages';
-import { NEW_LOCS } from '@/constants/territories';
+import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
 import { locationsAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
@@ -26,8 +26,6 @@ import DetailsButton from './details-button';
 import MarineWidgets from './widgets/marine-widgets';
 import SummaryWidgets from './widgets/summary-widgets';
 import TerrestrialWidgets from './widgets/terrestrial-widgets';
-
-// TODO TECH-3174: Clean up
 
 const SidebarDetails: FCWithMessages = () => {
   const locale = useLocale();

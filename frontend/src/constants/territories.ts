@@ -13,14 +13,6 @@ export const SOVEREIGNS: Set<string> = new Set([
   'USA',
 ]);
 // TODO TECH-3174: Clean up
-/**
- * WILL, ON MONDAT USE THIS TO FILTER THE DATA FETCHES FOR THE INSIGHTS TABLE AND FOR THE
- * THE LOCATION SELECTOR AND THE LIST OF RELATED COUNTRIES IN THE SIDE PANEL.
- * DO THIS ALL GATED BEHIND THE FEATURE FLAG...
- *
- *
- * DRINK COFFEE!
- */
 export const NEW_LOCS: Set<string> = new Set([
   'PO', // The one new Region
   'ABW',
