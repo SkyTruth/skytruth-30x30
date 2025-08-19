@@ -32,7 +32,8 @@
 
 #     Args:
 #         data_path (Path): The path to the file.
-#         output_path (Union[Path, None], optional): The path to the output file. The default is None.
+#         output_path (Union[Path, None], optional): The path to the output file. 
+# The default is None.
 #         update (bool, optional): Whether to update the mbtiles file. The default is False.
 
 #     Returns:
