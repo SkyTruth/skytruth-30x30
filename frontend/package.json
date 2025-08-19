@@ -1,6 +1,6 @@
 {
   "name": "skytruth-30x30-frontend",
-  "version": "0.1.10",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "yarn types && next dev",

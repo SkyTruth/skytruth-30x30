@@ -4,8 +4,30 @@
 
 import { factories } from '@strapi/strapi'
 
+import filterSovereigns from '../../../utils/filter-sovereigns';
+
 export default factories
   .createCoreController('api::mpaa-protection-level-stat.mpaa-protection-level-stat', ({ strapi }) => ({
+    // TODO TECH-3174: Clean up custom find method
+    async find(ctx) {
+      try {
+        const { query } = ctx;
+
+        let locationFilter = query?.filters?.location;
+        
+       const areTerritoriesActive = await strapi
+          .service('api::feature-flag.feature-flag')
+          .getFeaureFlag(ctx, 'are_territories_active');
+
+        if (locationFilter && !areTerritoriesActive) {
+            query.filters.location = filterSovereigns({...locationFilter})
+        }
+        return await super.find(ctx)
+      } catch (error) {
+            strapi.log.error('Error fetching ma protection coverage stat data: ' + error?.message, error);
+            return ctx.badRequest('Error fetching protection coverage stat data');
+      }
+    },
     async bulkUpsert(ctx) {
       try {
         const { data } = ctx.request?.body;

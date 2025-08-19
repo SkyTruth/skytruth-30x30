@@ -5,7 +5,7 @@ import { atom } from 'jotai';
 import { atomWithReset } from 'jotai/utils';
 
 import { CustomMapProps } from '@/components/map/types';
-import { Layer } from '@/types/generated/strapi.schemas';
+import type { Layer } from '@/types/generated/strapi.schemas';
 import type { ModellingData } from '@/types/modelling';
 
 export const sidebarAtom = atom(true);
