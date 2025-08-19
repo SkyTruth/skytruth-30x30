@@ -49,6 +49,7 @@ def patched_all(monkeypatch, call_log):
         "generate_protection_coverage_stats_table",
         "generate_marine_protection_level_stats_table",
         "generate_fishing_protection_table",
+        "upload_locations",
     ]
     for name in simple_targets:
         monkeypatch.setattr(
@@ -89,12 +90,17 @@ def patched_all(monkeypatch, call_log):
             "generate_marine_protection_level_stats_table",
         ),
         ("generate_fishing_protection_table", "generate_fishing_protection_table"),
+        ("update_locations", "upload_locations"),
     ],
 )
 def test_single_call_methods_route_and_pass_verbose(patched_all, method, expected_call):
     """Each simple METHOD should call exactly one target with only verbose kwarg."""
     resp = main.main(MockRequest({"METHOD": method}))
-    assert resp == ("OK", 200)
+
+    if method == "update_locations":
+        assert resp == {"ok": True}  # Catch because update locations passes on its return value
+    else:
+        assert resp == ("OK", 200)
 
     # Exactly one call recorded
     assert len(patched_all) == 1
@@ -220,6 +226,108 @@ def test_downloader_zip_routes(patched_all, method, expected, extra):
         chunk_size=expected["chunk_size"](main),
         extra_kwargs={k: v(main) for k, v in extra.items()} if extra else None,
     )
+
+
+def _make_mock_strapi(recorder):
+    """
+    Build a fake Strapi class that records instantiation and exposes the upsert methods.
+    """
+
+    class MockClient:
+        def __init__(self):
+            recorder["instantiated"] = recorder.get("instantiated", 0) + 1
+
+        # These methods won't be invoked by main; only passed as upload_function.
+        # We still provide them to allow isinstance/identity checks.
+        def upsert_protection_coverage_stats(self, *a, **k):
+            pass
+
+        def upsert_mpaa_protection_level_stats(self, *a, **k):
+            pass
+
+        def upsert_fishing_protection_level_stats(self, *a, **k):
+            pass
+
+        def upsert_habitat_stats(self, *a, **k):
+            pass
+
+    return MockClient
+
+
+def _patch_upload_stats_to_recorder(monkeypatch, recorder):
+    def mock_upload_stats(*, filename, upload_function, verbose=True, **_):
+        recorder["filename"] = filename
+        recorder["upload_function"] = upload_function
+        recorder["verbose"] = verbose
+        return ("STATS_OK", 201)
+
+    monkeypatch.setattr(main, "upload_stats", mock_upload_stats, raising=True)
+
+
+@pytest.mark.parametrize(
+    "method, expected_filename_attr, client_method_name",
+    [
+        (
+            "update_protection_coverage_stats",
+            "PROTECTION_COVERAGE_FILE_NAME",
+            "upsert_protection_coverage_stats",
+        ),
+        (
+            "update_mpaa_protection_level_stats",
+            "PROTECTION_LEVEL_FILE_NAME",
+            "upsert_mpaa_protection_level_stats",
+        ),
+        (
+            "update_fishing_protection_stats",
+            "FISHING_PROTECTION_FILE_NAME",
+            "upsert_fishing_protection_level_stats",
+        ),
+        (
+            "update_habitat_protection_stats",
+            "HABITAT_PROTECTION_FILE_NAME",
+            "upsert_habitat_stats",
+        ),
+    ],
+)
+def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
+    monkeypatch, method, expected_filename_attr, client_method_name
+):
+    """
+    Each update_*_stats route should:
+      - instantiate Strapi()
+      - call upload_stats(filename=<CONST>, upload_function=<client.bound_method>, 
+        verbose=module.verbose)
+      - return whatever upload_stats returns
+    """
+    recorder = {}
+
+    # Patch Strapi to our fake class
+    MockStrapi = _make_mock_strapi(recorder)
+    monkeypatch.setattr(main, "Strapi", MockStrapi, raising=True)
+
+    # Patch upload_stats to a recorder
+    _patch_upload_stats_to_recorder(monkeypatch, recorder)
+
+    resp = main.main(MockRequest({"METHOD": method}))
+    assert resp == ("STATS_OK", 201)
+
+    # Strapi was instantiated exactly once
+    assert recorder.get("instantiated", 0) == 1
+
+    expected_filename = getattr(main, expected_filename_attr)
+    assert recorder["filename"] == expected_filename
+
+    upload_fn = recorder["upload_function"]
+    assert callable(upload_fn)
+    # Method name matches expected
+    assert getattr(upload_fn, "__name__", "") == client_method_name
+    # Ensure the function is bound (has __self__ set to the MockStrapi instance)
+    # this makes sure the API call will be authenticated, since teh auth is tied to
+    # the class instance
+    assert getattr(upload_fn, "__self__", None).__class__ is MockStrapi
+
+    # Verbose propagated from module
+    assert recorder["verbose"] is main.verbose
 
 
 # Non-invoking / generic flows
