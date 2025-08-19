@@ -126,7 +126,7 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
                 errors: errors.length > 0 ? errors : null,
             });
         } catch (error) {
-            strapi.log.error('Error in habitat-stat bulkUpsert:', {error: error?.message });
+            strapi.log.error('Error in habitat-stat bulkUpsert:', error);
             return ctx.internalServerError('An internal server error occurred during bulk upsert');
         }
     }
