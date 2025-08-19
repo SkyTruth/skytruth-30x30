@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 import src.methods.database_uploads as db_uploads
 
@@ -139,3 +140,81 @@ def test_upload_locations_happy_path(monkeypatch):
     assert row2["groups"] == ["OCE"]
     assert row2["marine_bounds"] == [0.0, 0.0, 10.0, 10.0]
     assert row2["members"] == []
+
+
+def test_upload_stats_happy_path(monkeypatch, capsys):
+    df = pd.DataFrame(
+        [
+            {"code": "AAA", "val": 1},
+            {"code": "BBB", "val": 2},
+        ]
+    )
+
+    captured = {}
+
+    def mock_read_dataframe(*, bucket_name, filename, **kwargs):
+        captured["bucket_name"] = bucket_name
+        captured["filename"] = filename
+        return df
+
+    def mock_upload_function(payload):
+        captured["payload"] = payload
+        return {"ok": True, "count": len(payload)}
+
+    monkeypatch.setattr(db_uploads, "read_dataframe", mock_read_dataframe, raising=True)
+
+    res = db_uploads.upload_stats(
+        filename="stats.csv",
+        upload_function=mock_upload_function,
+        bucket="test-bucket",
+        verbose=True,
+    )
+
+    assert captured["bucket_name"] == "test-bucket"
+    assert captured["filename"] == "stats.csv"
+    assert captured["payload"] == df.to_dict(orient="records")
+    assert res == {"ok": True, "count": 2}
+
+    # Assert: printed message when verbose=True
+    out = capsys.readouterr().out
+    assert "Uploading stats from stats.csv via the API" in out
+
+
+def test_upload_stats_silent(monkeypatch, capsys):
+    df = pd.DataFrame([{"x": 1}])
+
+    monkeypatch.setattr(db_uploads, "read_dataframe", lambda **_: df, raising=True)
+
+    def mock_upload(payload):
+        return {"ok": True}
+
+    _ = db_uploads.upload_stats(
+        filename="no-prints.csv",
+        upload_function=mock_upload,
+        bucket="bucket",
+        verbose=False,
+    )
+
+    out = capsys.readouterr().out
+    assert out == ""
+
+
+def test_upload_stats_propagates_read_errors(monkeypatch):
+    def failing_read(**kwargs):
+        raise RuntimeError("broken while reading")
+
+    monkeypatch.setattr(db_uploads, "read_dataframe", failing_read, raising=True)
+
+    with pytest.raises(RuntimeError, match="broken while reading"):
+        db_uploads.upload_stats(filename="x.csv", upload_function=lambda _: None, bucket="b")
+
+
+def test_upload_stats_propagates_upload_errors(monkeypatch):
+    df = pd.DataFrame([{"a": 1}])
+    monkeypatch.setattr(db_uploads, "read_dataframe", lambda **_: df, raising=True)
+
+    def failing_upload(_payload):
+        raise ValueError("upload failed")
+
+    with pytest.raises(ValueError, match="upload failed"):
+        db_uploads.upload_stats(filename="x.csv", upload_function=failing_upload, bucket="b")

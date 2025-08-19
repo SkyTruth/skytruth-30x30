@@ -114,10 +114,19 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
 
                 for (const stat of data) {
                     const { location, environment, ...attributes } = stat;
-                    if (!location || !environment) {
-                        Logger.error('Skipping stat without location or environment', stat);
+                    if (!environment) {
+                        Logger.error('Skipping stat without environment', stat);
                         errors.push({
-                            message: 'Missing location or environment',
+                            message: 'Missing environment',
+                            stat
+                        });
+                        continue;
+                    }
+
+                    if (!location) {
+                        Logger.error('Skipping stat without location', stat);
+                        errors.push({
+                            message: 'Missing location',
                             stat
                         });
                         continue;
