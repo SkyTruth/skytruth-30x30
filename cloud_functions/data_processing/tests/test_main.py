@@ -98,7 +98,8 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     resp = main.main(MockRequest({"METHOD": method}))
 
     if method == "update_locations":
-        assert resp == {"ok": True}  # Catch because update locations passes on its return value
+        # Split this out because update_locations passes on its return value
+        assert resp == {"ok": True}
     else:
         assert resp == ("OK", 200)
 
@@ -322,7 +323,7 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     # Method name matches expected
     assert getattr(upload_fn, "__name__", "") == client_method_name
     # Ensure the function is bound (has __self__ set to the MockStrapi instance)
-    # this makes sure the API call will be authenticated, since teh auth is tied to
+    # this makes sure the API call will be authenticated, since the auth is tied to
     # the class instance
     assert getattr(upload_fn, "__self__", None).__class__ is MockStrapi
 

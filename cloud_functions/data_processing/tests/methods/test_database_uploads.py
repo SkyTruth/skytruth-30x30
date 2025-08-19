@@ -143,7 +143,6 @@ def test_upload_locations_happy_path(monkeypatch):
 
 
 def test_upload_stats_happy_path(monkeypatch, capsys):
-    # Arrange: fake DataFrame returned by read_dataframe
     df = pd.DataFrame(
         [
             {"code": "AAA", "val": 1},
@@ -153,35 +152,27 @@ def test_upload_stats_happy_path(monkeypatch, capsys):
 
     captured = {}
 
-    def fake_read_dataframe(*, bucket_name, filename, **kwargs):
-        # capture what was passed in
+    def mock_read_dataframe(*, bucket_name, filename, **kwargs):
         captured["bucket_name"] = bucket_name
         captured["filename"] = filename
         return df
 
-    # This will record the payload and return a canned result
-    def fake_upload_function(payload):
+    def mock_upload_function(payload):
         captured["payload"] = payload
         return {"ok": True, "count": len(payload)}
 
-    monkeypatch.setattr(db_uploads, "read_dataframe", fake_read_dataframe, raising=True)
+    monkeypatch.setattr(db_uploads, "read_dataframe", mock_read_dataframe, raising=True)
 
-    # Act
     res = db_uploads.upload_stats(
         filename="stats.csv",
-        upload_function=fake_upload_function,
+        upload_function=mock_upload_function,
         bucket="test-bucket",
         verbose=True,
     )
 
-    # Assert: read_dataframe called with our args
     assert captured["bucket_name"] == "test-bucket"
     assert captured["filename"] == "stats.csv"
-
-    # Assert: payload is list-of-dicts from df.to_dict(orient="records")
     assert captured["payload"] == df.to_dict(orient="records")
-
-    # Assert: return value is passthrough from upload_function
     assert res == {"ok": True, "count": 2}
 
     # Assert: printed message when verbose=True
