@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -9,14 +9,14 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
-import { locationsAtom, popupAtom } from '@/containers/map/store';
+import { popupAtom } from '@/containers/map/store';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import { cn } from '@/lib/classnames';
 import GlobeIcon from '@/styles/icons/globe.svg';
 import MagnifyingGlassIcon from '@/styles/icons/magnifying-glass.svg';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
-import { Location, LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schemas';
+import { LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schemas';
 
 import LocationDropdown from './location-dropdown';
 import LocationTypeToggle from './type-toggle';
@@ -50,7 +50,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     query: { locationCode = 'GLOB' },
   } = useRouter();
 
-  const setLocations = useSetAtom(locationsAtom);
   const setPopup = useSetAtom(popupAtom);
 
   const [locationsFilter, setLocationsFilter] = useState<keyof typeof FILTERS>('all');
@@ -83,19 +82,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       },
     }
   );
-
-  useEffect(() => {
-    if (locationsData?.length) {
-      const mappedLocs = locationsData.reduce(
-        (acc, loc) => {
-          acc[loc.attributes.code] = loc.attributes;
-          return acc;
-        },
-        {} as { code: Location }
-      );
-      setLocations(mappedLocs);
-    }
-  }, [locationsData, setLocations]);
 
   const filtersSearchLabels = useMemo(
     () => ({
