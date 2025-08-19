@@ -5,15 +5,23 @@ from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
     EEZ_PARAMS,
+    FISHING_PROTECTION_FILE_NAME,
     GADM_URL,
     GADM_ZIPFILE_NAME,
+    HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
+    PROTECTION_COVERAGE_FILE_NAME,
+    PROTECTION_LEVEL_FILE_NAME,
     verbose,
 )
-from src.methods.database_uploads import upload_locations
+from src.core.strapi import Strapi
+from src.methods.database_uploads import (
+    upload_locations,
+    upload_stats,
+)
 from src.methods.download_and_process import (
     download_mpatlas,
     download_protected_planet,
@@ -196,6 +204,39 @@ def main(request: Request) -> tuple[str, int]:
 
             case "update_locations":
                 return upload_locations(request=data, verbose=verbose)
+
+            case "update_protection_coverage_stats":
+                client = Strapi()
+                return upload_stats(
+                    filename=PROTECTION_COVERAGE_FILE_NAME,
+                    upload_function=client.upsert_protection_coverage_stats,
+                    verbose=verbose,
+                )
+
+            case "update_mpaa_protection_level_stats":
+                client = Strapi()
+                return upload_stats(
+                    filename=PROTECTION_LEVEL_FILE_NAME,
+                    upload_function=client.upsert_mpaa_protection_level_stats,
+                    verbose=verbose,
+                )
+
+            case "update_fishing_protection_stats":
+                client = Strapi()
+                return upload_stats(
+                    filename=FISHING_PROTECTION_FILE_NAME,
+                    upload_function=client.upsert_fishing_protection_level_stats,
+                    verbose=verbose,
+                )
+
+            case "update_habitat_protection_stats":
+                client = Strapi()
+                return upload_stats(
+                    filename=HABITAT_PROTECTION_FILE_NAME,
+                    upload_function=client.upsert_habitat_stats,
+                    verbose=verbose,
+                )
+
             case _:
                 print(f"METHOD: {method} not a valid option")
 

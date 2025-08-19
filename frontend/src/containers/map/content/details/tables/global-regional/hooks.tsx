@@ -9,11 +9,13 @@ import FiltersButton from '@/components/filters-button';
 import type { Source } from '@/components/tooltip-button';
 import Icon from '@/components/ui/icon';
 import { PAGES } from '@/constants/pages';
+import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import HeaderItem from '@/containers/map/content/details/table/header-item';
 import { cellFormatter } from '@/containers/map/content/details/table/helpers';
 import SortingButton from '@/containers/map/content/details/table/sorting-button';
 import TooltipButton from '@/containers/map/content/details/table/tooltip-button';
 import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 import { useGetDataInfos } from '@/types/generated/data-info';
@@ -339,6 +341,38 @@ export const useData = (
   pagination: PaginationState
 ) => {
   const locale = useLocale();
+  // TODO TECH-3174: Clean up,
+  const areTerritoriesActive = useFeatureFlag('are_territories_active');
+
+  // TODO TECH-3174: Clean up, only filter by group code === locationCode
+  const regionLocationFilter = useMemo(() => {
+    if (areTerritoriesActive) {
+      return {
+        groups: {
+          code: {
+            $eq: locationCode,
+          },
+        },
+      };
+    }
+
+    return {
+      $and: [
+        {
+          groups: {
+            code: {
+              $eq: locationCode,
+            },
+          },
+        },
+        {
+          code: {
+            $notIn: [...NEW_LOCS],
+          },
+        },
+      ],
+    };
+  }, [areTerritoriesActive, locationCode]);
 
   const {
     data: locationType,
@@ -417,13 +451,7 @@ export const useData = (
           : {}),
         location: {
           ...(locationType === 'region'
-            ? {
-                groups: {
-                  code: {
-                    $eq: locationCode,
-                  },
-                },
-              }
+            ? regionLocationFilter
             : {
                 type: {
                   $in: ['country', 'highseas'],
