@@ -115,6 +115,7 @@ ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted
 WDPA_API_URL = "http://api.protectedplanet.net/v3/"
 WDPA_URL = f"https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_{today_formatted}_Public.zip"
 WDPA_FILE_NAME = "raw/WDPA_Public.zip"
+WDPA_META_FILE_NAME = "raw/wdpa_metadata.csv"
 ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
 WDPA_COUNTRY_LEVEL_FILE_NAME = "raw/WDPA_country_level.csv"
 ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_country_level.csv"

@@ -22,6 +22,7 @@ from src.core.params import (
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_META_FILE_NAME,
     MPATLAS_URL,
     PP_API_KEY,
     PROJECT,
@@ -34,6 +35,7 @@ from src.core.params import (
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_URL,
     WDPA_MARINE_FILE_NAME,
+    WDPA_META_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_URL,
     today_formatted,
@@ -67,6 +69,7 @@ def download_mpatlas(
     bucket: str = BUCKET,
     project: str = PROJECT,
     mpatlas_filename: str = MPATLAS_FILE_NAME,
+    meta_filename: str = MPATLAS_META_FILE_NAME,
     archive_mpatlas_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
     mpatlas_country_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
     mpatlas_country_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
@@ -85,6 +88,7 @@ def download_mpatlas(
         url,
         bucket,
         mpatlas_filename,
+        meta_filename,
         archive_mpatlas_filename,
         verbose,
     )
@@ -321,11 +325,13 @@ def download_protected_planet(
 
 
 def process_protected_area_geoms(
+    metadata_file_name: str = WDPA_META_FILE_NAME,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     wdpa_file_name: str = WDPA_FILE_NAME,
     bucket: str = BUCKET,
     tolerances: list | tuple = TOLERANCES,
+    project: str = PROJECT,
     verbose: bool = True,
 ):
     def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -346,6 +352,17 @@ def process_protected_area_geoms(
         wdpa_file_name,
         bucket,
         layers=[f"WDPA_poly_{today_formatted}", f"WDPA_point_{today_formatted}"],
+    )
+
+    if verbose:
+        print(f"saving PA metadata to {metadata_file_name}")
+
+    upload_dataframe(
+        bucket,
+        wdpa.drop(columns="geometry"),
+        metadata_file_name,
+        project_id=project,
+        verbose=verbose,
     )
 
     if verbose:
