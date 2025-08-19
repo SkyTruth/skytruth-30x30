@@ -295,7 +295,7 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     """
     Each update_*_stats route should:
       - instantiate Strapi()
-      - call upload_stats(filename=<CONST>, upload_function=<client.bound_method>, 
+      - call upload_stats(filename=<CONST>, upload_function=<client.bound_method>,
         verbose=module.verbose)
       - return whatever upload_stats returns
     """
