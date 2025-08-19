@@ -20,7 +20,9 @@ from src.core.params import (
     CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_META_FILE_NAME,
     MPATLAS_URL,
+    PROJECT,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -32,6 +34,7 @@ from src.utils.gcp import (
     read_dataframe,
     read_json_from_gcs,
     save_file_bucket,
+    upload_dataframe,
 )
 from src.utils.geo import compute_pixel_area_map_km2
 
@@ -225,7 +228,9 @@ def download_mpatlas_zone(
     url: str = MPATLAS_URL,
     bucket: str = BUCKET,
     filename: str = MPATLAS_FILE_NAME,
+    meta_filename: str = MPATLAS_META_FILE_NAME,
     archive_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
+    project: str = PROJECT,
     verbose: bool = True,
 ) -> None:
     """
@@ -250,6 +255,10 @@ def download_mpatlas_zone(
 
     response = requests.get(url)
     response.raise_for_status()
+
+    data = response.json()["features"]
+    meta = pd.DataFrame([{**{"id": d["id"]}, **d["properties"]} for d in data])
+    upload_dataframe(bucket, meta, meta_filename, project_id=project, verbose=verbose)
 
     if verbose:
         print(f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}")

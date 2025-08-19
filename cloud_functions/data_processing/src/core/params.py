@@ -92,6 +92,7 @@ LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
 
 MPATLAS_URL = "https://guide.mpatlas.org/api/v2/zone/geojson"
 MPATLAS_FILE_NAME = "raw/mpatlas_zone_assessment.geojson"
+MPATLAS_META_FILE_NAME = "raw/mpatlas_metadata.csv"
 ARCHIVE_MPATLAS_FILE_NAME = f"archive/raw/mpatlas_zone_assessment_{today_formatted}.geojson"
 MPATLAS_COUNTRY_LEVEL_API_URL = "https://mpatlas.org/api/v1/internal/countries"
 MPATLAS_COUNTRY_LEVEL_FILE_NAME = "raw/mpatlas_country_level.csv"
