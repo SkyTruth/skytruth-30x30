@@ -1,10 +1,11 @@
 # import subprocess
 
 # def json2mbtiles(
-#     source_path: Path, output_path: Union[Path, None] = None, **kwargs: ExcessParams
-# ) -> Path:
-#     if not output_path:
-#         output_path = source_path.with_suffix(".json")
+#     bucket: str,
+#     input_file: str,
+#     output_file: str,
+# ) -> None:
+
 #     # https://github.com/mapbox/tippecanoe
 #     # -zg: Automatically choose a maxzoom that should be sufficient to clearly distinguish the
 #     #   features and the detail within each feature
@@ -13,12 +14,12 @@
 #     # -o: The following argurment is hte output path
 #     # -ae:  Increase the maxzoom if features are still being dropped at that zoom level
 #     subprocess.run(
-#         f"tippecanoe -zg -f -P -o {output_path} -ae {source_path}",
+#         f"tippecanoe -zg -f -P -o {output_file} -ae {input_file}",
 #         shell=True,
 #         check=True,
 #     )
-#     source_path.unlink()
-#     return output_path
+#     input_file.unlink()
+#     # return output_path
 
 
 # def mbtileGeneration(
