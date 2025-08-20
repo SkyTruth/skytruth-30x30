@@ -11,13 +11,19 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
     // TODO TECH-3174: Clean up
     const { query } = ctx;
     let locationFilter = query?.filters?.location;
+    let childLocationFilters = query?.populate?.children?.filters?.location;
     const areTerritoriesActive = await strapi
         .service('api::feature-flag.feature-flag')
         .getFeaureFlag(ctx, 'are_territories_active');
 
     if (locationFilter && !areTerritoriesActive) {
-        query.filters.location = filterSovereigns({...locationFilter})
+        query.filters.location = filterSovereigns({...locationFilter});
     }
+
+    if (childLocationFilters && !areTerritoriesActive) {
+        query.populate.children.filters.location = filterSovereigns({...childLocationFilters})
+    }
+
     if (ctx.query['keep-if-children-match']) {
       // In addition to the controller's default behavior, we also want to keep the rows for which
       // there is at least one child that matches the filters. For this, we'll use the `children`
@@ -49,7 +55,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
         limit: -1,
       }) as { id: number; parent: { id: number } }[]).map((d) => d.parent.id);
 
-      const uniqueParentIds = [...new Set(parentIds)];
+      const uniqueParentIds = [...new Set(parentIds)];555577434
 
       // Then, we get the list of all parents that match the initial request or the ones for which
       // children match, using the list of ids `uniqueParentIds`.
