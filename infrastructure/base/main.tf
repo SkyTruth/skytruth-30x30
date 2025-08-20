@@ -30,6 +30,8 @@ module "staging" {
   analysis_function_max_instance_request_concurrency = 10
   analysis_function_available_memory                 = "256M"
   data_processing_timeout_seconds                    = 3600
+  data_processing_available_memory                   = "16G"
+  data_processing_available_cpu                      = 4
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "staging"
   database_name                                      = "strapi"
@@ -60,6 +62,8 @@ module "production" {
   analysis_function_max_instance_request_concurrency = 10
   analysis_function_available_memory                 = "256M"
   data_processing_timeout_seconds                    = 3600
+  data_processing_available_memory                   = "16G"
+  data_processing_available_cpu                      = 4
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "production"
   database_name                                      = "strapi"
