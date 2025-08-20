@@ -55,7 +55,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
         limit: -1,
       }) as { id: number; parent: { id: number } }[]).map((d) => d.parent.id);
 
-      const uniqueParentIds = [...new Set(parentIds)];555577434
+      const uniqueParentIds = [...new Set(parentIds)];
 
       // Then, we get the list of all parents that match the initial request or the ones for which
       // children match, using the list of ids `uniqueParentIds`.
