@@ -32,6 +32,7 @@ module "staging" {
   data_processing_timeout_seconds                    = 3600
   data_processing_available_memory                   = "16G"
   data_processing_available_cpu                      = 4
+  mapbox_user                                        = "skytruth"
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "staging"
   database_name                                      = "strapi"
@@ -64,6 +65,7 @@ module "production" {
   data_processing_timeout_seconds                    = 3600
   data_processing_available_memory                   = "16G"
   data_processing_available_cpu                      = 4
+  mapbox_user                                        = "skytruth"
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "production"
   database_name                                      = "strapi"
