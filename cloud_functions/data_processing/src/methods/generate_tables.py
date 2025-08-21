@@ -240,7 +240,88 @@ def generate_protected_areas_table(
 
     protected_areas = pd.concat(results, ignore_index=True)
 
-    return protected_areas.to_dict(orient="records")
+    return protected_areas
+
+
+def database_updates(current_db, updated_pas):
+    def str_dif_idx(df1, df2, col):
+        return (~df2[col].isnull()) & (df2[col] != df1[col])
+
+    def area_dif_idx(df1, df2):
+        return (~df2["area"].isna()) & (
+            (df1["area"].isna()) | (abs(df2["area"] - df1["area"]) / df1["area"] > 0.01)
+        )
+
+    def list_dict_dif_idx(df1, df2, col):
+        p1 = df1[col]
+        p2 = df2[col]
+        both_na = p1.isna() & p2.isna()
+        dif = p1.ne(p2)
+        return (~both_na) & dif
+
+    new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
+    deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
+    static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
+
+    static_current = (
+        current_db[current_db["identifier"].isin(static)]
+        .sort_values(by="identifier")
+        .reset_index(drop=True)
+    )
+    static_updated = (
+        updated_pas[updated_pas["identifier"].isin(static)]
+        .sort_values(by="identifier")
+        .reset_index(drop=True)
+    )
+
+    change_indx = (
+        str_dif_idx(static_current, static_updated, "designation")
+        | str_dif_idx(static_current, static_updated, "mpaa_establishment_stage")
+        | str_dif_idx(static_current, static_updated, "mpaa_protection_level")
+        | str_dif_idx(static_current, static_updated, "iucn_category")
+        | area_dif_idx(static_current, static_updated)
+        | list_dict_dif_idx(static_current, static_updated, "parent")
+        | list_dict_dif_idx(static_current, static_updated, "children")
+    )
+
+    changed = static_updated[change_indx]
+
+    print(f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}")
+
+    return {
+        "new": updated_pas[updated_pas["identifier"].isin(new)].to_dict(orient="records"),
+        "changed": changed.to_dict(orient="records"),
+        "deleted": deleted,
+    }
+
+
+def update_protected_areas_table(
+    wdpa_file_name: str = WDPA_FILE_NAME,
+    mpatlas_file_name: str = MPATLAS_FILE_NAME,
+    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    updated_pas = generate_protected_areas_table(
+        wdpa_file_name=wdpa_file_name,
+        mpatlas_file_name=mpatlas_file_name,
+        related_countries_file_name=related_countries_file_name,
+        bucket=bucket,
+        verbose=verbose,
+    )
+
+    # TODO: Add code to get data from database
+    current_db = None
+
+    # TODO: Do we want to have an identifier as a string of the 3-4 identifiers?
+    # This is mainly for what to pass into delete_pas
+    cols_for_id = ["environment", "wdpa_id", "wdpa_pid", "zone_id"]
+    updated_pas["identifier"] = updated_pas[cols_for_id].astype(str).agg("_".join, axis=1)
+    current_db["identifier"] = current_db[cols_for_id].astype(str).agg("_".join, axis=1)
+
+    db_changes = database_updates(current_db, updated_pas)
+
+    return db_changes
 
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
