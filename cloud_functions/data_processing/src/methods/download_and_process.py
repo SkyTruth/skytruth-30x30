@@ -7,10 +7,7 @@ import requests
 from shapely.geometry import MultiPoint, Point, shape
 from tqdm.auto import tqdm
 
-from src.core.commons import (
-    download_and_duplicate_zipfile,
-    download_mpatlas_zone,
-)
+from src.core.commons import download_and_duplicate_zipfile
 from src.core.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
@@ -45,9 +42,11 @@ from src.core.processors import clean_geometries
 from src.utils.gcp import (
     duplicate_blob,
     load_gdb_layer_from_gcs,
+    save_file_bucket,
     upload_dataframe,
     upload_gdf,
 )
+from src.utils.geo import get_area_km2
 
 
 def download_mpatlas_country(
@@ -63,6 +62,101 @@ def download_mpatlas_country(
 
     upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+
+
+def download_mpatlas_zone_from_api():
+    mpa_api_url = "https://guide.mpatlas.org/api/v2/zone/"
+    timeout = 30
+
+    # Robust session with retries
+    session = requests.Session()
+
+    all_rows = []
+    pbar = None
+    url = mpa_api_url
+
+    while url:
+        r = session.get(url, params={} if url == mpa_api_url else None, timeout=timeout)
+        r.raise_for_status()
+        data = r.json()
+
+        if pbar is None:
+            total = data.get("count")
+            if isinstance(total, int) and total > 0:
+                pbar = tqdm(total=total, desc="Downloading zones", unit="items")
+
+        results = data.get("results", [])
+        all_rows.extend(results)
+        if pbar:
+            pbar.update(len(results))
+
+        url = data.get("next")
+
+    if pbar:
+        pbar.close()
+
+    return pd.DataFrame(all_rows)
+
+
+def download_mpatlas_zone(
+    url: str = MPATLAS_URL,
+    bucket: str = BUCKET,
+    filename: str = MPATLAS_FILE_NAME,
+    meta_filename: str = MPATLAS_META_FILE_NAME,
+    archive_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
+    project: str = PROJECT,
+    verbose: bool = True,
+) -> None:
+    """
+    Downloads the MPAtlas Zone Assessment dataset from a specified URL,
+    saves it to a Google Cloud Storage bucket, and duplicates the blob.
+
+    Parameters:
+    ----------
+    url : str
+        URL of the MPAtlas Zone Assessment file to download.
+    bucket : str
+        Name of the GCS bucket where the file should be stored.
+    filename : str
+        GCS blob name for the primary reference copy of the file.
+    archive_filename : str
+        GCS blob name for the archived/original version of the file.
+    verbose : bool, optional
+        If True, prints progress messages. Default is True.
+    """
+
+    def get_geo_dict(geom):
+        try:
+            geom = shape(geom.copy())
+            return {"area_km2": get_area_km2(geom), "bbox": shape(geom).bounds}
+        except Exception:
+            return {"area_km2": None, "bbox": (None, None, None, None)}
+
+    if verbose:
+        print(f"downloading MPAtlas Zone Assessment from {url}")
+
+    api_meta = download_mpatlas_zone_from_api()
+
+    response = requests.get(url)
+    response.raise_for_status()
+
+    data = response.json()["features"]
+    meta = pd.DataFrame([{**d["properties"], **get_geo_dict(d["geometry"])} for d in tqdm(data)])
+    # TODO: Make sure they do match one to one OR see if MPAtlas will
+    # provide zone_id via the geojson extension
+    meta["zone_id"] = api_meta["zone_id"]
+    upload_dataframe(bucket, meta, meta_filename, project_id=project, verbose=verbose)
+
+    if verbose:
+        print(f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}")
+    save_file_bucket(
+        response.content,
+        response.headers.get("Content-Type"),
+        archive_filename,
+        bucket,
+        verbose=verbose,
+    )
+    duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
 def download_mpatlas(
