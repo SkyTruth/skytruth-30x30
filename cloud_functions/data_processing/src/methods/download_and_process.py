@@ -4,7 +4,8 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
-from shapely.geometry import MultiPoint, Point
+from shapely.geometry import MultiPoint, Point, shape
+from tqdm.auto import tqdm
 
 from src.core.commons import (
     download_and_duplicate_zipfile,
@@ -345,6 +346,12 @@ def process_protected_area_geoms(
         )
         return df.to_crs("EPSG:4326").copy()
 
+    def get_bbox(geom):
+        try:
+            return shape(geom).bounds
+        except Exception:
+            return (None, None, None, None)
+
     if verbose:
         print(f"loading PAs from gs://{bucket}/{wdpa_file_name}")
 
@@ -353,6 +360,11 @@ def process_protected_area_geoms(
         bucket,
         layers=[f"WDPA_poly_{today_formatted}", f"WDPA_point_{today_formatted}"],
     )
+
+    if verbose:
+        print("adding bounding box to wdpa")
+    tqdm.pandas()
+    wdpa["bbox"] = wdpa["geometry"].progress_apply(get_bbox)
 
     if verbose:
         print(f"saving PA metadata to {metadata_file_name}")

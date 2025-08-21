@@ -113,8 +113,11 @@ def generate_protected_areas_table(
     related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=True)
     parent_dict = {}
     for cnt in related_countries:
-        for c in related_countries[cnt]:
-            parent_dict[c] = cnt
+        if "*" in cnt:
+            for c in related_countries[cnt]:
+                parent_dict[c] = cnt[:3]
+        else:
+            parent_dict[cnt] = cnt
 
     if verbose:
         print("processing WDPAs")
@@ -124,6 +127,7 @@ def generate_protected_areas_table(
         "STATUS": "STATUS",
         "STATUS_YR": "year",
         "WDPAID": "wdpa_id",
+        "WDPA_PID": "wdpa_pid",
         "DESIG_TYPE": "designation",
         "ISO3": "iso_3",
         "IUCN_CAT": "iucn_category",
@@ -167,6 +171,9 @@ def generate_protected_areas_table(
         .pipe(add_parent, parent_dict, location_name="location")
         .pipe(convert_type, {"wdpa_id": [pd.Int64Dtype(), str], "wdpa_pid": [str]})
     )
+
+    # TODO: there are a bunch of MPAs without WDPA_IDs, how to handle?
+    mpa_pa = mpa_pa[~mpa_pa["wdpa_id"].isna()]
 
     results = []
     for environment in ["marine", "terrestrial"]:

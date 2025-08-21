@@ -11,8 +11,11 @@ import numpy as np
 import pandas as pd
 import requests
 from rasterio.mask import mask
-from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
+from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, shape
 from shapely.ops import unary_union
+from tqdm.auto import tqdm
+
+from src.utils.geo import get_area_km2
 
 from src.core.params import (
     ARCHIVE_MPATLAS_FILE_NAME,
@@ -224,6 +227,40 @@ def read_mpatlas_from_gcs(
     return gdf
 
 
+def download_mpatlas_zone_from_api():
+    mpa_api_url = "https://guide.mpatlas.org/api/v2/zone/"
+    timeout = 30
+
+    # Robust session with retries
+    session = requests.Session()
+
+    all_rows = []
+    pbar = None
+    url = mpa_api_url
+
+    while url:
+        r = session.get(url, params={} if url == mpa_api_url else None, timeout=timeout)
+        r.raise_for_status()
+        data = r.json()
+
+        if pbar is None:
+            total = data.get("count")
+            if isinstance(total, int) and total > 0:
+                pbar = tqdm(total=total, desc="Downloading zones", unit="items")
+
+        results = data.get("results", [])
+        all_rows.extend(results)
+        if pbar:
+            pbar.update(len(results))
+
+        url = data.get("next")
+
+    if pbar:
+        pbar.close()
+
+    return pd.DataFrame(all_rows)
+
+
 def download_mpatlas_zone(
     url: str = MPATLAS_URL,
     bucket: str = BUCKET,
@@ -250,14 +287,27 @@ def download_mpatlas_zone(
     verbose : bool, optional
         If True, prints progress messages. Default is True.
     """
+
+    def get_geo_dict(geom):
+        try:
+            geom = shape(geom.copy())
+            return {"area_km2": get_area_km2(geom), "bbox": shape(geom).bounds}
+        except Exception:
+            return {"area_km2": None, "bbox": (None, None, None, None)}
+
     if verbose:
         print(f"downloading MPAtlas Zone Assessment from {url}")
+
+    api_meta = download_mpatlas_zone_from_api()
 
     response = requests.get(url)
     response.raise_for_status()
 
     data = response.json()["features"]
-    meta = pd.DataFrame([{**{"id": d["id"]}, **d["properties"]} for d in data])
+    meta = pd.DataFrame([{**d["properties"], **get_geo_dict(d["geometry"])} for d in tqdm(data)])
+    # TODO: Make sure they do match one to one OR see if MPAtlas will
+    # provide zone_id via the geojson extension
+    meta["zone_id"] = api_meta["zone_id"]
     upload_dataframe(bucket, meta, meta_filename, project_id=project, verbose=verbose)
 
     if verbose:

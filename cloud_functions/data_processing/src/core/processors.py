@@ -34,7 +34,7 @@ def add_environment(df: pd.DataFrame) -> pd.DataFrame:
         Must contain a 'MARINE' column with values '0', '1', or '2'.
     """
     df = df.copy()
-    df["environment"] = df["MARINE"].map({"0": "terrestrial", "1": "marine", "2": "marine"})
+    df["environment"] = df["MARINE"].map({0: "terrestrial", 1: "marine", 2: "marine"})
     return df
 
 
@@ -161,7 +161,7 @@ def add_year(df: pd.DataFrame) -> pd.DataFrame:
         Must include 'designated_date' string column.
     """
     df = df.copy()
-    df["year"] = df["designated_date"].apply(lambda x: int(x.split("-")[0]))
+    df["year"] = df["designated_date"].apply(lambda x: int(x.split("-")[0]) if x != "" else -9999)
     return df
 
 
@@ -212,9 +212,18 @@ def convert_type(
         For each column, try casting in order (e.g., ['float', 'Int64'])
     """
     df = df.copy()
-    for col in conversion:
-        for con in conversion[col]:
-            df[col] = df[col].astype(con)
+    for col, dtypes in conversion.items():
+        for con in dtypes:
+            try:
+                if con in ("int", "Int64", int):
+                    df[col] = pd.to_numeric(df[col], errors="coerce").astype(con)
+                elif con in ("float", "Float64", float):
+                    df[col] = pd.to_numeric(df[col], errors="coerce").astype(con)
+                else:
+                    df[col] = df[col].astype(con)
+                break
+            except (ValueError, TypeError):
+                continue
 
     return df
 
