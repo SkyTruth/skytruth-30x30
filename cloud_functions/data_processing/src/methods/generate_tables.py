@@ -58,6 +58,7 @@ from src.core.processors import (
     rename_habitats,
     update_mpatlas_asterisk,
 )
+from src.core.strapi import Strapi
 from src.methods.marine_habitats import process_marine_habitats
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.gcp import (
@@ -243,7 +244,20 @@ def generate_protected_areas_table(
     return protected_areas
 
 
-def database_updates(current_db, updated_pas):
+def pull_current_pa_db(page_size=10000):
+    client = Strapi()
+    pas = client.get_pas(page_size=page_size)
+    current_db = [{**{"id": d["id"]}, **d["attributes"]} for d in pas["data"]]
+    while len(pas["data"]) > 0:
+        pas = client.get_pas(page_size=page_size)
+        current_db.append([{**{"id": d["id"]}, **d["attributes"]} for d in pas["data"]])
+
+    return pd.DataFrame(current_db)
+
+
+def database_updates(current_db, updated_pas, verbose=True):
+    # TODO: Add DB index to parent/children
+
     def str_dif_idx(df1, df2, col):
         return (~df2[col].isnull()) & (df2[col] != df1[col])
 
@@ -274,6 +288,7 @@ def database_updates(current_db, updated_pas):
         .reset_index(drop=True)
     )
 
+    # Find indices where one of the priority columns has significantly changed
     change_indx = (
         str_dif_idx(static_current, static_updated, "designation")
         | str_dif_idx(static_current, static_updated, "mpaa_establishment_stage")
@@ -286,7 +301,8 @@ def database_updates(current_db, updated_pas):
 
     changed = static_updated[change_indx]
 
-    print(f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}")
+    if verbose:
+        print(f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}")
 
     return {
         "new": updated_pas[updated_pas["identifier"].isin(new)].to_dict(orient="records"),
@@ -310,8 +326,9 @@ def update_protected_areas_table(
         verbose=verbose,
     )
 
-    # TODO: Add code to get data from database
-    current_db = None
+    # Get the current database
+    # TODO: What is the best page_size? We loop through 300,000 - will be slow!
+    current_db = pull_current_pa_db(page_size=10000)
 
     # TODO: Do we want to have an identifier as a string of the 3-4 identifiers?
     # This is mainly for what to pass into delete_pas
@@ -319,7 +336,7 @@ def update_protected_areas_table(
     updated_pas["identifier"] = updated_pas[cols_for_id].astype(str).agg("_".join, axis=1)
     current_db["identifier"] = current_db[cols_for_id].astype(str).agg("_".join, axis=1)
 
-    db_changes = database_updates(current_db, updated_pas)
+    db_changes = database_updates(current_db, updated_pas, verbose=verbose)
 
     return db_changes
 
