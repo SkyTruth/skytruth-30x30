@@ -1,4 +1,5 @@
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
@@ -74,29 +75,51 @@ def generate_protected_areas_table(
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
-    def unique_pa(w, m, wdpa_id):
-        w = w[w["wdpa_id"] == wdpa_id].sort_values(by="wdpa_pid")
-        m = m[m["wdpa_id"] == wdpa_id].sort_values(by="wdpa_pid")
+    def add_parent_children(subset: pd.DataFrame) -> pd.DataFrame:
+        """
+        Reorder rows by priority, then set the first row as parent and the rest as children.
+        Priority (lower is earlier):
+          0: data_source=='Protected Planet' & wdpa_id==wdpa_pid
+          1: data_source=='Protected Planet'
+          2: data_source=='MPATLAS' & wdpa_id==wdpa_pid
+          3: all others
+        """
+        if subset.empty:
+            return subset
 
-        if len(w) > 0:
-            parent = w[w["wdpa_id"] == w["wdpa_pid"]]
-            parent = parent.iloc[0:1] if len(parent) == 1 else w.iloc[0:1]
-            children = (
-                pd.concat([w.drop(index=parent.index), m], axis=0)
-                if len(m) > 0
-                else w.drop(index=parent.index)
-            )
-        else:
-            parent = m[m["wdpa_id"] == m["wdpa_pid"]]
-            parent = parent.iloc[0:1] if len(parent) == 1 else m.iloc[0:1]
-            children = m.drop(index=parent.index)
+        # Priority lists
+        same_id = subset["wdpa_id"].values == subset["wdpa_pid"].values
+        data_source_pp = subset["data_source"].values == "Protected Planet"
+        data_source_mp = subset["data_source"].values == "MPATLAS"
 
-        parent = parent.copy()
-        children = children.copy()
-        parent["parent"] = True
-        children["parent"] = False
+        # select priority ranking
+        priority = np.select(
+            [
+                data_source_pp & same_id,
+                data_source_pp,
+                data_source_mp & same_id,
+            ],
+            [0, 1, 2],
+            default=3,
+        )
 
-        return pd.concat([parent, children], axis=0)
+        # Sort by priority
+        ordered = subset.iloc[np.argsort(priority, kind="stable")].copy()
+
+        ordered["parent"] = None
+        ordered["children"] = None
+
+        if len(ordered) > 1:
+            # create parent and list of children
+            fields = ["wdpa_id", "wdpa_pid", "zone_id"]
+            parent_dict = ordered.iloc[0][fields].to_dict()
+            children_list = ordered.iloc[1:][fields].to_dict("records")
+
+            # Assign parent and children to each PA
+            ordered.iat[0, ordered.columns.get_loc("children")] = children_list
+            ordered.loc[ordered.index[1:], "parent"] = [parent_dict] * (len(ordered) - 1)
+
+        return ordered
 
     if verbose:
         print(f"loading gs://{bucket}/{wdpa_file_name}")
@@ -129,11 +152,11 @@ def generate_protected_areas_table(
         "WDPAID": "wdpa_id",
         "WDPA_PID": "wdpa_pid",
         "DESIG_TYPE": "designation",
-        "ISO3": "iso_3",
+        "ISO3": "location",
         "IUCN_CAT": "iucn_category",
         "MARINE": "MARINE",
         "PARENT_ISO3": "parent_id",
-        "geometry": "geometry",
+        "bbox": "bbox",
     }
     cols = [i for i in wdpa_dict]
 
@@ -142,9 +165,24 @@ def generate_protected_areas_table(
         .rename(columns=wdpa_dict)
         .pipe(remove_non_designated_p)
         .pipe(add_environment)
-        .pipe(add_constants, {"data_source": "Protected Planet"})
+        .pipe(
+            add_constants,
+            {
+                "zone_id": "",
+                "data_source": "Protected Planet",
+                "mpaa_establishment_stage": "",
+                "mpaa_protection_level": "",
+            },
+        )
         .pipe(remove_columns, ["STATUS", "MARINE"])
-        .pipe(convert_type, {"wdpa_id": [pd.Int64Dtype(), str], "wdpa_pid": [str]})
+        .pipe(
+            convert_type,
+            {
+                "wdpa_id": [pd.Int64Dtype(), str],
+                "wdpa_pid": [str],
+                "zone_id": [pd.Int64Dtype(), str],
+            },
+        )
     )
 
     if verbose:
@@ -152,13 +190,16 @@ def generate_protected_areas_table(
 
     mpa_dict = {
         "name": "name",
+        "area_km2": "area",
         "designated_date": "designated_date",
         "wdpa_id": "wdpa_id",
+        "wdpa_pid": "wdpa_pid",
+        "zone_id": "zone_id",
         "designation": "designation",
         "establishment_stage": "mpaa_establishment_stage",
         "sovereign": "location",
         "protection_mpaguide_level": "mpaa_protection_level",
-        "geometry": "geometry",
+        "bbox": "bbox",
     }
     cols = [i for i in mpa_dict]
     mpa_pa = (
@@ -166,32 +207,38 @@ def generate_protected_areas_table(
         .rename(columns=mpa_dict)
         .pipe(remove_non_designated_m)
         .pipe(add_year)
-        .pipe(add_constants, {"environment": "marine", "data_source": "MPATLAS"})
+        .pipe(
+            add_constants, {"environment": "marine", "data_source": "MPATLAS", "iucn_category": ""}
+        )
         .pipe(remove_columns, "designated_date")
         .pipe(add_parent, parent_dict, location_name="location")
-        .pipe(convert_type, {"wdpa_id": [pd.Int64Dtype(), str], "wdpa_pid": [str]})
+        .pipe(
+            convert_type,
+            {
+                "wdpa_id": [pd.Int64Dtype(), str],
+                "wdpa_pid": [str],
+                "zone_id": [pd.Int64Dtype(), str],
+            },
+        )
     )
 
-    # TODO: there are a bunch of MPAs without WDPA_IDs, how to handle?
-    mpa_pa = mpa_pa[~mpa_pa["wdpa_id"].isna()]
+    pas = pd.concat((wdpa_pa[mpa_pa.columns], mpa_pa), axis=0)
+
+    pas = pas.sort_values(["wdpa_id", "wdpa_pid", "zone_id"])
 
     results = []
-    for environment in ["marine", "terrestrial"]:
+    # Split by environment to ensure parent/children are of the same environment
+    # TODO: ensure this is what we want to do
+    for environment, pa_env in pas.groupby("environment", sort=False):
         print(environment)
+        for _, subset in tqdm(
+            pa_env.groupby("wdpa_id", sort=False),
+            total=pa_env["wdpa_id"].nunique(),
+            desc=f"{environment} wdpa_id groups",
+        ):
+            results.append(add_parent_children(subset))
 
-        # Filter once per environment
-        w = wdpa_pa[wdpa_pa["environment"] == environment]
-        m = mpa_pa[mpa_pa["environment"] == environment]
-
-        # Union of unique wdpa_ids
-        wdpa_ids = sorted(set(w["wdpa_id"]) | set(m["wdpa_id"]))
-
-        for wdpa_id in tqdm(wdpa_ids):
-            entries = unique_pa(w, m, wdpa_id)
-            results.append(entries)
-
-    # Combine all at once
-    protected_areas = pd.concat(results, axis=0, ignore_index=True)
+    protected_areas = pd.concat(results, ignore_index=True)
 
     return protected_areas.to_dict(orient="records")
 
