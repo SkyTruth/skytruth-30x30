@@ -31,7 +31,6 @@ from src.core.params import (
     PROTECTED_SEAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
-    RELATED_COUNTRIES_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
@@ -62,7 +61,6 @@ from src.methods.marine_habitats import process_marine_habitats
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.gcp import (
     read_dataframe,
-    read_json_from_gcs,
     upload_dataframe,
 )
 
@@ -70,7 +68,6 @@ from src.utils.gcp import (
 def generate_protected_areas_table(
     wdpa_meta_file_name: str = WDPA_META_FILE_NAME,
     mpatlas_meta_file_name: str = MPATLAS_META_FILE_NAME,
-    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -124,15 +121,6 @@ def generate_protected_areas_table(
         print("loading PA metadata")
     mpatlas = read_dataframe(bucket, mpatlas_meta_file_name)
     wdpa = read_dataframe(bucket, wdpa_meta_file_name)
-
-    related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=True)
-    parent_dict = {}
-    for cnt in related_countries:
-        if "*" in cnt:
-            for c in related_countries[cnt]:
-                parent_dict[c] = cnt[:3]
-        else:
-            parent_dict[cnt] = cnt
 
     if verbose:
         print("processing WDPAs")
@@ -303,14 +291,12 @@ def database_updates(current_db, updated_pas, verbose=True):
 def update_protected_areas_table(
     wdpa_file_name: str = WDPA_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_FILE_NAME,
-    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
     updated_pas = generate_protected_areas_table(
         wdpa_file_name=wdpa_file_name,
         mpatlas_file_name=mpatlas_file_name,
-        related_countries_file_name=related_countries_file_name,
         bucket=bucket,
         verbose=verbose,
     )
