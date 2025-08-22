@@ -43,7 +43,6 @@ from src.core.params import (
 from src.core.processors import (
     add_constants,
     add_environment,
-    add_parent,
     add_pas_oecm,
     add_protected_from_fishing_area,
     add_protected_from_fishing_percent,
@@ -203,7 +202,6 @@ def generate_protected_areas_table(
             add_constants, {"environment": "marine", "data_source": "MPATLAS", "iucn_category": ""}
         )
         .pipe(remove_columns, "designated_date")
-        .pipe(add_parent, parent_dict, location_name="location")
         .pipe(
             convert_type,
             {
