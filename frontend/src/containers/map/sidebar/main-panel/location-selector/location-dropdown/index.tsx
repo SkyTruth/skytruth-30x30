@@ -22,6 +22,13 @@ type LocationDropdownProps = {
   onSelected: (code: string) => void;
 };
 
+enum LocationType {
+  country = 'country',
+  region = 'region',
+  highseas = 'highseas',
+  worldwide = 'worldwide',
+};
+
 const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   className,
   searchPlaceholder = 'Search',
@@ -62,7 +69,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
       <CommandEmpty>{t('no-result')}</CommandEmpty>
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
         {locations.map(({ attributes }) => {
-          const { name, name_es, name_fr, code, type } = attributes;
+          const { name, name_es, name_fr, code, type} = attributes;
 
           let locationName = name;
           if (locale === 'es') {
@@ -71,6 +78,8 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
           if (locale === 'fr') {
             locationName = name_fr;
           }
+
+          const locationType = LocationType[type] || LocationType.country;
 
           return (
             <CommandItem key={code} value={locationName} onSelect={() => onSelected(code)}>
@@ -82,7 +91,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
                   {locationName}
                 </div>
                 <span className="flex flex-shrink-0 items-center font-mono text-xs capitalize text-gray-300">
-                  {type}
+                  {t(locationType)}
                 </span>
               </div>
             </CommandItem>

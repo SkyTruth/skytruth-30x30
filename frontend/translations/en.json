@@ -188,7 +188,11 @@
       "claimed-by": "Claimed By",
       "related-countries": "Related Countries",
       "territory-of": "Territory of",
-      "also-claimed-by": "also claimed by"
+      "also-claimed-by": "also claimed by",
+      "country": "Country",
+      "region": "Region",
+      "highseas": "High Seas",
+      "worldwide": "Worldwide"
     },
     "map-sidebar-layers-panel": {
       "map-layers": "Map Layers",
