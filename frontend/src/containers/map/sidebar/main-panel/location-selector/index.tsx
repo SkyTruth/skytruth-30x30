@@ -23,8 +23,8 @@ import LocationTypeToggle from './type-toggle';
 
 export const FILTERS = {
   all: ['country', 'highseas', 'region', 'worldwide'],
-  countryHighseas: ['country', 'highseas'],
-  regions: ['region'],
+  country: ['country'],
+  regionsHighseas: ['region', 'highseas'],
 };
 
 const BUTTON_CLASSES =
@@ -86,8 +86,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const filtersSearchLabels = useMemo(
     () => ({
       all: t('search-country-region'),
-      countryHighseas: t('search-country-high-seas'),
-      regions: t('search-region'),
+      country: t('search-country'),
+      regionsHighseas: t('search-region-high-seas'),
     }),
     [t]
   );

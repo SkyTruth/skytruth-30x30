@@ -58,17 +58,17 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
       </ToggleGroup.Item>
       <ToggleGroup.Item
         className={toggleVariants({ theme })}
-        value="countryHighseas"
-        aria-label={t('countries-and-high-seas')}
+        value="country"
+        aria-label={t('countries')}
       >
-        {t('countries-and-high-seas')}
+        {t('countries')}
       </ToggleGroup.Item>
       <ToggleGroup.Item
         className={toggleVariants({ theme })}
-        value="regions"
-        aria-label={t('regions')}
+        value="regionsHighseas"
+        aria-label={t('regions-and-high-seas')}
       >
-        {t('regions')}
+        {t('regions-and-high-seas')}
       </ToggleGroup.Item>
     </ToggleGroup.Root>
   );
