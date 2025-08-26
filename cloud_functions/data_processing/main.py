@@ -46,6 +46,7 @@ from src.methods.static_processes import (
     process_terrestrial_biome_raster,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
+from src.methods.tileset_processes import create_and_update_eez_tileset
 from src.utils.gcp import download_zip_to_gcs
 
 
@@ -236,6 +237,13 @@ def main(request: Request) -> tuple[str, int]:
                     upload_function=client.upsert_habitat_stats,
                     verbose=verbose,
                 )
+            
+            # ------------------
+            #   Map Tilesets Updates
+            # ------------------
+            
+            case "update_eez_tileset":
+                create_and_update_eez_tileset()
 
             case _:
                 print(f"METHOD: {method} not a valid option")
