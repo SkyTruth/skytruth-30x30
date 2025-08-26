@@ -27,7 +27,7 @@ enum LocationType {
   region = 'region',
   highseas = 'highseas',
   worldwide = 'worldwide',
-};
+}
 
 const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   className,
@@ -69,7 +69,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
       <CommandEmpty>{t('no-result')}</CommandEmpty>
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
         {locations.map(({ attributes }) => {
-          const { name, name_es, name_fr, code, type} = attributes;
+          const { name, name_es, name_fr, code, type } = attributes;
 
           let locationName = name;
           if (locale === 'es') {
