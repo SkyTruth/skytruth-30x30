@@ -1,18 +1,16 @@
-import subprocess
-import requests
-from pathlib import Path
 import os
+import subprocess
 from time import sleep
-from tqdm import tqdm
 
 import boto3
+import requests
+from tqdm import tqdm
 
+from src.core.map_params import MAPBOX_BASE_URL
 from src.utils.logger import Logger
-from src.core.map_params import (
-    MAPBOX_BASE_URL
-)
 
 logger = Logger()
+
 
 def mbtileGeneration(
     input_file: str,
@@ -20,47 +18,54 @@ def mbtileGeneration(
     verbose: bool = False,
 ) -> None:
     """
-    generate mbtiles file from geomtry file
+        generate mbtiles file from geomtry file
 
-    Args:
-        input_file (Path): The path to the file.
-        output_file (Union[Path, None], optional): The path to the output file.
-The default is None.
-        update (bool, optional): Whether to update the mbtiles file. The default is False.
+        Args:
+            input_file (Path): The path to the file.
+            output_file (Union[Path, None], optional): The path to the output file.
+    The default is None.
+            update (bool, optional): Whether to update the mbtiles file. The default is False.
 
-    Returns:
-        Path: The path to the output file.
+        Returns:
+            Path: The path to the output file.
 
     """
     try:
-      if verbose:
-        print(f"Creating mbtiles file from {input_file}...")
-      # https://github.com/mapbox/tippecanoe
-      # -zg: Automatically choose a maxzoom that should be sufficient to clearly distinguish the
-      #   features and the detail within each feature
-      # -f: Deletes existing files in location with the same name
-      # -P: reads the geojson in parallel if the file is newline delimited
-      # -o: The following argurment is hte output path
-      # -ae:  Increase the maxzoom if features are still being dropped at that zoom level
-      subprocess.run(
-          f"tippecanoe -zg -f -P -o {output_file} -ae {input_file}",
-          shell=True,
-          check=True,
-      )
+        if verbose:
+            print(f"Creating mbtiles file from {input_file}...")
+        # https://github.com/mapbox/tippecanoe
+        # -zg: Automatically choose a maxzoom that should be sufficient to clearly distinguish the
+        #   features and the detail within each feature
+        # -f: Deletes existing files in location with the same name
+        # -P: reads the geojson in parallel if the file is newline delimited
+        # -o: The following argurment is hte output path
+        # -ae:  Increase the maxzoom if features are still being dropped at that zoom level
+        subprocess.run(
+            f"tippecanoe -zg -f -P -o {output_file} -ae {input_file}",
+            shell=True,
+            check=True,
+        )
 
-      if verbose:
-        print(f"mbtiles file created and written to {output_file}")
+        if verbose:
+            print(f"mbtiles file created and written to {output_file}")
 
     except Exception as e:
         logger.error(f"Error generating mbtiles file from {input_file}")
         raise e
 
 
-def uploadToMapbox(source: str, tileset_id: str, display_name: str, username: str, token: str, verbose: bool = False) -> None:
+def uploadToMapbox(
+    source: str,
+    tileset_id: str,
+    display_name: str,
+    username: str,
+    token: str,
+    verbose: bool = False,
+) -> None:
     """
     Upload the mbtiles file to Mapbox. Following the steps outlined here:
     https://docs.mapbox.com/api/maps/uploads/
-    
+
     In general the flow is:
     1. Get S3 credentials from Mapbox
     2. Upload the file to MapBox's S3
@@ -74,15 +79,11 @@ def uploadToMapbox(source: str, tileset_id: str, display_name: str, username: st
 
     uploadToS3(source, mapboxCredentials, verbose)
 
-    loadToMapbox(
-        username, token, mapboxCredentials, tileset_id, display_name
-    )
+    loadToMapbox(username, token, mapboxCredentials, tileset_id, display_name)
 
 
 def getS3Credentials(user: str, token: str) -> dict:
-    response = requests.get(
-        f"{MAPBOX_BASE_URL}{user}/credentials?access_token={token}"
-    )
+    response = requests.get(f"{MAPBOX_BASE_URL}{user}/credentials?access_token={token}")
     response.raise_for_status()
     return response.json()
 
@@ -97,22 +98,24 @@ def setS3Credentials(credentials: dict) -> None:
 
 
 def uploadToS3(source: str, credentials: dict, verbose: bool = False) -> None:
-    """
-
-    """
+    """ """
     if verbose:
         print("Uploading to S3...")
 
-    s3 = boto3.client('s3')
-    s3.upload_file(source, credentials['bucket'], credentials['key'])
+    s3 = boto3.client("s3")
+    s3.upload_file(source, credentials["bucket"], credentials["key"])
 
     if verbose:
         print("Upload to S3 complete.")
 
 
-
 def loadToMapbox(
-    username: str, token: str, credentials: dict, tileset_name: str, display_name=None, verbose: bool = False
+    username: str,
+    token: str,
+    credentials: dict,
+    tileset_name: str,
+    display_name=None,
+    verbose: bool = False,
 ):
     def uploadStatus(upload_id):
         url = f"{MAPBOX_BASE_URL}{username}/{upload_id}?access_token={token}"

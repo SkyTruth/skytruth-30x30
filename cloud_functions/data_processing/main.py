@@ -237,11 +237,11 @@ def main(request: Request) -> tuple[str, int]:
                     upload_function=client.upsert_habitat_stats,
                     verbose=verbose,
                 )
-            
+
             # ------------------
             #   Map Tilesets Updates
             # ------------------
-            
+
             case "update_eez_tileset":
                 create_and_update_eez_tileset()
 
