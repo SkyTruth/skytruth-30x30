@@ -4,6 +4,7 @@ from time import sleep
 
 import boto3
 import requests
+from requests.exceptions import HTTPError
 from tqdm import tqdm
 
 from src.core.map_params import MAPBOX_BASE_URL
@@ -114,7 +115,7 @@ def loadToMapbox(
     token: str,
     credentials: dict,
     tileset_name: str,
-    display_name=None,
+    display_name: str,
     verbose: bool = False,
 ):
     def uploadStatus(upload_id):
@@ -128,30 +129,36 @@ def loadToMapbox(
 
         return response.json()["complete"], response.json()["progress"]
 
-    if not display_name:
-        display_name = tileset_name
+    try:
+        if verbose:
+            print("Loading to Mapbox...")
+        
+        if credentials.get("bucket") is None or credentials.get("key") is None:
+            raise ValueError("Missing bucket or key in credentials")
+        # Create the tileset upload
+        url = f"{MAPBOX_BASE_URL}{username}?access_token={token}"
+        body = {
+            "url": f"https://{credentials.get('bucket')}.s3.amazonaws.com/{credentials.get('key')}",
+            "tileset": f"{username}.{tileset_name}",
+            "name": f"{display_name}",
+        }
+        response = requests.post(url, json=body)
+        response.raise_for_status()
 
-    # Create the tileset upload
-    url = f"{MAPBOX_BASE_URL}{username}?access_token={token}"
-    body = {
-        "url": f"https://{credentials.get('bucket', '')}.s3.amazonaws.com/{credentials.get('key')}",
-        "tileset": f"{username}.{tileset_name}",
-        "name": f"{display_name}",
-    }
-    response = requests.post(url, json=body)
-    response.raise_for_status()
+        upload_id = response.json()["id"]
+        # Progress bar to show upload status in Mapbox
+        with tqdm(total=100) as pbar:
+            pbar.set_description("Linking tileset to Mapbox")
+            pbar.update(0)
 
-    upload_id = response.json()["id"]
-    # Progress bar to show upload status in Mapbox
-    with tqdm(total=100) as pbar:
-        pbar.set_description("Linking tileset to Mapbox")
-        pbar.update(0)
+            # Check the upload status
+            status = False
+            while status is False:
+                sleep(5)
+                status, progress = uploadStatus(upload_id)
+                pbar.update(round(progress * 100))
 
-        # Check the upload status
-        status = False
-        while status is False:
-            sleep(5)
-            status, progress = uploadStatus(upload_id)
-            pbar.update(round(progress * 100))
-
-    return status
+        return status
+    except HTTPError as http_err:
+        logger.error({"message": "HTTP loading tiles to mapbox", "error": str(http_err)})
+        raise http_err
