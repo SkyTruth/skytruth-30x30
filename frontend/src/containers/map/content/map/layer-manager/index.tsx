@@ -44,6 +44,7 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
 
   useEffect(() => {
     const onZoom = () => {
+      console.log("Zoom", map.getZoom());
       setZoom(map.getZoom());
     };
 

@@ -243,7 +243,7 @@ def main(request: Request) -> tuple[str, int]:
             # ------------------
 
             case "update_eez_tileset":
-                create_and_update_eez_tileset()
+                create_and_update_eez_tileset(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")

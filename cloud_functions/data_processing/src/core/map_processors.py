@@ -13,7 +13,7 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
-def mbtileGeneration(
+def generate_mbtiles(
     input_file: str,
     output_file: str,
     verbose: bool = False,
@@ -39,7 +39,7 @@ def mbtileGeneration(
         #   features and the detail within each feature
         # -f: Deletes existing files in location with the same name
         # -P: reads the geojson in parallel if the file is newline delimited
-        # -o: The following argurment is hte output path
+        # -o: The following argurment is the output path
         # -ae:  Increase the maxzoom if features are still being dropped at that zoom level
         subprocess.run(
             f"tippecanoe -zg -f -P -o {output_file} -ae {input_file}",
@@ -55,7 +55,7 @@ def mbtileGeneration(
         raise e
 
 
-def uploadToMapbox(
+def upload_to_mapbox(
     source: str,
     tileset_id: str,
     display_name: str,
@@ -70,7 +70,7 @@ def uploadToMapbox(
     In general the flow is:
     1. Get S3 credentials from Mapbox
     2. Upload the file to MapBox's S3
-    3. Load hte tilset from S3 into MapBox
+    3. Load the tilset from S3 into MapBox
     """
     if verbose:
         print("Uploading to Mapbox...")
@@ -80,7 +80,7 @@ def uploadToMapbox(
 
     uploadToS3(source, mapboxCredentials, verbose)
 
-    loadToMapbox(username, token, mapboxCredentials, tileset_id, display_name)
+    link_to_mapbox(username, token, mapboxCredentials, tileset_id, display_name, verbose)
 
 
 def getS3Credentials(user: str, token: str) -> dict:
@@ -110,7 +110,7 @@ def uploadToS3(source: str, credentials: dict, verbose: bool = False) -> None:
         print("Upload to S3 complete.")
 
 
-def loadToMapbox(
+def link_to_mapbox(
     username: str,
     token: str,
     credentials: dict,
@@ -132,7 +132,7 @@ def loadToMapbox(
     try:
         if verbose:
             print("Loading to Mapbox...")
-        
+
         if credentials.get("bucket") is None or credentials.get("key") is None:
             raise ValueError("Missing bucket or key in credentials")
         # Create the tileset upload
