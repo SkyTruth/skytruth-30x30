@@ -4,7 +4,7 @@ import os
 # General Mapbox
 # ------------------------
 MAPBOX_BASE_URL = "https://api.mapbox.com/uploads/v1/"
-MAPBOX_USER = os.environ.get("MAPBOX_USERNAME", None)
+MAPBOX_USER = os.environ.get("MAPBOX_USER", None)
 MAPBOX_TOKEN = os.environ.get("MAPBOX_TOKEN", None)
 
 # ------------------------
