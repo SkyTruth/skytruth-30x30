@@ -213,13 +213,13 @@ def process_eez_geoms(
 
     if verbose:
         print(f"simplifying eez with mulit-sovereign geometries with tolerance {TOLERANCES[1]}")
-    # eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
+    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
-    # blob_name = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{tolerance}.geojson")
+    blob_name = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{tolerance}.geojson")
     if verbose:
         print(f"uploading eez with multi-sovereign file to {out_fn}")
-    upload_gdf(bucket, eez_multiple_sovs, EEZ_MULTIPLE_SOV_FILE_NAME)
+    upload_gdf(bucket, eez_multiple_sovs, blob_name)
 
 
 def _pick_eez_parents(row):
