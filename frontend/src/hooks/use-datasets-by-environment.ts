@@ -99,7 +99,7 @@ export default function useDatasetsByEnvironment() {
       marine: marineDataset,
       basemap: basemapDataset,
     };
-  }, [data]);
+  }, [data, areTerritoriesActive]);
 
   return [datasets, { isLoading: isFetching }] as const;
 }
