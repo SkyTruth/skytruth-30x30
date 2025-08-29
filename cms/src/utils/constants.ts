@@ -12,3 +12,8 @@ export const ALL_TERRITORIES = new Set([
   "NZL",
   "USA",
 ])
+
+// TODO TECH-3174: Clean up
+export const TERRITORY_LAYERS = {
+  eez: "mapbox://skytruth.eez_v12"
+}

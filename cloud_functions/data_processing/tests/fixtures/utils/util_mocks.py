@@ -8,8 +8,19 @@ class MockBar:
     def update(self, n):
         self.updates.append(n)
 
+    def set_description(self, s):
+        self.desc = s
+
     def close(self):
         self.closed = True
+
+    # The following support mocking tqdm as a context manager
+    # so it can be used in a `with` statement.
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
 
 
 class IterableMockBar(MockBar):

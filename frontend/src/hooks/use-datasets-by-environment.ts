@@ -3,11 +3,17 @@ import { useMemo } from 'react';
 import { useLocale } from 'next-intl';
 
 import { ENVIRONMENTS } from '@/constants/environments';
+import { TERRITORY_LAYERS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { useGetDatasets } from '@/types/generated/dataset';
 import { DatasetUpdatedByData } from '@/types/generated/strapi.schemas';
 
+import { useFeatureFlag } from './use-feature-flag'; // TODO TECH-3174: Clean up
+
 export default function useDatasetsByEnvironment() {
   const locale = useLocale();
+
+  // TODO TECH-3174: Clean up
+  const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
   const { data, isFetching } = useGetDatasets<DatasetUpdatedByData[]>(
     {
@@ -40,12 +46,22 @@ export default function useDatasetsByEnvironment() {
     // to pick only the layers for the environment we're displaying.
     const filterLayersByEnvironment = (layers, environment) => {
       const layersData = layers?.data;
-
       return (
         layersData?.filter(({ attributes }) => {
+          // TODO TECH-3174: Clean up
+          const layerUrl = attributes?.config?.source?.url;
+          const layerSlug = attributes?.slug;
+
           const environmentData = attributes?.environment?.data;
-          return environmentData?.attributes?.slug === environment;
-        }) || []
+          return (
+            environmentData?.attributes?.slug === environment &&
+            // TODO TECH-3174: Clean up
+            ((!areTerritoriesActive &&
+              (!TERRITORY_LAYERS[layerSlug] || TERRITORY_LAYERS[layerSlug] !== layerUrl)) ||
+              (areTerritoriesActive &&
+                (!TERRITORY_LAYERS[layerSlug] || TERRITORY_LAYERS[layerSlug] === layerUrl)))
+          );
+        }) || [areTerritoriesActive]
       );
     };
 
@@ -83,7 +99,7 @@ export default function useDatasetsByEnvironment() {
       marine: marineDataset,
       basemap: basemapDataset,
     };
-  }, [data]);
+  }, [data, areTerritoriesActive]);
 
   return [datasets, { isLoading: isFetching }] as const;
 }
