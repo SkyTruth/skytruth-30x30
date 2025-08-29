@@ -51,7 +51,9 @@ def generate_mbtiles(
             print(f"mbtiles file created and written to {output_file}")
 
     except Exception as excep:
-        logger.error({"message": f"Error generating mbtiles file from {input_file}", "error": str(excep)})
+        logger.error(
+            {"message": f"Error generating mbtiles file from {input_file}", "error": str(excep)}
+        )
         raise excep
 
 
