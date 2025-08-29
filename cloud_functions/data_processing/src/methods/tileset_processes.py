@@ -52,7 +52,7 @@ def create_and_update_eez_tileset(
 
             if verbose:
                 print("Uploading tileset to GCS...")
-            upload_file_to_gcs(bucket, tileset_local, tileset_file)
+            upload_file_to_gcs(bucket=bucket, file_name=tileset_local, blob_name=tileset_file)
 
             if verbose:
                 print("Uploading tileset to Mapbox...")
