@@ -58,11 +58,12 @@ def test_mbtile_generation_errors(monkeypatch):
     )
 
     captured = {}
-    monkeypatch.setattr(mp.logger, "error", lambda m: captured.setdefault("msg", m), raising=True)
+    monkeypatch.setattr(mp.logger, "error", lambda m: captured.setdefault("log", m), raising=True)
 
     with pytest.raises(ValueError, match="bad"):
         mp.generate_mbtiles("input", "output")
-    assert "Error generating mbtiles file from input" in captured["msg"]
+    assert "Error generating mbtiles file from input" in captured["log"]["message"]
+    assert "bad" in captured["log"]["error"]
 
 
 # ----------------------------

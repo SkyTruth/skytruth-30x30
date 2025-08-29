@@ -18,16 +18,15 @@ export default factories.createCoreController('api::layer.layer', ({ strapi }) =
     const filteredData = response.data.filter(layer => {
       const layerUrl =  layer?.attributes?.config?.source?.url;
       const layerSlug = layer?.attributes?.slug;
-      console.log(layerUrl, layerSlug, (!areTerritoriesActive && (!TERRITORY_LAYERS[layerSlug] || TERRITORY_LAYERS[layerSlug] !== layerUrl)) ||
-        (areTerritoriesActive && (!TERRITORY_LAYERS[layerSlug]  || TERRITORY_LAYERS[layerSlug] === layerUrl)));
       return (
-        (!areTerritoriesActive && (!TERRITORY_LAYERS[layerSlug] || TERRITORY_LAYERS[layerSlug] !== layerUrl)) ||
-        (areTerritoriesActive && (!TERRITORY_LAYERS[layerSlug]  || TERRITORY_LAYERS[layerSlug] === layerUrl))
+        (!areTerritoriesActive &&
+          (!TERRITORY_LAYERS[layerSlug] || TERRITORY_LAYERS[layerSlug] !== layerUrl)) ||
+        (areTerritoriesActive &&
+          (!TERRITORY_LAYERS[layerSlug]  || TERRITORY_LAYERS[layerSlug] === layerUrl))
       );
     });
 
     response.data = filteredData;
-    console.log(response.data.length,filteredData.length)
     return response;
   }
 }));

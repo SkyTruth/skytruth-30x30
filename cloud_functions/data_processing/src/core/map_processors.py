@@ -50,9 +50,9 @@ def generate_mbtiles(
         if verbose:
             print(f"mbtiles file created and written to {output_file}")
 
-    except Exception as e:
-        logger.error(f"Error generating mbtiles file from {input_file}")
-        raise e
+    except Exception as excep:
+        logger.error({"message": f"Error generating mbtiles file from {input_file}", "error": str(excep)})
+        raise excep
 
 
 def upload_to_mapbox(
