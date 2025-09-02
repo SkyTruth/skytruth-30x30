@@ -8,7 +8,7 @@ export default factories.createCoreController('api::feature-flag.feature-flag',
   ({ strapi }) => ({
     async find(ctx) {
       try {
-      const { query, request: { header } } = ctx
+      const { query, request: { header } } = ctx;
 
       // User defined runAsOf date preferentailly uses the header, then query, then defaults to now
       const runAsOf = header['run-as-of'] ? new Date(header['run-as-of']) 

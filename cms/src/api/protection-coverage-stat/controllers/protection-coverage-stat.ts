@@ -11,6 +11,7 @@ import {
 } from '@/types/generated/contentTypes';
 
 import Logger from '../../../utils/Logger';
+import filterSovereigns from '../../../utils/filter-sovereigns';
 
 export const PROTECTION_COVERAGE_STAT_NAMESPACE = 'api::protection-coverage-stat.protection-coverage-stat';
 const DEFAULT_PAGE_SIZE = 25;
@@ -19,6 +20,17 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
     async find(ctx) {
         try {
             const { query } = ctx;
+
+            // TODO TECH-3174: Clean up
+            let locationFilter = query?.filters?.location;
+            const areTerritoriesActive = await strapi
+                .service('api::feature-flag.feature-flag')
+                .getFeaureFlag(ctx, 'are_territories_active');
+
+            if (locationFilter && !areTerritoriesActive) {
+                query.filters.location = filterSovereigns({...locationFilter})
+            }
+
             // find the most recently updated record and return its updatedAt date
             const updatedAtQuery = {
                 ...query,
@@ -102,10 +114,19 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
 
                 for (const stat of data) {
                     const { location, environment, ...attributes } = stat;
-                    if (!location || !environment) {
-                        Logger.error('Skipping stat without location or environment', stat);
+                    if (!environment) {
+                        Logger.error('Skipping stat without environment', stat);
                         errors.push({
-                            message: 'Missing location or environment',
+                            message: 'Missing environment',
+                            stat
+                        });
+                        continue;
+                    }
+
+                    if (!location) {
+                        Logger.error('Skipping stat without location', stat);
+                        errors.push({
+                            message: 'Missing location',
                             stat
                         });
                         continue;

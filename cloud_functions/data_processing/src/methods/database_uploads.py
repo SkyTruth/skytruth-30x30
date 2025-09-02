@@ -2,7 +2,10 @@ from ast import literal_eval
 
 import pandas as pd
 
-from src.core.params import BUCKET, LOCATIONS_FILE_NAME
+from src.core.params import (
+    BUCKET,
+    LOCATIONS_FILE_NAME,
+)
 from src.core.strapi import Strapi
 from src.utils.gcp import read_dataframe
 
@@ -70,3 +73,22 @@ def _parse_list_or_na(val):
         return parsed_val if isinstance(parsed_val, list) else [parsed_val]
     except (ValueError, SyntaxError):
         return pd.NA  # fallback if bad format
+
+
+def upload_stats(
+    filename: str,
+    upload_function: callable,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    """
+    Pass through function for writing generated CSV tables to the database via the API.
+    Reads teh CSV stored in a GCS bucket at bucket/filename, converts it to a dictionary and
+    uplaods to the DB via the API by way of a passed in upload_function
+    """
+    stats_df = read_dataframe(bucket_name=bucket, filename=filename)
+    stats_dict = stats_df.to_dict(orient="records")
+
+    if verbose:
+        print(f"Uploading stats from {filename} via the API")
+    return upload_function(stats_dict)

@@ -85,6 +85,7 @@ export default factories.createCoreController('api::location.location', ({ strap
               locationsMap[code],
               {
                 data: {
+                  name,
                   ...attributes,
                 },
               }

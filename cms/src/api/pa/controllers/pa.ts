@@ -4,8 +4,26 @@
 
 import { factories } from '@strapi/strapi'
 
+import filterSovereigns from '../../../utils/filter-sovereigns';
+
 export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
   async find(ctx) {
+    // TODO TECH-3174: Clean up
+    const { query } = ctx;
+    let locationFilter = query?.filters?.location;
+    let childLocationFilters = query?.populate?.children?.filters?.location;
+    const areTerritoriesActive = await strapi
+        .service('api::feature-flag.feature-flag')
+        .getFeaureFlag(ctx, 'are_territories_active');
+
+    if (locationFilter && !areTerritoriesActive) {
+        query.filters.location = filterSovereigns({...locationFilter});
+    }
+
+    if (childLocationFilters && !areTerritoriesActive) {
+        query.populate.children.filters.location = filterSovereigns({...childLocationFilters})
+    }
+
     if (ctx.query['keep-if-children-match']) {
       // In addition to the controller's default behavior, we also want to keep the rows for which
       // there is at least one child that matches the filters. For this, we'll use the `children`

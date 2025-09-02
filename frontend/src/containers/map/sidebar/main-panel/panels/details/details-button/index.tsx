@@ -35,7 +35,10 @@ const DetailsButton: FCWithMessages<DetailsButtonProps> = ({ className, location
       onClick={handleButtonClick}
     >
       <span className="font-mono text-xs font-semibold normal-case">
-        {tab === 'summary' && locationType !== 'country' && t('show-global-insights-table')}
+        {tab === 'summary' && locationType === 'worldwide' && t('show-global-insights-table')}
+        {tab === 'summary' &&
+          (locationType === 'region' || locationType === 'highseas') &&
+          t('show-region-insights-table')}
         {tab === 'summary' && locationType === 'country' && t('show-country-insights-table')}
         {tab === 'terrestrial' && t('show-terrestrial-insights-table')}
         {tab === 'marine' && t('show-marine-insights-table')}

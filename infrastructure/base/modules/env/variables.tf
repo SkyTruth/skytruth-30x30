@@ -77,6 +77,11 @@ variable "cors_origin" {
   default     = "*"
 }
 
+variable "mapbox_user" {
+  type        = string
+  description = "Service account username for mapbox"
+}
+
 variable "uptime_alert_email" {
   type        = string
   description = "Email address to which uptime alerts should be sent"

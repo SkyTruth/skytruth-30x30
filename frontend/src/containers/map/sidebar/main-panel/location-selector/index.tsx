@@ -8,7 +8,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { popupAtom } from '@/containers/map/store';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import { cn } from '@/lib/classnames';
 import GlobeIcon from '@/styles/icons/globe.svg';
 import MagnifyingGlassIcon from '@/styles/icons/magnifying-glass.svg';
@@ -21,8 +23,8 @@ import LocationTypeToggle from './type-toggle';
 
 export const FILTERS = {
   all: ['country', 'highseas', 'region', 'worldwide'],
-  countryHighseas: ['country', 'highseas'],
-  regions: ['region'],
+  country: ['country'],
+  regionsHighseas: ['region', 'highseas'],
 };
 
 const BUTTON_CLASSES =
@@ -53,6 +55,9 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const [locationsFilter, setLocationsFilter] = useState<keyof typeof FILTERS>('all');
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
 
+  // TODO TECH-3174: Clean up
+  const areTerritoriesActive = useFeatureFlag('are_territories_active');
+
   const locationNameField = useMemo(() => {
     let res = 'name';
     if (locale === 'es') {
@@ -81,8 +86,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const filtersSearchLabels = useMemo(
     () => ({
       all: t('search-country-region'),
-      countryHighseas: t('search-country-high-seas'),
-      regions: t('search-region'),
+      country: t('search-country'),
+      regionsHighseas: t('search-region-high-seas'),
     }),
     [t]
   );
@@ -108,12 +113,19 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   }, [locationsData]);
 
   const filteredLocations = useMemo(() => {
-    if (!locationsFilter) return reorderedLocations;
-
-    return reorderedLocations.filter(({ attributes }) =>
-      FILTERS[locationsFilter].includes(attributes.type)
+    if (!locationsFilter) {
+      // TODO TECH-3174: Clean up
+      return areTerritoriesActive
+        ? reorderedLocations
+        : reorderedLocations.filter(({ attributes }) => !NEW_LOCS.has(attributes.code));
+    }
+    return reorderedLocations.filter(
+      ({ attributes }) =>
+        // TODO TECH-3174: Clean up NEW_LOCS filter
+        FILTERS[locationsFilter].includes(attributes.type) &&
+        (areTerritoriesActive || !NEW_LOCS.has(attributes.code))
     );
-  }, [locationsFilter, reorderedLocations]);
+  }, [locationsFilter, reorderedLocations, areTerritoriesActive]);
 
   return (
     <div className={cn('flex gap-3.5', className)}>

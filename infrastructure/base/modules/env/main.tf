@@ -305,6 +305,7 @@ resource "google_storage_bucket" "data_bucket" {
 locals {
   data_processing_cloud_function_env = {
     BUCKET              = google_storage_bucket.data_bucket.name
+    MAPBOX_USER         = var.mapbox_user
     PROJECT             = var.gcp_project_id
     STRAPI_API_URL      = local.api_lb_url
     STRAPI_USERNAME     = var.backend_write_user
@@ -319,6 +320,12 @@ locals {
     key        = "STRAPI_PASSWORD"
     project_id = var.gcp_project_id
     secret     = "${var.project_name}_strapi_write_user_password"
+    version    = "latest"
+  },
+  {
+    key        = "MAPBOX_TOKEN"
+    project_id = var.gcp_project_id
+    secret     = "mapbox_token"
     version    = "latest"
   }]
 }

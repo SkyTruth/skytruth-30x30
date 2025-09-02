@@ -592,6 +592,10 @@ def generate_protection_coverage_stats_table(
         add_global_stats, wdpa_global, "marine"
     ).pipe(add_global_stats, wdpa_global, "terrestrial")
 
+    protection_coverage_table["total_area"] = (
+        protection_coverage_table["total_area"].round(0).astype("Int64")
+    )
+
     upload_dataframe(
         bucket,
         protection_coverage_table,
@@ -702,6 +706,9 @@ def generate_marine_protection_level_stats_table(
     )
 
     protection_level_table = protection_level_table[protection_level_table["total_area"] > 0]
+    protection_level_table["total_area"] = (
+        protection_level_table["total_area"].round(0).astype("Int64")
+    )
 
     upload_dataframe(
         bucket,
@@ -820,6 +827,9 @@ def generate_fishing_protection_table(
         )
 
     fishing_protection_table = fishing_protection_table[fishing_protection_table["total_area"] > 0]
+    fishing_protection_table["total_area"] = (
+        fishing_protection_table["total_area"].round(0).astype("Int64")
+    )
 
     upload_dataframe(
         bucket,

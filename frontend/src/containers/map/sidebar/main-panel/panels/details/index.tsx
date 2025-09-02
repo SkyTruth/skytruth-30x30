@@ -6,8 +6,10 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGES } from '@/constants/pages';
+import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
@@ -29,6 +31,9 @@ const SidebarDetails: FCWithMessages = () => {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerScroll = useScrollPosition(containerRef);
+
+  // TODO TECH-3174: Clean up
+  const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
   const {
     push,
@@ -52,6 +57,9 @@ const SidebarDetails: FCWithMessages = () => {
       members: {
         fields: ['code', 'name', 'name_es', 'name_fr'],
       },
+      groups: {
+        fields: ['code', 'name', 'name_es', 'name_fr'],
+      },
     },
   });
 
@@ -66,12 +74,30 @@ const SidebarDetails: FCWithMessages = () => {
     return res;
   }, [locale]);
 
-  const memberCountries = useMemo(() => {
-    return locationsData?.data[0]?.attributes?.members?.data?.map(({ attributes }) => ({
-      code: attributes?.code,
-      name: attributes?.[locationNameField],
-    }));
-  }, [locationsData?.data, locationNameField]);
+  const mapLocationRelations = useCallback(
+    (relation: string) => {
+      const mappedLocs = locationsData?.data[0]?.attributes[relation]?.data?.map(
+        ({ attributes }) => ({
+          code: attributes?.code,
+          name: attributes?.[locationNameField],
+        })
+      );
+
+      if (areTerritoriesActive) {
+        return mappedLocs;
+      }
+
+      return mappedLocs?.filter((loc) => !NEW_LOCS.has(loc?.code)); // TODO TECH-3174: Clean up NEW_LOCS filter
+    },
+    [areTerritoriesActive, locationsData?.data, locationNameField]
+  );
+
+  const memberCountries = mapLocationRelations('members');
+
+  const sovereignCountries = useMemo(() => {
+    const groupCountries = mapLocationRelations('groups');
+    return groupCountries?.filter((loc) => loc?.code[loc?.code?.length - 1] === '*');
+  }, [mapLocationRelations]);
 
   const handleLocationSelected = useCallback(
     (locationCode) => {
@@ -122,6 +148,16 @@ const SidebarDetails: FCWithMessages = () => {
           size={containerScroll > 0 ? 'small' : 'default'}
           onChange={handleLocationSelected}
         />
+        {/* TODO TECH-3174: Clean up Feature flag checks */}
+        {areTerritoriesActive && sovereignCountries?.length ? t('claimed-by') : ''}
+        {areTerritoriesActive ? (
+          <CountriesList
+            className="w-full shrink-0"
+            bgColorClassName="bg-orange"
+            countries={sovereignCountries}
+          />
+        ) : null}
+        {areTerritoriesActive && memberCountries?.length ? t('related-countries') : ''}
         <CountriesList
           className="w-full shrink-0"
           bgColorClassName="bg-orange"
