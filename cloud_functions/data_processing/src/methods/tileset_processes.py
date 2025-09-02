@@ -1,8 +1,6 @@
 import os
 import tempfile
 
-import geopandas as gdp
-
 from src.core.map_params import (
     EEZ_TILESET_FILE,
     EEZ_TILESET_ID,
