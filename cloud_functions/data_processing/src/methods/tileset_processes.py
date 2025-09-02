@@ -39,7 +39,6 @@ def create_and_update_eez_tileset(
                 print("Downloading source EEZ file from GCS...")
 
             eez_df = read_json_df(bucket, source_file, verbose=verbose)
-            eez_df = gdp.read_file(geojson_local)
             eez_df.drop(columns=["MRGID", "AREA_KM2"], errors="ignore", inplace=True)
             eez_df["geometry"] = eez_df["geometry"].make_valid()
             eez_df.to_file(geojson_local, driver="GeoJSON")
