@@ -284,7 +284,7 @@ def database_updates(current_db, updated_pas, verbose=True):
     return {
         "new": updated_pas[updated_pas["identifier"].isin(new)].to_dict(orient="records"),
         "changed": changed.to_dict(orient="records"),
-        "deleted": deleted,
+        "deleted": list(current_db[current_db["identifier"].isin(deleted)]["id"]),
     }
 
 
@@ -303,6 +303,7 @@ def update_protected_areas_table(
 
     # Get the current database
     # TODO: What is the best page_size? We loop through 300,000 - will be slow!
+    # is there instead a way to download the entire database not via API?
     current_db = pull_current_pa_db(page_size=10000)
 
     # TODO: Do we want to have an identifier as a string of the 3-4 identifiers?

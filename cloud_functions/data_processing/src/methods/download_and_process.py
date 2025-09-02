@@ -141,8 +141,6 @@ def download_mpatlas_zone(
     if verbose:
         print(f"downloading MPAtlas Zone Assessment from {url}")
 
-    api_meta = download_mpatlas_zone_from_api()
-
     response = requests.get(url)
     response.raise_for_status()
 
@@ -150,6 +148,7 @@ def download_mpatlas_zone(
     meta = pd.DataFrame([{**d["properties"], **get_geo_dict(d["geometry"])} for d in tqdm(data)])
     # TODO: Make sure they do match one to one OR see if MPAtlas will
     # provide zone_id via the geojson extension
+    api_meta = download_mpatlas_zone_from_api()
     meta["zone_id"] = api_meta["zone_id"]
     upload_dataframe(bucket, meta, meta_filename, project_id=project, verbose=verbose)
 
@@ -178,20 +177,21 @@ def download_mpatlas(
     verbose: bool = True,
 ) -> None:
     download_mpatlas_country(
-        bucket,
-        project,
-        mpatlas_country_url,
-        mpatlas_country_file_name,
-        archive_mpatlas_country_file_name,
+        bucket=bucket,
+        project=project,
+        url=mpatlas_country_url,
+        current_filename=mpatlas_country_file_name,
+        archive_filename=archive_mpatlas_country_file_name,
     )
 
     download_mpatlas_zone(
-        url,
-        bucket,
-        mpatlas_filename,
-        meta_filename,
-        archive_mpatlas_filename,
-        verbose,
+        url=url,
+        bucket=bucket,
+        filename=mpatlas_filename,
+        meta_filename=meta_filename,
+        archive_filename=archive_mpatlas_filename,
+        project=project,
+        verbose=verbose,
     )
 
 
@@ -230,6 +230,7 @@ def download_protected_seas(
     data["includes_multi_jurisdictional_areas"] = data["includes_multi_jurisdictional_areas"].map(
         {"t": True, "f": False}
     )
+    data = data.drop_duplicates()
 
     if verbose:
         print(f"saving Protected Seas to gs://{bucket}/{archive_filename}")
