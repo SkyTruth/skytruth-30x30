@@ -484,10 +484,11 @@ def test_proccess_eez_multiple_sovs_happy_path(
     assert row1["ISO_SOV3"] is None
 
     row2 = out[out["MRGID"] == 102].iloc[0]
-    ters = ['FRA', 'AAA']
+    ters = ["FRA", "AAA"]
     assert row2["ISO_TER1"] in ters
     assert row2["ISO_TER2"] in ters
-    assert row2["ISO_SOV1"] == 'FRA*'
+    assert row2["ISO_SOV1"] == "FRA*"
+
 
 def test_process_eez_geoms_happy_path(
     monkeypatch,

@@ -222,9 +222,9 @@ def process_eez_geoms(
     eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
-    blob_name = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{tolerance}.geojson")
+    blob_name = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{TOLERANCES[1]}.geojson")
     if verbose:
-        print(f"uploading eez with multi-sovereign file to {out_fn}")
+        print(f"uploading eez with multi-sovereign file to {blob_name}")
     upload_gdf(bucket, eez_multiple_sovs, blob_name)
 
 
