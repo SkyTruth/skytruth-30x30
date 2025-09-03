@@ -478,7 +478,7 @@ def test_proccess_eez_multiple_sovs_happy_path(
     # Sets don't preserve order so these can get mixed up
     assert row["ISO_TER1"] == "PRI" or row["ISO_TER1"] == "AAA"
     assert row["ISO_SOV1"] == "USA*"
-    assert row["ISO_TER2"] == "AAA" or row["ISO_TER1"] == "PRI"
+    assert row["ISO_TER2"] == "AAA" or row["ISO_TER2"] == "PRI"
     assert row["ISO_SOV2"] is None
     assert row["ISO_TER3"] is None
     assert row["ISO_SOV3"] is None

@@ -242,8 +242,8 @@ def test_create_and_update_marine_regions_tileset_happy_path(
 
     mb = mockUploadToMapbox.call_args.kwargs
     assert mb["source"] == tileset_mbtiles_path
-    assert mb["tileset_id"] == tileset_processes.EEZ_TILESET_ID
-    assert mb["display_name"] == tileset_processes.EEZ_TILESET_NAME
+    assert mb["tileset_id"] == tileset_processes.MARINE_REGIONS_TILESET_ID
+    assert mb["display_name"] == tileset_processes.MARINE_REGIONS_TILESET_NAME
     assert mb["username"] == "mock_user"
     assert mb["token"] == "mock_token"
 

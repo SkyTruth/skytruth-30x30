@@ -10,6 +10,7 @@ from src.core.map_params import (
     MAPBOX_USER,
     MARINE_REGIONS_TILESET_FILE,
     MARINE_REGIONS_TILESET_ID,
+    MARINE_REGIONS_TILESET_NAME,
 )
 from src.core.map_processors import generate_mbtiles, upload_to_mapbox
 from src.core.params import (
@@ -146,8 +147,8 @@ def create_and_update_marine_regions_tileset(
 
             upload_to_mapbox(
                 source=tileset_local,
-                tileset_id=EEZ_TILESET_ID,
-                display_name=EEZ_TILESET_NAME,
+                tileset_id=MARINE_REGIONS_TILESET_ID,
+                display_name=MARINE_REGIONS_TILESET_NAME,
                 username=MAPBOX_USER,
                 token=MAPBOX_TOKEN,
                 verbose=verbose,
