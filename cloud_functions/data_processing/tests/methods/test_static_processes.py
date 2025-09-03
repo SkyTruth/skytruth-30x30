@@ -70,7 +70,7 @@ def mock_eez():
             "ISO_TER1": ["PRI", None],
             "ISO_SOV1": ["USA", "AAA"],
             "ISO_TER2": [None, None],
-            "ISO_SOV2": ["AAA", None],
+            "ISO_SOV2": ["AAA", "FRA"],
             "ISO_TER3": [None, None],
             "ISO_SOV3": ["AAA", None],
             "AREA_KM2": [10.0, 5.0],
@@ -474,15 +474,20 @@ def test_proccess_eez_multiple_sovs_happy_path(
 
     assert expect_cols.issubset(out.columns)
 
-    row = out[out["MRGID"] == 101].iloc[0]
-    # Sets don't preserve order so these can get mixed up
-    assert row["ISO_TER1"] == "PRI" or row["ISO_TER1"] == "AAA"
-    assert row["ISO_SOV1"] == "USA*"
-    assert row["ISO_TER2"] == "AAA" or row["ISO_TER2"] == "PRI"
-    assert row["ISO_SOV2"] is None
-    assert row["ISO_TER3"] is None
-    assert row["ISO_SOV3"] is None
+    row1 = out[out["MRGID"] == 101].iloc[0]
+    ters = ["AAA", "PRI"]
+    assert row1["ISO_TER1"] in ters
+    assert row1["ISO_SOV1"] == "USA*"
+    assert row1["ISO_TER2"] in ters
+    assert row1["ISO_SOV2"] is None
+    assert row1["ISO_TER3"] is None
+    assert row1["ISO_SOV3"] is None
 
+    row2 = out[out["MRGID"] == 102].iloc[0]
+    ters = ['FRA', 'AAA']
+    assert row2["ISO_TER1"] in ters
+    assert row2["ISO_TER2"] in ters
+    assert row2["ISO_SOV1"] == 'FRA*'
 
 def test_process_eez_geoms_happy_path(
     monkeypatch,

@@ -215,7 +215,6 @@ def test_create_and_update_marine_regions_tileset_happy_path(
     mock_feature = mock_geojson["features"][0]
     props = mock_feature["properties"]
 
-    # AREA_KM2 dropped, MRGRID preserved (note: function drops MRGID, not MRGRID)
     assert "AREA_KM2" not in props
     assert "MRGID" not in props
     assert "location" not in props

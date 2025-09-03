@@ -192,7 +192,7 @@ def process_eez_geoms(
     # Load in High Seas Data
     high_seas = load_marine_regions(HIGH_SEAS_PARAMS, bucket)
     high_seas[["GID_0"]] = "ABNJ"
-    high_seas[["ISO_SOV1"]] = "ABNJ"
+    high_seas[["ISO_TER1"]] = "ABNJ"
     high_seas[["POL_TYPE"]] = "High Seas"
     high_seas[["GEONAME"]] = "High Seas"
     high_seas[["has_shared_marine_area"]] = False
@@ -259,29 +259,27 @@ def _pick_eez_parents(row, related_countries: dict) -> list:
     sovs = set()
     if row.ISO_TER1:
         parents.add(row.ISO_TER1)
-        sov = f"{row.ISO_SOV1}*" if row.ISO_SOV1 else None
-        if related_countries.get(sov) is not None:
-            sovs.add(sov)
     else:
         parents.add(row.ISO_SOV1)
+    sov = f"{row.ISO_SOV1}*" if row.ISO_SOV1 else None
+    if related_countries.get(sov) is not None:
+        sovs.add(sov)
 
     if row.ISO_TER2:
         parents.add(row.ISO_TER2)
-        sov = f"{row.ISO_SOV2}*" if row.ISO_SOV2 else None
-        if related_countries.get(sov) is not None:
-            sovs.add(sov)
-
     elif row.ISO_SOV2:
         parents.add(row.ISO_SOV2)
+    sov = f"{row.ISO_SOV2}*" if row.ISO_SOV2 else None
+    if related_countries.get(sov) is not None:
+        sovs.add(sov)
 
     if row.ISO_TER3:
         parents.add(row.ISO_TER3)
-        sov = f"{row.ISO_SOV3}*" if row.ISO_SOV3 else None
-        if related_countries.get(sov) is not None:
-            sovs.add(sov)
-
     elif row.ISO_SOV3:
         parents.add(row.ISO_SOV3)
+    sov = f"{row.ISO_SOV3}*" if row.ISO_SOV3 else None
+    if related_countries.get(sov) is not None:
+        sovs.add(sov)
 
     return list(parents), list(sovs)
 
