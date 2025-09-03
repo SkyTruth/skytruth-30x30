@@ -77,3 +77,8 @@ export const NEW_LOCS: Set<string> = new Set([
   'VIR',
   'WLF',
 ]);
+
+// TODO TECH-3174: Clean up
+export const TERRITORY_LAYERS = {
+  eez: 'mapbox://skytruth.eez_v12',
+};

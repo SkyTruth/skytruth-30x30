@@ -1,6 +1,6 @@
 [project]
 name = "data-processing"
-version = "0.3.0"
+version = "0.4.0"
 description = "Cloud function for agregating, processing, and updating data for the 30x30 Progress Tracker"
 authors = [
     {name = "SkyTruth"}
@@ -22,6 +22,8 @@ dependencies = [
     "gcsfs (>=2025.5.1,<2026.0.0)",
     "rasterio (>=1.4.3,<2.0.0)",
     "numpy (>=2.3.2,<3.0.0)",
+    "tippecanoe (>=2.72.0,<3.0.0)",
+    "boto3 (>=1.40.18,<2.0.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]
