@@ -10,31 +10,6 @@ from shapely.geometry import Polygon, mapping, shape
 import src.methods.tileset_processes as tileset_processes
 from src.methods.tileset_processes import create_and_update_eez_tileset
 
-# @pytest.fixture
-# def mock_geodf(monkeypatch):
-#     """
-#     Minimal GeoDataFrame-like mock that satisfies the function's usage:
-#       - .drop(..., inplace=True)
-#       - .to_file(...)
-#       - .geometry.make_valid()
-#     """
-#     mockGeometrySeries = MagicMock(name="mockGeometrySeries")
-#     # make_valid returns a GeoSeries-like object (we don't use the return)
-#     mockGeometrySeries.make_valid.return_value = mockGeometrySeries
-
-#     mockGeoDF = MagicMock(name="mockGeoDF")
-#     mockGeoDF.geometry = mockGeometrySeries
-
-#     mockGeoDF.drop.return_value = None
-#     mockGeoDF.to_file.return_value = None
-
-#     # Mock geopandas.read_file to return mock geodf
-#     mock_gdp = types.SimpleNamespace()
-#     mock_gdp.read_file = MagicMock(name="mock_gdp.read_file", return_value=mockGeoDF)
-#     monkeypatch.setattr(tileset_processes, "gdp", mock_gdp, raising=True)
-
-#     return mockGeoDF
-
 
 @pytest.fixture
 def mock_eez_gdf():
