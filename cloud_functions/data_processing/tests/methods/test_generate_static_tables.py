@@ -187,7 +187,10 @@ def test_generate_locations_table_happy(
         raising=True,
     )
     monkeypatch.setattr(
-        gen_static_tbl, "read_dataframe", _mock_read_dataframe(mock_locs_translations_df), raising=True
+        gen_static_tbl,
+        "read_dataframe",
+        _mock_read_dataframe(mock_locs_translations_df),
+        raising=True,
     )
     monkeypatch.setattr(gen_static_tbl, "upload_dataframe", upload_mock, raising=True)
 
@@ -262,7 +265,10 @@ def test_generate_locations_table_read_failure(
         raising=True,
     )
     monkeypatch.setattr(
-        gen_static_tbl, "read_dataframe", _mock_read_dataframe(mock_locs_translations_df), raising=True
+        gen_static_tbl,
+        "read_dataframe",
+        _mock_read_dataframe(mock_locs_translations_df),
+        raising=True,
     )
     monkeypatch.setattr(gen_static_tbl, "upload_dataframe", upload_mock, raising=True)
     monkeypatch.setattr(gen_static_tbl, "get_area_km2", lambda geom: 1.0, raising=True)
