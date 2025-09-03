@@ -1,8 +1,6 @@
 import os
 import tempfile
 
-import geopandas as gdp
-
 from src.core.map_params import (
     EEZ_TILESET_FILE,
     EEZ_TILESET_ID,
@@ -14,9 +12,15 @@ from src.core.map_params import (
     MARINE_REGIONS_TILESET_ID,
 )
 from src.core.map_processors import generate_mbtiles, upload_to_mapbox
+from src.core.params import (
+    BUCKET,
+    EEZ_FILE_NAME,
+    EEZ_MULTIPLE_SOV_FILE_NAME,
+    LOCATIONS_TRANSLATED_FILE_NAME,
+    REGIONS_FILE_NAME,
+)
 from src.core.processors import add_translations
-from src.core.params import BUCKET, EEZ_MULTIPLE_SOV_FILE_NAME, EEZ_FILE_NAME, REGIONS_FILE_NAME, LOCATIONS_TRANSLATED_FILE_NAME
-from src.utils.gcp import read_json_df, upload_file_to_gcs, read_json_from_gcs, read_dataframe
+from src.utils.gcp import read_dataframe, read_json_df, read_json_from_gcs, upload_file_to_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -29,8 +33,7 @@ def create_and_update_eez_tileset(
     verbose: bool = False,
 ):
     try:
-        if not MAPBOX_USER or not MAPBOX_TOKEN:
-            raise ValueError("MAPBOX_USERNAME and MAPBOX_TOKEN environment variables must be set")
+        _check_map_box_credentials()
 
         if verbose:
             print("Creating and updating EEZ tileset...")
@@ -81,15 +84,14 @@ def create_and_update_marine_regions_tileset(
     verbose: bool = False,
 ):
     try:
-        if not MAPBOX_USER or not MAPBOX_TOKEN:
-            raise ValueError("MAPBOX_USERNAME and MAPBOX_TOKEN environment variables must be set")
+        _check_map_box_credentials()
 
         if verbose:
             print("Creating and updating Marine Regions tileset...")
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            tileset_local = '/app/data/marine_regions.mbtiles'
-            geojson_local = '/app/data/marine_regions.geojson'
+            tileset_local = os.path.join(temp_dir, f"{MARINE_REGIONS_TILESET_ID}.mbtiles")
+            geojson_local = os.path.join(temp_dir, "marine_regions.geojson")
 
             if verbose:
                 print("Downloading source Marine Regions file from GCS...")
@@ -97,20 +99,31 @@ def create_and_update_marine_regions_tileset(
             eez_in_file = source_file.replace(".geojson", f"_{EEZ_TOLERANCE}.geojson")
 
             eez_df = read_json_df(bucket, eez_in_file, verbose=verbose)
-            translations_df = read_dataframe(bucket, LOCATIONS_TRANSLATED_FILE_NAME, verbose=verbose)
+            translations_df = read_dataframe(
+                bucket, LOCATIONS_TRANSLATED_FILE_NAME, verbose=verbose
+            )
             regions = read_json_from_gcs(bucket, REGIONS_FILE_NAME, verbose)
 
             iso_to_region = {
-                iso: region_id
-                    for region_id, iso_list in regions.items()
-                    for iso in iso_list
+                iso: region_id for region_id, iso_list in regions.items() for iso in iso_list
             }
+
             eez_df["region_id"] = eez_df["location"].map(iso_to_region)
             region_gdf = (
                 eez_df.dissolve(by="region_id", as_index=False)
-                    .drop(columns=["MRGID", "AREA_KM2", "has_shared_marine_area", "index", "code", "location"], errors="ignore")
-                    .pipe(add_translations, translations_df, "region_id", "code")
-                    .dropna(subset=["region_id"])
+                .drop(
+                    columns=[
+                        "MRGID",
+                        "AREA_KM2",
+                        "has_shared_marine_area",
+                        "index",
+                        "code",
+                        "location",
+                    ],
+                    errors="ignore",
+                )
+                .pipe(add_translations, translations_df, "region_id", "code")
+                .dropna(subset=["region_id"])
             )
 
             region_gdf["geometry"] = region_gdf["geometry"].make_valid()
@@ -139,5 +152,12 @@ def create_and_update_marine_regions_tileset(
             )
 
     except Exception as excep:
-        logger.error({"message": "Error creating and updating Marine Regions tileset", "error": str(excep)})
+        logger.error(
+            {"message": "Error creating and updating Marine Regions tileset", "error": str(excep)}
+        )
         raise excep
+
+
+def _check_map_box_credentials():
+    if not MAPBOX_USER or not MAPBOX_TOKEN:
+        raise ValueError("MAPBOX_USERNAME and MAPBOX_TOKEN environment variables must be set")

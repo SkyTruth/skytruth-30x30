@@ -395,7 +395,10 @@ def round_to_list(bounds: pd.DataFrame) -> list[float]:
     """
     return list(np.round(bounds, decimals=5))
 
-def add_translations(gdf: gpd.GeoDataFrame, translations: pd.DataFrame, gdf_field: str, translation_field:str) -> gpd.GeoDataFrame:
+
+def add_translations(
+    gdf: gpd.GeoDataFrame, translations: pd.DataFrame, gdf_field: str, translation_field: str
+) -> gpd.GeoDataFrame:
     """
     Add translated names to a GeoDataFrame from a translations DataFrame.
     Parameters

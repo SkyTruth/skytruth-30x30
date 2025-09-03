@@ -46,7 +46,10 @@ from src.methods.static_processes import (
     process_terrestrial_biome_raster,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
-from src.methods.tileset_processes import create_and_update_eez_tileset, create_and_update_marine_regions_tileset
+from src.methods.tileset_processes import (
+    create_and_update_eez_tileset,
+    create_and_update_marine_regions_tileset,
+)
 from src.utils.gcp import download_zip_to_gcs
 
 

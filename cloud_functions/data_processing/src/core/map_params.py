@@ -18,4 +18,3 @@ EEZ_TOLERANCE = 0.0001
 MARINE_REGIONS_TILESET_ID = "marine_regions"
 MARINE_REGIONS_TILESET_NAME = "Marine Regions"
 MARINE_REGIONS_TILESET_FILE = "maps/marine_regions.mbtiles"
-
