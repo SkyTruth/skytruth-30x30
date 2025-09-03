@@ -67,12 +67,12 @@ def mock_eez():
     crs = "EPSG:4326"
     df = gpd.GeoDataFrame(
         {
-            "ISO_TER1": ["AAA", None],
-            "ISO_SOV1": ["AAA", "BBB"],
+            "ISO_TER1": ["PRI", None],
+            "ISO_SOV1": ["USA", "AAA"],
             "ISO_TER2": [None, None],
-            "ISO_SOV2": ["CCC", None],
+            "ISO_SOV2": ["AAA", None],
             "ISO_TER3": [None, None],
-            "ISO_SOV3": [None, None],
+            "ISO_SOV3": ["AAA", None],
             "AREA_KM2": [10.0, 5.0],
             "MRGID": [101, 102],
             "POL_TYPE": ["EEZ", "EEZ"],
@@ -113,6 +113,8 @@ def mock_related_countries_map():
         "CYP": ["CYP", "ZNC"],
         "HKG": ["HKG"],
         "USA*": ["PRI"],
+        "FRA*": ["FRA", "MYT"],
+        "COM*": ["COM", "MYT"],
     }
 
 
@@ -383,7 +385,7 @@ def test_process_gadm_geoms_bad_input_columns(
 # -------------------------------
 
 
-def test_pick_eez_parents_basic():
+def test_pick_eez_parents_basic(mock_related_countries_map):
     row = pd.Series(
         {
             "ISO_TER1": "MYT",
@@ -394,15 +396,18 @@ def test_pick_eez_parents_basic():
             "ISO_SOV3": None,
         }
     )
-    parents = _pick_eez_parents(row)
+    parents, sovs = _pick_eez_parents(row, mock_related_countries_map)
     # MYT should be chosen (deduped), no None, order not guaranteed
     assert set(parents) == {"MYT"}
+    assert set(sovs) == {"COM*", "FRA*"}
 
 
-def test_process_eez_by_sov_happy_path(mock_eez, mock_high_seas):
+def test_process_eez_by_sov_happy_path(mock_eez, mock_high_seas, mock_related_countries_map):
     # Precompute parents like process_eez_geoms would
     eez = mock_eez.copy()
-    eez["parents"] = eez.apply(_pick_eez_parents, axis=1)
+    eez[["parents", "sovs"]] = eez.apply(
+        _pick_eez_parents, args=(mock_related_countries_map,), axis=1, result_type="expand"
+    )
     eez.loc[eez["parents"].apply(lambda parents: len(parents) > 1), "has_shared_marine_area"] = True
 
     # Emulate high seas standardization done in process_eez_geoms
@@ -419,19 +424,23 @@ def test_process_eez_by_sov_happy_path(mock_eez, mock_high_seas):
     # Structure checks
     assert isinstance(out, gpd.GeoDataFrame)
     assert set(["location", "AREA_KM2", "has_shared_marine_area", "geometry"]).issubset(out.columns)
-    # Parents (AAA, CCC) + ABNJ should exist
-    assert {"AAA", "CCC", "ABNJ"}.issubset(set(out["location"]))
+
+    assert {"AAA", "PRI", "ABNJ"}.issubset(set(out["location"]))
 
     np.testing.assert_array_equal(out["location"].unique(), out["location"])
 
     shared_area = out[out["location"] == "AAA"]
-    assert shared_area.loc[0, "AREA_KM2"] == 10  # sum of shared area locations
+    assert shared_area.loc[0, "AREA_KM2"] == 15  # sum of shared area locations
     assert shared_area.loc[0, "has_shared_marine_area"]
 
 
-def test_proccess_eez_multiple_sovs_happy_path(mock_eez, mock_high_seas, mock_eez_translations):
+def test_proccess_eez_multiple_sovs_happy_path(
+    mock_eez, mock_high_seas, mock_eez_translations, mock_related_countries_map
+):
     eez = mock_eez.copy()
-    eez["parents"] = eez.apply(_pick_eez_parents, axis=1)
+    eez[["parents", "sovs"]] = eez.apply(
+        _pick_eez_parents, args=(mock_related_countries_map,), axis=1, result_type="expand"
+    )
 
     # Standardize HS as process_eez_geoms does
     hs = mock_high_seas.copy()
@@ -450,6 +459,9 @@ def test_proccess_eez_multiple_sovs_happy_path(mock_eez, mock_high_seas, mock_ee
         "ISO_SOV1",
         "ISO_SOV2",
         "ISO_SOV3",
+        "ISO_TER1",
+        "ISO_TER2",
+        "ISO_TER3",
         "geometry",
         "AREA_KM2",
         "POL_TYPE",
@@ -459,15 +471,26 @@ def test_proccess_eez_multiple_sovs_happy_path(mock_eez, mock_high_seas, mock_ee
         "name_fr",
         "name_pt",
     }
+
     assert expect_cols.issubset(out.columns)
-    # First EEZ should have two parents -> ISO_SOV1 & ISO_SOV2 not None
+
     row = out[out["MRGID"] == 101].iloc[0]
-    assert row["ISO_SOV1"] is not None
-    assert row["ISO_SOV2"] is not None
+    # Sets don't preserve order so these can get mixed up
+    assert row["ISO_TER1"] == "PRI" or row["ISO_TER1"] == "AAA"
+    assert row["ISO_SOV1"] == "USA*"
+    assert row["ISO_TER2"] == "AAA" or row["ISO_TER1"] == "PRI"
+    assert row["ISO_SOV2"] is None
+    assert row["ISO_TER3"] is None
+    assert row["ISO_SOV3"] is None
 
 
 def test_process_eez_geoms_happy_path(
-    monkeypatch, uploads_recorder, mock_eez, mock_high_seas, mock_eez_translations
+    monkeypatch,
+    uploads_recorder,
+    mock_eez,
+    mock_high_seas,
+    mock_eez_translations,
+    mock_related_countries_map,
 ):
     calls, upload_gdf_mock = uploads_recorder
 
@@ -484,6 +507,11 @@ def test_process_eez_geoms_happy_path(
         _mock_read_dataframe(mock_eez_translations),
         raising=True,
     )
+    monkeypatch.setattr(
+        static_processes,
+        "read_json_from_gcs",
+        _mock_read_json_from_gcs(mock_related_countries_map),
+    )
     monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
     monkeypatch.setattr(static_processes, "TOLERANCES", [None, 0.1, 0.3], raising=True)
@@ -498,6 +526,7 @@ def test_process_eez_geoms_happy_path(
         eez_file_name=static_processes.EEZ_FILE_NAME,
         eez_params=static_processes.EEZ_PARAMS,
         bucket="test-bucket",
+        related_countries_file_name=static_processes.RELATED_COUNTRIES_FILE_NAME,
         tolerances=static_processes.TOLERANCES,
         verbose=False,
     )
@@ -524,7 +553,12 @@ def test_process_eez_geoms_happy_path(
 
 
 def test_process_eez_geoms_loader_failure(
-    monkeypatch, uploads_recorder, mock_eez, mock_high_seas, mock_eez_translations
+    monkeypatch,
+    uploads_recorder,
+    mock_eez,
+    mock_high_seas,
+    mock_eez_translations,
+    mock_related_countries_map,
 ):
     calls, upload_gdf_mock = uploads_recorder
 
@@ -537,6 +571,11 @@ def test_process_eez_geoms_loader_failure(
         "read_dataframe",
         _mock_read_dataframe(mock_eez_translations),
         raising=True,
+    )
+    monkeypatch.setattr(
+        static_processes,
+        "read_json_from_gcs",
+        _mock_read_json_from_gcs(mock_related_countries_map),
     )
     monkeypatch.setattr(static_processes, "clean_geometries", lambda g: g, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
@@ -552,7 +591,9 @@ def test_process_eez_geoms_loader_failure(
     assert calls == []
 
 
-def test_process_eez_geoms_missing_columns(monkeypatch, uploads_recorder, mock_eez_translations):
+def test_process_eez_geoms_missing_columns(
+    monkeypatch, uploads_recorder, mock_eez_translations, mock_related_countries_map
+):
     """
     If EEZ input lacks required columns, we should fail before uploading.
     e.g., remove ISO_TER#/ISO_SOV# so _pick_eez_parents explodes.
@@ -592,6 +633,11 @@ def test_process_eez_geoms_missing_columns(monkeypatch, uploads_recorder, mock_e
         "read_dataframe",
         _mock_read_dataframe(mock_eez_translations),
         raising=True,
+    )
+    monkeypatch.setattr(
+        static_processes,
+        "read_json_from_gcs",
+        _mock_read_json_from_gcs(mock_related_countries_map),
     )
     monkeypatch.setattr(static_processes, "clean_geometries", lambda g: g, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)

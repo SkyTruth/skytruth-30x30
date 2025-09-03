@@ -1,7 +1,7 @@
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 
 import src.methods.generate_static_tables as gen_static_tbl
 
@@ -12,24 +12,24 @@ def crs():
     return "EPSG:4326"
 
 
-@pytest.fixture
-def mock_eez_gdf(crs):
-    """
-    Minimal EEZ-like frame
-    """
-    return gpd.GeoDataFrame(
-        {
-            "location": ["USA", "MEX", "ABNJ"],
-            "AREA_KM2": ["1000.4", "499.6", "123.1"],  # strings on purpose
-            "has_shared_marine_area": [True, None, False],
-            "geometry": [
-                Point(-100, 35).buffer(3.0),
-                Point(-102, 18).buffer(2.0),
-                Polygon([(-10, -10), (-10, 10), (10, 10), (10, -10)]),
-            ],
-        },
-        crs=crs,
-    )
+# @pytest.fixture
+# def mock_eez_gdf(crs):
+#     """
+#     Minimal EEZ-like frame
+#     """
+#     return gpd.GeoDataFrame(
+#         {
+#             "location": ["USA", "MEX", "ABNJ"],
+#             "AREA_KM2": ["1000.4", "499.6", "123.1"],  # strings on purpose
+#             "has_shared_marine_area": [True, None, False],
+#             "geometry": [
+#                 Point(-100, 35).buffer(3.0),
+#                 Point(-102, 18).buffer(2.0),
+#                 Polygon([(-10, -10), (-10, 10), (10, 10), (10, -10)]),
+#             ],
+#         },
+#         crs=crs,
+#     )
 
 
 @pytest.fixture
@@ -70,48 +70,6 @@ def mock_regions_map():
     return {
         "NA": ["USA", "MEX"],  # North America region
     }
-
-
-@pytest.fixture
-def mock_translations_df():
-    """Minimal translations table to be merged at the end."""
-    return pd.DataFrame(
-        {
-            "code": ["USA", "MEX", "ABNJ", "NA", "USA*", "MEX*"],
-            "name": [
-                "United States",
-                "Mexico",
-                "High Seas",
-                "North America",
-                "United States*",
-                "Mexico*",
-            ],
-            "name_es": [
-                "Estados Unidos",
-                "México",
-                "Alta mar",
-                "Norteamérica",
-                "Estados Unidos*",
-                "México*",
-            ],
-            "name_fr": [
-                "États-Unis",
-                "Mexique",
-                "Haute mer",
-                "Amérique du Nord",
-                "États-Unis*",
-                "Mexique*",
-            ],
-            "name_pt": [
-                "Estados Unidos",
-                "México",
-                "Alto-mar",
-                "América do Norte",
-                "Estados Unidos*",
-                "México*",
-            ],
-        }
-    )
 
 
 @pytest.fixture
