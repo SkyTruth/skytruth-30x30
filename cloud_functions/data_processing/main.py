@@ -47,6 +47,7 @@ from src.methods.static_processes import (
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.tileset_processes import (
+    create_and_update_country_tileset,
     create_and_update_eez_tileset,
     create_and_update_marine_regions_tileset,
 )
@@ -250,6 +251,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case "update_marine_regions_tileset":
                 create_and_update_marine_regions_tileset(verbose=verbose)
+
+            case "update_country_tileset":
+                create_and_update_country_tileset(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")
