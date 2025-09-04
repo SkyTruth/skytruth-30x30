@@ -50,6 +50,7 @@ from src.methods.tileset_processes import (
     create_and_update_country_tileset,
     create_and_update_eez_tileset,
     create_and_update_marine_regions_tileset,
+    create_and_update_terrestrial_regions_tileset
 )
 from src.utils.gcp import download_zip_to_gcs
 
@@ -254,6 +255,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case "update_country_tileset":
                 create_and_update_country_tileset(verbose=verbose)
+
+            case "update_terrestrial_regions_tileset":
+                create_and_update_terrestrial_regions_tileset(verbose=verbose)
 
             case _:
                 print(f"METHOD: {method} not a valid option")

@@ -26,3 +26,7 @@ COUNTRIES_TILESET_ID = "countries"
 COUNTRIES_TILESET_NAME = "countries"
 COUNTRIES_TILESET_FILE = "maps/countries.mbtiles"
 COUNTRIES_TOLERANCE = 0.001
+
+TERRESTRIAL_REGIONS_TILESET_ID = "terrestrial_regions"
+TERRESTRIAL_REGIONS_TILESET_NAME = "Terrestrial Regions"
+TERRESTRIAL_REGIONS_TILESET_FILE = "maps/terrestrial_regions.mbtiles"
