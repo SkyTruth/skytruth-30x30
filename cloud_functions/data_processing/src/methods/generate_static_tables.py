@@ -98,7 +98,7 @@ def generate_locations_table(
             how="outer",
         )
         .pipe(_add_translations, translations)
-        .drop(columns=["geometry", "COUNTRY", "GID_0"])
+        .drop(columns=["geometry", "GID_0"])
     )
 
     # Typesafe defaults that might be missing after merger
