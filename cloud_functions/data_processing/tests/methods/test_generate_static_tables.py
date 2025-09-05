@@ -1,7 +1,7 @@
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 
 import src.methods.generate_static_tables as gen_static_tbl
 
@@ -10,26 +10,6 @@ import src.methods.generate_static_tables as gen_static_tbl
 @pytest.fixture
 def crs():
     return "EPSG:4326"
-
-
-@pytest.fixture
-def mock_eez_gdf(crs):
-    """
-    Minimal EEZ-like frame
-    """
-    return gpd.GeoDataFrame(
-        {
-            "location": ["USA", "MEX", "ABNJ"],
-            "AREA_KM2": ["1000.4", "499.6", "123.1"],  # strings on purpose
-            "has_shared_marine_area": [True, None, False],
-            "geometry": [
-                Point(-100, 35).buffer(3.0),
-                Point(-102, 18).buffer(2.0),
-                Polygon([(-10, -10), (-10, 10), (10, 10), (10, -10)]),
-            ],
-        },
-        crs=crs,
-    )
 
 
 @pytest.fixture
@@ -73,48 +53,6 @@ def mock_regions_map():
 
 
 @pytest.fixture
-def mock_translations_df():
-    """Minimal translations table to be merged at the end."""
-    return pd.DataFrame(
-        {
-            "code": ["USA", "MEX", "ABNJ", "NA", "USA*", "MEX*"],
-            "name": [
-                "United States",
-                "Mexico",
-                "High Seas",
-                "North America",
-                "United States*",
-                "Mexico*",
-            ],
-            "name_es": [
-                "Estados Unidos",
-                "México",
-                "Alta mar",
-                "Norteamérica",
-                "Estados Unidos*",
-                "México*",
-            ],
-            "name_fr": [
-                "États-Unis",
-                "Mexique",
-                "Haute mer",
-                "Amérique du Nord",
-                "États-Unis*",
-                "Mexique*",
-            ],
-            "name_pt": [
-                "Estados Unidos",
-                "México",
-                "Alto-mar",
-                "América do Norte",
-                "Estados Unidos*",
-                "México*",
-            ],
-        }
-    )
-
-
-@pytest.fixture
 def upload_recorder():
     """
     Record uploads so tests can assert the target blob name and the resulting dataframe shape.
@@ -135,7 +73,7 @@ def upload_recorder():
 
 
 # Mocks to patch in for functions and pas the fixtures
-def _mock_read_json_df(mock_eez_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix):
+def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix):
     """
     Return the right GeoDataFrame based on the filename the function asks for.
     We detect which one by the suffix (tolerance is part of the suffix).
@@ -143,7 +81,7 @@ def _mock_read_json_df(mock_eez_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix):
 
     def _read_json_df(*, bucket_name, filename, verbose=True):
         if filename.endswith(eez_suffix):
-            return mock_eez_gdf.copy()
+            return mock_eez_by_loc_gdf.copy()
         if filename.endswith(gadm_suffix):
             return mock_gadm_gdf.copy()
         raise AssertionError(f"Unexpected filename: {filename}")
@@ -162,10 +100,10 @@ def _mock_read_json_from_gcs(mock_related_countries_map, mock_regions_map):
     return _reader
 
 
-def _mock_read_dataframe(mock_translations_df):
+def _mock_read_dataframe(mock_locs_translations_df):
     def _reader(*, bucket_name, filename, verbose=True):
         assert filename == gen_static_tbl.LOCATIONS_TRANSLATED_FILE_NAME
-        return mock_translations_df.copy()
+        return mock_locs_translations_df.copy()
 
     return _reader
 
@@ -182,9 +120,9 @@ def test__add_default_types():
     assert gen_static_tbl._add_default_types({"location": "ABNJ"}) == "highseas"
 
 
-def test__add_translations_adds_names_and_keeps_code_column(mock_translations_df):
+def test__add_translations_adds_names_and_keeps_code_column(mock_locs_translations_df):
     out = gen_static_tbl._add_translations(
-        gpd.GeoDataFrame({"GID_0": ["USA", "MEX"]}), mock_translations_df
+        gpd.GeoDataFrame({"GID_0": ["USA", "MEX"]}), mock_locs_translations_df
     )
 
     assert "code" in out.columns
@@ -218,11 +156,11 @@ def test__add_groups_creates_group_rows_and_updates_member_lists(crs):
 
 def test_generate_locations_table_happy(
     monkeypatch,
-    mock_eez_gdf,
+    mock_eez_by_loc_gdf,
     mock_gadm_gdf,
     mock_related_countries_map,
     mock_regions_map,
-    mock_translations_df,
+    mock_locs_translations_df,
     upload_recorder,
 ):
     calls, upload_mock = upload_recorder
@@ -239,7 +177,7 @@ def test_generate_locations_table_happy(
     monkeypatch.setattr(
         gen_static_tbl,
         "read_json_df",
-        _mock_read_json_df(mock_eez_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix),
+        _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix),
         raising=True,
     )
     monkeypatch.setattr(
@@ -249,7 +187,10 @@ def test_generate_locations_table_happy(
         raising=True,
     )
     monkeypatch.setattr(
-        gen_static_tbl, "read_dataframe", _mock_read_dataframe(mock_translations_df), raising=True
+        gen_static_tbl,
+        "read_dataframe",
+        _mock_read_dataframe(mock_locs_translations_df),
+        raising=True,
     )
     monkeypatch.setattr(gen_static_tbl, "upload_dataframe", upload_mock, raising=True)
 
@@ -300,7 +241,7 @@ def test_generate_locations_table_read_failure(
     mock_gadm_gdf,
     mock_related_countries_map,
     mock_regions_map,
-    mock_translations_df,
+    mock_locs_translations_df,
     upload_recorder,
 ):
     calls, upload_mock = upload_recorder
@@ -324,7 +265,10 @@ def test_generate_locations_table_read_failure(
         raising=True,
     )
     monkeypatch.setattr(
-        gen_static_tbl, "read_dataframe", _mock_read_dataframe(mock_translations_df), raising=True
+        gen_static_tbl,
+        "read_dataframe",
+        _mock_read_dataframe(mock_locs_translations_df),
+        raising=True,
     )
     monkeypatch.setattr(gen_static_tbl, "upload_dataframe", upload_mock, raising=True)
     monkeypatch.setattr(gen_static_tbl, "get_area_km2", lambda geom: 1.0, raising=True)
