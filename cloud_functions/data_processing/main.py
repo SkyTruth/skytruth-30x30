@@ -50,7 +50,7 @@ from src.methods.tileset_processes import (
     create_and_update_country_tileset,
     create_and_update_eez_tileset,
     create_and_update_marine_regions_tileset,
-    create_and_update_terrestrial_regions_tileset
+    create_and_update_terrestrial_regions_tileset,
 )
 from src.utils.gcp import download_zip_to_gcs
 

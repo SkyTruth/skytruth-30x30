@@ -84,7 +84,7 @@ def create_and_update_eez_tileset(
 
     except Exception as excep:
         logger.error({"message": "Error creating and updating EEZ tileset", "error": str(excep)})
-        raise
+        raise excep
 
 
 def create_and_update_marine_regions_tileset(
@@ -123,7 +123,7 @@ def create_and_update_marine_regions_tileset(
         logger.error(
             {"message": "Error creating and updating Marine Region tileset", "error": str(excep)}
         )
-        raise
+        raise excep
 
 
 def marine_regions_process(temp_dir: Path, ctx: dict[str, Any]):
@@ -205,7 +205,7 @@ def create_and_update_country_tileset(
         logger.error(
             {"message": "Error creating and updating Countries tileset", "error": str(excep)}
         )
-        raise
+        raise excep
 
 
 def countries_process(temp_dir: Path, ctx: dict[str, Any]):
@@ -280,6 +280,84 @@ def create_and_update_terrestrial_regions_tileset(
             },
         )
 
+        return run_tileset_pipeline(cfg, process=terrestrial_regions_process)
+    except Exception as excep:
+        logger.error(
+            {
+                "message": "Error creating and updating Terrestrial Regions tileset",
+                "error": str(excep),
+            }
+        )
+        raise excep
+
+
+def terrestrial_regions_process(temp_dir: Path, ctx: dict[str, Any]):
+    verbose = ctx["verbose"]
+    bucket = ctx["bucket"]
+    source_file: str = ctx["source_file"]
+    regions_file: str = ctx["regions_file"]
+    tolerance: int | str = ctx["tolerance"]
+    translation_file: str = ctx["translation_file"]
+
+    if verbose:
+        print("Downloading source GADM file from GCS...")
+
+    input_file = source_file.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_gdf = read_json_df(bucket, input_file, verbose=verbose)
+
+    translations_df = read_dataframe(bucket, translation_file, verbose=verbose)
+    regions = read_json_from_gcs(bucket, regions_file, verbose)
+
+    iso_to_region = {iso: region_id for region_id, iso_list in regions.items() for iso in iso_list}
+
+    gadm_gdf["region_id"] = gadm_gdf["location"].map(iso_to_region)
+    region_gdf = (
+        gadm_gdf.dissolve(by="region_id", as_index=False)
+        .drop(
+            columns=[
+                "location",
+            ],
+        )
+        .pipe(add_translations, translations_df, "region_id", "code")
+        .drop(columns="code")
+        .dropna(subset=["region_id"])
+    )
+
+    region_gdf["geometry"] = region_gdf["geometry"].make_valid()
+    geojson_local = temp_dir / ctx["local_geojson"]
+    region_gdf.to_file(geojson_local, driver="GeoJSON")
+
+
+def create_and_update_protected_area_tileset(
+    bucket: str,
+    source_file: str,
+    tileset_file: str,
+    tileset_id: str,
+    display_name: str,
+    tolerance: float, 
+    verbose: bool = False,
+    *,
+    keep_temp: bool = False,
+):
+    try:
+        if verbose:
+            print(f"Creating and updating {display_name} tileset...")
+
+        cfg = TilesetConfig(
+            bucket=bucket,
+            tileset_blob_name=tileset_file,
+            tileset_id=tileset_id,
+            display_name=display_name,
+            local_geojson_name="terrestrial_regions.geojson",
+            local_mbtiles_name=f"{tileset_id}.mbtiles",
+            source_file=source_file,
+            verbose=verbose,
+            keep_temp=keep_temp,
+            extra={
+                "tolerance": COUNTRIES_TOLERANCE,
+            },
+        )
+
         return run_tileset_pipeline(
             cfg,
             process=terrestrial_regions_process,
@@ -292,7 +370,7 @@ def create_and_update_terrestrial_regions_tileset(
                 "error": str(excep),
             }
         )
-        raise
+        raise excep
 
 
 def terrestrial_regions_process(temp_dir: Path, ctx: dict[str, Any]):
