@@ -348,13 +348,13 @@ def create_and_update_protected_area_tileset(
             tileset_blob_name=tileset_file,
             tileset_id=tileset_id,
             display_name=display_name,
-            local_geojson_name="terrestrial_regions.geojson",
+            local_geojson_name="pas.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
             source_file=source_file,
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
-                "tolerance": COUNTRIES_TOLERANCE,
+                "tolerance": tolerance,
             },
         )
 
@@ -377,34 +377,16 @@ def protected_area_process(temp_dir: Path, ctx: dict[str, Any]):
     verbose = ctx["verbose"]
     bucket = ctx["bucket"]
     source_file: str = ctx["source_file"]
-    regions_file: str = ctx["regions_file"]
     tolerance: int | str = ctx["tolerance"]
-    translation_file: str = ctx["translation_file"]
 
     if verbose:
         print("Downloading source GADM file from GCS...")
 
     input_file = source_file.replace(".geojson", f"_{tolerance}.geojson")
-    gadm_gdf = read_json_df(bucket, input_file, verbose=verbose)
+    wdpa_gdf = read_json_df(bucket, input_file, verbose=verbose)
 
-    translations_df = read_dataframe(bucket, translation_file, verbose=verbose)
-    regions = read_json_from_gcs(bucket, regions_file, verbose)
-
-    iso_to_region = {iso: region_id for region_id, iso_list in regions.items() for iso in iso_list}
-
-    gadm_gdf["region_id"] = gadm_gdf["location"].map(iso_to_region)
-    region_gdf = (
-        gadm_gdf.dissolve(by="region_id", as_index=False)
-        .drop(
-            columns=[
-                "location",
-            ],
-        )
-        .pipe(add_translations, translations_df, "region_id", "code")
-        .drop(columns="code")
-        .dropna(subset=["region_id"])
-    )
-
-    region_gdf["geometry"] = region_gdf["geometry"].make_valid()
+    properties = ["GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "geometry"]
+    wdpa_gdf.drop(columns=list(set(wdpa_gdf.columns) - set(properties)), inplace=True)
+    wdpa_gdf["geometry"] = wdpa_gdf["geometry"].make_valid()
     geojson_local = temp_dir / ctx["local_geojson"]
-    region_gdf.to_file(geojson_local, driver="GeoJSON")
+    wdpa_gdf.to_file(geojson_local, driver="GeoJSON")
