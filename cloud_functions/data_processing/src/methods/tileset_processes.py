@@ -1,6 +1,6 @@
-from pathlib import Path
 from typing import Any
 
+import geopandas as gpd
 import pandas as pd
 
 from src.core.map_params import (
@@ -29,34 +29,24 @@ from src.core.params import (
     RELATED_COUNTRIES_FILE_NAME,
 )
 from src.core.processors import add_translations
-from src.utils.gcp import read_dataframe, read_json_df, read_json_from_gcs
+from src.utils.gcp import read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
 from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
 
 logger = Logger()
 
 
-def eez_process(temp_dir: Path, ctx: dict[str, Any]):
-    verbose = ctx["verbose"]
-    bucket = ctx["bucket"]
-    source_file: str = ctx["source_file"]
-    tolerance: int | str = ctx["tolerance"]
-
-    if verbose:
-        print("Downloading source EEZ file from GCS...")
-
-    input_file = source_file.replace(".geojson", f"_{tolerance}.geojson")
-    eez_df = read_json_df(bucket, input_file, verbose=verbose)
-    eez_df.drop(columns=["MRGID", "AREA_KM2"], errors="ignore", inplace=True)
-    eez_df["geometry"] = eez_df["geometry"].make_valid()
-    geojson_local = temp_dir / ctx["local_geojson"]
-    eez_df.to_file(geojson_local, driver="GeoJSON")
+def eez_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
+    gdf.drop(columns=["MRGID", "AREA_KM2"], errors="ignore", inplace=True)
+    return gdf
 
 
 def create_and_update_eez_tileset(
     bucket: str = BUCKET,
     source_file: str = EEZ_MULTIPLE_SOV_FILE_NAME,
     tileset_file: str = EEZ_TILESET_FILE,
+    tileset_id: str = EEZ_TILESET_ID,
+    display_name: str = EEZ_TILESET_NAME,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -68,16 +58,13 @@ def create_and_update_eez_tileset(
         cfg = TilesetConfig(
             bucket=bucket,
             tileset_blob_name=tileset_file,
-            tileset_id=EEZ_TILESET_ID,
-            display_name=EEZ_TILESET_NAME,
+            tileset_id=tileset_id,
+            display_name=display_name,
             local_geojson_name="eez.geojson",
-            local_mbtiles_name=f"{EEZ_TILESET_ID}.mbtiles",
-            source_file=source_file,
+            local_mbtiles_name=f"{tileset_id}.mbtiles",
+            source_file=source_file.replace(".geojson", f"_{EEZ_TOLERANCE}.geojson"),
             verbose=verbose,
             keep_temp=keep_temp,
-            extra={
-                "tolerance": EEZ_TOLERANCE,
-            },
         )
 
         return run_tileset_pipeline(cfg, process=eez_process)
@@ -108,11 +95,10 @@ def create_and_update_marine_regions_tileset(
             display_name=display_name,
             local_geojson_name="marine_regions.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file,
+            source_file=source_file.replace(".geojson", f"_{EEZ_TOLERANCE}.geojson"),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
-                "tolerance": EEZ_TOLERANCE,
                 "translation_file": LOCATIONS_TRANSLATED_FILE_NAME,
                 "regions_file": REGIONS_FILE_NAME,
             },
@@ -126,28 +112,20 @@ def create_and_update_marine_regions_tileset(
         raise excep
 
 
-def marine_regions_process(temp_dir: Path, ctx: dict[str, Any]):
+def marine_regions_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     verbose = ctx["verbose"]
     bucket = ctx["bucket"]
-    source_file: str = ctx["source_file"]
-    tolerance: int | str = ctx["tolerance"]
     translation_file: str = ctx["translation_file"]
     regions_file: str = ctx["regions_file"]
-
-    if verbose:
-        print("Downloading source Marine Regions file from GCS...")
-
-    input_file = source_file.replace(".geojson", f"_{tolerance}.geojson")
-    eez_df = read_json_df(bucket, input_file, verbose=verbose)
 
     translations_df = read_dataframe(bucket, translation_file, verbose=verbose)
     regions = read_json_from_gcs(bucket, regions_file, verbose)
 
     iso_to_region = {iso: region_id for region_id, iso_list in regions.items() for iso in iso_list}
+    gdf["region_id"] = gdf["location"].map(iso_to_region)
 
-    eez_df["region_id"] = eez_df["location"].map(iso_to_region)
     region_gdf = (
-        eez_df.dissolve(by="region_id", as_index=False)
+        gdf.dissolve(by="region_id", as_index=False)
         .drop(
             columns=[
                 "MRGID",
@@ -164,9 +142,7 @@ def marine_regions_process(temp_dir: Path, ctx: dict[str, Any]):
         .dropna(subset=["region_id"])
     )
 
-    region_gdf["geometry"] = region_gdf["geometry"].make_valid()
-    geojson_local = temp_dir / ctx["local_geojson"]
-    region_gdf.to_file(geojson_local, driver="GeoJSON")
+    return region_gdf
 
 
 def create_and_update_country_tileset(
@@ -190,11 +166,10 @@ def create_and_update_country_tileset(
             display_name=display_name,
             local_geojson_name="countries.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file,
+            source_file=source_file.replace(".geojson", f"_{COUNTRIES_TOLERANCE}.geojson"),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
-                "tolerance": COUNTRIES_TOLERANCE,
                 "translation_file": LOCATIONS_TRANSLATED_FILE_NAME,
                 "related_countries_file": RELATED_COUNTRIES_FILE_NAME,
             },
@@ -208,45 +183,32 @@ def create_and_update_country_tileset(
         raise excep
 
 
-def countries_process(temp_dir: Path, ctx: dict[str, Any]):
+def countries_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     verbose = ctx["verbose"]
     bucket = ctx["bucket"]
-    source_file: str = ctx["source_file"]
     related_countries_file: str = ctx["related_countries_file"]
-    tolerance: int | str = ctx["tolerance"]
     translation_file: str = ctx["translation_file"]
-
-    if verbose:
-        print("Downloading source GADM file from GCS...")
-
-    input_file = source_file.replace(".geojson", f"_{tolerance}.geojson")
-    gadm_gdf = read_json_df(bucket, input_file, verbose=verbose)
 
     translations_df = read_dataframe(bucket, translation_file, verbose=verbose)
     related_countries = read_json_from_gcs(bucket, related_countries_file, verbose)
 
     country_to_sov = {}
-
     for iso_sov, iso_list in related_countries.items():
         if iso_sov.endswith("*"):
             for iso in iso_list:
                 country_to_sov.setdefault(iso, []).append(iso_sov)
 
-    sovs = gadm_gdf["location"].map(lambda loc: country_to_sov.get(loc, []))
+    sovs = gdf["location"].map(lambda loc: country_to_sov.get(loc, []))
 
     # Map sovereigns to country
     for idx in range(3):
-        gadm_gdf[f"ISO_SOV{idx + 1}"] = sovs.map(
+        gdf[f"ISO_SOV{idx + 1}"] = sovs.map(
             lambda sov, idx=idx: sov[idx] if idx < len(sov) else pd.NA
         ).astype("string")
 
-    gadm_gdf = gadm_gdf.pipe(add_translations, translations_df, "location", "code").drop(
-        columns="code"
-    )
+    gdf = gdf.pipe(add_translations, translations_df, "location", "code").drop(columns="code")
 
-    gadm_gdf["geometry"] = gadm_gdf["geometry"].make_valid()
-    geojson_local = temp_dir / ctx["local_geojson"]
-    gadm_gdf.to_file(geojson_local, driver="GeoJSON")
+    return gdf
 
 
 def create_and_update_terrestrial_regions_tileset(
@@ -270,11 +232,10 @@ def create_and_update_terrestrial_regions_tileset(
             display_name=display_name,
             local_geojson_name="terrestrial_regions.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file,
+            source_file=source_file.replace(".geojson", f"_{COUNTRIES_TOLERANCE}.geojson"),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
-                "tolerance": COUNTRIES_TOLERANCE,
                 "translation_file": LOCATIONS_TRANSLATED_FILE_NAME,
                 "regions_file": REGIONS_FILE_NAME,
             },
@@ -291,28 +252,20 @@ def create_and_update_terrestrial_regions_tileset(
         raise excep
 
 
-def terrestrial_regions_process(temp_dir: Path, ctx: dict[str, Any]):
+def terrestrial_regions_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     verbose = ctx["verbose"]
     bucket = ctx["bucket"]
-    source_file: str = ctx["source_file"]
     regions_file: str = ctx["regions_file"]
-    tolerance: int | str = ctx["tolerance"]
     translation_file: str = ctx["translation_file"]
-
-    if verbose:
-        print("Downloading source GADM file from GCS...")
-
-    input_file = source_file.replace(".geojson", f"_{tolerance}.geojson")
-    gadm_gdf = read_json_df(bucket, input_file, verbose=verbose)
 
     translations_df = read_dataframe(bucket, translation_file, verbose=verbose)
     regions = read_json_from_gcs(bucket, regions_file, verbose)
 
     iso_to_region = {iso: region_id for region_id, iso_list in regions.items() for iso in iso_list}
+    gdf["region_id"] = gdf["location"].map(iso_to_region)
 
-    gadm_gdf["region_id"] = gadm_gdf["location"].map(iso_to_region)
     region_gdf = (
-        gadm_gdf.dissolve(by="region_id", as_index=False)
+        gdf.dissolve(by="region_id", as_index=False)
         .drop(
             columns=[
                 "location",
@@ -323,9 +276,7 @@ def terrestrial_regions_process(temp_dir: Path, ctx: dict[str, Any]):
         .dropna(subset=["region_id"])
     )
 
-    region_gdf["geometry"] = region_gdf["geometry"].make_valid()
-    geojson_local = temp_dir / ctx["local_geojson"]
-    region_gdf.to_file(geojson_local, driver="GeoJSON")
+    return region_gdf
 
 
 def create_and_update_protected_area_tileset(
@@ -350,18 +301,14 @@ def create_and_update_protected_area_tileset(
             display_name=display_name,
             local_geojson_name="pas.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file,
+            source_file=source_file.replace(".geojson", f"_{tolerance}.geojson"),
             verbose=verbose,
             keep_temp=keep_temp,
-            extra={
-                "tolerance": tolerance,
-            },
         )
 
         return run_tileset_pipeline(
             cfg,
             process=protected_area_process,
-            upload_mapbox=lambda a, b: print("MAPBOXING..."),
         )
     except Exception as excep:
         logger.error(
@@ -373,20 +320,8 @@ def create_and_update_protected_area_tileset(
         raise excep
 
 
-def protected_area_process(temp_dir: Path, ctx: dict[str, Any]):
-    verbose = ctx["verbose"]
-    bucket = ctx["bucket"]
-    source_file: str = ctx["source_file"]
-    tolerance: int | str = ctx["tolerance"]
-
-    if verbose:
-        print("Downloading source GADM file from GCS...")
-
-    input_file = source_file.replace(".geojson", f"_{tolerance}.geojson")
-    wdpa_gdf = read_json_df(bucket, input_file, verbose=verbose)
-
+def protected_area_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     properties = ["GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "geometry"]
-    wdpa_gdf.drop(columns=list(set(wdpa_gdf.columns) - set(properties)), inplace=True)
-    wdpa_gdf["geometry"] = wdpa_gdf["geometry"].make_valid()
-    geojson_local = temp_dir / ctx["local_geojson"]
-    wdpa_gdf.to_file(geojson_local, driver="GeoJSON")
+    gdf.drop(columns=list(set(gdf.columns) - set(properties)), inplace=True)
+
+    return gdf

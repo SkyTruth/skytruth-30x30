@@ -1,3 +1,4 @@
+import shutil
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -9,7 +10,7 @@ from src.core.map_params import (
     MAPBOX_USER,
 )
 from src.core.map_processors import generate_mbtiles, upload_to_mapbox
-from src.utils.gcp import upload_file_to_gcs
+from src.utils.gcp import read_json_df, upload_file_to_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -91,18 +92,25 @@ def run_tileset_pipeline(
         if cfg.verbose:
             print(f"Starting {ctx['display_name']} tileset pipeline...")
 
-        temp_mgr = tempfile.TemporaryDirectory()
-        temp_dir = Path(temp_mgr.__enter__())
+        # temp_mgr = tempfile.TemporaryDirectory()
+        # temp_dir = Path(temp_mgr.__enter__())
+
+        temp_dir_str = tempfile.mkdtemp()
+        temp_dir = Path(temp_dir_str)
 
         try:
+            if cfg.verbose:
+                print(f"Downloading source {cfg.source_file} file from GCS...")
+            gdf = read_json_df(ctx["bucket"], ctx["source_file"], verbose=ctx["verbose"])
+
             if process:
                 if cfg.verbose:
                     print(f"Processing {ctx['display_name']}...")
-                process(temp_dir, ctx)
+                gdf = process(gdf, ctx)
 
             geojson_path = temp_dir / ctx["local_geojson"]
-            if not geojson_path.exists():
-                raise FileNotFoundError(f"Expected GeoJSON not found: {geojson_path}")
+            gdf["geometry"] = gdf["geometry"].make_valid()
+            gdf.to_file(geojson_path, driver="GeoJSON")
 
             if cfg.verbose:
                 print(f"Generating {ctx['display_name']} MBTiles...")
@@ -132,13 +140,14 @@ def run_tileset_pipeline(
 
         finally:
             if not cfg.keep_temp:
-                temp_mgr.__exit__(None, None, None)
+                if not cfg.keep_temp:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
             else:
                 if cfg.verbose:
                     print(f"Preserving temp dir at {temp_dir}")
 
-    except Exception as ex:
+    except Exception as excep:
         logger.error(
-            {"message": f"Tileset pipeline failed for {ctx['display_name']}", "error": str(ex)}
+            {"message": f"Tileset pipeline failed for {ctx['display_name']}", "error": str(excep)}
         )
-        raise
+        raise excep
