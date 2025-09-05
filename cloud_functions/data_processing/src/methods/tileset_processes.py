@@ -334,7 +334,7 @@ def create_and_update_protected_area_tileset(
     tileset_file: str,
     tileset_id: str,
     display_name: str,
-    tolerance: float, 
+    tolerance: float,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -360,7 +360,7 @@ def create_and_update_protected_area_tileset(
 
         return run_tileset_pipeline(
             cfg,
-            process=terrestrial_regions_process,
+            process=protected_area_process,
             upload_mapbox=lambda a, b: print("MAPBOXING..."),
         )
     except Exception as excep:
@@ -373,7 +373,7 @@ def create_and_update_protected_area_tileset(
         raise excep
 
 
-def terrestrial_regions_process(temp_dir: Path, ctx: dict[str, Any]):
+def protected_area_process(temp_dir: Path, ctx: dict[str, Any]):
     verbose = ctx["verbose"]
     bucket = ctx["bucket"]
     source_file: str = ctx["source_file"]
