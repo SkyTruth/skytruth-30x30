@@ -84,4 +84,6 @@ export const NEW_LOCS: Set<string> = new Set([
 export const TERRITORY_LAYERS = {
   eez: 'mapbox://skytruth.eez_v12',
   mrr: 'mapbox://skytruth.marine_regions',
+  cnt: "mapbox://skytruth.countries",
+  trr: "mapbox://skytruth.terrestrial_regions"
 };

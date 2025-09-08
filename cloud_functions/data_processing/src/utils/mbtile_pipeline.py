@@ -92,9 +92,6 @@ def run_tileset_pipeline(
         if cfg.verbose:
             print(f"Starting {ctx['display_name']} tileset pipeline...")
 
-        # temp_mgr = tempfile.TemporaryDirectory()
-        # temp_dir = Path(temp_mgr.__enter__())
-
         temp_dir_str = tempfile.mkdtemp()
         temp_dir = Path(temp_dir_str)
 
