@@ -3,6 +3,7 @@ export const ALL_TERRITORIES = new Set([
   "ARG",
   "AUS",
   "CHN",
+  "COM",
   "DNK",
   "FRA",
   "GBR",

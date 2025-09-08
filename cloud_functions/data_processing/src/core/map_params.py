@@ -35,11 +35,11 @@ TERRESTRIAL_REGIONS_TILESET_FILE = "maps/terrestrial_regions.mbtiles"
 # WDPA
 # ------------------------
 TERRESTRIAL_PA_TILESET_ID = "terrestrial_pas"
-TERRESTRIAL_PA_TILESET_NAME = "Terrestrial Pas"
+TERRESTRIAL_PA_TILESET_NAME = "Terrestrial PAs"
 TERRESTRIAL_PA_TILESET_FILE = "maps/terrestrial_pas.mbtiles"
 
 MARINE_PA_TILESET_ID = "marine_pas"
-MARINE_PA_TILESET_NAME = "Marine Pas"
+MARINE_PA_TILESET_NAME = "Marine PAs"
 MARINE_PA_TILESET_FILE = "maps/marine_pas.mbtiles"
 
 WDPA_TOLERANCE = 0.001
