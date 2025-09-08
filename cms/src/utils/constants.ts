@@ -3,6 +3,7 @@ export const ALL_TERRITORIES = new Set([
   "ARG",
   "AUS",
   "CHN",
+  "COM",
   "DNK",
   "FRA",
   "GBR",
@@ -15,5 +16,8 @@ export const ALL_TERRITORIES = new Set([
 
 // TODO TECH-3174: Clean up
 export const TERRITORY_LAYERS = {
-  eez: "mapbox://skytruth.eez_v12"
+  eez: "mapbox://skytruth.eez_v12",
+  mrr: "mapbox://skytruth.marine_regions",
+  cnt: "mapbox://skytruth.countries",
+  trr: "mapbox://skytruth.terrestrial_regions"
 }

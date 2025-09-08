@@ -3,6 +3,7 @@ export const SOVEREIGNS: Set<string> = new Set([
   'ARG',
   'AUS',
   'CHN',
+  'COM',
   'DNK',
   'FRA',
   'GBR',
@@ -28,6 +29,7 @@ export const NEW_LOCS: Set<string> = new Set([
   'CCK',
   'CHN*',
   'COK',
+  'COM*',
   'CUW',
   'CXR',
   'CYM',
@@ -81,4 +83,7 @@ export const NEW_LOCS: Set<string> = new Set([
 // TODO TECH-3174: Clean up
 export const TERRITORY_LAYERS = {
   eez: 'mapbox://skytruth.eez_v12',
+  mrr: 'mapbox://skytruth.marine_regions',
+  cnt: 'mapbox://skytruth.countries',
+  trr: 'mapbox://skytruth.terrestrial_regions',
 };

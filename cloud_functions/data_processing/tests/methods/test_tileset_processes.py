@@ -1,269 +1,320 @@
-import json
-import tempfile
-import types
-from unittest.mock import MagicMock
-
+import geopandas as gpd
+import pandas as pd
 import pytest
-from shapely.geometry import mapping, shape
+from shapely.geometry import Point
 
-import src.methods.tileset_processes as tileset_processes
-from src.methods.tileset_processes import (
-    _check_map_box_credentials,
-    create_and_update_eez_tileset,
-    create_and_update_marine_regions_tileset,
+import src.methods.tileset_processes as tp
+
+
+@pytest.fixture
+def mock_gdf():
+    """A tiny valid GeoDataFrame with a 'location' column."""
+    return gpd.GeoDataFrame(
+        {"location": ["AAA", "BBB", "AAA"]},
+        geometry=[Point(0, 0), Point(1, 1), Point(2, 2)],
+        crs="EPSG:4326",
+    )
+
+
+def mock_add_translations(df, translations_df, key_col, code_col):
+    df = df.copy()
+    df["code"] = "USA"
+    df["name_es"] = "nombre"
+    return df
+
+
+@pytest.mark.parametrize(
+    "which, kwargs, expected_local_geojson, expected_source_suffix, expected_process",
+    [
+        (
+            "eez",
+            {
+                "bucket": "bkt",
+                "source_file": "eez_source.geojson",
+                "tileset_file": "out.mbtiles",
+                "tileset_id": "eez.id",
+                "display_name": "EEZ",
+            },
+            "eez.geojson",
+            # Uses EEZ_TOLERANCE constant; we will monkeypatch it to 5 in test.
+            "_5.geojson",
+            tp.eez_process,
+        ),
+        (
+            "marine",
+            {
+                "bucket": "bkt",
+                "source_file": "eez_source.geojson",
+                "tileset_file": "mr.mbtiles",
+                "tileset_id": "mr.id",
+                "display_name": "Marine Regions",
+            },
+            "marine_regions.geojson",
+            "_5.geojson",  # uses EEZ_TOLERANCE for suffix as well
+            tp.marine_regions_process,
+        ),
+        (
+            "countries",
+            {
+                "bucket": "bkt",
+                "source_file": "countries.geojson",
+                "tileset_file": "cty.mbtiles",
+                "tileset_id": "cty.id",
+                "display_name": "Countries",
+            },
+            "countries.geojson",
+            "_7.geojson",  # will monkeypatch COUNTRIES_TOLERANCE=7
+            tp.countries_process,
+        ),
+        (
+            "terrestrial",
+            {
+                "bucket": "bkt",
+                "source_file": "gadm.geojson",
+                "tileset_file": "terr.mbtiles",
+                "tileset_id": "terr.id",
+                "display_name": "Terrestrial Regions",
+            },
+            "terrestrial_regions.geojson",
+            "_7.geojson",  # reuses COUNTRIES_TOLERANCE
+            tp.terrestrial_regions_process,
+        ),
+        (
+            "protected",
+            {
+                "bucket": "bkt",
+                "source_file": "pas.geojson",
+                "tileset_file": "pas.mbtiles",
+                "tileset_id": "pas.id",
+                "display_name": "Protected Areas",
+                "tolerance": 3.2,
+            },
+            "pas.geojson",
+            "_3.2.geojson",
+            tp.protected_area_process,
+        ),
+    ],
 )
-
-
-@pytest.fixture
-def mock_regions():
+def test_wrappers_call_pipeline_with_expected_config(
+    which, kwargs, expected_local_geojson, expected_source_suffix, expected_process, monkeypatch
+):
     """
-    Mock Region mapping
-    """
-    return {"NA": ["USA", "MEX"]}
-
-
-@pytest.fixture
-def mock_to_file():
-    def _to_file(self, path, driver=None, **_kwargs):
-        fc = {"type": "FeatureCollection", "features": []}
-        for _, row in self.iterrows():
-            props = row.drop(labels="geometry").to_dict()
-            geom = mapping(row.geometry)
-            fc["features"].append({"type": "Feature", "properties": props, "geometry": geom})
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(fc, f)
-
-    return _to_file
-
-
-@pytest.fixture
-def mock_collaborators(monkeypatch, mock_locs_translations_df, mock_regions):
-    mockReadJsonDf = MagicMock(name="mockReadJsonDf")
-    mockReadDataframe = MagicMock(name="mockReadDataframe", return_value=mock_locs_translations_df)
-    mockReadJsonFromGCS = MagicMock(name="mockReadJsonFromGCS", return_value=mock_regions)
-    mockGenerateMbtiles = MagicMock(name="mockGenerateMbtiles")
-    mockUploadFileToGcs = MagicMock(name="mockUploadFileToGcs")
-    mockUploadToMapbox = MagicMock(name="mockUploadToMapbox")
-    mockLogger = MagicMock(name="mockLogger")
-
-    monkeypatch.setattr(tileset_processes, "read_json_df", mockReadJsonDf, raising=True)
-    monkeypatch.setattr(tileset_processes, "read_dataframe", mockReadDataframe, raising=True)
-    monkeypatch.setattr(tileset_processes, "read_json_from_gcs", mockReadJsonFromGCS, raising=True)
-    monkeypatch.setattr(tileset_processes, "generate_mbtiles", mockGenerateMbtiles, raising=True)
-    monkeypatch.setattr(tileset_processes, "upload_file_to_gcs", mockUploadFileToGcs, raising=True)
-    monkeypatch.setattr(tileset_processes, "upload_to_mapbox", mockUploadToMapbox, raising=True)
-    monkeypatch.setattr(tileset_processes, "logger", mockLogger, raising=True)
-
-    return {
-        "mockReadJsonDf": mockReadJsonDf,
-        "mockReadDataframe": mockReadDataframe,
-        "mockReadJsonFromGCS": mockReadJsonFromGCS,
-        "mockGenerateMbtiles": mockGenerateMbtiles,
-        "mockUploadFileToGcs": mockUploadFileToGcs,
-        "mockUploadToMapbox": mockUploadToMapbox,
-        "mockLogger": mockLogger,
-    }
-
-
-@pytest.fixture
-def mock_tempdir(monkeypatch, tmp_path):
-    """
-    Replace TemporaryDirectory with one backed by pytest's tmp_path so the
-    directory persists after the function returns (no cleanup).
+    Ensure each wrapper function forwards a TilesetConfig with the expected
+    derived fields and the correct process function to run_tileset_pipeline.
     """
 
-    class mockTempDir:
-        def __init__(self, base):
-            self._base = base
+    calls = {}
 
-        def __enter__(self):
-            return str(self._base)
+    def mock_run_tileset_pipeline(cfg, *, process):
+        # capture cfg & process for assertions
+        calls["cfg"] = cfg
+        calls["process"] = process
+        # return a simple shape the wrappers would propagate
+        return {"tileset_id": cfg.tileset_id, "gcs_blob": cfg.tileset_blob_name}
 
-        def __exit__(self, exc_type, exc, tb):
-            # Do NOT delete; leave artifacts for assertions.
-            return False
+    # Monkeypatch constants used by wrappers that don't receive them as params
+    monkeypatch.setattr(tp, "EEZ_TOLERANCE", 5, raising=True)
+    monkeypatch.setattr(tp, "COUNTRIES_TOLERANCE", 7, raising=True)
+    monkeypatch.setattr(tp, "run_tileset_pipeline", mock_run_tileset_pipeline, raising=True)
+
+    # Invoke the appropriate wrapper
+    if which == "eez":
+        tp.create_and_update_eez_tileset(**kwargs)
+    elif which == "marine":
+        tp.create_and_update_marine_regions_tileset(**kwargs)
+    elif which == "countries":
+        tp.create_and_update_country_tileset(**kwargs)
+    elif which == "terrestrial":
+        tp.create_and_update_terrestrial_regions_tileset(**kwargs)
+    elif which == "protected":
+        tp.create_and_update_protected_area_tileset(**kwargs)
+    else:
+        raise AssertionError("Unknown case")
+
+    cfg = calls["cfg"]
+    proc = calls["process"]
+
+    assert proc is expected_process, "Expected the correct process hook to be passed"
+    assert cfg.local_geojson_name == expected_local_geojson
+    assert cfg.source_file.endswith(expected_source_suffix), (
+        "Source file suffix should include tolerance"
+    )
+    assert cfg.tileset_blob_name == kwargs["tileset_file"]
+    assert cfg.bucket == kwargs["bucket"]
+
+
+def test_eez_process_drops_expected_columns(mock_gdf):
+    gdf = mock_gdf.copy()
+
+    # add columns that should be dropped if present
+    gdf["MRGID"] = [1, 2, 3]
+    gdf["AREA_KM2"] = [10.0, 20.0, 30.0]
+
+    out = tp.eez_process(gdf, {"verbose": False})
+    assert "MRGID" not in out.columns
+    assert "AREA_KM2" not in out.columns
+
+    assert {"location", "geometry"} <= set(out.columns)
+
+
+def test_marine_regions_process(monkeypatch):
+    """
+    Asserts that:
+      - region_id is computed from mapping
+      - dissolve reduces to one row per region_id
+      - known columns are dropped
+      - translations are applied then 'code' dropped
+    """
+    # Input gdf with locations mapping to two regions
+    gdf = gpd.GeoDataFrame(
+        {
+            "location": ["CAN", "USA", "ANG"],
+            "MRGID": [1, 2, 3],
+            "AREA_KM2": [1.0, 2.0, 3.0],
+            "has_shared_marine_area": [False, False, True],
+            "index": [0, 1, 2],
+        },
+        geometry=[Point(0, 0), Point(0, 1), Point(1, 1)],
+        crs="EPSG:4326",
+    )
 
     monkeypatch.setattr(
-        tempfile,
-        "TemporaryDirectory",
-        lambda: mockTempDir(tmp_path),
+        tp,
+        "read_json_from_gcs",
+        lambda bucket, path, verbose=False: {"NA": ["USA", "CAM"], "AF": ["ANG"]},
         raising=True,
     )
 
+    monkeypatch.setattr(
+        tp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
+    )
+    monkeypatch.setattr(tp, "add_translations", mock_add_translations, raising=True)
 
-@pytest.fixture
-def mock_mapbox_creds(monkeypatch):
-    """Ensure MAPBOX_USER and MAPBOX_TOKEN are populated."""
-    monkeypatch.setattr(tileset_processes, "MAPBOX_USER", "mock_user", raising=True)
-    monkeypatch.setattr(tileset_processes, "MAPBOX_TOKEN", "mock_token", raising=True)
-
-
-def test_missing_mapbox_creds_raises_value_error(monkeypatch, mock_collaborators):
-    monkeypatch.setattr(tileset_processes, "MAPBOX_USER", "", raising=True)
-    monkeypatch.setattr(tileset_processes, "MAPBOX_TOKEN", None, raising=True)
-
-    with pytest.raises(ValueError) as mockErr:
-        _check_map_box_credentials()
-    assert "MAPBOX_USERNAME and MAPBOX_TOKEN environment variables must be set" in str(
-        mockErr.value
+    result = tp.marine_regions_process(
+        gdf,
+        {"verbose": False, "bucket": "b", "translation_file": "t.csv", "regions_file": "r.json"},
     )
 
+    # Should have one row per region_id
+    assert set(result["region_id"]) == {"NA", "AF"}
+    for col in ["MRGID", "AREA_KM2", "has_shared_marine_area", "index", "code", "location"]:
+        assert col not in result.columns
 
-def test_create_and_update_eez_tileset_happy_path(
-    mock_collaborators, mock_mapbox_creds, mock_tempdir, mock_to_file, mock_eez_by_sov_gdf
-):
-    mock_eez_by_sov_gdf.to_file = types.MethodType(mock_to_file, mock_eez_by_sov_gdf)
-    mock_collaborators["mockReadJsonDf"].return_value = mock_eez_by_sov_gdf
-    create_and_update_eez_tileset(verbose=True)
-
-    # Find the geojson path from what generate_mbtiles consumed
-    mockGenerateMbtiles = mock_collaborators["mockGenerateMbtiles"]
-    assert mockGenerateMbtiles.call_count == 1
-    gen_kwargs = mockGenerateMbtiles.call_args.kwargs
-    geojson_path = gen_kwargs["input_file"]
-    tileset_mbtiles_path = gen_kwargs["output_file"]
-
-    # Assert the written GeoJSON exists and has the expected outcome
-    with open(geojson_path, encoding="utf-8") as f:
-        mock_geojson = json.load(f)
-
-    assert mock_geojson.get("type") == "FeatureCollection"
-    assert "features" in mock_geojson and len(mock_geojson["features"]) == 1
-
-    mock_feature = mock_geojson["features"][0]
-    props = mock_feature["properties"]
-
-    # AREA_KM2 dropped, MRGRID preserved (note: function drops MRGID, not MRGRID)
-    assert "AREA_KM2" not in props
-    assert "MRGID" not in props
-
-    # Key attributes persisted
-    assert props.get("name") == "mock_eez"
-    assert props.get("name_es") == "mock_eez_es"
-    assert props.get("name_fr") == "mock_eez_fr"
-    assert props.get("name_pt") == "mock_eez_pt"
-    assert props.get("ISO_TER1") == "USA"
-    assert props.get("ISO_TER2") == "MEX"
-    assert props.get("ISO_TER3") == "ABNJ"
-    assert props.get("ISO_SOV1") == "USA*"
-    assert props.get("ISO_SOV2") is None
-    assert props.get("ISO_SOV3") is None
-
-    # Geometry valid polygon
-    geom = shape(mock_feature["geometry"])
-    assert geom.geom_type == "Polygon"
-    assert not geom.is_empty
-
-    # The produced mbtiles path should flow to both uploads
-    mockUploadFileToGcs = mock_collaborators["mockUploadFileToGcs"]
-    assert mockUploadFileToGcs.call_count == 1
-    assert mockUploadFileToGcs.call_args.kwargs["file_name"] == tileset_mbtiles_path
-
-    mockUploadToMapbox = mock_collaborators["mockUploadToMapbox"]
-    assert mockUploadToMapbox.call_count == 1
-
-    mb = mockUploadToMapbox.call_args.kwargs
-    assert mb["source"] == tileset_mbtiles_path
-    assert mb["tileset_id"] == tileset_processes.EEZ_TILESET_ID
-    assert mb["display_name"] == tileset_processes.EEZ_TILESET_NAME
-    assert mb["username"] == "mock_user"
-    assert mb["token"] == "mock_token"
+    assert "geometry" in result.columns
 
 
-def test_eez_error_is_logged_and_reraised(
-    mock_collaborators,
-    mock_mapbox_creds,
-    mock_tempdir,
-):
-    mock_collaborators["mockGenerateMbtiles"].side_effect = RuntimeError("mock generation failure")
+def test_countries_process(monkeypatch):
+    """
+    Asserts:
+      - ISO_SOV1..3 are created from related_countries mapping
+      - translations applied then 'code' dropped
+      - string dtype in ISO_SOV* columns with <NA> for missing
+    """
+    gdf = gpd.GeoDataFrame(
+        {"location": ["GBR", "USA", "GGY", "FOO"]},
+        geometry=[Point(0, 0), Point(1, 1), Point(2, 2), Point(1, 2)],
+        crs="EPSG:4326",
+    )
 
-    with pytest.raises(RuntimeError) as mockErr:
-        create_and_update_eez_tileset(verbose=False)
-    assert "mock generation failure" in str(mockErr.value)
+    related = {"GBR*": ["GBR", "FOO"], "USA*": ["USA", "FOO"], "GGY": ["GGY"]}
+    monkeypatch.setattr(
+        tp, "read_json_from_gcs", lambda bucket, path, verbose=False: related, raising=True
+    )
 
-    # Ensure we logged the error with the expected message content
-    mock_logger = mock_collaborators["mockLogger"]
-    assert mock_logger.error.call_count == 1
+    monkeypatch.setattr(
+        tp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
+    )
+    monkeypatch.setattr(tp, "add_translations", mock_add_translations, raising=True)
 
-    logged_arg = mock_logger.error.call_args.args[0]
-    assert isinstance(logged_arg, dict)
-    assert logged_arg.get("message") == "Error creating and updating EEZ tileset"
-    assert "mock generation failure" in logged_arg.get("error", "")
+    result = tp.countries_process(
+        gdf.copy(),
+        {
+            "verbose": False,
+            "bucket": "b",
+            "related_countries_file": "rc.json",
+            "translation_file": "t.csv",
+        },
+    )
 
+    for col in ["ISO_SOV1", "ISO_SOV2", "ISO_SOV3"]:
+        assert col in result.columns
+        assert pd.api.types.is_string_dtype(result[col])
 
-def test_create_and_update_marine_regions_tileset_happy_path(
-    mock_collaborators, mock_mapbox_creds, mock_tempdir, mock_to_file, mock_eez_by_loc_gdf
-):
-    mock_eez_by_loc_gdf.to_file = types.MethodType(mock_to_file, mock_eez_by_loc_gdf)
-    mock_collaborators["mockReadJsonDf"].return_value = mock_eez_by_loc_gdf
-    create_and_update_marine_regions_tileset(verbose=True)
+    # Values per our mapping
+    row_gbr = result.loc[result["location"] == "GBR"].iloc[0]
+    assert row_gbr["ISO_SOV1"] == "GBR*"
+    assert pd.isna(row_gbr["ISO_SOV2"])
+    assert pd.isna(row_gbr["ISO_SOV3"])
 
-    # Find the geojson path from what generate_mbtiles consumed
-    mockGenerateMbtiles = mock_collaborators["mockGenerateMbtiles"]
-    assert mockGenerateMbtiles.call_count == 1
-    gen_kwargs = mockGenerateMbtiles.call_args.kwargs
-    geojson_path = gen_kwargs["input_file"]
-    tileset_mbtiles_path = gen_kwargs["output_file"]
+    row_usa = result.loc[result["location"] == "USA"].iloc[0]
+    assert row_usa["ISO_SOV1"] == "USA*"
+    assert pd.isna(row_usa["ISO_SOV2"])
+    assert pd.isna(row_usa["ISO_SOV3"])
 
-    # Assert the written GeoJSON exists and has the expected outcome
-    with open(geojson_path, encoding="utf-8") as f:
-        mock_geojson = json.load(f)
+    row_foo = result.loc[result["location"] == "FOO"].iloc[0]
+    assert row_foo["ISO_SOV1"] in ["GBR*", "USA*"]
+    assert row_foo["ISO_SOV2"] in ["GBR*", "USA*"]
+    assert pd.isna(row_foo["ISO_SOV3"])
 
-    assert mock_geojson.get("type") == "FeatureCollection"
-    assert "features" in mock_geojson and len(mock_geojson["features"]) == 1
+    row_ggy = result.loc[result["location"] == "GGY"].iloc[0]
+    assert pd.isna(row_ggy["ISO_SOV1"])
 
-    mock_feature = mock_geojson["features"][0]
-    props = mock_feature["properties"]
-
-    assert "AREA_KM2" not in props
-    assert "MRGID" not in props
-    assert "location" not in props
-
-    # Key attributes persisted
-    assert props.get("name") == "North America"
-    assert props.get("name_es") == "Norteamérica"
-    assert props.get("name_fr") == "Amérique du Nord"
-    assert props.get("name_pt") == "América do Norte"
-    assert props.get("region_id") == "NA"
-
-    # Geometry valid polygon
-    geom = shape(mock_feature["geometry"])
-    assert geom.geom_type == "MultiPolygon"  # Multi because of dissolve
-    assert not geom.is_empty
-
-    # The produced mbtiles path should flow to both uploads
-    mockUploadFileToGcs = mock_collaborators["mockUploadFileToGcs"]
-    assert mockUploadFileToGcs.call_count == 1
-    assert mockUploadFileToGcs.call_args.kwargs["file_name"] == tileset_mbtiles_path
-
-    mockUploadToMapbox = mock_collaborators["mockUploadToMapbox"]
-    assert mockUploadToMapbox.call_count == 1
-
-    mb = mockUploadToMapbox.call_args.kwargs
-    assert mb["source"] == tileset_mbtiles_path
-    assert mb["tileset_id"] == tileset_processes.MARINE_REGIONS_TILESET_ID
-    assert mb["display_name"] == tileset_processes.MARINE_REGIONS_TILESET_NAME
-    assert mb["username"] == "mock_user"
-    assert mb["token"] == "mock_token"
+    assert "code" not in result.columns
+    assert "geometry" in result.columns
 
 
-def test_marine_regions_error_is_logged_and_reraised(
-    mock_collaborators, mock_mapbox_creds, mock_tempdir, mock_to_file, mock_eez_by_loc_gdf
-):
-    mock_eez_by_loc_gdf.to_file = types.MethodType(mock_to_file, mock_eez_by_loc_gdf)
-    mock_collaborators["mockReadJsonDf"].return_value = mock_eez_by_loc_gdf
+def test_terrestrial_regions_process(monkeypatch):
+    """
+    Asserts:
+      - region_id from mapping
+      - dissolve reduces rows to unique region_id
+      - 'location' dropped
+      - translations applied then 'code' dropped
+    """
+    gdf = gpd.GeoDataFrame(
+        {"location": ["A", "B", "A"]},
+        geometry=[Point(0, 0), Point(1, 1), Point(0, 2)],
+        crs="EPSG:4326",
+    )
 
-    mock_collaborators["mockGenerateMbtiles"].side_effect = RuntimeError("mock generation failure")
+    monkeypatch.setattr(
+        tp,
+        "read_json_from_gcs",
+        lambda bucket, path, verbose=False: {"R1": ["A"], "R2": ["B"]},
+        raising=True,
+    )
 
-    with pytest.raises(RuntimeError) as mockErr:
-        create_and_update_eez_tileset(verbose=False)
-    assert "mock generation failure" in str(mockErr.value)
+    monkeypatch.setattr(
+        tp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
+    )
+    monkeypatch.setattr(tp, "add_translations", mock_add_translations, raising=True)
 
-    # Ensure we logged the error with the expected message content
-    mock_logger = mock_collaborators["mockLogger"]
-    assert mock_logger.error.call_count == 1
+    result = tp.terrestrial_regions_process(
+        gdf.copy(),
+        {"verbose": False, "bucket": "b", "regions_file": "r.json", "translation_file": "t.csv"},
+    )
 
-    logged_arg = mock_logger.error.call_args.args[0]
-    assert isinstance(logged_arg, dict)
-    assert logged_arg.get("message") == "Error creating and updating EEZ tileset"
-    assert "mock generation failure" in logged_arg.get("error", "")
+    assert set(result["region_id"]) == {"R1", "R2"}
+    assert "location" not in result.columns
+    assert "code" not in result.columns
+    assert "geometry" in result.columns
+
+
+def test_protected_area_process():
+    gdf = gpd.GeoDataFrame(
+        {
+            "GIS_AREA": [1.2],
+            "NAME": ["Foo Park"],
+            "PA_DEF": [1],
+            "ISO3": ["AAA"],
+            "WDPAID": [123],
+            "EXTRA1": [999],
+            "EXTRA2": ["dropme"],
+        },
+        geometry=[Point(0, 0)],
+        crs="EPSG:4326",
+    )
+
+    out = tp.protected_area_process(gdf.copy(), {"verbose": False})
+    expected = {"GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "geometry"}
+    assert set(out.columns) == expected
