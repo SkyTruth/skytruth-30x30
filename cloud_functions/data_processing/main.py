@@ -271,7 +271,7 @@ def main(request: Request) -> tuple[str, int]:
                     tileset_id=map_params.MARINE_PA_TILESET_ID,
                     display_name=map_params.MARINE_PA_TILESET_NAME,
                     tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose,
+                    verbose=verbose
                 )
 
             case "update_terrestrial_protected_areas_tileset":
@@ -282,7 +282,7 @@ def main(request: Request) -> tuple[str, int]:
                     tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
                     display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
                     tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose,
+                    verbose=verbose
                 )
 
             case _:

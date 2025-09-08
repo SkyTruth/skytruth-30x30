@@ -299,7 +299,7 @@ def create_and_update_protected_area_tileset(
             tileset_blob_name=tileset_file,
             tileset_id=tileset_id,
             display_name=display_name,
-            local_geojson_name="pas.geojson",
+            local_geojson_name=f"{tileset_id}.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
             source_file=source_file.replace(".geojson", f"_{tolerance}.geojson"),
             verbose=verbose,
