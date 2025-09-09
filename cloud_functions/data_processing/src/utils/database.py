@@ -16,7 +16,6 @@ def get_connection():
         DATABASE_NAME = os.environ.get("DATABASE_NAME", None)
         DATABASE_HOST = os.environ.get("DATABASE_HOST", None)
 
-        print("CHECK", DATABASE_NAME, DATABASE_PASSWORD, DATABASE_NAME, DATABASE_HOST)
         if (
             DATABASE_NAME is None
             or DATABASE_PASSWORD is None
@@ -44,9 +43,10 @@ def get_connection():
 
 def get_pas(verbose: bool = False) -> list[dict]:
     """get all of the PAS and their related values from the DB"""
-    conn = get_connection()
+    try:
+        conn = get_connection()
 
-    pas_query = """
+        pas_query = """
       WITH child_ids AS (
         SELECT 
           pas.id AS pas_id
@@ -140,12 +140,13 @@ def get_pas(verbose: bool = False) -> list[dict]:
         ,cid.children
         ,pid.parents;
     """
-    if verbose:
-        print("Fetching PAS...")
-    with conn.cursor() as curr:
-        curr.execute(pas_query)
-        rows = curr.fetchall()
+        if verbose:
+            print("Fetching PAS...")
+        with conn.cursor() as curr:
+            curr.execute(pas_query)
+            rows = curr.fetchall()
 
-    conn.close()
-    print("TEST RESPONSE", rows[17])
-    return rows
+        conn.close()
+        return rows
+    except Exception as excep:
+        logger.error({"message": "Failed to read PAs from the Database", "error": str(excep)})
