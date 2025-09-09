@@ -58,6 +58,7 @@ from src.methods.tileset_processes import (
 )
 from src.utils.gcp import download_zip_to_gcs
 
+from src.utils.database import get_connection
 
 @functions_framework.http
 def main(request: Request) -> tuple[str, int]:
@@ -285,6 +286,8 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
 
+            case "test_conn":
+                get_connection()
             case _:
                 print(f"METHOD: {method} not a valid option")
 
