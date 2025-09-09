@@ -56,9 +56,9 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
+from src.utils.database import get_connection
 from src.utils.gcp import download_zip_to_gcs
 
-from src.utils.database import get_connection
 
 @functions_framework.http
 def main(request: Request) -> tuple[str, int]:
