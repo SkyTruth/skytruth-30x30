@@ -11,19 +11,20 @@ logger = Logger()
 def get_connection():
     """Establish a connection to the database"""
     try:
-        DB_USER = os.environ.get("DB_USER", None)
-        DB_PASSWORD = os.environ.get("DB_PASSWORD", None)
-        DB_NAME = os.environ.get("DB_NAME", None)
+        DATABASE_USERNAME = os.environ.get("DATABASE_USER", None)
+        DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD", None)
+        DATABASE_NAME = os.environ.get("DATABASE_NAME", None)
+        DATABASE_HOST = os.environ.get("DATABASE_HOST")
 
-        if DB_NAME is None or DB_PASSWORD is None or DB_NAME is None:
+        if DATABASE_NAME is None or DATABASE_PASSWORD is None or DATABASE_USERNAME is None or DATABASE_HOST is None:
             raise ValueError("Missing DB Crednetials")
 
-        print(DB_NAME, DB_PASSWORD, DB_USER)
+        print(DATABASE_NAME, DATABASE_PASSWORD, DATABASE_NAME)
         conn = psycopg.connect(
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            host="host.docker.internal",
+            dbname=DATABASE_NAME,
+            user=DATABASE_USERNAME,
+            password=DATABASE_PASSWORD,
+            host=DATABASE_HOST,
             port=5432,
             row_factory=dict_row,
         )
