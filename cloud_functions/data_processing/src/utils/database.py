@@ -16,7 +16,12 @@ def get_connection():
         DATABASE_NAME = os.environ.get("DATABASE_NAME", None)
         DATABASE_HOST = os.environ.get("DATABASE_HOST")
 
-        if DATABASE_NAME is None or DATABASE_PASSWORD is None or DATABASE_USERNAME is None or DATABASE_HOST is None:
+        if (
+            DATABASE_NAME is None
+            or DATABASE_PASSWORD is None
+            or DATABASE_USERNAME is None
+            or DATABASE_HOST is None
+        ):
             raise ValueError("Missing DB Crednetials")
 
         print(DATABASE_NAME, DATABASE_PASSWORD, DATABASE_NAME)
