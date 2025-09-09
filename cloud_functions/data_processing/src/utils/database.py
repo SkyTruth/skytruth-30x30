@@ -11,11 +11,12 @@ logger = Logger()
 def get_connection():
     """Establish a connection to the database"""
     try:
-        DATABASE_USERNAME = os.environ.get("DATABASE_USER", None)
+        DATABASE_USERNAME = os.environ.get("DATABASE_USERNAME", None)
         DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD", None)
         DATABASE_NAME = os.environ.get("DATABASE_NAME", None)
-        DATABASE_HOST = os.environ.get("DATABASE_HOST")
+        DATABASE_HOST = os.environ.get("DATABASE_HOST", None)
 
+        print("CHECK", DATABASE_NAME, DATABASE_PASSWORD, DATABASE_NAME, DATABASE_HOST)
         if (
             DATABASE_NAME is None
             or DATABASE_PASSWORD is None
@@ -24,7 +25,6 @@ def get_connection():
         ):
             raise ValueError("Missing DB Crednetials")
 
-        print(DATABASE_NAME, DATABASE_PASSWORD, DATABASE_NAME)
         conn = psycopg.connect(
             dbname=DATABASE_NAME,
             user=DATABASE_USERNAME,
