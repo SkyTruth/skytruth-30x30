@@ -1,6 +1,7 @@
 import functions_framework
 from flask import Request
 
+from src.core import map_params
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -15,6 +16,8 @@ from src.core.params import (
     MARINE_REGIONS_URL,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
+    WDPA_MARINE_FILE_NAME,
+    WDPA_TERRESTRIAL_FILE_NAME,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -46,6 +49,13 @@ from src.methods.static_processes import (
     process_terrestrial_biome_raster,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
+from src.methods.tileset_processes import (
+    create_and_update_country_tileset,
+    create_and_update_eez_tileset,
+    create_and_update_marine_regions_tileset,
+    create_and_update_protected_area_tileset,
+    create_and_update_terrestrial_regions_tileset,
+)
 from src.utils.gcp import download_zip_to_gcs
 
 
@@ -234,6 +244,44 @@ def main(request: Request) -> tuple[str, int]:
                 return upload_stats(
                     filename=HABITAT_PROTECTION_FILE_NAME,
                     upload_function=client.upsert_habitat_stats,
+                    verbose=verbose,
+                )
+
+            # ------------------
+            #   Map Tilesets Updates
+            # ------------------
+
+            case "update_eez_tileset":
+                create_and_update_eez_tileset(verbose=verbose)
+
+            case "update_marine_regions_tileset":
+                create_and_update_marine_regions_tileset(verbose=verbose)
+
+            case "update_country_tileset":
+                create_and_update_country_tileset(verbose=verbose)
+
+            case "update_terrestrial_regions_tileset":
+                create_and_update_terrestrial_regions_tileset(verbose=verbose)
+
+            case "update_marine_protected_areas_tileset":
+                create_and_update_protected_area_tileset(
+                    bucket=BUCKET,
+                    source_file=WDPA_MARINE_FILE_NAME,
+                    tileset_file=map_params.MARINE_PA_TILESET_FILE,
+                    tileset_id=map_params.MARINE_PA_TILESET_ID,
+                    display_name=map_params.MARINE_PA_TILESET_NAME,
+                    tolerance=map_params.WDPA_TOLERANCE,
+                    verbose=verbose,
+                )
+
+            case "update_terrestrial_protected_areas_tileset":
+                create_and_update_protected_area_tileset(
+                    bucket=BUCKET,
+                    source_file=WDPA_TERRESTRIAL_FILE_NAME,
+                    tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
+                    tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
+                    display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
+                    tolerance=map_params.WDPA_TOLERANCE,
                     verbose=verbose,
                 )
 

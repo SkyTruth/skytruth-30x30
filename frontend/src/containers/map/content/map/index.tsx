@@ -73,7 +73,9 @@ const MainMap: FCWithMessages = () => {
   const { data: defaultLayers } = useGetLayers(
     {
       locale,
-      fields: 'slug',
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      fields: ['slug', 'config'], // TODO TECH-3174: Clean up config
       filters: {
         default: {
           $eq: true,
@@ -96,7 +98,7 @@ const MainMap: FCWithMessages = () => {
   // user manually remove all the layers from the map
   useEffect(() => {
     if (!previousDefaultLayersRef.current && defaultLayers && mapLayers.length === 0) {
-      setMapLayers(defaultLayers);
+      setMapLayers(defaultLayers as string[]);
     }
 
     previousDefaultLayersRef.current = defaultLayers;

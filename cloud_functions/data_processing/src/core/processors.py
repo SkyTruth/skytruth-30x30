@@ -403,3 +403,34 @@ def round_to_list(bounds: pd.DataFrame) -> list[float]:
     Convert a dataframe of geometry.bounds to a rounded list of bounds
     """
     return list(np.round(bounds, decimals=5))
+
+
+def add_translations(
+    gdf: gpd.GeoDataFrame, translations: pd.DataFrame, gdf_field: str, translation_field: str
+) -> gpd.GeoDataFrame:
+    """
+    Add translated names to a GeoDataFrame from a translations DataFrame.
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        The GeoDataFrame to which translations will be added.
+    translations : pd.DataFrame
+        DataFrame containing translation data with columns for codes and names.
+    gdf_field : str
+        The column in gdf to match with the translation codes.
+    translation_field : str
+        The column in translations containing the codes to match against gdf_field.
+    Returns
+    -------
+    gpd.GeoDataFrame
+        The updated GeoDataFrame with added translation columns.
+    """
+    gdf = gdf.copy()
+
+    gdf = gdf.merge(
+        translations[[translation_field, "name", "name_es", "name_fr", "name_pt"]],
+        left_on=gdf_field,
+        right_on=translation_field,
+        how="left",
+    )
+    return gdf
