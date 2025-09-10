@@ -1,14 +1,18 @@
 from io import BytesIO
-
+import os
 import geopandas as gpd
+import glob
 import numpy as np
 import pandas as pd
 import requests
 from shapely.geometry import MultiPoint, Point
+import zipfile
 
 from src.core.commons import (
-    download_and_duplicate_zipfile,
     download_mpatlas_zone,
+    download_file_with_progress,
+    print_peak_memory_allocation,
+    unzip_file,
 )
 from src.core.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
@@ -18,7 +22,6 @@ from src.core.params import (
     ARCHIVE_WDPA_FILE_NAME,
     ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
     BUCKET,
-    CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
@@ -30,20 +33,17 @@ from src.core.params import (
     TOLERANCES,
     WDPA_API_URL,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_URL,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_URL,
-    today_formatted,
 )
-from src.core.processors import clean_geometries
 from src.utils.gcp import (
     duplicate_blob,
-    load_gdb_layer_from_gcs,
     upload_dataframe,
     upload_gdf,
+    upload_file_to_gcs,
 )
 
 
@@ -130,6 +130,126 @@ def download_protected_seas(
         print(f"saving Protected Seas to gs://{bucket}/{archive_filename}")
     upload_dataframe(bucket, data, archive_filename, project_id=project, verbose=verbose)
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
+
+
+def process_protected_area_geoms(
+    wdpa: gpd.GeoDataFrame,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    bucket: str = BUCKET,
+    tolerances: list | tuple = TOLERANCES,
+    verbose: bool = True,
+):
+    def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        def calculate_radius(rep_area: float) -> float:
+            return ((rep_area * 1e6) / np.pi) ** 0.5
+
+        df = df.to_crs("ESRI:54009")
+        df["geometry"] = df.apply(
+            lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+            axis=1,
+        )
+        return df.to_crs("EPSG:4326").copy()
+
+    def buffer_if_point(row, crs):
+        g = row.geometry
+        if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
+            # build a 1-row GeoDataFrame with the same CRS
+            row_gdf = gpd.GeoDataFrame(
+                row.to_frame().T, geometry="geometry", crs=crs  # 1-row DataFrame
+            )
+            buffed = create_buffer(row_gdf)  # your existing function
+            return buffed.geometry.iloc[0]
+        return g
+
+    def save_simplified_marine_terrestrial_pas(
+        df, tolerance, terrestrial_pa_file_name, marine_pa_file_name
+    ):
+        if verbose:
+            print(f"simplifying PAs with tolerance = {tolerance}")
+
+        if tolerance is not None:
+            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
+
+        df = df.dropna(axis=1, how="all")
+
+        ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"saving terrestrial PAs to {ter_out_fn}")
+        upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
+
+        mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"saving marine PAs to {mar_out_fn}")
+        upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
+
+    if verbose:
+        print("buffering and simplifying geometries")
+
+    wdpa["geometry"] = wdpa.apply(lambda r: buffer_if_point(r, wdpa.crs), axis=1)
+    wdpa = wdpa.loc[wdpa.geometry.is_valid]
+
+    for tolerance in tolerances:
+        _ = print_peak_memory_allocation(
+            save_simplified_marine_terrestrial_pas,
+            wdpa,
+            tolerance,
+            terrestrial_pa_file_name,
+            marine_pa_file_name,
+        )
+
+
+def unpack_pas(pa_dir):
+    to_append = []
+    for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
+        print(zip_path)
+        with zipfile.ZipFile(zip_path) as z:
+            shp_paths = [n for n in z.namelist() if n.lower().endswith(".shp")]
+
+            for shp in shp_paths:
+                print(f"Loading layer: {shp}")
+                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+                gdf["layer_name"] = shp.replace(".shp", "")
+                to_append.append(gdf)
+
+    return pd.concat((to_append), axis=0)
+
+
+def download_and_process_protected_planet_pas(
+    wdpa_url: str = WDPA_URL,
+    archive_wdpa_file_name: str = ARCHIVE_WDPA_FILE_NAME,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    tolerances: list | tuple = TOLERANCES,
+    verbose: bool = True,
+    bucket: str = BUCKET,
+):
+    base_zip_path = "wdpa.zip"
+    pa_dir = "wdpa"
+
+    print(f"downloading {wdpa_url}")
+    _ = print_peak_memory_allocation(download_file_with_progress, wdpa_url, base_zip_path)
+
+    print(f"uploading zipfile to {archive_wdpa_file_name}")
+    _ = print_peak_memory_allocation(
+        upload_file_to_gcs, bucket, archive_wdpa_file_name, base_zip_path
+    )
+
+    print(f"unzipping {base_zip_path}")
+    _ = print_peak_memory_allocation(unzip_file, base_zip_path, pa_dir)
+
+    print(f"unpacking PAs from {pa_dir}")
+    pas = print_peak_memory_allocation(unpack_pas, pa_dir)
+
+    print("processing protected areas")
+    process_protected_area_geoms(
+        pas,
+        terrestrial_pa_file_name=terrestrial_pa_file_name,
+        marine_pa_file_name=marine_pa_file_name,
+        bucket=bucket,
+        tolerances=tolerances,
+        verbose=verbose,
+    )
 
 
 def download_protected_planet_global(
@@ -244,10 +364,11 @@ def download_protected_planet(
     wdpa_global_url: str = WDPA_GLOBAL_LEVEL_URL,
     wdpa_url: str = WDPA_URL,
     api_url: str = WDPA_API_URL,
-    wdpa_file_name: str = WDPA_FILE_NAME,
     archive_wdpa_file_name: str = ARCHIVE_WDPA_FILE_NAME,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    tolerances: list | tuple = TOLERANCES,
     bucket: str = BUCKET,
-    chunk_size: int = CHUNK_SIZE,
     verbose: bool = True,
 ) -> None:
     """
@@ -289,13 +410,14 @@ def download_protected_planet(
 
     """
     # download wdpa
-    download_and_duplicate_zipfile(
-        wdpa_url,
-        bucket,
-        wdpa_file_name,
-        archive_wdpa_file_name,
-        chunk_size=chunk_size,
+    download_and_process_protected_planet_pas(
+        wdpa_url=wdpa_url,
+        archive_wdpa_file_name=archive_wdpa_file_name,
+        terrestrial_pa_file_name=terrestrial_pa_file_name,
+        marine_pa_file_name=marine_pa_file_name,
+        tolerances=tolerances,
         verbose=verbose,
+        bucket=bucket,
     )
 
     # download wdpa global stats
@@ -318,73 +440,3 @@ def download_protected_planet(
         per_page=50,
         verbose=verbose,
     )
-
-
-def process_protected_area_geoms(
-    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
-    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    wdpa_file_name: str = WDPA_FILE_NAME,
-    bucket: str = BUCKET,
-    tolerances: list | tuple = TOLERANCES,
-    verbose: bool = True,
-):
-    def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        def calculate_radius(rep_area: float) -> float:
-            return ((rep_area * 1e6) / np.pi) ** 0.5
-
-        df = df.to_crs("ESRI:54009")
-        df["geometry"] = df.apply(
-            lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
-            axis=1,
-        )
-        return df.to_crs("EPSG:4326").copy()
-
-    if verbose:
-        print(f"loading PAs from gs://{bucket}/{wdpa_file_name}")
-
-    wdpa = load_gdb_layer_from_gcs(
-        wdpa_file_name,
-        bucket,
-        layers=[f"WDPA_poly_{today_formatted}", f"WDPA_point_{today_formatted}"],
-    )
-
-    if verbose:
-        print("buffering and simplifying geometries")
-
-    # TODO: This eliminates point PAs that have REP_AREA=0,
-    # is this what we want?: TECH-3163
-    point_pas = wdpa[wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
-    point_pas = point_pas[point_pas["REP_AREA"] > 0].copy()
-    buffered_point_pas = create_buffer(point_pas)
-    buffered_point_pas = buffered_point_pas[buffered_point_pas.geometry.is_valid]
-    poly_pas = wdpa[~wdpa.geometry.apply(lambda geom: isinstance(geom, (Point, MultiPoint)))]
-    wdpa = pd.concat((poly_pas, buffered_point_pas), axis=0).pipe(clean_geometries)
-
-    for tolerance in tolerances:
-        df = wdpa.copy()
-
-        if verbose:
-            print(f"simplifying PAs with tolerance = {tolerance}")
-        if tolerance is not None:
-            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
-
-        df["geometry"] = df["geometry"].make_valid()
-
-        if verbose:
-            print("separating marine and terrestrial PAs")
-        wdpa_ter = df[df["MARINE"].eq("0")].copy()
-        wdpa_ter = wdpa_ter.dropna(axis=1, how="all")
-        wdpa_mar = df[df["MARINE"].isin(["1", "2"])].copy()
-        wdpa_mar = wdpa_mar.dropna(axis=1, how="all")
-
-        ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-        if verbose:
-            print(f"saving terrestrial PAs to {ter_out_fn}")
-        upload_gdf(bucket, wdpa_ter, ter_out_fn)
-
-        mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-        if verbose:
-            print(f"saving marine PAs to {mar_out_fn}")
-        upload_gdf(bucket, wdpa_mar, mar_out_fn)
-
-    return wdpa

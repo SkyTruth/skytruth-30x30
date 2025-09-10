@@ -29,7 +29,6 @@ from src.methods.download_and_process import (
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
-    process_protected_area_geoms,
 )
 from src.methods.generate_static_tables import generate_locations_table
 from src.methods.generate_tables import (
@@ -183,7 +182,6 @@ def main(request: Request) -> tuple[str, int]:
 
             case "download_protected_planet_wdpa":
                 download_protected_planet(verbose=verbose)
-                _ = process_protected_area_geoms(verbose=verbose)
 
             # ------------------
             #   Table updates

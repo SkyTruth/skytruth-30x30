@@ -697,12 +697,14 @@ def load_gdb_layer_from_gcs(
 
             print("Extracting layers:", layers)
 
-            gdf = gpd.GeoDataFrame()
+            to_append = []
             for layer in layers:
                 print(f"Loading layer: {layer}")
-                gdf0 = gpd.read_file(gdb_path, layer=layer)
-                gdf0["gdb_layer_name"] = layer
-                gdf = pd.concat((gdf, gdf0), axis=0)
+                gdf = gpd.read_file(gdb_path, layer=layer)
+                gdf["gdb_layer_name"] = layer
+                to_append.append(gdf)
+
+            return pd.concat((to_append), axis=0)
 
             return gdf
 
