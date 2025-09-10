@@ -206,7 +206,6 @@ def generate_protected_areas_table(
 
     results = []
     # Split by environment to ensure parent/children are of the same environment
-    # TODO: ensure this is what we want to do
     for environment, pa_env in pas.groupby("environment", sort=False):
         print(environment)
         for _, subset in tqdm(
@@ -214,7 +213,11 @@ def generate_protected_areas_table(
             total=pa_env["wdpa_id"].nunique(),
             desc=f"{environment} wdpa_id groups",
         ):
-            results.append(add_parent_children(subset))
+            results.append(
+                add_parent_children(
+                    subset, fields=["wdpa_id", "wdpa_pid", "zone_id", "environment"]
+                )
+            )
 
     protected_areas = pd.concat(results, ignore_index=True)
 
