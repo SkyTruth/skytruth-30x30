@@ -18,6 +18,9 @@ import { useGetProtectionCoverageStats } from '@/types/generated/protection-cove
 import { ProtectionCoverageStat } from '@/types/generated/strapi.schemas';
 import { LayerTyped } from '@/types/layers';
 
+import {Accordion, AccordionItem, AccordionContent, AccordionTrigger, AccordionHeader} from '@/components/ui/accordion';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+
 import { POPUP_BUTTON_CONTENT_BY_SOURCE, POPUP_PROPERTIES_BY_SOURCE } from '../constants';
 
 const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) => {
@@ -216,51 +219,69 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
       <h3 className="font-sans text-xl font-black">{localizedLocationName || '-'}</h3>
       {isFetching && <div className="my-4 text-center font-mono text-xl">{t('loading')}</div>}
       {!isFetching && !protectionCoverageStats && (
-        <div className="my-4 text-center font-mono text-xs">{t('no-data-available')}</div>
+        <div className="my-4 text-center font-mono">{t('no-data-available')}</div>
       )}
       {!isFetching && !!protectionCoverageStats && (
         <>
-          <div className="flex flex-col gap-2">
-            <div className="max-w-[95%] font-mono">
-              {environment === 'marine'
-                ? t('marine-conservation-coverage')
-                : t('terrestrial-conservation-coverage')}
-            </div>
-            <div className="space-x-1 font-mono tracking-tighter text-black">
-              {formattedStats.percentage !== '-' &&
-                t.rich('percentage-bold', {
-                  percentage: formattedStats.percentage,
-                  b1: (chunks) => (
-                    <span className="text-[32px] font-bold leading-none">{chunks}</span>
+      <Accordion
+        type='single'
+        collapsible
+      >
+          <AccordionItem className='divide-y' value='item-1'>
+            <AccordionHeader>
+            <AccordionTrigger className='flex text-lg group w-[100%]'>
+                {protectionCoverageStats?.location?.data?.attributes?.name}
+                <ChevronDown
+                  aria-hidden
+                  className='transition-transform duration-300 ease-[cubic-bezier(0.87,_0,_0.13,_1)] group-data-[state=open]:rotate-180'
+                />
+              </AccordionTrigger>
+              </AccordionHeader>
+            <AccordionContent className='text-xs'>
+            <div className="flex flex-col gap-2">
+              <div className="max-w-[95%] font-mono">
+                {environment === 'marine'
+                  ? t('marine-conservation-coverage')
+                  : t('terrestrial-conservation-coverage')}
+              </div>
+              <div className="space-x-1 font-mono tracking-tighter text-black">
+                {formattedStats.percentage !== '-' &&
+                  t.rich('percentage-bold', {
+                    percentage: formattedStats.percentage,
+                    b1: (chunks) => (
+                      <span className="text-[32px] font-bold leading-none">{chunks}</span>
+                    ),
+                    b2: (chunks) => <span className="text-lg">{chunks}</span>,
+                  })}
+                {formattedStats.percentage === '-' && (
+                  <span className="text-xl font-bold leading-none">{formattedStats.percentage}</span>
+                )}
+              </div>
+              <div className="space-x-1 font-mono font-medium text-black">
+                {t.rich('protected-area', {
+                  br: () => <br />,
+                  protectedArea: formattedStats.protectedArea,
+                  totalArea: formatKM(
+                    locale,
+                    Number(
+                      protectionCoverageStats?.location.data.attributes[
+                        environment === 'marine' ? 'total_marine_area' : 'total_terrestrial_area'
+                      ]
+                    )
                   ),
-                  b2: (chunks) => <span className="text-lg">{chunks}</span>,
                 })}
-              {formattedStats.percentage === '-' && (
-                <span className="text-xl font-bold leading-none">{formattedStats.percentage}</span>
-              )}
+              </div>
             </div>
-            <div className="space-x-1 font-mono font-medium text-black">
-              {t.rich('protected-area', {
-                br: () => <br />,
-                protectedArea: formattedStats.protectedArea,
-                totalArea: formatKM(
-                  locale,
-                  Number(
-                    protectionCoverageStats?.location.data.attributes[
-                      environment === 'marine' ? 'total_marine_area' : 'total_terrestrial_area'
-                    ]
-                  )
-                ),
-              })}
-            </div>
-          </div>
-          <button
-            type="button"
-            className="mt-3 block w-full border border-black px-4 py-2.5 text-center font-mono text-xs"
-            onClick={handleLocationSelected}
-          >
-            {t(POPUP_BUTTON_CONTENT_BY_SOURCE[source?.['id']])}
-          </button>
+            <button
+              type="button"
+              className="mt-3 block w-full border border-black px-4 py-2.5 text-center font-mono text-xs"
+              onClick={handleLocationSelected}
+            >
+              {t(POPUP_BUTTON_CONTENT_BY_SOURCE[source?.['id']])}
+            </button>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
         </>
       )}
     </div>
