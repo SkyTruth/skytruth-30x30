@@ -56,7 +56,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
 
   const DATA = useMemo(() => {
     const source = layerQuery?.data?.source;
-  
+
     if (source?.type === 'vector' && rendered && popup && map) {
       const point = map.project(popup.lngLat);
 
