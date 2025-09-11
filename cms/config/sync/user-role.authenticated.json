@@ -109,6 +109,9 @@
       "action": "api::pa.pa.bulkUpdate"
     },
     {
+      "action": "api::pa.pa.bulkUpsert"
+    },
+    {
       "action": "api::pa.pa.create"
     },
     {

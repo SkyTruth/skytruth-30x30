@@ -8,7 +8,7 @@ export default {
     {
       method: 'POST',
       path: '/pas',
-      handler: 'pa.bulkInsert'
+      handler: 'pa.bulkUpsert'
     },
     {
       method: 'PATCH',

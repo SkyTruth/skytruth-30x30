@@ -59,12 +59,14 @@ def get_pas(verbose: bool = False) -> list[dict]:
         GROUP BY pas.id
       )
       ,parent_ids AS (
-        SELECT pas.id AS pas_id,
-              array_agg(p.id) FILTER (WHERE p.id IS NOT NULL) AS parents
+        SELECT 
+          pas.id AS pas_id
+          ,p.id AS parent
         FROM pas pas
-        LEFT JOIN pas_parent_links ppl ON pas.id = ppl.pa_id
-        LEFT JOIN pas p ON p.id = ppl.inv_pa_id
-        GROUP BY pas.id
+          LEFT JOIN pas_parent_links ppl 
+            ON pas.id = ppl.pa_id
+        LEFT JOIN pas p 
+          ON p.id = ppl.inv_pa_id
       )
       SELECT 
         pas.id
@@ -83,7 +85,7 @@ def get_pas(verbose: bool = False) -> list[dict]:
         ,ds.slug AS data_source
         ,mpl.slug AS mpaa_protection_level
         ,mic.slug AS iucn_category
-        ,mes.slug AS establishment_stage
+        ,mes.slug AS mpaa_establishment_stage
         ,cid.children
         ,pid.parents
       FROM pas pas
@@ -138,7 +140,7 @@ def get_pas(verbose: bool = False) -> list[dict]:
         ,mic.slug
         ,mes.slug
         ,cid.children
-        ,pid.parents;
+        ,pid.parent;
     """
         if verbose:
             print("Fetching PAS...")
