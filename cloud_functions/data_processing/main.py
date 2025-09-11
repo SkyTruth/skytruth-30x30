@@ -56,7 +56,6 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
-from src.utils.database import get_pas
 from src.utils.gcp import download_zip_to_gcs
 
 
@@ -286,8 +285,6 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
 
-            case "test_conn":
-                get_pas(verbose=verbose)
             case _:
                 print(f"METHOD: {method} not a valid option")
 
