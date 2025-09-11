@@ -300,7 +300,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
         }
       });
       return ctx.send({
-          message: deleted.length + ' Entries updated successfully.',
+          message: deleted.length + ' Entries deleted successfully.',
           deleted,
           errors
         });

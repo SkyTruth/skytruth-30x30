@@ -87,7 +87,7 @@ def get_pas(verbose: bool = False) -> list[dict]:
         ,mic.slug AS iucn_category
         ,mes.slug AS mpaa_establishment_stage
         ,cid.children
-        ,pid.parents
+        ,pid.parent
       FROM pas pas
       -- Children --
         LEFT JOIN child_ids AS cid
@@ -143,7 +143,7 @@ def get_pas(verbose: bool = False) -> list[dict]:
         ,pid.parent;
     """
         if verbose:
-            print("Fetching PAS...")
+            print("Fetching PAs...")
         with conn.cursor() as curr:
             curr.execute(pas_query)
             rows = curr.fetchall()

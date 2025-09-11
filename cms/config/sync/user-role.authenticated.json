@@ -100,13 +100,7 @@
       "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.findOne"
     },
     {
-      "action": "api::pa.pa.bulkInsert"
-    },
-    {
       "action": "api::pa.pa.bulkPatch"
-    },
-    {
-      "action": "api::pa.pa.bulkUpdate"
     },
     {
       "action": "api::pa.pa.bulkUpsert"

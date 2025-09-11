@@ -7,7 +7,6 @@ import { factories } from '@strapi/strapi';
 import type { ToUpdateRelations, InputPA ,PA, PARelations } from '../controllers/pa';
 
 
-
 export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
   async getRelationMaps(): Promise<{[key: string]: IDMap}>{
     const locationMap = await strapi
