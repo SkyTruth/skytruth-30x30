@@ -180,6 +180,18 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
     // All good!
     return true
   },
+  /**
+   * This function checks a PAs parent and child realtions, if they exist as records in the database
+   * then they are passed through and allowd to be created as relationships. If they don't yet exist
+   * in the database we record a uniquely identifying key for the relationship and map that key to 
+   * the current PA so that relationships can be made after the parent or children are added to the DB
+   * and have IDs.
+   * @param pa Protected Arae
+   * @param toUpdateRelations Mapping of parent and child relations that must be updated
+   * after first pass of upserting
+   * @param newIdMap Map of identifying strings to IDs of newly created PAs
+   * @returns 
+   */
   checkParentChild(pa: InputPA, toUpdateRelations: ToUpdateRelations, newIdMap: IDMap): PA {
     const { children, parent } = pa;
     const paIdentifier = pa?.id ?? this.makePAKey(pa);
@@ -227,107 +239,5 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
       }
     }
     return pa
-  },
-  async upsertWithRelations(pa: PA, trx: typeof strapi.db.connection = null):
-    Promise<{ id: number | null; error: Error | null }> {
-    try {
-      const connection = trx ?? strapi.db.connection;
-      const {
-        id,
-        year,
-        name,
-        area,
-        bbox,
-        wdpaid,
-        wdpa_p_id,
-        zone_id,
-        coverage
-      } = pa;
-
-      const attributes = {
-        year,
-        name,
-        area,
-        bbox: bbox ? JSON.stringify(bbox) : bbox,
-        wdpaid,
-        wdpa_p_id,
-        zone_id,
-        coverage,
-      }
-
-      const linkedFields: string[] = [
-        "children",
-        "data_source", 
-        "environment",
-        "protection_status",
-        "iucn_category",
-        "location",
-        "mpaa_protection_level",
-        "mpaa_stablishment_stage",
-        "parent",
-      ];
-
-      let res: PA[] = [];
-      if (id) {
-       res = await connection('pas').where({ id })
-        .update({
-          ...attributes,
-          updated_at: connection.fn.now(),
-        }, ['id']);
-      } else {
-        res = await connection('pas')
-          .insert({
-            ...attributes,
-            created_at: connection.fn.now(),
-          }, ['id']);
-      }
-      // Continue with falsy values other than undefined which are used to unset the realtionship
-        for (const field of linkedFields) {
-          if (pa[field] !== undefined) {
-            await this.insertLinkTable(field, res[0].id, pa[field], connection)
-          }
-        }
-      return {
-        id: res[0].id,
-        error: null
-      }
-    } catch (error) {
-      strapi.log.error('Error in PA upsertWithRelations: ', error);
-      return {
-        id: null,
-        error
-      }
-    }
-  },
-  async insertLinkTable(
-    field: string,
-    pa_id: number,
-    linkID: number | number[],
-    connection: typeof strapi.db.connection): 
-      Promise<void> {
-    const linkTable: string = `pas_${field}_links`; 
-    let linkIDName: string;
-
-      switch (field) {
-        case 'children':
-        case 'parent':
-          linkIDName = 'inv_pa_id';
-          break;
-        case 'iucn_category':
-          linkIDName = 'mpa_iucn_category_id';
-          break;
-        default:
-          linkIDName = `${field}_id`;
-          break;
-      }
-     await connection(linkTable).where({ pa_id }).del();
-     if (Array.isArray(linkID)) {
-      for (let i=0; i<linkID.length; i++) {
-        const id = +linkID[i];
-        await connection(linkTable).insert({ pa_id, [linkIDName]: id })
-      }
-     } else if (linkID) {
-      await connection(linkTable).insert({ pa_id, [linkIDName]: linkID })
-    }
   }
 }));

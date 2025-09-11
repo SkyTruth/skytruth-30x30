@@ -182,7 +182,6 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             ...attributes
           } = updatedPA as PA;
 
-
           // Record exists, update in place
           if (id) {
             await strapi.entityService.update("api::pa.pa", id, {
@@ -272,68 +271,6 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
       strapi.log.error('Error in PAS bulkupsert:', error);
       return ctx.internalServerError('An error occurred while processing the request.', { error });
     }
-  },
-  async bulkUpdate(ctx) {
-    try {
-      if (!Array.isArray(ctx?.request?.body?.data)) {
-        return ctx.badRequest('Invalid data format. Expected a body with an array of objects.');
-      }
-      const data = ctx.request.body.data;
-      const knex = strapi.db.connection;
-      const errors = [];
-      const updated = []
-      await knex.transaction(async (trx) => {
-        for (const pa of data) {
-          if (!pa.id) {
-            errors.push({ name: pa?.name, msg: "Missing PA ID"});
-          }
-          const updateResponse = await strapi.service('api::pa.pa').upsertWithRelations(pa, trx);
-          if (updateResponse.error) {
-            errors.push({ name: pa?.name, msg: "Failed to update PA with ID " + pa.id + ": " + updateResponse.error });
-          } else {
-            updated.push(updateResponse.id)
-          }
-        }
-      })
-      return ctx.send({
-          message: updated.length + ' Entries updated successfully.',
-          updated,
-          errors
-        });
-    } catch (error) {
-      strapi.log.error('Error in PAS bulkUpdate:', error);
-      return ctx.internalServerError('An error occurred while processing the request.', { error });
-    }
-  },
-  async bulkInsert(ctx) {
-    try {
-      if (!Array.isArray(ctx?.request?.body?.data)) {
-        return ctx.badRequest('Invalid data format. Expected a body with an array of objects.');
-      }
-      const data = ctx.request.body.data;
-      const knex = strapi.db.connection;
-      const errors = [];
-      const created = []
-
-      await knex.transaction(async (trx) => {
-        for (const pa of data) {
-          const updateResponse = await strapi.service('api::pa.pa').upsertWithRelations(pa, trx);
-          if (updateResponse.error) {
-            errors.push({ name: pa?.name, msg: "Failed to update PA with ID " + pa.id + ": " + updateResponse.error });
-          } else {
-            created.push(updateResponse.id)
-          }
-        }
-      });
-      return ctx.send({
-          message: created.length + ' Entries created successfully.',
-          created,
-          errors
-        });
-    } catch (error) {
-        strapi.log.error('Error in PAS bulkInsert:', error);
-      return ctx.internalServerError('An error occurred while processing the request.', { error });
-      }
   },
   async bulkPatch(ctx) {
     /**
