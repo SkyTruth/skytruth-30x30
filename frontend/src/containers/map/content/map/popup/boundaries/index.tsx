@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 
 import type { Feature } from 'geojson';
 import { useAtom, useAtomValue } from 'jotai';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import {
@@ -23,10 +23,12 @@ import { formatPercentage, formatKM } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
-import { ProtectionCoverageStat } from '@/types/generated/strapi.schemas';
+import { ProtectionCoverageStatListResponseDataItem } from '@/types/generated/strapi.schemas';
 import { LayerTyped } from '@/types/layers';
 
-import { POPUP_BUTTON_CONTENT_BY_SOURCE, POPUP_PROPERTIES_BY_SOURCE } from '../constants';
+import { POPUP_PROPERTIES_BY_SOURCE } from '../constants';
+
+import StatCard from './StatCard';
 
 const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) => {
   const t = useTranslations('containers.map');
@@ -116,89 +118,148 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     return geometryDataRef.current;
   }, [popup, source, layersInteractiveIds, map, rendered]);
 
-  const locationCode = useMemo(
-    () => geometryData?.[POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.id],
-    [geometryData, source]
-  );
+  // const locationCode = useMemo(
+  //   () => geometryData?.[POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.id],
+  //   [geometryData, source]
+  // );
+
+  const locationCodes = useMemo(() => {
+    const locKeys = POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.ids ?? [];
+    const codes = [];
+    console.log('LOCKET', source, locKeys, 'geom', geometryData);
+    locKeys.forEach((key: string) => geometryData?.[key] && codes.push(geometryData[key]));
+
+    return codes;
+  }, [geometryData, source]);
 
   const localizedLocationName = useMemo(
     () => geometryData?.[POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.name[locale]],
     [geometryData, locale, source]
   );
 
-  const { data: protectionCoverageStats, isFetching } =
-    useGetProtectionCoverageStats<ProtectionCoverageStat>(
-      {
-        locale,
-        filters: {
-          location: {
-            code: locationCode,
-          },
-          is_last_year: {
-            $eq: true,
-          },
-          environment: {
-            slug: {
-              $eq: environment,
-            },
-          },
-        },
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        populate: {
-          location: {
-            fields: [
-              ...(locale === 'en' ? ['name'] : []),
-              ...(locale === 'es' ? ['name_es'] : []),
-              ...(locale === 'fr' ? ['name_fr'] : []),
-              'code',
-              'total_marine_area',
-              'total_terrestrial_area',
-            ],
+  const nameField = useMemo(() => {
+    let res = 'name';
+    if (locale === 'es') {
+      res = 'name_es';
+    }
+    if (locale === 'fr') {
+      res = 'name_fr';
+    }
+    return res;
+  }, [locale]);
+
+  const { data: protectionCoverageStats, isFetching } = useGetProtectionCoverageStats<
+    ProtectionCoverageStatListResponseDataItem[]
+  >(
+    {
+      locale,
+      filters: {
+        location: {
+          code: {
+            $in: locationCodes,
           },
         },
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        fields: ['coverage', 'protected_area'],
-        'pagination[limit]': 1,
+        is_last_year: {
+          $eq: true,
+        },
+        environment: {
+          slug: {
+            $eq: environment,
+          },
+        },
       },
-      {
-        query: {
-          select: ({ data }) => data?.[0].attributes,
-          enabled: !!geometryData,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      populate: {
+        location: {
+          fields: [nameField, 'code', 'total_marine_area', 'total_terrestrial_area'],
         },
-      }
-    );
+      },
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      fields: ['coverage', 'protected_area'],
+      'pagination[limit]': 1,
+    },
+    {
+      query: {
+        select: ({ data }) => data,
+        enabled: !!geometryData,
+      },
+    }
+  );
 
   const formattedStats = useMemo(() => {
-    if (protectionCoverageStats) {
-      const percentage = formatPercentage(locale, protectionCoverageStats.coverage, {
-        displayPercentageSign: false,
+    if (protectionCoverageStats?.length > 0) {
+      return protectionCoverageStats.map((item, idx) => {
+        if (item) {
+          const coverage = item?.attributes?.coverage;
+          const percentage =
+            coverage !== null && coverage !== undefined
+              ? formatPercentage(locale, coverage, {
+                  displayPercentageSign: false,
+                })
+              : '-';
+
+          const pArea = item?.attributes?.protected_area;
+          const protectedArea =
+            pArea !== null && pArea !== undefined ? formatKM(locale, pArea) : '-';
+
+          const tArea =
+            item?.attributes?.total_area ??
+            item?.attributes?.location?.data?.attributes?.[
+              environment === 'marine' ? 'total_marine_area' : 'total_terrestrial_area'
+            ];
+
+          return {
+            location: item.attributes.location.data.attributes[nameField],
+            iso: item.attributes.location.data.attributes['code'],
+            percentage,
+            protectedArea,
+            totalArea: +tArea,
+          };
+        }
+        return {
+          location: localizedLocationName, // default to clicked area name
+          iso: locationCodes[idx],
+          percentage: '-',
+          protectedArea: '-',
+          totalArea: '-',
+        };
       });
-
-      const protectedArea = formatKM(locale, protectionCoverageStats.protected_area);
-
-      return {
-        percentage,
-        protectedArea,
-      };
     }
 
-    return {
-      percentage: '-',
-      protectedArea: '-',
-    };
-  }, [locale, protectionCoverageStats]);
+    return [
+      {
+        location: localizedLocationName,
+        iso: locationCodes[0],
+        percentage: '-',
+        protectedArea: '-',
+        totalArea: '-',
+      },
+    ];
+  }, [
+    environment,
+    locale,
+    localizedLocationName,
+    locationCodes,
+    nameField,
+    protectionCoverageStats,
+  ]);
 
   // handle renderer
   const handleMapRender = useCallback(() => {
     setRendered(map?.loaded() && map?.areTilesLoaded());
   }, [map]);
 
-  const handleLocationSelected = useCallback(async () => {
-    await push(`${PAGES.progressTracker}/${locationCode.toUpperCase()}?${searchParams.toString()}`);
-    setPopup({});
-  }, [push, locationCode, searchParams, setPopup]);
+  const handleLocationSelected = useCallback(
+    async (locationCode: string) => {
+      await push(
+        `${PAGES.progressTracker}/${locationCode.toUpperCase()}?${searchParams.toString()}`
+      );
+      setPopup({});
+    },
+    [push, searchParams, setPopup]
+  );
 
   useEffect(() => {
     map?.on('render', handleMapRender);
@@ -227,12 +288,12 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
         <div className="my-4 text-center font-mono">{t('no-data-available')}</div>
       )}
       {!isFetching && !!protectionCoverageStats && (
-        <>
-          <Accordion type="single" collapsible>
-            <AccordionItem className="divide-y" value="item-1">
+        <Accordion type="single" collapsible className="divide-y">
+          {formattedStats.map((stat) => (
+            <AccordionItem value={`item-${stat.iso}`} key={stat.iso}>
               <AccordionHeader>
                 <AccordionTrigger className="group flex w-[100%] text-lg">
-                  {protectionCoverageStats?.location?.data?.attributes?.name}
+                  {stat.location}
                   <ChevronDown
                     aria-hidden
                     className="ease-[cubic-bezier(0.87,_0,_0.13,_1)] transition-transform duration-300 group-data-[state=open]:rotate-180"
@@ -240,55 +301,16 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
                 </AccordionTrigger>
               </AccordionHeader>
               <AccordionContent className="text-xs">
-                <div className="flex flex-col gap-2">
-                  <div className="max-w-[95%] font-mono">
-                    {environment === 'marine'
-                      ? t('marine-conservation-coverage')
-                      : t('terrestrial-conservation-coverage')}
-                  </div>
-                  <div className="space-x-1 font-mono tracking-tighter text-black">
-                    {formattedStats.percentage !== '-' &&
-                      t.rich('percentage-bold', {
-                        percentage: formattedStats.percentage,
-                        b1: (chunks) => (
-                          <span className="text-[32px] font-bold leading-none">{chunks}</span>
-                        ),
-                        b2: (chunks) => <span className="text-lg">{chunks}</span>,
-                      })}
-                    {formattedStats.percentage === '-' && (
-                      <span className="text-xl font-bold leading-none">
-                        {formattedStats.percentage}
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-x-1 font-mono font-medium text-black">
-                    {t.rich('protected-area', {
-                      br: () => <br />,
-                      protectedArea: formattedStats.protectedArea,
-                      totalArea: formatKM(
-                        locale,
-                        Number(
-                          protectionCoverageStats?.location.data.attributes[
-                            environment === 'marine'
-                              ? 'total_marine_area'
-                              : 'total_terrestrial_area'
-                          ]
-                        )
-                      ),
-                    })}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="mt-3 block w-full border border-black px-4 py-2.5 text-center font-mono text-xs"
-                  onClick={handleLocationSelected}
-                >
-                  {t(POPUP_BUTTON_CONTENT_BY_SOURCE[source?.['id']])}
-                </button>
+                <StatCard
+                  environment={environment}
+                  formattedStat={stat}
+                  handleLocationSelected={handleLocationSelected}
+                  source={source}
+                />
               </AccordionContent>
             </AccordionItem>
-          </Accordion>
-        </>
+          ))}
+        </Accordion>
       )}
     </div>
   );

@@ -5,7 +5,7 @@ import Wave from '@/styles/icons/wave.svg';
 export const POPUP_PROPERTIES_BY_SOURCE = {
   // TODO TECH-3174: Clean up eez-source after removing old EEZ layer from DB
   'ezz-source': {
-    id: 'ISO_SOV1',
+    ids: ['ISO_SOV1'],
     name: {
       en: 'GEONAME',
       es: 'GEONAME_ES',
@@ -14,7 +14,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
   },
   // TODO TECH-3174: Clean up regions-source after removing old marine regions layer from DB
   'regions-source': {
-    id: 'region_id',
+    ids: ['region_id'],
     name: {
       en: 'name',
       es: 'name_es',
@@ -23,7 +23,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
   },
   // TODO TECH-3174: Clean up regions-source after removing old marine regions layer from DB
   'gadm-countries': {
-    id: 'GID_0',
+    ids: ['GID_0'],
     name: {
       en: 'COUNTRY',
       es: 'name_es',
@@ -32,7 +32,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
   },
   // TODO TECH-3174: Clean up regions-source after removing old marine regions layer from DB
   'gadm-regions': {
-    id: 'region_id',
+    ids: ['region_id'],
     name: {
       en: 'name',
       es: 'name_es',
@@ -40,7 +40,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
     },
   },
   'eez-countries-source': {
-    id: 'ISO_TER1',
+    ids: ['ISO_TER1', 'ISO_TER2', 'ISO_TER3', 'ISO_SOV1', 'ISO_SOV2', 'ISO_SOV3'],
     name: {
       en: 'name',
       es: 'name_es',
@@ -48,7 +48,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
     },
   },
   'marine-regions-source': {
-    id: 'region_id',
+    ids: ['region_id'],
     name: {
       en: 'name',
       es: 'name_es',
@@ -56,7 +56,8 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
     },
   },
   countries: {
-    id: 'location',
+    // There's currently on sov1 and sov2 but the code allows for sov3
+    ids: ['location', 'ISO_SOV1', 'ISO_SOV2', 'ISO_SOV3'],
     name: {
       en: 'name',
       es: 'name_es',
@@ -64,7 +65,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
     },
   },
   'terrestrial-regions': {
-    id: 'region_id',
+    ids: ['region_id'],
     name: {
       en: 'name',
       es: 'name_es',
