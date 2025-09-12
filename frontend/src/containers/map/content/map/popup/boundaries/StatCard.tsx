@@ -6,26 +6,12 @@ import { formatKM } from '@/lib/utils/formats';
 
 import { POPUP_BUTTON_CONTENT_BY_SOURCE } from '../constants';
 
+import type { FormattedStat } from './hooks';
+
 interface StatCardProps {
   environment: string;
-  formattedStat:
-    | {
-        location: string;
-        iso: string;
-        percentage: string;
-        protectedArea: string;
-        totalArea: number;
-      }
-    | {
-        location: string;
-        iso: string;
-        percentage: string;
-        protectedArea: string;
-        totalArea: string;
-      };
+  formattedStat: FormattedStat;
   handleLocationSelected: (iso: string) => void;
-  // name: string;
-  // protectionCoverageStats: ProtectionCoverageStatListResponseDataItem[];
   source: string;
 }
 
@@ -33,8 +19,6 @@ const StatCard: FC<StatCardProps> = ({
   environment,
   formattedStat,
   handleLocationSelected,
-  // name,
-  //protectionCoverageStats,
   source,
 }) => {
   const t = useTranslations('containers.map');

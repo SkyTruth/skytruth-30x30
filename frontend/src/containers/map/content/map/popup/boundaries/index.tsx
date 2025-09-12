@@ -19,15 +19,13 @@ import {
 import { PAGES } from '@/constants/pages';
 import { useMapSearchParams, useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { layersInteractiveIdsAtom, popupAtom } from '@/containers/map/store';
-import { formatPercentage, formatKM } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
-import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
-import { ProtectionCoverageStatListResponseDataItem } from '@/types/generated/strapi.schemas';
 import { LayerTyped } from '@/types/layers';
 
 import { POPUP_PROPERTIES_BY_SOURCE } from '../constants';
 
+import useFormattedStats from './hooks';
 import StatCard from './StatCard';
 
 const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) => {
@@ -118,15 +116,9 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     return geometryDataRef.current;
   }, [popup, source, layersInteractiveIds, map, rendered]);
 
-  // const locationCode = useMemo(
-  //   () => geometryData?.[POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.id],
-  //   [geometryData, source]
-  // );
-
   const locationCodes = useMemo(() => {
     const locKeys = POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.ids ?? [];
     const codes = [];
-    console.log('LOCKET', source, locKeys, 'geom', geometryData);
     locKeys.forEach((key: string) => geometryData?.[key] && codes.push(geometryData[key]));
 
     return codes;
@@ -137,114 +129,11 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     [geometryData, locale, source]
   );
 
-  const nameField = useMemo(() => {
-    let res = 'name';
-    if (locale === 'es') {
-      res = 'name_es';
-    }
-    if (locale === 'fr') {
-      res = 'name_fr';
-    }
-    return res;
-  }, [locale]);
-
-  const { data: protectionCoverageStats, isFetching } = useGetProtectionCoverageStats<
-    ProtectionCoverageStatListResponseDataItem[]
-  >(
-    {
-      locale,
-      filters: {
-        location: {
-          code: {
-            $in: locationCodes,
-          },
-        },
-        is_last_year: {
-          $eq: true,
-        },
-        environment: {
-          slug: {
-            $eq: environment,
-          },
-        },
-      },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      populate: {
-        location: {
-          fields: [nameField, 'code', 'total_marine_area', 'total_terrestrial_area'],
-        },
-      },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      fields: ['coverage', 'protected_area'],
-      'pagination[limit]': 1,
-    },
-    {
-      query: {
-        select: ({ data }) => data,
-        enabled: !!geometryData,
-      },
-    }
-  );
-
-  const formattedStats = useMemo(() => {
-    if (protectionCoverageStats?.length > 0) {
-      return protectionCoverageStats.map((item, idx) => {
-        if (item) {
-          const coverage = item?.attributes?.coverage;
-          const percentage =
-            coverage !== null && coverage !== undefined
-              ? formatPercentage(locale, coverage, {
-                  displayPercentageSign: false,
-                })
-              : '-';
-
-          const pArea = item?.attributes?.protected_area;
-          const protectedArea =
-            pArea !== null && pArea !== undefined ? formatKM(locale, pArea) : '-';
-
-          const tArea =
-            item?.attributes?.total_area ??
-            item?.attributes?.location?.data?.attributes?.[
-              environment === 'marine' ? 'total_marine_area' : 'total_terrestrial_area'
-            ];
-
-          return {
-            location: item.attributes.location.data.attributes[nameField],
-            iso: item.attributes.location.data.attributes['code'],
-            percentage,
-            protectedArea,
-            totalArea: +tArea,
-          };
-        }
-        return {
-          location: localizedLocationName, // default to clicked area name
-          iso: locationCodes[idx],
-          percentage: '-',
-          protectedArea: '-',
-          totalArea: '-',
-        };
-      });
-    }
-
-    return [
-      {
-        location: localizedLocationName,
-        iso: locationCodes[0],
-        percentage: '-',
-        protectedArea: '-',
-        totalArea: '-',
-      },
-    ];
-  }, [
-    environment,
-    locale,
-    localizedLocationName,
+  const [formattedStats, isFetching] = useFormattedStats(
     locationCodes,
-    nameField,
-    protectionCoverageStats,
-  ]);
+    environment,
+    !!geometryData
+  );
 
   // handle renderer
   const handleMapRender = useCallback(() => {
@@ -278,40 +167,51 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     }
   }, [layerSlug, activeLayers, setPopup]);
 
+  const renderStats = () => {
+    return formattedStats.length === 1 ? (
+      <StatCard
+        environment={environment}
+        formattedStat={formattedStats[0]}
+        handleLocationSelected={handleLocationSelected}
+        source={source}
+      />
+    ) : (
+      <Accordion type="single" collapsible className="divide-y">
+        {formattedStats.map((stat) => (
+          <AccordionItem value={`item-${stat.iso}`} key={stat.iso}>
+            <AccordionHeader>
+              <AccordionTrigger className="text-m group flex grid w-[100%] grid-cols-6 justify-items-start gap-4 text-left">
+                <span className="col-span-5 col-start-1 font-semibold">{stat.location}</span>
+                <ChevronDown
+                  aria-hidden
+                  className="ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; transition-transform duration-300 group-data-[state=open]:rotate-180"
+                />
+              </AccordionTrigger>
+            </AccordionHeader>
+            <AccordionContent className="text-xs">
+              <StatCard
+                environment={environment}
+                formattedStat={stat}
+                handleLocationSelected={handleLocationSelected}
+                source={source}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    );
+  };
+
   if (!geometryData) return null;
 
   return (
     <div className="flex flex-col gap-2">
       <h3 className="font-sans text-xl font-black">{localizedLocationName || '-'}</h3>
       {isFetching && <div className="my-4 text-center font-mono text-xl">{t('loading')}</div>}
-      {!isFetching && !protectionCoverageStats && (
+      {!isFetching && !formattedStats && (
         <div className="my-4 text-center font-mono">{t('no-data-available')}</div>
       )}
-      {!isFetching && !!protectionCoverageStats && (
-        <Accordion type="single" collapsible className="divide-y">
-          {formattedStats.map((stat) => (
-            <AccordionItem value={`item-${stat.iso}`} key={stat.iso}>
-              <AccordionHeader>
-                <AccordionTrigger className="group flex w-[100%] text-lg">
-                  {stat.location}
-                  <ChevronDown
-                    aria-hidden
-                    className="ease-[cubic-bezier(0.87,_0,_0.13,_1)] transition-transform duration-300 group-data-[state=open]:rotate-180"
-                  />
-                </AccordionTrigger>
-              </AccordionHeader>
-              <AccordionContent className="text-xs">
-                <StatCard
-                  environment={environment}
-                  formattedStat={stat}
-                  handleLocationSelected={handleLocationSelected}
-                  source={source}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      )}
+      {!isFetching && !!formattedStats && renderStats()}
     </div>
   );
 };
