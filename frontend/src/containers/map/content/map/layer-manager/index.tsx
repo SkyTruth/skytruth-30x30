@@ -20,7 +20,7 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
 
   const getSettings = useCallback(
     (slug: string) => ({
-      ...(layersSettings[slug] ?? { opacity: 1, visibility: true, expand: true }),
+      ...(layersSettings[slug] ?? { opacity: 1, visibility: true }),
       zoom,
     }),
     [layersSettings, zoom]

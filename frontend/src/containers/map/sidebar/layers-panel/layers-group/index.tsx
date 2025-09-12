@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
   useSyncMapLayers,
-  useSyncMapLayerSettings,
 } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
@@ -52,7 +51,6 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
   const t = useTranslations('containers.map-sidebar-layers-panel');
 
   const [activeLayers, setMapLayers] = useSyncMapLayers();
-  const [layerSettings, setLayerSettings] = useSyncMapLayerSettings();
   const [{ tab }] = useSyncMapContentSettings();
 
   const datasetsLayersIds = useMemo(() => {
@@ -76,27 +74,8 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
           : activeLayers.filter((activeSlug) => activeSlug !== layerSlug)
       );
 
-      // If we don't have layerSettings entries, the view is in its default state; we wish to
-      // show all legend accordion items expanded by default.
-      const initialSettings = (() => {
-        const layerSettingsKeys = Object.keys(layerSettings);
-        if (layerSettingsKeys.length) return {};
-        return Object.assign(
-          {},
-          ...activeLayers.map((layerSlug) => ({ [layerSlug]: { expanded: true } }))
-        );
-      })();
-
-      setLayerSettings((prev) => ({
-        ...initialSettings,
-        ...prev,
-        [layerSlug]: {
-          ...prev[layerSlug],
-          expanded: true,
-        },
-      }));
     },
-    [activeLayers, layerSettings, setLayerSettings, setMapLayers]
+    [activeLayers, setMapLayers]
   );
 
   useEffect(() => {

@@ -15,15 +15,15 @@ const mapSettingsSchema = z.object({
 
 type MapSettings = z.infer<typeof mapSettingsSchema>;
 
-const DEFAULT_SYNC_MAP_SETTINGS: MapSettings = {
-  bbox: null,
-  labels: true,
-};
+// const DEFAULT_SYNC_MAP_SETTINGS: MapSettings = {
+//   bbox: null,
+//   labels: true,
+// };
 
 export const useSyncMapSettings = () => {
   return useQueryState(
     'settings',
-    parseAsJson<MapSettings>(mapSettingsSchema.parse).withDefault(DEFAULT_SYNC_MAP_SETTINGS)
+    parseAsJson<MapSettings>(mapSettingsSchema.parse).withDefault({})
   );
 };
 
@@ -54,20 +54,32 @@ export const useMapSearchParams = (): URLSearchParams => {
   const [runAsOf] = useSyncRunAsOf();
   const currentSearchparams = new URLSearchParams();
 
-  currentSearchparams.set('layers', parseAsArrayOf(parseAsString).serialize(layers));
-  currentSearchparams.set(
-    'settings',
-    parseAsJson<MapSettings>(mapSettingsSchema.parse).serialize(settings)
-  );
-  currentSearchparams.set(
-    'layer-settings',
-    parseAsJson<LayerSettings>(layerSettingsSchema.parse).serialize(layerSettings)
-  );
-  currentSearchparams.set(
-    'content',
-    parseAsJson<ContentSettings>(contentSettingsSchema.parse).serialize(contentSettings)
-  );
-  currentSearchparams.set('run-as-of', runAsOf);
+  if (layers.length) {
+    currentSearchparams.set('layers', parseAsArrayOf(parseAsString).serialize(layers));
+  }
+
+  if (Object.keys(settings).length) {
+    currentSearchparams.set(
+      'settings',
+      parseAsJson<MapSettings>(mapSettingsSchema.parse).serialize(settings)
+    );
+  }
+
+  if (Object.keys(layerSettings).length) {
+    currentSearchparams.set(
+      'layer-settings',
+      parseAsJson<LayerSettings>(layerSettingsSchema.parse).serialize(layerSettings)
+    );
+  }
+
+  if (Object.keys(contentSettings).length) {
+    currentSearchparams.set(
+      'content',
+      parseAsJson<ContentSettings>(contentSettingsSchema.parse).serialize(contentSettings)
+    );
+  }
+
+  if (runAsOf) currentSearchparams.set('run-as-of', runAsOf);
 
   return currentSearchparams;
 };
