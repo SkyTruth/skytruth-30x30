@@ -31,10 +31,6 @@ export const useSyncMapLayers = () => {
   return useQueryState('layers', parseAsArrayOf(parseAsString).withDefault([]));
 };
 
-export const useSyncRunAsOf = () => {
-  return useQueryState('run-as-of');
-};
-
 export const useSyncMapLayerSettings = () => {
   return useQueryState(
     'layer-settings',
@@ -51,7 +47,6 @@ export const useMapSearchParams = (): URLSearchParams => {
   const [layers] = useSyncMapLayers();
   const [layerSettings] = useSyncMapLayerSettings();
   const [contentSettings] = useSyncMapContentSettings();
-  const [runAsOf] = useSyncRunAsOf();
   const currentSearchparams = new URLSearchParams();
 
   currentSearchparams.set('layers', parseAsArrayOf(parseAsString).serialize(layers));
@@ -67,7 +62,6 @@ export const useMapSearchParams = (): URLSearchParams => {
     'content',
     parseAsJson<ContentSettings>(contentSettingsSchema.parse).serialize(contentSettings)
   );
-  currentSearchparams.set('run-as-of', runAsOf);
 
   return currentSearchparams;
 };
