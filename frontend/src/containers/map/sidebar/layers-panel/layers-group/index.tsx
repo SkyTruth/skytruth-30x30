@@ -7,9 +7,7 @@ import TooltipButton from '@/components/tooltip-button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  useSyncMapLayers,
-} from '@/containers/map/content/map/sync-settings';
+import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
@@ -73,7 +71,6 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
           ? [...activeLayers, layerSlug]
           : activeLayers.filter((activeSlug) => activeSlug !== layerSlug)
       );
-
     },
     [activeLayers, setMapLayers]
   );
