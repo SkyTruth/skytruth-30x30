@@ -55,15 +55,13 @@ const useFormattedStats = (
           },
         },
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      // @ts-expect-error
       populate: {
         location: {
           fields: [nameField, 'code', 'total_marine_area', 'total_terrestrial_area'],
         },
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      // @ts-expect-error
       fields: ['coverage', 'protected_area'],
       'pagination[limit]': 1,
     },

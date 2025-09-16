@@ -33,7 +33,8 @@
       {
         "caughtErrors": "none"
       }
-    ]
+    ],
+    "@typescript-eslint/ban-ts-comment": "off"
   },
   "overrides": [
     {
