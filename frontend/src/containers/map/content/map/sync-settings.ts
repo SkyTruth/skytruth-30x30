@@ -15,11 +15,6 @@ const mapSettingsSchema = z.object({
 
 type MapSettings = z.infer<typeof mapSettingsSchema>;
 
-// const DEFAULT_SYNC_MAP_SETTINGS: MapSettings = {
-//   bbox: null,
-//   labels: true,
-// };
-
 export const useSyncMapSettings = () => {
   return useQueryState(
     'settings',
@@ -30,6 +25,10 @@ export const useSyncMapSettings = () => {
 export const useSyncMapLayers = () => {
   return useQueryState('layers', parseAsArrayOf(parseAsString).withDefault([]));
 };
+
+const useSyncRunAsOf = () => {
+  return useQueryState('run-as-of', {defaultValue: null});
+}
 
 export const useSyncMapLayerSettings = () => {
   return useQueryState(
@@ -47,6 +46,7 @@ export const useMapSearchParams = (): URLSearchParams => {
   const [layers] = useSyncMapLayers();
   const [layerSettings] = useSyncMapLayerSettings();
   const [contentSettings] = useSyncMapContentSettings();
+  const [runAsOf] = useSyncRunAsOf();
   const currentSearchparams = new URLSearchParams();
 
   if (layers.length) {
