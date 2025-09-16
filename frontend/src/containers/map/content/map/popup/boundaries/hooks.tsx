@@ -55,15 +55,13 @@ const useFormattedStats = (
           },
         },
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      // @ts-expect-error
       populate: {
         location: {
           fields: [nameField, 'code', 'total_marine_area', 'total_terrestrial_area'],
         },
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      // @ts-expect-error
       fields: ['coverage', 'protected_area'],
       'pagination[limit]': 1,
     },
@@ -79,7 +77,7 @@ const useFormattedStats = (
     if (protectionCoverageStats?.length > 0) {
       const stats = protectionCoverageStats.map((item, idx) => {
         const iso = item?.attributes?.location?.data?.attributes?.['code'] ?? locationCodes[idx];
-        const location = item?.attributes?.location?.data.attributes?.[nameField ?? iso];
+        const location = item?.attributes?.location?.data?.attributes?.[nameField ?? iso];
         const coverage = item?.attributes?.coverage;
         const percentage =
           coverage !== null && coverage !== undefined
