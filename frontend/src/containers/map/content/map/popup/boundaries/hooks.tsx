@@ -79,7 +79,7 @@ const useFormattedStats = (
     if (protectionCoverageStats?.length > 0) {
       const stats = protectionCoverageStats.map((item, idx) => {
         const iso = item?.attributes?.location?.data?.attributes?.['code'] ?? locationCodes[idx];
-        const location = item?.attributes?.location?.data.attributes?.[nameField ?? iso];
+        const location = item?.attributes?.location?.data?.attributes?.[nameField ?? iso];
         const coverage = item?.attributes?.coverage;
         const percentage =
           coverage !== null && coverage !== undefined
