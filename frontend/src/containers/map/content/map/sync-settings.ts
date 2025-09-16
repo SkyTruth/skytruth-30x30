@@ -27,8 +27,8 @@ export const useSyncMapLayers = () => {
 };
 
 const useSyncRunAsOf = () => {
-  return useQueryState('run-as-of', {defaultValue: null});
-}
+  return useQueryState('run-as-of', { defaultValue: null });
+};
 
 export const useSyncMapLayerSettings = () => {
   return useQueryState(
