@@ -15,6 +15,9 @@ import type {
   LocationGroupsDataItemAttributes,
   ProtectionCoverageStatListResponseDataItem,
 } from '@/types/generated/strapi.schemas';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { is } from 'date-fns/locale';
 
 type MarineConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -26,56 +29,69 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
-  const { data, isFetching } = useGetProtectionCoverageStats<
-    ProtectionCoverageStatListResponseDataItem[]
-  >(
-    {
-      locale,
-      // @ts-expect-error
-      populate: {
-        location: {
-          fields: ['code', 'total_marine_area', 'marine_target', 'marine_target_year'],
-        },
-        environment: {
-          fields: ['slug'],
-        },
-      },
-      sort: 'year:asc',
-      'pagination[limit]': -1,
-      // @ts-expect-error
-      fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
-      filters: {
-        location: {
-          code: {
-            $eq: location?.code || 'GLOB',
-          },
-        },
-        environment: {
-          slug: {
-            $eq: 'marine',
-          },
-        },
-      },
-    },
-    {
-      query: {
-        select: ({ data }) => data ?? [],
-        placeholderData: [],
-        refetchOnWindowFocus: false,
-      },
-    }
-  );
+  // const { data, isFetching } = useGetProtectionCoverageStats<
+  //   ProtectionCoverageStatListResponseDataItem[]
+  // >(
+  //   {
+  //     locale,
+  //     // @ts-expect-error
+  //     populate: {
+  //       location: {
+  //         fields: ['code', 'total_marine_area', 'marine_target', 'marine_target_year'],
+  //       },
+  //       environment: {
+  //         fields: ['slug'],
+  //       },
+  //     },
+  //     sort: 'year:asc',
+  //     'pagination[limit]': -1,
+  //     // @ts-expect-error
+  //     fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
+  //     filters: {
+  //       location: {
+  //         code: {
+  //           $eq: location?.code || 'GLOB',
+  //         },
+  //       },
+  //       environment: {
+  //         slug: {
+  //           $eq: 'marine',
+  //         },
+  //       },
+  //     },
+  //   },
+  //   {
+  //     query: {
+  //       select: ({ data }) => data ?? [],
+  //       placeholderData: [],
+  //       refetchOnWindowFocus: false,
+  //     },
+  //   }
+  // );
 
+  console.log("gonna Fetch")
+  const { data, isFetching} = useQuery({
+    queryFn:() =>
+      axios(
+        `${process.env.NEXT_PUBLIC_API_URL}aggregated-stats?locations=USA*,MEX&environment=marine`
+      ).then(res => res.data),
+      select: ({ data }) => data ?? [],
+      placeholderData: [],
+      refetchOnWindowFocus: false,
+  });
+
+console.log("AFter fetch", data, isFetching)
   const aggregatedData = useMemo(() => {
-    if (!data.length) return [];
+    if (!data?.length) return [];
 
-    const groupedByYear = groupBy(data, 'attributes.year');
+    const groupedByYear = groupBy(data, 'year');
+    console.log("group", groupedByYear)
 
     return Object.keys(groupedByYear).map((year) => {
       const entries = groupedByYear[year];
-      const protectedArea = entries[0].attributes.protected_area;
-      const coverage = entries[0].attributes.coverage;
-      const totalArea = entries[0].attributes.total_area ?? location.total_marine_area;
+      const protectedArea = entries[0].protected_area;
+      const coverage = entries[0].coverage;
+      const totalArea = entries[0].total_area ?? location.total_marine_area;
 
       return {
         year: Number(year),
@@ -85,6 +101,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       };
     });
   }, [data, location]);
+  console.log("agg", aggregatedData);
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -173,7 +190,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   return (
     <Widget
       title={t('marine-conservation-coverage')}
-      lastUpdated={data[data.length - 1]?.attributes.updatedAt}
+      lastUpdated={data[data.length - 1]?.updatedAt}
       noData={noData}
       loading={isFetching}
       info={metadata?.info}
