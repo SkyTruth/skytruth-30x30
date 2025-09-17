@@ -2,6 +2,8 @@ import { IconProps } from '@/components/ui/icon';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 
+export const EEZ_SOURCE = 'eez-countries-source';
+
 export const POPUP_PROPERTIES_BY_SOURCE = {
   // TODO TECH-3174: Clean up eez-source after removing old EEZ layer from DB
   'ezz-source': {
@@ -39,7 +41,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
       fr: 'name_fr',
     },
   },
-  'eez-countries-source': {
+  [EEZ_SOURCE]: {
     ids: ['ISO_TER1', 'ISO_TER2', 'ISO_TER3', 'ISO_SOV1', 'ISO_SOV2', 'ISO_SOV3'],
     name: {
       en: 'name',
@@ -80,7 +82,7 @@ export const POPUP_ICON_BY_SOURCE = {
   'regions-source': Wave as IconProps['icon'], // TODO TECH-3174: Clean up
   'gadm-countries': Mountain as IconProps['icon'], // TODO TECH-3174: Clean up
   'gadm-regions': Mountain as IconProps['icon'], // TODO TECH-3174: Clean up
-  'eez-countries-source': Wave as IconProps['icon'],
+  [EEZ_SOURCE]: Wave as IconProps['icon'],
   'marine-regions-source': Wave as IconProps['icon'],
   countries: Mountain as IconProps['icon'],
   'terrestrial-regions': Mountain as IconProps['icon'],
@@ -92,7 +94,7 @@ export const POPUP_BUTTON_CONTENT_BY_SOURCE = {
   'regions-source': 'open-region-insights', // TODO TECH-3174: Clean up
   'gadm-countries': 'open-country-insights', // TODO TECH-3174: Clean up
   'terrestrial-regions': 'open-region-insights', // TODO TECH-3174: Clean up
-  'eez-countries-source': 'open-country-insights',
+  [EEZ_SOURCE]: 'open-country-insights',
   'marine-regions-source': 'open-region-insights',
   countries: 'open-country-insights',
   'gadm-regions': 'open-region-insights',
