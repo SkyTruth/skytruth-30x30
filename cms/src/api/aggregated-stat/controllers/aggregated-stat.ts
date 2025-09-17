@@ -6,20 +6,22 @@ import { PROTECTION_COVERAGE_STAT_NAMESPACE } from "../../protection-coverage-st
 export default {
   async getStats(ctx) {
     try {
-      strapi.entityService
-      const stat = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE,
-        {
-          filters: {
-            year: 2025,
-            location: {
-              code: 'GLOB'
-            }
-          }
-        }
-      )
+      const { query } = ctx;
+      const { year, locations, environement, stats } = query;
+
+      if (!locations) {
+        return ctx.badRequest('locations is not defined');
+      }
+      const formattedLocs = locations.split(',');
+
+      const stat = await strapi
+        .service(PROTECTION_COVERAGE_STAT_NAMESPACE)
+        .getAggregatedStats(formattedLocs, environement, year);
+
+      
       return stat;
-    } catch {
-      return false
+    } catch (error){
+      return ctx.badRequest('something bad happened', {error})
     }
   }
 
