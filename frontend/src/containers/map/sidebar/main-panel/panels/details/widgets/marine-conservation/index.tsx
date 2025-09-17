@@ -1,5 +1,8 @@
 import { useMemo } from 'react';
 
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { is } from 'date-fns/locale';
 import { groupBy } from 'lodash-es';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -15,9 +18,6 @@ import type {
   LocationGroupsDataItemAttributes,
   ProtectionCoverageStatListResponseDataItem,
 } from '@/types/generated/strapi.schemas';
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-import { is } from 'date-fns/locale';
 
 type MarineConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -69,23 +69,23 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   //   }
   // );
 
-  console.log("gonna Fetch")
-  const { data, isFetching} = useQuery({
-    queryFn:() =>
+  console.log('gonna Fetch');
+  const { data, isFetching } = useQuery({
+    queryFn: () =>
       axios(
         `${process.env.NEXT_PUBLIC_API_URL}aggregated-stats?locations=USA*,MEX&environment=marine`
-      ).then(res => res.data),
-      select: ({ data }) => data ?? [],
-      placeholderData: [],
-      refetchOnWindowFocus: false,
+      ).then((res) => res.data),
+    select: ({ data }) => data ?? [],
+    placeholderData: [],
+    refetchOnWindowFocus: false,
   });
 
-console.log("AFter fetch", data, isFetching)
+  console.log('AFter fetch', data, isFetching);
   const aggregatedData = useMemo(() => {
     if (!data?.length) return [];
 
     const groupedByYear = groupBy(data, 'year');
-    console.log("group", groupedByYear)
+    console.log('group', groupedByYear);
 
     return Object.keys(groupedByYear).map((year) => {
       const entries = groupedByYear[year];
@@ -101,7 +101,7 @@ console.log("AFter fetch", data, isFetching)
       };
     });
   }, [data, location]);
-  console.log("agg", aggregatedData);
+  console.log('agg', aggregatedData);
 
   const { data: metadata } = useGetDataInfos(
     {

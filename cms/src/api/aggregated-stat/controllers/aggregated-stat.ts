@@ -10,8 +10,19 @@ enum Stats {
   FishingProtectionLevel = 'FishingProtectionLevel',
 }
 
+type StatsResponse = {
+  [key in Stats]?: {
+    coverage: number,
+    habitat?: string,
+    protected_area: number,
+    records?: number,
+    total_area: number,
+    year?: number
+  }[]
+}
+
 export default {
-  async getStats(ctx) {
+  async getStats(ctx): Promise<{data: StatsResponse}> {
     try {
       const { query } = ctx;
       const { year, locations, environment, stats=Stats.ProtectionCoverage } = query;
@@ -19,30 +30,32 @@ export default {
       if (!locations) {
         return ctx.badRequest('locations is not defined');
       }
-      const formattedLocs = locations.split(',');
-      const requestedStats: Set<Stats> = new Set(stats.split(','));
-      console.log(requestedStats)
-      const response = {};
 
+      const formattedLocs: string[] = locations.split(',');
+      const requestedStats: Set<Stats> = new Set(stats.split(','));
+      const response = {} as StatsResponse;
+
+      const statsGetters = {
+        [Stats.ProtectionCoverage]: async () => strapi
+          .service(PROTECTION_COVERAGE_STAT_NAMESPACE)
+          .getAggregatedStats(formattedLocs, environment, year),
+        [Stats.Habitat]: async () => strapi
+          .service("api::habitat-stat.habitat-stat")
+          .getAggregatedStats(formattedLocs, environment, year)
+      }
+
+      const inputValidation = new Set(Object.values(Stats));
       for (const stat of requestedStats) {
-        console.log("Stat!", stat)
-        switch (stat) {
-          case Stats.ProtectionCoverage:
-            response[stat] = await strapi
-              .service(PROTECTION_COVERAGE_STAT_NAMESPACE)
-              .getAggregatedStats(formattedLocs, environment, year);
-          case Stats.Habitat:
-            response[stat] = await strapi
-              .service("api::habitat-stat.habitat-stat")
-              .getAggregatedStats(formattedLocs, environment, year);
-        
-          default:
-            break;
+        if (inputValidation.has(stat)) {
+          response[stat] = await statsGetters[stat]()
+
         }
       }
+
       return {data: response};
     } catch (error){
-      return ctx.badRequest('something bad happened', {error})
+      strapi.log.error("Failed to get aggregated stats", error)
+      return ctx.badRequest('something bad happened', {error: error.message})
     }
   }
 
