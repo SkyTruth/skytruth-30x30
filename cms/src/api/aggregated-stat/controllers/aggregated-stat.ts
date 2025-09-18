@@ -1,12 +1,12 @@
 /**
- * A set of functions called "actions" for `aggregated-stats`
+ * Controller logic for fetching statistics aggregated by location
  */
 import { FISHING_PROTECTION_LEVEL_STATS_NAMESPACE } from "../../fishing-protection-level-stat/controllers/fishing-protection-level-stat";
 import { HABITAT_STATS_NAMESPACE } from "../../habitat-stat/controllers/habitat-stat";
 import { MPAA_PROTECTION_LEVEL_STATS_NAMESPACE } from "../../mpaa-protection-level-stat/controllers/mpaa-protection-level-stat";
 import { PROTECTION_COVERAGE_STAT_NAMESPACE } from "../../protection-coverage-stat/controllers/protection-coverage-stat";
 
-export const AGGREGATED_STATS_NAMESPACE = 'api::aggregated-stat.aggregated-stat';
+const AGGREGATED_STATS_NAMESPACE = 'api::aggregated-stat.aggregated-stat';
 
 export enum Stats {
   ProtectionCoverage = 'protection_coverage',

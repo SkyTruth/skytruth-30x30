@@ -103,6 +103,9 @@
       "action": "api::pa.pa.bulkPatch"
     },
     {
+      "action": "api::pa.pa.bulkUpsert"
+    },
+    {
       "action": "api::pa.pa.create"
     },
     {

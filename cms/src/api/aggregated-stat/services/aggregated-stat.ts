@@ -22,7 +22,7 @@ export default () => ({
     subFieldName = null,
     subFieldValue = null
   }: AggregatedStatsParams): Promise<AggregatedStats[]> {
-    console.log("In here!", subFieldName, apiNamespace)
+
      const stats = await strapi.db.query(apiNamespace).findMany({
       where: {
         location: {

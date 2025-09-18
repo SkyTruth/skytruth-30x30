@@ -34,5 +34,5 @@ export default factories.createCoreService('api::habitat-stat.habitat-stat', ({ 
       statsMap[`${stat.location.code}-${stat.environment.slug}-${stat.habitat.slug}`] = stat.id
     });
     return statsMap;
-  }
+  },
 }));
