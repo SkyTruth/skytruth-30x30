@@ -6,8 +6,10 @@ import { factories } from '@strapi/strapi'
 
 import filterSovereigns from '../../../utils/filter-sovereigns';
 
+export const FISHING_PROTECTION_LEVEL_STATS_NAMESPACE = 'api::fishing-protection-level-stat.fishing-protection-level-stat';
+
 export default factories
-.createCoreController('api::fishing-protection-level-stat.fishing-protection-level-stat' , ({ strapi }) => ({
+.createCoreController(FISHING_PROTECTION_LEVEL_STATS_NAMESPACE , ({ strapi }) => ({
   // TODO TECH-3174: Clean up custom find method
   async find(ctx) {
     try {
@@ -39,7 +41,7 @@ export default factories
       let fishingProtectionLevelMap: IDMap | null = null;
       await strapi.db.transaction(async () => {
         const statsMap: IDMap = await strapi
-          .service('api::fishing-protection-level-stat.fishing-protection-level-stat')
+          .service(FISHING_PROTECTION_LEVEL_STATS_NAMESPACE)
           .getFishingProtectionLevelStatsMap();
 
         for (const stat of data) {
@@ -73,7 +75,7 @@ export default factories
               continue;
             }
             await strapi.entityService.create(
-              'api::fishing-protection-level-stat.fishing-protection-level-stat',
+              FISHING_PROTECTION_LEVEL_STATS_NAMESPACE,
               {
                 data: {
                   area,
@@ -87,7 +89,7 @@ export default factories
           } else {
             // Update existing record
             await strapi.entityService.update(
-              'api::fishing-protection-level-stat.fishing-protection-level-stat',
+              FISHING_PROTECTION_LEVEL_STATS_NAMESPACE,
               statsMap[statKey],
               {
                 data: { area, pct, total_area },
