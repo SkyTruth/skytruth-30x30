@@ -1,1 +1,246 @@
-{}
+{
+  "/aggregated-stats": {
+    "get": {
+      "summary": "Get aggregated statistics",
+      "description": "Returns aggregated statistics for one or more locations. The `stats` query accepts a comma-separated list of statistic types. At least one location is required.",
+      "tags": ["Aggregated-stats"],
+      "parameters": [
+        {
+          "name": "locations",
+          "in": "query",
+          "required": true,
+          "description": "Comma-separated list of location codes (e.g. `USA,PRI,GLB`).",
+          "schema": { "type": "string" },
+          "example": "USA,PRI"
+        },
+        {
+          "name": "stats",
+          "in": "query",
+          "required": false,
+          "description": "Comma-separated list of stat types to compute. If omitted, defaults to `protection_coverage`.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "protection_coverage",
+              "habitat",
+              "mpaa_protection_level",
+              "fishing_protection_level"
+            ],
+            "default": "protection_coverage"
+          },
+          "example": "protection_coverage,habitat"
+        },
+        {
+          "name": "year",
+          "in": "query",
+          "required": false,
+          "description": "Restrict results to a specific year.",
+          "schema": { "type": "integer", "format": "int32" },
+          "example": 2023
+        },
+        {
+          "name": "environment",
+          "in": "query",
+          "required": false,
+          "description": "Filter by environment slug (nullable).",
+          "schema": { "type": "string", "nullable": true },
+          "example": "marine"
+        },
+        {
+          "name": "habitat",
+          "in": "query",
+          "required": false,
+          "description": "Filter value for `habitat` stats (slug). Used only when `stats` includes `habitat`.",
+          "schema": { "type": "string", "nullable": true },
+          "example": "coral_reef"
+        },
+        {
+          "name": "fishing_protection_level",
+          "in": "query",
+          "required": false,
+          "description": "Filter value for `fishing_protection_level` stats (slug). Used only when `stats` includes `fishing_protection_level`.",
+          "schema": { "type": "string", "nullable": true },
+          "example": "high"
+        },
+        {
+          "name": "mpaa_protection_level",
+          "in": "query",
+          "required": false,
+          "description": "Filter value for `mpaa_protection_level` stats (slug). Used only when `stats` includes `mpaa_protection_level`.",
+          "schema": { "type": "string", "nullable": true },
+          "example": "fully_protected"
+        }
+      ],
+      "responses": {
+        "200": {
+          "description": "OK",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AggregatedStatsEnvelope"
+              },
+              "examples": {
+                "protection_coverage_only": {
+                  "value": {
+                    "data": {
+                      "protection_coverage": [
+                        {
+                          "coverage": 37.5,
+                          "protected_area": 1500,
+                          "locations": ["USA", "PRI"],
+                          "total_area": 4000,
+                          "environment": "marine",
+                          "year": 2023
+                        }
+                      ]
+                    }
+                  }
+                },
+                "multiple_stat_groups": {
+                  "value": {
+                    "data": {
+                      "protection_coverage": [
+                        {
+                          "coverage": 20.1,
+                          "protected_area": 220,
+                          "locations": ["USA"],
+                          "total_area": 1095,
+                          "environment": "marine",
+                          "year": 2022
+                        }
+                      ],
+                      "habitat": [
+                        {
+                          "coverage": 55.2,
+                          "protected_area": 552,
+                          "locations": ["USA", "PRI"],
+                          "total_area": 1000,
+                          "habitat": "coral_reef",
+                          "year": 2022
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad Request (e.g., missing `locations` or input validation error)",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Error" },
+              "examples": {
+                "missing_locations": {
+                  "value": { "error": "locations is not defined" }
+                }
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Unauthorized",
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+          }
+        },
+        "403": {
+          "description": "Forbidden",
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+          }
+        },
+        "404": {
+          "description": "Not Found",
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+          }
+        },
+        "500": {
+          "description": "Internal Server Error",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Error" },
+              "examples": {
+                "generic": {
+                  "value": {
+                    "error": "something bad happened"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AggregatedStats": {
+        "type": "object",
+        "required": ["coverage", "protected_area", "locations", "total_area"],
+        "properties": {
+          "coverage": { "type": "number" },
+          "protected_area": { "type": "number" },
+          "locations": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "total_area": { "type": "number" },
+          "environment": { "type": "string", "nullable": true },
+          "fishing_protection_level": { "type": "string", "nullable": true },
+          "mpaa_protection_level": { "type": "string", "nullable": true },
+          "habitat": { "type": "string", "nullable": true },
+          "year": { "type": "integer", "format": "int32", "nullable": true }
+        },
+        "example": {
+          "coverage": 37.5,
+          "protected_area": 1500,
+          "locations": ["USA", "PRI"],
+          "total_area": 4000,
+          "environment": "marine",
+          "year": 2023
+        }
+      },
+      "StatsResponse": {
+        "type": "object",
+        "description": "Object keyed by requested stat type(s), each value an array of AggregatedStats.",
+        "properties": {
+          "protection_coverage": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AggregatedStats" }
+          },
+          "habitat": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AggregatedStats" }
+          },
+          "mpaa_protection_level": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AggregatedStats" }
+          },
+          "fishing_protection_level": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/AggregatedStats" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AggregatedStatsEnvelope": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": { "$ref": "#/components/schemas/StatsResponse" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" },
+          "status": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
