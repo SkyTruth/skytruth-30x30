@@ -49,15 +49,15 @@ export default factories
         },
     })
       const aggregatedStats = stats.reduce((acc, stat) => {
-        const fishingLevel = stat.fishing_protection_level.slug;
+        const protectionLevel = stat.fishing_protection_level.slug;
         let totalArea = +stat.total_area;
 
         if (!totalArea) {
           totalArea = (stat.protected_area * 100) / stat.coverage;
         }
 
-        if (!acc[fishingLevel]) {
-          acc[fishingLevel] = {
+        if (!acc[protectionLevel]) {
+          acc[protectionLevel] = {
             fishing_protection_level,
             total_area: 0,
             protected_area: 0,
@@ -65,11 +65,11 @@ export default factories
           };
         }
 
-        acc[fishingLevel].total_area += totalArea;
-        acc[fishingLevel].protected_area += stat.parea;
-        acc[fishingLevel].records++;
-        acc[fishingLevel].coverage = 
-          (acc[fishingLevel].protected_area / acc[fishingLevel].total_area) * 100;
+        acc[protectionLevel].total_area += totalArea;
+        acc[protectionLevel].protected_area += stat.area;
+        acc[protectionLevel].records++;
+        acc[protectionLevel].coverage = 
+          (acc[protectionLevel].protected_area / acc[protectionLevel].total_area) * 100;
         return acc;
       }, {})
 

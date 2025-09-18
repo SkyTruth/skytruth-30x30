@@ -33,5 +33,53 @@ export default factories
         }
       };
       return statsMap;
-    }
+    },
+    async getAggregatedStats(locations: string[], mpaa_protection_level: string = null) {
+      console.log("protection level", mpaa_protection_level)
+    const stats = await strapi.db.query('api::mpaa-protection-level-stat.mpaa-protection-level-stat').findMany({
+      where: {
+          ...(mpaa_protection_level ? {
+            mpaa_protection_level : {
+              slug: mpaa_protection_level
+            } 
+          } : {}),
+          location: {
+            code: {
+              $in: locations
+            }
+          },
+        },
+        populate: {
+          mpaa_protection_level: {
+            fields: "slug"
+          }
+        },
+    })
+      const aggregatedStats = stats.reduce((acc, stat) => {
+        const protectionLevel = stat.mpaa_protection_level.slug;
+        let totalArea = +stat.total_area;
+
+        if (!totalArea) {
+          totalArea = (stat.protected_area * 100) / stat.coverage;
+        }
+
+        if (!acc[protectionLevel]) {
+          acc[protectionLevel] = {
+            mpaa_protection_level,
+            total_area: 0,
+            protected_area: 0,
+            records: 0
+          };
+        }
+
+        acc[protectionLevel].total_area += totalArea;
+        acc[protectionLevel].protected_area += stat.area;
+        acc[protectionLevel].records++;
+        acc[protectionLevel].coverage = 
+          (acc[protectionLevel].protected_area / acc[protectionLevel].total_area) * 100;
+        return acc;
+      }, {})
+
+    return Object.values(aggregatedStats);
+  }
 }));
