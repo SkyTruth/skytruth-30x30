@@ -25,7 +25,7 @@ export default {
   async getStats(ctx): Promise<{data: StatsResponse}> {
     try {
       const { query } = ctx;
-      const { year, locations, environment, stats=Stats.ProtectionCoverage } = query;
+      const { year, locations, environment, stats=Stats.ProtectionCoverage, fishing_protection_level } = query;
 
       if (!locations) {
         return ctx.badRequest('locations is not defined');
@@ -41,7 +41,10 @@ export default {
           .getAggregatedStats(formattedLocs, environment, year),
         [Stats.Habitat]: async () => strapi
           .service("api::habitat-stat.habitat-stat")
-          .getAggregatedStats(formattedLocs, environment, year)
+          .getAggregatedStats(formattedLocs, environment, year),
+        [Stats.FishingProtectionLevel]: async () => strapi
+          .service("api::fishing-protection-level-stat.fishing-protection-level-stat")
+          .getAggregatedStats(formattedLocs, fishing_protection_level)
       }
 
       const inputValidation = new Set(Object.values(Stats));
