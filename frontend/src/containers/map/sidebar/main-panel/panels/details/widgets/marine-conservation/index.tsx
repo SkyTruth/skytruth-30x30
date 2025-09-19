@@ -150,7 +150,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       return {
         // We only want to show up to 55%, so we'll cap the percentage here
         // Some of the data seems incorrect; this is a quick fix in order to not blow the chart
-        percentage: percentage > 55 ? 55 : percentage,
+        percentage,//: percentage > 55 ? 55 : percentage,
         year,
         active: isLastYear,
         totalArea: Number(entry.totalArea),
