@@ -35,14 +35,15 @@ export default () => ({
         ...(subFieldName && subFieldValue ? { [subFieldName]: { slug: subFieldValue } } : {})
       },
       populate: {
-        location: { fields: 'code' },
-        environment: { fields: 'slug' },
-        [subFieldName]: { fields: 'slug' },
+        location: true,
+        environment: true,
+        [subFieldName]: true,
       },
       ...(year ? { orderBy: { year: 'asc' }} : {})
     })
 
       const aggregatedStats = stats.reduce<Record<string, AggregatedStats>>((acc, stat) => {
+        console.log(stat)
         const location = stat.location.code;
         const environment = stat?.environment?.slug;
         const year = stat?.year;
@@ -65,18 +66,25 @@ export default () => ({
             total_area: 0,
             protected_area: 0,
             locations: [],
-            coverage: 0
+            coverage: 0,
+            updatedAt: null
           };
         }
 
         acc[recordKey].total_area += totalArea;
         acc[recordKey].protected_area += protected_area;
-        acc[recordKey].locations.push(location);
         acc[recordKey].coverage = 
-          (acc[recordKey].protected_area / acc[recordKey].total_area) * 100;
-        return acc;
-      }, {});
+        (acc[recordKey].protected_area / acc[recordKey].total_area) * 100;
+        acc[recordKey].locations.unshift(location);
+        acc[recordKey].updatedAt = 
+          acc[recordKey].updatedAt && new Date(acc[recordKey].updatedAt) > new Date(stat.updatedAt)
+           ? acc[recordKey].updatedAt : stat.updatedAt
 
-    return Object.values(aggregatedStats);
+        return acc;
+    }, {});
+      
+    const sortedStats = Object.values(aggregatedStats).sort((a,b) => b.year - a.year);
+      
+    return sortedStats;
   }
 });

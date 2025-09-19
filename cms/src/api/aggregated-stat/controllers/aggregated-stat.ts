@@ -19,6 +19,7 @@ export type AggregatedStats = {
   protected_area: number,
   locations: string[],
   total_area: number,
+  updatedAt: string,
   environment?: string,
   fishing_protection_level?: string,
   mpaa_protection_level?: string,

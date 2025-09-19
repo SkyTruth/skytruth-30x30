@@ -16,6 +16,8 @@ import type {
   ProtectionCoverageStatListResponseDataItem,
 } from '@/types/generated/strapi.schemas';
 
+import { useProtectionCoverageData } from '../hooks';
+
 type MarineConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
 };
@@ -26,56 +28,59 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
-  const { data, isFetching } = useGetProtectionCoverageStats<
-    ProtectionCoverageStatListResponseDataItem[]
-  >(
-    {
-      locale,
-      // @ts-expect-error
-      populate: {
-        location: {
-          fields: ['code', 'total_marine_area', 'marine_target', 'marine_target_year'],
-        },
-        environment: {
-          fields: ['slug'],
-        },
-      },
-      sort: 'year:asc',
-      'pagination[limit]': -1,
-      // @ts-expect-error
-      fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
-      filters: {
-        location: {
-          code: {
-            $eq: location?.code || 'GLOB',
-          },
-        },
-        environment: {
-          slug: {
-            $eq: 'marine',
-          },
-        },
-      },
-    },
-    {
-      query: {
-        select: ({ data }) => data ?? [],
-        placeholderData: [],
-        refetchOnWindowFocus: false,
-      },
-    }
-  );
+  const {data, isFetching} = useProtectionCoverageData(location.code, 'marine');
+
+  // const { data, isFetching } = useGetProtectionCoverageStats<
+  //   ProtectionCoverageStatListResponseDataItem[]
+  // >(
+  //   {
+  //     locale,
+  //     // @ts-expect-error
+  //     populate: {
+  //       location: {
+  //         fields: ['code', 'total_marine_area', 'marine_target', 'marine_target_year'],
+  //       },
+  //       environment: {
+  //         fields: ['slug'],
+  //       },
+  //     },
+  //     sort: 'year:asc',
+  //     'pagination[limit]': -1,
+  //     // @ts-expect-error
+  //     fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
+  //     filters: {
+  //       location: {
+  //         code: {
+  //           $eq: location?.code || 'GLOB',
+  //         },
+  //       },
+  //       environment: {
+  //         slug: {
+  //           $eq: 'marine',
+  //         },
+  //       },
+  //     },
+  //   },
+  //   {
+  //     query: {
+  //       select: ({ data }) => data ?? [],
+  //       placeholderData: [],
+  //       refetchOnWindowFocus: false,
+  //     },
+  //   }
+  // );
 
   const aggregatedData = useMemo(() => {
-    if (!data.length) return [];
+    console.log("DATA", data)
+    if (!data?.length) return [];
 
-    const groupedByYear = groupBy(data, 'attributes.year');
+    const groupedByYear = groupBy(data, 'year');
 
     return Object.keys(groupedByYear).map((year) => {
       const entries = groupedByYear[year];
-      const protectedArea = entries[0].attributes.protected_area;
-      const coverage = entries[0].attributes.coverage;
-      const totalArea = entries[0].attributes.total_area ?? location.total_marine_area;
+      const protectedArea = entries[0].protected_area;
+      const coverage = entries[0].coverage;
+      const totalArea = entries[0].total_area ?? location.total_marine_area;
 
       return {
         year: Number(year),
@@ -173,7 +178,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   return (
     <Widget
       title={t('marine-conservation-coverage')}
-      lastUpdated={data[data.length - 1]?.attributes.updatedAt}
+      lastUpdated={data[data.length - 1]?.updatedAt}
       noData={noData}
       loading={isFetching}
       info={metadata?.info}
