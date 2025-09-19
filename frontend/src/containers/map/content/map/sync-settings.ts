@@ -26,6 +26,10 @@ export const useSyncMapLayers = () => {
   return useQueryState('layers', parseAsArrayOf(parseAsString).withDefault([]));
 };
 
+export const useSyncCustomRegion = () => {
+  return useQueryState('region', parseAsArrayOf(parseAsString).withDefault([]));
+};
+
 const useSyncRunAsOf = () => {
   return useQueryState('run-as-of', { defaultValue: null });
 };
@@ -47,6 +51,7 @@ export const useMapSearchParams = (): URLSearchParams => {
   const [layerSettings] = useSyncMapLayerSettings();
   const [contentSettings] = useSyncMapContentSettings();
   const [runAsOf] = useSyncRunAsOf();
+  const [customRegion] = useSyncCustomRegion();
   const currentSearchparams = new URLSearchParams();
 
   if (layers.length) {
@@ -75,6 +80,10 @@ export const useMapSearchParams = (): URLSearchParams => {
   }
 
   if (runAsOf) currentSearchparams.set('run-as-of', runAsOf);
+
+  if (customRegion.length) {
+    currentSearchparams.set('region', parseAsArrayOf(parseAsString).serialize(customRegion));
+  }
 
   return currentSearchparams;
 };

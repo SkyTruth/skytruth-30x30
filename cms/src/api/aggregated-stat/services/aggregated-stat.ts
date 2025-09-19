@@ -45,7 +45,6 @@ export default () => ({
     })
 
       const aggregatedStats = stats.reduce<Record<string, AggregatedStats>>((acc, stat) => {
-        console.log(stat)
         const location = stat.location.code;
         const environment = stat?.environment?.slug;
         const year = stat?.year;

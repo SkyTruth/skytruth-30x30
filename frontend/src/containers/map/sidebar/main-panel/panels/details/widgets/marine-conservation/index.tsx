@@ -7,16 +7,17 @@ import ConservationChart from '@/components/charts/conservation-chart';
 import { Button } from '@/components/ui/button';
 import Widget from '@/components/widget';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { formatKM, formatPercentage } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
+import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import type {
   LocationGroupsDataItemAttributes,
-  ProtectionCoverageStatListResponseDataItem,
+  AggregatedStats,
+  AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
-
-import { useProtectionCoverageData } from '../hooks';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants'
 
 type MarineConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -27,48 +28,24 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const locale = useLocale();
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
+  const [customRegionLocations] = useSyncCustomRegion();
 
-  const { data, isFetching } = useProtectionCoverageData(location.code, 'marine');
+  const locations = location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code
 
-  // const { data, isFetching } = useGetProtectionCoverageStats<
-  //   ProtectionCoverageStatListResponseDataItem[]
-  // >(
-  //   {
-  //     locale,
-  //     // @ts-expect-error
-  //     populate: {
-  //       location: {
-  //         fields: ['code', 'total_marine_area', 'marine_target', 'marine_target_year'],
-  //       },
-  //       environment: {
-  //         fields: ['slug'],
-  //       },
-  //     },
-  //     sort: 'year:asc',
-  //     'pagination[limit]': -1,
-  //     // @ts-expect-error
-  //     fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
-  //     filters: {
-  //       location: {
-  //         code: {
-  //           $eq: location?.code || 'GLOB',
-  //         },
-  //       },
-  //       environment: {
-  //         slug: {
-  //           $eq: 'marine',
-  //         },
-  //       },
-  //     },
-  //   },
-  //   {
-  //     query: {
-  //       select: ({ data }) => data ?? [],
-  //       placeholderData: [],
-  //       refetchOnWindowFocus: false,
-  //     },
-  //   }
-  // );
+  const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
+    {
+      stats: 'protection_coverage',
+      locations,
+      environment: 'marine',
+    },
+    {
+      query: {
+        select: ({ data }) => data?.protection_coverage ?? [],
+        placeholderData: { data: [] } as AggregatedStatsEnvelope,
+        refetchOnWindowFocus: false,
+      },
+    }
+  );
 
   const aggregatedData = useMemo(() => {
     console.log('DATA', data);
@@ -150,7 +127,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       return {
         // We only want to show up to 55%, so we'll cap the percentage here
         // Some of the data seems incorrect; this is a quick fix in order to not blow the chart
-        percentage,//: percentage > 55 ? 55 : percentage,
+        percentage,
         year,
         active: isLastYear,
         totalArea: Number(entry.totalArea),

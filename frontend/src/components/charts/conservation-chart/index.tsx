@@ -2,8 +2,7 @@ import { useMemo } from 'react';
 
 import twTheme from 'lib/tailwind';
 
-import {maxBy} from 'lodash-es';
-
+import { maxBy } from 'lodash-es';
 import { useTranslations } from 'next-intl';
 import {
   ComposedChart,
@@ -55,7 +54,7 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
 }) => {
   const t = useTranslations('components.chart-conservation');
 
-  const maxRecord = useMemo(() => maxBy(data, data => data.percentage), [data]);
+  const maxRecord = useMemo(() => maxBy(data, (data) => data.percentage), [data]);
 
   const barChartData = useMemo(() => {
     // Last year of data available
@@ -172,9 +171,8 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
       <ResponsiveContainer>
         <ComposedChart data={chartData}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          {
-            firstYearData.year !== activeYearData.year ? (
-              <>
+          {firstYearData.year !== activeYearData.year ? (
+            <>
               <ReferenceLine
                 xAxisId={1}
                 x={firstYearData.year - 0.4}
@@ -188,10 +186,8 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
                 label={getMultilineRenderer(t('future-projection'), 15)}
                 stroke="#000"
               />
-              </>
-            )
-              : null
-          }
+            </>
+          ) : null}
           <XAxis
             xAxisId={1}
             type="number"

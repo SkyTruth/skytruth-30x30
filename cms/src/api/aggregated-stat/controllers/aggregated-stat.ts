@@ -48,7 +48,7 @@ export default {
         return ctx.badRequest('locations is not defined');
       }
 
-      const formattedLocs: string[] = locations.split(',');
+      const formattedLocs: string[] = locations.toUpperCase().split(',');
       const requestedStats: Set<Stats> = new Set(stats.split(','));
       const response = {} as StatsResponse;
 
