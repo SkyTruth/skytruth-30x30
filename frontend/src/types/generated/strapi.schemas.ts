@@ -1221,6 +1221,7 @@ export interface AggregatedStats {
   mpaa_protection_level?: string | null;
   habitat?: string | null;
   year?: number | null;
+  updatedAt?: string;
 }
 
 export interface StatsResponse {

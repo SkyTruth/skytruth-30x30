@@ -1,6 +1,8 @@
 /**
  * aggregated-stats service
  */
+import { FISHING_PROTECTION_LEVEL_STATS_NAMESPACE } from '../../fishing-protection-level-stat/controllers/fishing-protection-level-stat';
+import { MPAA_PROTECTION_LEVEL_STATS_NAMESPACE } from '../../mpaa-protection-level-stat/controllers/mpaa-protection-level-stat';
 import { AggregatedStats } from '../controllers/aggregated-stat';
 
 type AggregatedStatsParams = {
@@ -54,7 +56,11 @@ export default () => ({
         let totalArea = +stat.total_area;
 
         if (!totalArea) {
-          totalArea = (protected_area * 100) / stat.coverage;
+          totalArea = 
+            environment === 'marine' || apiNamespace === FISHING_PROTECTION_LEVEL_STATS_NAMESPACE
+            || apiNamespace === MPAA_PROTECTION_LEVEL_STATS_NAMESPACE 
+            ? +stat.location.total_marine_area : +stat.location.total_terrestrial_area
+
         }
 
         const recordKey = `${year ?? ''}-${environment ?? ''}-${sub ?? ''}`
@@ -75,7 +81,7 @@ export default () => ({
         acc[recordKey].protected_area += protected_area;
         acc[recordKey].coverage = 
         (acc[recordKey].protected_area / acc[recordKey].total_area) * 100;
-        acc[recordKey].locations.unshift(location);
+        acc[recordKey].locations.push(location);
         acc[recordKey].updatedAt = 
           acc[recordKey].updatedAt && new Date(acc[recordKey].updatedAt) > new Date(stat.updatedAt)
            ? acc[recordKey].updatedAt : stat.updatedAt
@@ -83,7 +89,7 @@ export default () => ({
         return acc;
     }, {});
       
-    const sortedStats = Object.values(aggregatedStats).sort((a,b) => b.year - a.year);
+    const sortedStats = Object.values(aggregatedStats).sort((a,b) => a.year - b.year);
       
     return sortedStats;
   }

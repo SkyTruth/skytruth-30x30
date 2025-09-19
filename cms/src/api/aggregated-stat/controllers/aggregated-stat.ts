@@ -71,7 +71,7 @@ export default {
           locations: formattedLocs,
           apiNamespace: FISHING_PROTECTION_LEVEL_STATS_NAMESPACE,
           subFieldName: 'fishing_protection_level',
-          subFieldValue: fishing_protection_level
+          subFieldValue: fishing_protection_level,
         },
         [Stats.MpaaProtectionLevel]: {
           locations: formattedLocs,

@@ -62,7 +62,7 @@ const useFormattedStats = (
         },
       },
       // @ts-expect-error
-      fields: ['coverage', 'protected_area'],
+      fields: ['coverage', 'protected_area', 'total_area'],
       'pagination[limit]': 1,
     },
     {
