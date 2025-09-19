@@ -6,18 +6,18 @@ import { useLocale, useTranslations } from 'next-intl';
 import ConservationChart from '@/components/charts/conservation-chart';
 import { Button } from '@/components/ui/button';
 import Widget from '@/components/widget';
-import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
+import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { formatKM, formatPercentage } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
-import { useGetDataInfos } from '@/types/generated/data-info';
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
+import { useGetDataInfos } from '@/types/generated/data-info';
 import type {
   LocationGroupsDataItemAttributes,
   AggregatedStats,
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
-import { CUSTOM_REGION_CODE } from '@/containers/map/constants'
 
 type MarineConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -30,7 +30,8 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
   const [customRegionLocations] = useSyncCustomRegion();
 
-  const locations = location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code
+  const locations =
+    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
 
   const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {
