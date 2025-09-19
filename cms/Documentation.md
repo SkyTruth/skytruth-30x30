@@ -4,6 +4,12 @@
 
 This API provides a single source for accessing open source data related to terrestrial and marine conservation. For most users, we recommend using the 30x30 web application, which provides a visual interface for exploring the complete set of conservation data layers.
 
+## ⚠️ ${\color{red}Upcoming \space Breaking \space Changes}$ ⚠️
+
+A major update of the API will occur sometime in between December 2205 and March 2026 that will introduce breaking changes to the API response contract. We will notify our users of this change when it is planned. In order to safeguard yourself against these changes you can add the following header to your request
+
+${\color{lightgreen} Strapi-Response-Format: v4}$
+
 ## Base URL
 
 ```bash
@@ -73,6 +79,7 @@ Error Responses are fairly consistent and take on the form:
 * [Marine Protection Level Stats][mpaa_protection_level_stats]
 * [Protected Areas][protected_areas]
 * [Protection Coverage Stats][protection_coverage_stats]
+* [Aggregated Stats][aggregated_stats]
 
 ### Related Resources Table of Contents
 
@@ -87,9 +94,9 @@ Error Responses are fairly consistent and take on the form:
 
 Below are queryable data entities and their related data that you can request. Fields marked with a 🖇️ indicate a related field that can be linked in a query using the `populate` query parameter.
 
-### Fishing Protection Level Stats
+## Fishing Protection Level Stats
 
-#### Description
+### Description
 
 Data related to fishing protection levels.
 
@@ -105,12 +112,12 @@ Data related to fishing protection levels.
 
 </details>
 
-#### End Points
+### End Points
 
 * `GET /fishing-protection-level-stats`
 * `GET /fishing-protection-level-stats/{id}`
 
-#### Example Requests
+### Example Requests
 
 <details>
   <summary>cURL</summary>
@@ -130,6 +137,7 @@ Data related to fishing protection levels.
     method: "GET",
     headers: {
       "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
     }
   })
   .then(response => response.json())
@@ -147,6 +155,7 @@ Data related to fishing protection levels.
   url = "https://30x30.skytruth.org/cms/api/fishing-protection-level-stats?populate[fishing_protection_level][fields]=name&populate[fishing_protection_level][fields]=info&populate[location][fields]=name"
   headers = {
     "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
   }
 
   response = requests.get(url, headers=headers)
@@ -155,7 +164,7 @@ Data related to fishing protection levels.
 
 </details>
 
-#### Example Responses
+### Example Responses
 
 <details>
   <summary>
@@ -205,9 +214,9 @@ Data related to fishing protection levels.
 
 </details>
 
-### Habitat Stats
+## Habitat Stats
 
-#### Description
+### Description
 
 Data related to habitat statistics.
 
@@ -225,12 +234,12 @@ Data related to habitat statistics.
 
 </details>
 
-#### End Points
+### End Points
 
 * `GET /habitat-stats`
 * `GET /habitat-stats/{id}`
 
-#### Example Requests
+### Example Requests
 
 <details>
   <summary>cURL</summary>
@@ -250,7 +259,8 @@ Data related to habitat statistics.
     method: "GET",
     headers: {
       "Content-Type": "application/json;"
-    }
+      "Strapi-Response-Format: v4"    
+  }
   })
   .then(response => response.json())
   .then(data => console.log(data));
@@ -267,6 +277,7 @@ Data related to habitat statistics.
   url = "https://30x30.skytruth.org/cms/api/habitat-stats?filters[location][type]=region&populate[habitat][fields]=name&populate[location][fields]=name"
   headers = {
     "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
   }
 
   response = requests.get(url, headers=headers)
@@ -275,7 +286,7 @@ Data related to habitat statistics.
 
 </details>
 
-#### Example Responses
+### Example Responses
 
 <details>
   <summary>
@@ -326,9 +337,226 @@ Data related to habitat statistics.
 
 </details>
 
-### Locations
+## Aggregated Stats
 
-#### Description
+### Description
+
+An endpoint for fetching other types of statistics aggregated across multiple locations and grouped by user defined fields.
+
+### Query params
+
+* stats: comma separated string that dictates which type or types of statistics will be returned
+  * Valid options: `protection_coverage`, `habitat`, `mpaa_protection_level`, `fishing_protection_level`
+* year: 4 digit year for which stats will be returned.
+  * Only valid for `protection_coverage` and `habitat`
+  * Omitting will return all years of available data grouped by year
+* environment: the environment for which returned stats are valid
+  * Only valid for `protection_coverage` and `habitat`
+  * Omitting will return data from all environments grouped by environment
+  * Valid options: `marine` and `terrestrial`
+* habitat: the habitat for which returned stats are valid
+  * Only valid for `habitat`
+  * Omitting will return data from all habitats grouped by habitat
+  * Valid options depend on environment:
+    * Terrestrial: `artificial`, `desert`, `forrest`, grassland`, rocky-mountains`, `savanna`
+    * Marine: `cold-water corals`, `mangroves`, `saltmarshes`, `seagrasses`, `seamounts`, `warm-water corals`, `wetland-open-waters`
+* fishing_protection_level: the fishing protection level for which stats are returned
+  * Only valid for `fishing_protection_level` stats
+  * Omitting will return data for all fishing protection levels grouped by level
+  * Valid options: `highly`, `less`, `moderately`
+* mpaa_protection_level: the protection level for which stats are returned
+  * Only valid for `mpaa_protection_level` stats
+  * Omitting will return data for all protection levels grouped by level
+  * Valid options: 'full', `high`, `fully-highly-protected`, `light`, `minimal`, `unknown`, `incompatible`
+
+
+<details>
+  <summary>Aggregated Stats Fields</summary>
+
+  | Name            | Type                        | Description |
+  |-----------------|-----------------------------|-------------|
+  | locations       | Relation with Location 🖇️   | [Location][location] just the location code is returned|
+  | habitat         | Relation with Habitat 🖇️    | [Habitat][habitat] just the habitat slug |
+  | year            | Number                      | Year of the aggregated stat |
+  | protected_area  | Number                      | Protected area in km&#178; |
+  | total_area      | Number                      | Total area in km&#178; |
+  | coverage        | Number                      | Percent of total area covered by protection metric |
+  | total_area      | Number                      | Total area in km&#178; |
+  | environment     | Relation with Environment 🖇️ | [Environment][environment] just the slug is returned|
+
+</details>
+
+### End Points
+
+* `GET /aggregated-stats`
+
+### Example Requests
+
+<details>
+  <summary>cURL</summary>
+
+  ```bash
+  curl -X GET --globoff 'https://30x30.skytruth.org/cms/api/aggregated-stats/?year=2025&locations=USA%2CMEX%2CCAN&stats=habitat%2Cprotection_coverage%2Cmpaa_protection_level%2Cfishing_protection_level&mpaa_protection_level=fully-highly-protected' \
+  -H "Content-Type: application/json;"
+  ```
+
+</details>
+
+<details>
+  <summary>JavaScript</summary>
+
+  ```javascript
+  fetch("https://30x30.skytruth.org/cms/api/aggregated-stats/?year=2025&locations=USA%2CMEX%2CCAN&stats=habitat%2Cprotection_coverage%2Cmpaa_protection_level%2Cfishing_protection_level&mpaa_protection_level=fully-highly-protected'", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
+  }
+  })
+  .then(response => response.json())
+  .then(data => console.log(data));
+  ```
+
+</details>
+
+<details>
+  <summary>Python</summary>
+
+  ```python
+  import requests
+
+  url = "https://30x30.skytruth.org/cms/api/aggregated-stats/?year=2025&locations=USA%2CMEX%2CCAN&stats=habitat%2Cprotection_coverage%2Cmpaa_protection_level%2Cfishing_protection_level&mpaa_protection_level=fully-highly-protected'"
+  headers = {
+    "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
+  }
+
+  response = requests.get(url, headers=headers)
+  print(response.json())
+  ```
+
+</details>
+
+### Example Responses
+
+<details>
+  <summary>
+  Example Success Response</summary>
+
+  ```json
+  {
+    "data": {
+        "habitat": [
+            {
+                "year": 2025,
+                "environment": "marine",
+                "habitat": "warm-water corals",
+                "total_area": 5650.45,
+                "protected_area": 4663.12,
+                "locations": [
+                    "MEX",
+                    "USA"
+                ],
+                "coverage": 82.52652443610687
+            },
+            {
+                "year": 2025,
+                "environment": "terrestrial",
+                "habitat": "rocky-mountains",
+                "total_area": 135770.79,
+                "protected_area": 61654.880000000005,
+                "locations": [
+                    "CAN",
+                    "MEX",
+                    "USA"
+                ],
+                "coverage": 45.411004826590464
+            },
+            //... Truncated
+        ],
+        "protection_coverage": [
+            {
+                "year": 2025,
+                "environment": "terrestrial",
+                "total_area": 21385230,
+                "protected_area": 2903469.09,
+                "locations": [
+                    "CAN",
+                    "MEX",
+                    "USA"
+                ],
+                "coverage": 13.576983226273459
+            },
+            {
+                "year": 2025,
+                "environment": "marine",
+                "total_area": 17530540,
+                "protected_area": 3201545.7199999997,
+                "locations": [
+                    "CAN",
+                    "MEX",
+                    "USA"
+                ],
+                "coverage": 18.2626759928673
+            }
+        ],
+        "mpaa_protection_level": [
+            {
+                "mpaa_protection_level": "fully-highly-protected",
+                "total_area": 17663476,
+                "protected_area": 1681172.2899999998,
+                "locations": [
+                    "CAN",
+                    "MEX",
+                    "USA"
+                ],
+                "coverage": 9.517788514559648
+            }
+        ],
+        "fishing_protection_level": [
+            {
+                "fishing_protection_level": "highly",
+                "total_area": 17594270,
+                "protected_area": 2053201.3900000001,
+                "locations": [
+                    "CAN",
+                    "MEX",
+                    "USA"
+                ],
+                "coverage": 11.669716276946984
+            },
+            {
+                "fishing_protection_level": "less",
+                "total_area": 17594270,
+                "protected_area": 13786414.26,
+                "locations": [
+                    "CAN",
+                    "MEX",
+                    "USA"
+                ],
+                "coverage": 78.35740988401338
+            },
+            {
+                "fishing_protection_level": "moderately",
+                "total_area": 17594270,
+                "protected_area": 1754928.96,
+                "locations": [
+                    "CAN",
+                    "MEX",
+                    "USA"
+                ],
+                "coverage": 9.97443463127484
+            }
+        ]
+    }
+}
+  ```
+
+</details>
+
+## Locations
+
+### Description
 
 Data related to locations.
 
@@ -357,12 +585,12 @@ Data related to locations.
 
 </details>
 
-#### End Points
+### End Points
 
 * `GET /locations`
 * `GET /locations/{id}`
 
-#### Example Requests
+### Example Requests
 
 <details>
   <summary>cURL</summary>
@@ -382,7 +610,8 @@ Data related to locations.
     method: "GET",
     headers: {
       "Content-Type": "application/json;"
-    }
+      "Strapi-Response-Format: v4"    
+  }
   })
   .then(response => response.json())
   .then(data => console.log(data));
@@ -399,6 +628,7 @@ Data related to locations.
   url = "https://30x30.skytruth.org/cms/api/locations?filters[code][%24eq]=CHL&populate[groups][fields]=name"
   headers = {
     "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
   }
 
   response = requests.get(url, headers=headers)
@@ -511,7 +741,8 @@ Data related to Marine Protected Area (MPA) protection levels.
     method: "GET",
     headers: {
       "Content-Type": "application/json;"
-    }
+      "Strapi-Response-Format: v4"    
+  }
   })
   .then(response => response.json())
   .then(data => console.log(data));
@@ -528,6 +759,7 @@ Data related to Marine Protected Area (MPA) protection levels.
   url = "https://30x30.skytruth.org/cms/api/mpaa-protection-level-stats?populate[location][fields]=name&filter[location][type][%24eq]=region&populate[mpaa_protection_level][fields]=name"
   headers = {
     "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
   }
 
   response = requests.get(url, headers=headers)
@@ -637,7 +869,8 @@ Data related to world protected areas.
     method: "GET",
     headers: {
       "Content-Type": "application/json;"
-    }
+      "Strapi-Response-Format: v4"    
+  }
   })
   .then(response => response.json())
   .then(data => console.log(data));
@@ -654,6 +887,7 @@ Data related to world protected areas.
   url = "https://30x30.skytruth.org/cms/api/pas?fields[]=*&populate[location][fields]=name&populate[data_source][fields]=url&populate[data_source][fields]=title&pagination[pageSize]=1"
   headers = {
     "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
   }
 
   response = requests.get(url, headers=headers)
@@ -775,7 +1009,8 @@ This example gets terrestrial protected area stats for all regions
     method: "GET",
     headers: {
       "Content-Type": "application/json;"
-    }
+      "Strapi-Response-Format: v4"    
+  }
   })
   .then(response => response.json())
   .then(data => console.log(data));
@@ -792,6 +1027,7 @@ This example gets terrestrial protected area stats for all regions
   url = "https://30x30.skytruth.org/cms/api/protection-coverage-stats?fields[]=coverage&fields[]=protected_area&fields[]=pas&fields[]=oecms&fields[]=global_contribution&populate[location][fields][0]=name&filters[environment][slug][%24eq]=terrestrial&filters[location][type][%24eq]=region&sort=location.name%3Aasc%2Cenvironment.name%3Aasc&populate[location][fields]=code&filters[is_last_year][%24eq]=true"
   headers = {
     "Content-Type": "application/json;"
+      "Strapi-Response-Format: v4"    
   }
 
   response = requests.get(url, headers=headers)
@@ -956,6 +1192,7 @@ Data related to protection status. This field is queryable as a related field to
 </details>
 
 <!-- Internal Sections -->
+[aggregated_stats]: #aggregated-stats
 [citation]: #citation
 [data_source]: #data-source
 [environment]: #environment

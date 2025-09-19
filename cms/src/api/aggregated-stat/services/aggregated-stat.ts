@@ -48,7 +48,7 @@ export default () => ({
         const year = stat?.year;
         const sub = stat[subFieldName]?.slug;
 
-        // Some tables call preotected area protected_area, others call it area
+        // Some tables call protected area protected_area, others call it area
         const protected_area = stat?.protected_area ?? stat?.area 
         let totalArea = +stat.total_area;
 
