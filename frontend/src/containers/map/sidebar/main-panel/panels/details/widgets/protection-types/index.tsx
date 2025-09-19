@@ -7,8 +7,14 @@ import Widget from '@/components/widget';
 import { PROTECTION_TYPES_CHART_COLORS } from '@/constants/protection-types-chart-colors';
 import { FCWithMessages } from '@/types';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import { useGetMpaaProtectionLevelStats } from '@/types/generated/mpaa-protection-level-stat';
-import type { LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schemas';
+import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
+import type {
+  LocationGroupsDataItemAttributes,
+  AggregatedStats,
+  AggregatedStatsEnvelope,
+} from '@/types/generated/strapi.schemas';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 
 type ProtectionTypesWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -18,30 +24,51 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
 
-  // Get protection levels data for the location
-  const {
-    data: { data: protectionLevelsStatsData },
-    isFetching: isFetchingProtectionLevelsStatsData,
-  } = useGetMpaaProtectionLevelStats(
+  const [customRegionLocations] = useSyncCustomRegion();
+
+  const locations =
+    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+
+  const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {
-      locale,
-      filters: {
-        location: {
-          code: location?.code || 'GLOB',
-        },
-      },
-      populate: '*',
-      'pagination[limit]': -1,
+      stats: 'mpaa_protection_level',
+      mpaa_protection_level: 'fully-highly-protected',
+      locations,
+      environment: 'marine',
     },
     {
       query: {
-        enabled: Boolean(location?.code),
-        select: ({ data }) => ({ data }),
-        placeholderData: { data: [] },
+        select: ({ data }) => data?.mpaa_protection_level ?? [],
+        placeholderData: { data: [] } as AggregatedStatsEnvelope,
         refetchOnWindowFocus: false,
       },
     }
   );
+
+  // // Get protection levels data for the location
+  // const {
+  //   data: { data: data },
+  //   isFetching: isFetchingProtectionLevelsStatsData,
+  // } = useGetMpaaProtectionLevelStats(
+  //   {
+  //     locale,
+  //     filters: {
+  //       location: {
+  //         code: location?.code || 'GLOB',
+  //       },
+  //     },
+  //     populate: '*',
+  //     'pagination[limit]': -1,
+  //   },
+  //   {
+  //     query: {
+  //       enabled: Boolean(location?.code),
+  //       select: ({ data }) => ({ data }),
+  //       placeholderData: { data: [] },
+  //       refetchOnWindowFocus: false,
+  //     },
+  //   }
+  // );
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -72,44 +99,43 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
 
   // Go through all the relevant stats, find the last updated one's value
   const lastUpdated = useMemo(() => {
-    const updatedAtValues = protectionLevelsStatsData?.reduce(
-      (acc, curr) => [...acc, curr?.attributes?.updatedAt],
+    const updatedAtValues = data?.reduce(
+      (acc, curr) => [...acc, curr?.updatedAt],
       []
     );
 
     return updatedAtValues?.sort()?.reverse()?.[0];
-  }, [protectionLevelsStatsData]);
+  }, [data]);
 
   // Parse data to display in the chart
   const widgetChartData = useMemo(() => {
-    if (!protectionLevelsStatsData.length) return [];
+    if (!data.length) return [];
 
     const parseProtectionLevelStats = (protectionLevelStats) => {
-      const mpaaProtectionLevel = protectionLevelStats?.mpaa_protection_level?.data?.attributes;
-      const location = protectionLevelStats?.location?.data?.attributes;
-      const totalArea = protectionLevelStats?.total_area ?? location?.total_marine_area;
+      const mpaaProtectionLevel = protectionLevelStats?.mpaa_protection_level
+      const totalArea = protectionLevelStats?.total_area;
 
-      const barColor = PROTECTION_TYPES_CHART_COLORS[mpaaProtectionLevel?.slug];
+      const barColor = PROTECTION_TYPES_CHART_COLORS[mpaaProtectionLevel];
 
       return {
         title: mpaaProtectionLevel?.name,
         slug: mpaaProtectionLevel?.slug,
         background: barColor,
         totalArea: Number(totalArea),
-        protectedArea: protectionLevelStats?.area,
-        percentage: protectionLevelStats?.percentage,
+        protectedArea: protectionLevelStats?.protected_area,
+        percentage: protectionLevelStats?.coverage,
         info: metadata?.info,
         sources: metadata?.sources,
       };
     };
 
-    return protectionLevelsStatsData?.map(({ attributes }) =>
-      parseProtectionLevelStats(attributes)
+    return data?.map((stats) =>
+      parseProtectionLevelStats(stats)
     );
-  }, [metadata, protectionLevelsStatsData]);
+  }, [metadata, data]);
 
   const noData = !widgetChartData.length;
-  const loading = isFetchingProtectionLevelsStatsData;
+  const loading = isFetching;
 
   return (
     <Widget

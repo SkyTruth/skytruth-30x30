@@ -5,18 +5,18 @@ import { useLocale, useTranslations } from 'next-intl';
 import ConservationChart from '@/components/charts/conservation-chart';
 import { Button } from '@/components/ui/button';
 import Widget from '@/components/widget';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { formatKM, formatPercentage } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
+import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type {
   LocationGroupsDataItemAttributes,
   AggregatedStats,
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
-import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
-import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
-import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 
 type TerrestrialConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -30,66 +30,24 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
   const [customRegionLocations] = useSyncCustomRegion();
-  
-    const locations =
-      location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+
+  const locations =
+    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
 
   const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
-      {
-        stats: 'protection_coverage',
-        locations,
-        environment: 'terrestrial',
+    {
+      stats: 'protection_coverage',
+      locations,
+      environment: 'terrestrial',
+    },
+    {
+      query: {
+        select: ({ data }) => data?.protection_coverage ?? [],
+        placeholderData: { data: [] } as AggregatedStatsEnvelope,
+        refetchOnWindowFocus: false,
       },
-      {
-        query: {
-          select: ({ data }) => data?.protection_coverage ?? [],
-          placeholderData: { data: [] } as AggregatedStatsEnvelope,
-          refetchOnWindowFocus: false,
-        },
-      }
-    );
-
-  // const { data, isFetching } = useGetProtectionCoverageStats<
-  //   ProtectionCoverageStatListResponseDataItem[]
-  // >(
-  //   {
-  //     locale,
-  //     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  //     // @ts-ignore
-  //     populate: {
-  //       location: {
-  //         fields: ['code', 'total_terrestrial_area'],
-  //       },
-  //       environment: {
-  //         fields: ['slug'],
-  //       },
-  //     },
-  //     sort: 'year:desc',
-  //     'pagination[pageSize]': 1,
-  //     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  //     // @ts-ignore
-  //     fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
-  //     filters: {
-  //       location: {
-  //         code: {
-  //           $eq: location?.code || 'GLOB',
-  //         },
-  //       },
-  //       environment: {
-  //         slug: {
-  //           $eq: 'terrestrial',
-  //         },
-  //       },
-  //     },
-  //   },
-  //   {
-  //     query: {
-  //       select: ({ data }) => data ?? [],
-  //       placeholderData: [],
-  //       refetchOnWindowFocus: false,
-  //     },
-  //   }
-  // );
+    }
+  );
 
   const aggregatedData = useMemo(() => {
     if (!data.length) return null;
