@@ -28,7 +28,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
-  const {data, isFetching} = useProtectionCoverageData(location.code, 'marine');
+  const { data, isFetching } = useProtectionCoverageData(location.code, 'marine');
 
   // const { data, isFetching } = useGetProtectionCoverageStats<
   //   ProtectionCoverageStatListResponseDataItem[]
@@ -71,7 +71,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   // );
 
   const aggregatedData = useMemo(() => {
-    console.log("DATA", data)
+    console.log('DATA', data);
     if (!data?.length) return [];
 
     const groupedByYear = groupBy(data, 'year');

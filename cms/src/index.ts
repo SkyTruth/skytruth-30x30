@@ -48,7 +48,8 @@ export default {
                 fishing_protection_level: { type: 'string', nullable: true },
                 mpaa_protection_level: { type: 'string', nullable: true },
                 habitat: { type: 'string', nullable: true },
-                year: { type: 'integer', format: 'int32', nullable: true }
+                year: { type: 'integer', format: 'int32', nullable: true },
+                updatedAt: {type: 'string'}
               }
             },
             StatsResponse: {
