@@ -5,16 +5,16 @@ import { useLocale, useTranslations } from 'next-intl';
 import HorizontalBarChart from '@/components/charts/horizontal-bar-chart';
 import Widget from '@/components/widget';
 import { PROTECTION_TYPES_CHART_COLORS } from '@/constants/protection-types-chart-colors';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { FCWithMessages } from '@/types';
-import { useGetDataInfos } from '@/types/generated/data-info';
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
+import { useGetDataInfos } from '@/types/generated/data-info';
 import type {
   LocationGroupsDataItemAttributes,
   AggregatedStats,
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
-import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
-import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 
 type ProtectionTypesWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -29,8 +29,9 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
   const locations =
     location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
 
-  const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
+  const { data: protectionLevelData, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {
+      locale,
       stats: 'mpaa_protection_level',
       mpaa_protection_level: 'fully-highly-protected',
       locations,
@@ -44,31 +45,6 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
       },
     }
   );
-
-  // // Get protection levels data for the location
-  // const {
-  //   data: { data: data },
-  //   isFetching: isFetchingProtectionLevelsStatsData,
-  // } = useGetMpaaProtectionLevelStats(
-  //   {
-  //     locale,
-  //     filters: {
-  //       location: {
-  //         code: location?.code || 'GLOB',
-  //       },
-  //     },
-  //     populate: '*',
-  //     'pagination[limit]': -1,
-  //   },
-  //   {
-  //     query: {
-  //       enabled: Boolean(location?.code),
-  //       select: ({ data }) => ({ data }),
-  //       placeholderData: { data: [] },
-  //       refetchOnWindowFocus: false,
-  //     },
-  //   }
-  // );
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -99,23 +75,20 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
 
   // Go through all the relevant stats, find the last updated one's value
   const lastUpdated = useMemo(() => {
-    const updatedAtValues = data?.reduce(
-      (acc, curr) => [...acc, curr?.updatedAt],
-      []
-    );
+    const updatedAtValues = protectionLevelData?.reduce((acc, curr) => [...acc, curr?.updatedAt], []);
 
     return updatedAtValues?.sort()?.reverse()?.[0];
-  }, [data]);
+  }, [protectionLevelData]);
 
   // Parse data to display in the chart
   const widgetChartData = useMemo(() => {
-    if (!data.length) return [];
+    if (!protectionLevelData.length) return [];
 
     const parseProtectionLevelStats = (protectionLevelStats) => {
-      const mpaaProtectionLevel = protectionLevelStats?.mpaa_protection_level
+      const mpaaProtectionLevel = protectionLevelStats?.mpaa_protection_level;
       const totalArea = protectionLevelStats?.total_area;
 
-      const barColor = PROTECTION_TYPES_CHART_COLORS[mpaaProtectionLevel];
+      const barColor = PROTECTION_TYPES_CHART_COLORS[mpaaProtectionLevel.slug];
 
       return {
         title: mpaaProtectionLevel?.name,
@@ -129,10 +102,8 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
       };
     };
 
-    return data?.map((stats) =>
-      parseProtectionLevelStats(stats)
-    );
-  }, [metadata, data]);
+    return protectionLevelData?.map((stats) => parseProtectionLevelStats(stats));
+  }, [metadata, protectionLevelData]);
 
   const noData = !widgetChartData.length;
   const loading = isFetching;

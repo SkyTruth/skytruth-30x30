@@ -21,8 +21,14 @@ export type AggregatedStats = {
   total_area: number,
   updatedAt: string,
   environment?: string,
-  fishing_protection_level?: string,
-  mpaa_protection_level?: string,
+  fishing_protection_level?: {
+    slug: string,
+    name: string
+  },
+  mpaa_protection_level?: {
+    slug: string,
+    name: string
+  },
   habitat?: string,
   year?: number
 }
@@ -37,6 +43,7 @@ export default {
       const {
         year,
         locations,
+        locale='en',
         environment=null,
         stats=Stats.ProtectionCoverage,
         fishing_protection_level=null,
@@ -69,12 +76,14 @@ export default {
         },
         [Stats.FishingProtectionLevel]: {
           locations: formattedLocs,
+          locale,
           apiNamespace: FISHING_PROTECTION_LEVEL_STATS_NAMESPACE,
           subFieldName: 'fishing_protection_level',
           subFieldValue: fishing_protection_level,
         },
         [Stats.MpaaProtectionLevel]: {
           locations: formattedLocs,
+          locale,
           apiNamespace: MPAA_PROTECTION_LEVEL_STATS_NAMESPACE,
           subFieldName: 'mpaa_protection_level',
           subFieldValue: mpaa_protection_level

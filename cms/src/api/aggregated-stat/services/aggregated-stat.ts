@@ -8,6 +8,7 @@ import { AggregatedStats } from '../controllers/aggregated-stat';
 type AggregatedStatsParams = {
     locations: string[],
     apiNamespace: string,
+    locale?: string,
     environment?: string, 
     year?: number,
     subFieldName?: string,
@@ -19,12 +20,12 @@ export default () => ({
   async getAggregatedStats({
     locations,
     apiNamespace,
+    locale,
     environment = null, 
     year = null,
     subFieldName = null,
     subFieldValue = null
   }: AggregatedStatsParams): Promise<AggregatedStats[]> {
-
      const stats = await strapi.db.query(apiNamespace).findMany({
       where: {
         location: {
@@ -34,21 +35,36 @@ export default () => ({
         },
         ...(year ? { year } : {}),
         ...(environment ? { environment: { slug: environment } } : {}),
-        ...(subFieldName && subFieldValue ? { [subFieldName]: { slug: subFieldValue } } : {})
+        ...(subFieldName && subFieldValue ? {
+          [subFieldName]: {
+              slug: subFieldValue,
+          },
+        } : {})
       },
       populate: {
         location: true,
         environment: true,
-        [subFieldName]: true,
+          [subFieldName]: {
+          populate: {
+            localizations: {
+          filters: { locale },             // ← ask for the sibling in the desired locale
+          fields: ['id', 'slug', 'locale'] // optional
+      }
+          }
+        },
       },
       ...(year ? { orderBy: { year: 'asc' }} : {})
     })
 
       const aggregatedStats = stats.reduce<Record<string, AggregatedStats>>((acc, stat) => {
+        console.log(stat, locale) //.mpaa_protection_level.localizations)
         const location = stat.location.code;
         const environment = stat?.environment?.slug;
         const year = stat?.year;
-        const sub = stat[subFieldName]?.slug;
+        const sub = {
+          slug: stat[subFieldName]?.slug,
+          name: stat[subFieldName]?.localizations[0]?.name ?? stat[subFieldName]?.name
+        };
 
         // Some tables call protected area protected_area, others call it area
         const protected_area = stat?.protected_area ?? stat?.area 
@@ -62,7 +78,7 @@ export default () => ({
 
         }
 
-        const recordKey = `${year ?? ''}-${environment ?? ''}-${sub ?? ''}`
+        const recordKey = `${year ?? ''}-${environment ?? ''}-${sub.slug ?? ''}`
         if (!acc[recordKey]) {
           acc[recordKey] = {
             year,

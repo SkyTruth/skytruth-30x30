@@ -23,6 +23,7 @@ export type GetAggregatedStatsParams = {
   habitat?: string | null;
   fishing_protection_level?: string | null;
   mpaa_protection_level?: string | null;
+  locale?: string | null;
 };
 
 export type GetStaticIndicatorsIdParams = {
