@@ -35,7 +35,6 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
       stats: 'mpaa_protection_level',
       mpaa_protection_level: 'fully-highly-protected',
       locations,
-      environment: 'marine',
     },
     {
       query: {
@@ -75,7 +74,10 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
 
   // Go through all the relevant stats, find the last updated one's value
   const lastUpdated = useMemo(() => {
-    const updatedAtValues = protectionLevelData?.reduce((acc, curr) => [...acc, curr?.updatedAt], []);
+    const updatedAtValues = protectionLevelData?.reduce(
+      (acc, curr) => [...acc, curr?.updatedAt],
+      []
+    );
 
     return updatedAtValues?.sort()?.reverse()?.[0];
   }, [protectionLevelData]);
