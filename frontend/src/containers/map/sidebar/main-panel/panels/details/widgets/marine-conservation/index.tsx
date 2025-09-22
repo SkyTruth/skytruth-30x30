@@ -31,8 +31,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   >(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      // @ts-expect-error
       populate: {
         location: {
           fields: ['code', 'total_marine_area', 'marine_target', 'marine_target_year'],
@@ -43,8 +42,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       },
       sort: 'year:asc',
       'pagination[limit]': -1,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      // @ts-expect-error
       fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
       filters: {
         location: {
