@@ -68,6 +68,7 @@ export default {
         },
         [Stats.Habitat]: {
           locations: formattedLocs,
+          locale,
           apiNamespace: HABITAT_STATS_NAMESPACE,
           environment, 
           year,

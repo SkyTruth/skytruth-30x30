@@ -5,17 +5,16 @@ import { useLocale, useTranslations } from 'next-intl';
 import HorizontalBarChart from '@/components/charts/horizontal-bar-chart';
 import Widget from '@/components/widget';
 import { FISHING_PROTECTION_CHART_COLORS } from '@/constants/fishing-protection-chart-colors';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { FCWithMessages } from '@/types';
+import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type {
   LocationGroupsDataItemAttributes,
   AggregatedStats,
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
-import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
-
-import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
-import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 
 type FishingProtectionWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -29,21 +28,23 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
   const locations =
     location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
 
-    const { data: fishingProtectionLevelsData, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
-      {
-        locale,
-        stats: 'fishing_protection_level',
-        fishing_protection_level: 'highly',
-        locations,
+  const { data: fishingProtectionLevelsData, isFetching } = useGetAggregatedStats<
+    AggregatedStats[]
+  >(
+    {
+      locale,
+      stats: 'fishing_protection_level',
+      fishing_protection_level: 'highly',
+      locations,
+    },
+    {
+      query: {
+        select: ({ data }) => data?.fishing_protection_level ?? [],
+        placeholderData: { data: [] } as AggregatedStatsEnvelope,
+        refetchOnWindowFocus: false,
       },
-      {
-        query: {
-          select: ({ data }) => data?.fishing_protection_level ?? [],
-          placeholderData: { data: [] } as AggregatedStatsEnvelope,
-          refetchOnWindowFocus: false,
-        },
-      }
-    );
+    }
+  );
 
   const { data: metadata } = useGetDataInfos(
     {

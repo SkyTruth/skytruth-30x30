@@ -57,7 +57,6 @@ export default () => ({
     })
 
       const aggregatedStats = stats.reduce<Record<string, AggregatedStats>>((acc, stat) => {
-        console.log(stat, locale) //.mpaa_protection_level.localizations)
         const location = stat.location.code;
         const environment = stat?.environment?.slug;
         const year = stat?.year;
