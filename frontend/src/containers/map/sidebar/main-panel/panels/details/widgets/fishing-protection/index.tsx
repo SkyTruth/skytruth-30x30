@@ -10,14 +10,10 @@ import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings'
 import { FCWithMessages } from '@/types';
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import type {
-  LocationGroupsDataItemAttributes,
-  AggregatedStats,
-  AggregatedStatsEnvelope,
-} from '@/types/generated/strapi.schemas';
+import type { AggregatedStats, AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
 type FishingProtectionWidgetProps = {
-  location: LocationGroupsDataItemAttributes;
+  location: string;
 };
 
 const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({ location }) => {
@@ -25,8 +21,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
   const locale = useLocale();
 
   const [customRegionLocations] = useSyncCustomRegion();
-  const locations =
-    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+  const locations = location === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location;
 
   const { data: fishingProtectionLevelsData, isFetching } = useGetAggregatedStats<
     AggregatedStats[]
@@ -98,7 +93,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
     });
 
     return parsedFishingProtectionLevelData?.filter(Boolean) ?? [];
-  }, [t, fishingProtectionLevelsData, metadata, location]);
+  }, [fishingProtectionLevelsData, metadata]);
 
   const noData = useMemo(() => {
     if (!widgetChartData.length) {

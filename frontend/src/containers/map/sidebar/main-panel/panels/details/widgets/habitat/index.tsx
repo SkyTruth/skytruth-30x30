@@ -8,19 +8,15 @@ import {
   MARINE_HABITAT_CHART_COLORS,
   TERRESTRIAL_HABITAT_CHART_COLORS,
 } from '@/constants/habitat-chart-colors';
-import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { FCWithMessages } from '@/types';
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
+import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import type {
-  LocationGroupsDataItemAttributes,
-  AggregatedStatsEnvelope,
-} from '@/types/generated/strapi.schemas';
+import type { AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
 type HabitatWidgetProps = {
-  location: LocationGroupsDataItemAttributes;
+  location: string;
 };
 
 const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
@@ -29,8 +25,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
 
   const [customRegionLocations] = useSyncCustomRegion();
 
-  const locations =
-    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+  const locations = location === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location;
 
   const [{ tab }] = useSyncMapContentSettings();
 
@@ -43,7 +38,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
     return [{ ...MARINE_HABITAT_CHART_COLORS, ...TERRESTRIAL_HABITAT_CHART_COLORS }, total];
   }, [tab]);
 
-    const { data: habitatMetadatas } = useGetDataInfos<
+  const { data: habitatMetadatas } = useGetDataInfos<
     { slug: string; info: string; sources?: { id: number; title: string; url: string }[] }[]
   >(
     {
@@ -77,7 +72,8 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
     }
   );
 
-    const { data: chartData, isFetching } = useGetAggregatedStats<{
+  const { data: chartData, isFetching } = useGetAggregatedStats<
+    {
       title: string;
       slug: string;
       background: string;
@@ -86,16 +82,17 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       info?: string;
       sources?: { id: number; title: string; url: string }[];
       updatedAt: string;
-    }[]>(
-      {
-        locale,
-        stats: 'habitat',
-        environment: tab === 'marine' ? tab : 'terrestrial',
-        locations,
-      },
-      {
+    }[]
+  >(
+    {
+      locale,
+      stats: 'habitat',
+      environment: tab === 'marine' ? tab : 'terrestrial',
+      locations,
+    },
+    {
       query: {
-        select: ({ data: {habitat: habitatStats} }) => {
+        select: ({ data: { habitat: habitatStats } }) => {
           if (!habitatStats?.length) {
             return [];
           }
@@ -112,7 +109,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
             parsedHabitats.add(entry.habitat.slug);
 
             const stats = entry;
-            let habitat = stats?.habitat;
+            const habitat = stats?.habitat;
 
             const metadata = habitatMetadatas?.find(({ slug }) => slug === habitat?.slug);
 
@@ -136,9 +133,9 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
             })
             .filter(({ totalArea }) => totalArea !== 0);
         },
-        placeholderData: {data: []} as AggregatedStatsEnvelope,
+        placeholderData: { data: [] } as AggregatedStatsEnvelope,
         refetchOnWindowFocus: false,
-      }
+      },
     }
   );
 

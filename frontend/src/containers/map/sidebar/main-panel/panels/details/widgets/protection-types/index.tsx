@@ -10,14 +10,10 @@ import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings'
 import { FCWithMessages } from '@/types';
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import type {
-  LocationGroupsDataItemAttributes,
-  AggregatedStats,
-  AggregatedStatsEnvelope,
-} from '@/types/generated/strapi.schemas';
+import type { AggregatedStats, AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
 type ProtectionTypesWidgetProps = {
-  location: LocationGroupsDataItemAttributes;
+  location: string;
 };
 
 const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ location }) => {
@@ -26,8 +22,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
 
   const [customRegionLocations] = useSyncCustomRegion();
 
-  const locations =
-    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+  const locations = location === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location;
 
   const { data: protectionLevelData, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {

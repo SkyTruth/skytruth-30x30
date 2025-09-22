@@ -49,7 +49,6 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   );
 
   const aggregatedData = useMemo(() => {
-    console.log('DATA', data);
     if (!data?.length) return [];
 
     const groupedByYear = groupBy(data, 'year');
