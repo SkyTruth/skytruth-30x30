@@ -99,7 +99,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
 
           const parsedHabitats = new Set();
           // Reverse the array first because the endpoint returns data from oldest
-          // to newest. This allows is to take only the newest recrods
+          // to newest. This allows us to take only the newest recrods
           const reversedStats = [...habitatStats].reverse();
 
           const parsedData = reversedStats.reduce((parsed, entry) => {

@@ -1,8 +1,6 @@
 /**
  * aggregated-stats service
- */
-import { FISHING_PROTECTION_LEVEL_STATS_NAMESPACE } from '../../fishing-protection-level-stat/controllers/fishing-protection-level-stat';
-import { MPAA_PROTECTION_LEVEL_STATS_NAMESPACE } from '../../mpaa-protection-level-stat/controllers/mpaa-protection-level-stat';
+ * */
 import { AggregatedStats } from '../controllers/aggregated-stat';
 
 type AggregatedStatsParams = {
@@ -71,9 +69,8 @@ export default () => ({
 
         if (!totalArea) {
           totalArea = 
-            environment === 'marine' || apiNamespace === FISHING_PROTECTION_LEVEL_STATS_NAMESPACE
-            || apiNamespace === MPAA_PROTECTION_LEVEL_STATS_NAMESPACE 
-            ? +stat.location.total_marine_area : +stat.location.total_terrestrial_area
+            environment === 'terrestrial' 
+            ? +stat.location.total_terrestrial_area : +stat.location.total_marine_area 
 
         }
 
