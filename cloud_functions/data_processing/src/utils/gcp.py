@@ -344,11 +344,11 @@ def upload_gdf(
         print("Upload complete.")
 
 
-def upload_file_to_gcs(bucket, file_name, blob_name, project_id=PROJECT):
+def upload_file_to_gcs(bucket, file_name, blob_name, project_id=PROJECT, timeout=600):
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket)
     blob = bucket.blob(blob_name)
-    blob.upload_from_filename(file_name)
+    blob.upload_from_filename(file_name, timeout=timeout)
 
 
 def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefile_path: str = ""):

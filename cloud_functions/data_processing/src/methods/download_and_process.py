@@ -19,7 +19,6 @@ from src.core.params import (
     ARCHIVE_MPATLAS_FILE_NAME,
     ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
-    ARCHIVE_WDPA_FILE_NAME,
     ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
     BUCKET,
     MPATLAS_COUNTRY_LEVEL_API_URL,
@@ -43,7 +42,6 @@ from src.utils.gcp import (
     duplicate_blob,
     upload_dataframe,
     upload_gdf,
-    upload_file_to_gcs,
 )
 
 
@@ -165,6 +163,8 @@ def process_protected_area_geoms(
     def save_simplified_marine_terrestrial_pas(
         df, tolerance, terrestrial_pa_file_name, marine_pa_file_name
     ):
+        df = df.copy()
+
         if verbose:
             print(f"simplifying PAs with tolerance = {tolerance}")
 
@@ -175,13 +175,15 @@ def process_protected_area_geoms(
 
         ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
-            print(f"saving terrestrial PAs to {ter_out_fn}")
+            print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
         upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
+        duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
 
         mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
-            print(f"saving marine PAs to {mar_out_fn}")
+            print(f"saving and duplicating marine PAs to {mar_out_fn}")
         upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
+        duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
 
     if verbose:
         print("buffering and simplifying geometries")
@@ -217,7 +219,6 @@ def unpack_pas(pa_dir):
 
 def download_and_process_protected_planet_pas(
     wdpa_url: str = WDPA_URL,
-    archive_wdpa_file_name: str = ARCHIVE_WDPA_FILE_NAME,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     tolerances: list | tuple = TOLERANCES,
@@ -229,11 +230,6 @@ def download_and_process_protected_planet_pas(
 
     print(f"downloading {wdpa_url}")
     _ = print_peak_memory_allocation(download_file_with_progress, wdpa_url, base_zip_path)
-
-    print(f"uploading zipfile to {archive_wdpa_file_name}")
-    _ = print_peak_memory_allocation(
-        upload_file_to_gcs, bucket, archive_wdpa_file_name, base_zip_path
-    )
 
     print(f"unzipping {base_zip_path}")
     _ = print_peak_memory_allocation(unzip_file, base_zip_path, pa_dir)
@@ -364,7 +360,6 @@ def download_protected_planet(
     wdpa_global_url: str = WDPA_GLOBAL_LEVEL_URL,
     wdpa_url: str = WDPA_URL,
     api_url: str = WDPA_API_URL,
-    archive_wdpa_file_name: str = ARCHIVE_WDPA_FILE_NAME,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     tolerances: list | tuple = TOLERANCES,
@@ -412,7 +407,6 @@ def download_protected_planet(
     # download wdpa
     download_and_process_protected_planet_pas(
         wdpa_url=wdpa_url,
-        archive_wdpa_file_name=archive_wdpa_file_name,
         terrestrial_pa_file_name=terrestrial_pa_file_name,
         marine_pa_file_name=marine_pa_file_name,
         tolerances=tolerances,
