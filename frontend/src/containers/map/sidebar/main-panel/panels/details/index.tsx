@@ -7,7 +7,11 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGES } from '@/constants/pages';
 import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
-import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import {
+  useMapSearchParams,
+  useSyncCustomRegion,
+} from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
@@ -39,29 +43,46 @@ const SidebarDetails: FCWithMessages = () => {
     push,
     query: { locationCode = 'GLOB' },
   } = useRouter();
-  const searchParams = useMapSearchParams();
 
+  const [customRegionLocations] = useSyncCustomRegion();
+  const searchParams = useMapSearchParams();
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
-  const { data: locationsData } = useGetLocations({
-    locale,
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    fields: ['name', 'name_es', 'name_fr', 'type'],
-    filters: {
-      code: locationCode,
-    },
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    populate: {
-      members: {
-        fields: ['code', 'name', 'name_es', 'name_fr'],
+  const isCustomRegion = locationCode === CUSTOM_REGION_CODE;
+  const location = isCustomRegion
+    ? [...customRegionLocations.map((loc) => loc.toUpperCase()), locationCode]
+    : [locationCode];
+
+  const { data: locationsData } = useGetLocations(
+    {
+      locale,
+      // @ts-ignore
+      fields: ['name', 'name_es', 'name_fr', 'type', 'code'],
+      filters: {
+        code: {
+          $in: location,
+        },
       },
-      groups: {
-        fields: ['code', 'name', 'name_es', 'name_fr'],
-      },
+      // @ts-ignore
+      ...(!isCustomRegion
+        ? {
+            populate: {
+              members: {
+                fields: ['code', 'name', 'name_es', 'name_fr'],
+              },
+              groups: {
+                fields: ['code', 'name', 'name_es', 'name_fr'],
+              },
+            },
+          }
+        : {}),
     },
-  });
+    {
+      query: {
+        placeholderData: { data: [] },
+      },
+    }
+  );
 
   const locationNameField = useMemo(() => {
     let res = 'name';
@@ -92,12 +113,36 @@ const SidebarDetails: FCWithMessages = () => {
     [areTerritoriesActive, locationsData?.data, locationNameField]
   );
 
-  const memberCountries = mapLocationRelations('members');
+  const titleCountry = useMemo(() => {
+    if (isCustomRegion) {
+      return locationsData?.data?.find((loc) => loc?.attributes.code === CUSTOM_REGION_CODE);
+    }
+    return locationsData?.data[0];
+  }, [locationsData, isCustomRegion]);
+
+  const memberCountries = useMemo(() => {
+    if (!isCustomRegion) {
+      return mapLocationRelations('members');
+    }
+    const members = [];
+    for (const country of locationsData?.data) {
+      if (country.attributes.code !== CUSTOM_REGION_CODE) {
+        members.push({
+          code: country.attributes.code,
+          name: country.attributes[locationNameField],
+        });
+      }
+    }
+    return members;
+  }, [mapLocationRelations, isCustomRegion, locationNameField, locationsData]);
 
   const sovereignCountries = useMemo(() => {
+    if (isCustomRegion) {
+      return [];
+    }
     const groupCountries = mapLocationRelations('groups');
     return groupCountries?.filter((loc) => loc?.code[loc?.code?.length - 1] === '*');
-  }, [mapLocationRelations]);
+  }, [mapLocationRelations, isCustomRegion]);
 
   const handleLocationSelected = useCallback(
     (locationCode) => {
@@ -140,7 +185,7 @@ const SidebarDetails: FCWithMessages = () => {
             'text-xl': containerScroll > 0,
           })}
         >
-          {locationsData?.data[0]?.attributes?.[locationNameField]}
+          {titleCountry?.attributes?.[locationNameField]}
         </h1>
         <LocationSelector
           className="flex-shrink-0"
@@ -181,7 +226,7 @@ const SidebarDetails: FCWithMessages = () => {
         </TabsContent>
       </div>
       <div className="shrink-0 border-t border-t-black bg-white px-4 py-5 md:px-8">
-        <DetailsButton locationType={locationsData?.data[0]?.attributes.type} />
+        <DetailsButton locationType={titleCountry?.attributes.type} />
       </div>
     </Tabs>
   );

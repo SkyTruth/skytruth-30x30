@@ -37,7 +37,9 @@ const DetailsButton: FCWithMessages<DetailsButtonProps> = ({ className, location
       <span className="font-mono text-xs font-semibold normal-case">
         {tab === 'summary' && locationType === 'worldwide' && t('show-global-insights-table')}
         {tab === 'summary' &&
-          (locationType === 'region' || locationType === 'highseas') &&
+          (locationType === 'region' ||
+            locationType === 'highseas' ||
+            locationType === 'custom_region') &&
           t('show-region-insights-table')}
         {tab === 'summary' && locationType === 'country' && t('show-country-insights-table')}
         {tab === 'terrestrial' && t('show-terrestrial-insights-table')}
