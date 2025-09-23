@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { popupAtom } from '@/containers/map/store';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import { cn } from '@/lib/classnames';
@@ -57,6 +58,9 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
   const [locationsFilter, setLocationsFilter] = useState<keyof typeof FILTERS>('all');
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+
+  const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
+  const prevLocation = useRef(code);
 
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
@@ -107,6 +111,16 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     },
     [setPopup, onChange]
   );
+
+  const handleToggleCustomRegion = useCallback(() => {
+    if (!isCustomRegionActive) {
+      const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
+      prevLocation.current = code;
+      handleLocationSelected(CUSTOM_REGION_CODE);
+    } else {
+      handleLocationSelected(prevLocation.current);
+    }
+  }, [isCustomRegionActive, prevLocation, handleLocationSelected, locationCode]);
 
   const reorderedLocations = useMemo(() => {
     const globalLocation = locationsData.find(({ attributes }) => attributes.type === 'worldwide');
@@ -169,7 +183,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           {t('global-view')}
         </Button>
       )}
-
       <Button
         className={cn(
           { [BUTTON_CLASSES]: true, 'h-auto py-0': true },
@@ -177,7 +190,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         )}
         type="button"
         variant="text-link"
-        onClick={() => handleLocationSelected(isCustomRegionActive ? 'GLOB' : 'CREG')}
+        onClick={handleToggleCustomRegion}
       >
         <PlusCircle
           className={cn(

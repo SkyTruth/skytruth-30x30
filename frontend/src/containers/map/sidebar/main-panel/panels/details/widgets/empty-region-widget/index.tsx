@@ -9,21 +9,19 @@ import { FCWithMessages } from '@/types';
 const EmptyRegionWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
-  const EmptyCustomRegion = (
-    <span className="text-left text-sm">
-      {t.rich('empty-custom-region', {
-        addIcon: () => <PlusCircle className="inline h-4 w-4 pb-px" />,
-        searchIcon: () => <Icon icon={MagnifyingGlassIcon} className="inline h-4 w-4 pb-px" />,
-      })}
-    </span>
-  );
-
   return (
     <Widget
       title={t('add-country-custom-region')}
       className="text-left md:px-7"
       noData
-      noDataMessage={EmptyCustomRegion}
+      noDataMessage={
+        <span className="text-left text-sm">
+          {t.rich('empty-custom-region', {
+            addIcon: () => <PlusCircle className="inline h-4 w-4 pb-px" />,
+            searchIcon: () => <Icon icon={MagnifyingGlassIcon} className="inline h-4 w-4 pb-px" />,
+          })}
+        </span>
+      }
       noDataClassName="text-left"
     />
   );
