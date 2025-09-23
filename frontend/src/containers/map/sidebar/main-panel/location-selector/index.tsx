@@ -21,6 +21,8 @@ import { LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schem
 import LocationDropdown from './location-dropdown';
 import LocationTypeToggle from './type-toggle';
 
+import { PlusCircle } from 'lucide-react';
+
 export const FILTERS = {
   all: ['country', 'highseas', 'region', 'worldwide'],
   country: ['country'],
@@ -28,12 +30,13 @@ export const FILTERS = {
 };
 
 const BUTTON_CLASSES =
-  'font-mono text-xs px-0 font-semibold no-underline normal-case ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all';
+  'font-mono text-xs font-semibold no-underline normal-case ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all px-0';
 
 type LocationSelectorProps = {
   className?: HTMLDivElement['className'];
   theme: 'orange' | 'blue';
   size?: 'default' | 'small';
+  isCustomRegionActive: boolean;
   onChange: (locationCode: string) => void;
 };
 
@@ -41,6 +44,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   className,
   theme,
   size = 'default',
+  isCustomRegionActive,
   onChange,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
@@ -128,7 +132,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   }, [locationsFilter, reorderedLocations, areTerritoriesActive]);
 
   return (
-    <div className={cn('flex gap-3.5', className)}>
+    <div className={cn('flex gap-4 gap-y-0', className, 'grid grid-cols-2')}>
       <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -157,7 +161,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       </Popover>
       {locationCode !== 'GLOB' && (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true, 'h-auto py-0': size === 'small' })}
+          className={cn({ [BUTTON_CLASSES]: true, 'h-auto py-0': true }, 'justify-end')}
           type="button"
           variant="text-link"
           onClick={() => handleLocationSelected('GLOB')}
@@ -166,7 +170,18 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           {t('global-view')}
         </Button>
       )}
-    </div>
+
+      <Button
+          className={cn({ [BUTTON_CLASSES]: true, 'h-auto py-0': true}, 'col-span-2 col-start-1, col-end-2 justify-start pb-2')}
+          type="button"
+          variant="text-link"
+          onClick={() => handleLocationSelected(isCustomRegionActive ? 'GLOB' : 'CREG')}
+        >
+          <PlusCircle className={cn({"rotate-45": isCustomRegionActive}, "mr-2 h-4 w-4 pb-px ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; transition-transform duration-300")} />
+          {isCustomRegionActive ? t('close-custom-region') : t('create-custom-region')}
+        </Button>
+
+      </div>
   );
 };
 
@@ -177,3 +192,4 @@ LocationSelector.messages = [
 ];
 
 export default LocationSelector;
+

@@ -181,8 +181,8 @@ const SidebarDetails: FCWithMessages = () => {
         <h1
           className={cn({
             'text-ellipsis font-black transition-all': true,
-            'text-5xl': containerScroll === 0,
-            'text-xl': containerScroll > 0,
+            'text-5xl min-h-[3rem]': containerScroll === 0,
+            'text-xl min-h-[1.75rem]': containerScroll > 0,
           })}
         >
           {titleCountry?.attributes?.[locationNameField]}
@@ -191,6 +191,7 @@ const SidebarDetails: FCWithMessages = () => {
           className="flex-shrink-0"
           theme="orange"
           size={containerScroll > 0 ? 'small' : 'default'}
+          isCustomRegionActive={isCustomRegion}
           onChange={handleLocationSelected}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}

@@ -191,7 +191,9 @@
       "country": "Country",
       "region": "Region",
       "highseas": "High Seas",
-      "worldwide": "Worldwide"
+      "worldwide": "Worldwide",
+      "create-custom-region": "Create a custom region",
+      "close-custom-region": "Close custom region"
     },
     "map-sidebar-layers-panel": {
       "map-layers": "Map Layers",
