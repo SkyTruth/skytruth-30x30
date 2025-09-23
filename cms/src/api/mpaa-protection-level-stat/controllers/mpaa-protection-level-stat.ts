@@ -6,8 +6,10 @@ import { factories } from '@strapi/strapi'
 
 import filterSovereigns from '../../../utils/filter-sovereigns';
 
+export const MPAA_PROTECTION_LEVEL_STATS_NAMESPACE = 'api::mpaa-protection-level-stat.mpaa-protection-level-stat';
+
 export default factories
-  .createCoreController('api::mpaa-protection-level-stat.mpaa-protection-level-stat', ({ strapi }) => ({
+  .createCoreController(MPAA_PROTECTION_LEVEL_STATS_NAMESPACE, ({ strapi }) => ({
     // TODO TECH-3174: Clean up custom find method
     async find(ctx) {
       try {
@@ -40,7 +42,7 @@ export default factories
 
         await strapi.db.transaction(async () => {
           const statsMap = await strapi
-          .service('api::mpaa-protection-level-stat.mpaa-protection-level-stat')
+          .service(MPAA_PROTECTION_LEVEL_STATS_NAMESPACE)
           .getStatsMap();
 
           for  (const stat of data) {
@@ -72,7 +74,7 @@ export default factories
                 continue;
               }
               await strapi.entityService.create(
-                'api::mpaa-protection-level-stat.mpaa-protection-level-stat',
+                MPAA_PROTECTION_LEVEL_STATS_NAMESPACE,
                 {
                   data: {
                     area,
@@ -86,7 +88,7 @@ export default factories
             } else {
               // Update the existing record
               await strapi.entityService.update(
-                'api::mpaa-protection-level-stat.mpaa-protection-level-stat',
+                MPAA_PROTECTION_LEVEL_STATS_NAMESPACE,
                 statsMap[statKey],
                 {
                   data: {

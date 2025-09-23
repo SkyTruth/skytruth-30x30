@@ -14,8 +14,6 @@ class Strapi:
         self.BASE_URL = os.environ.get("STRAPI_API_URL", "")
         self.USERNAME = os.environ.get("STRAPI_USERNAME", "")
         self.PASSWORD = os.environ.get("STRAPI_PASSWORD", None)
-        self.pas_page = 1
-        self.pas_per_page = 1000  # Default to 1000 PAs per page
         self.token = self.authenticate()
         self.default_headers = {"Content-Type": "application/json"}
         self.auth_headers = {"Authorization": f"Bearer {self.token}"}
@@ -46,107 +44,73 @@ class Strapi:
             )
             raise excep
 
-    def get_pas(
-        self, next_page: bool = True, page: int | None = None, page_size: int | None = None
-    ) -> list[dict]:
+    def upsert_pas(self, pas: list[dict]) -> dict:
         """
-        Get all protected areas (PAs) from the API.
+        Bulk upsert existing PAs
 
-        Parameters
-        ----------
-        next_page : bool
-            If True, will fetch the next page of the paginated results
-        page : int, optional
-            The page number to fetch. If None, and next_page=false will fetch the first page.
-            This parameter is ignored if next_page is True.
-        page_size : int, optional
-            The number of results per page. If None, the default page size of 1000 will be used.
-            If page_size is set and page is not set, it will fetch the first page with the
-            specified page size. This effectivley resets the next_page back to the first page.
+          Parameters
+        -----------
+            pas: list[dict]
+                list of Pas to either create or update, if the dict has an id field
+                the pa with that databgase id will be updated with the new data, otherwise
+                a new pa will be created.
 
-        Returns
-        -------
-        list[dict]
-            A list of protected areas.
-        Raises
-        ------
-        Exception
-            If the request fails or the API returns an error.
-        """
-        try:
-            if page_size is not None and page_size != self.pas_per_page:
-                self.pas_per_page = page_size
-                self.pas_page = 1
+                Sample data, required fields marked with *
 
-            if not next_page:
-                self.pas_page = page if page else 1
-
-            query_params = (
-                "fields[]=name&fields[]=year&fields[]=wdpaid&fields[]=wdpa_p_id&fields[]=zone_id"
-                "&fields[]=designation&fields[]=bbox&fields[]=coverage&populate[data_source][fields]=slug"
-                "&populate[environment][fields]=slug&populate[mpaa_establishment_stage][fields]=slug"
-                "&populate[location][fields]=code&populate[mpaa_protection_level][fields]=slug"
-                "&populate[iucn_category][fields]=slug&populate[parent][fields]=id&populate[children][fields]=id"
-                f"&pagination[pageSize]={self.pas_per_page}&pagination[page]={self.pas_page}"
-            )
-            response = requests.get(
-                f"{self.BASE_URL}pas?{query_params}",
-                headers={**self.default_headers},
-                timeout=600,  # Wait ten minutes
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            current_page = data.get("meta").get("pagination").get("page")
-            self.pas_page = current_page + 1 if current_page else self.pas_page + 1
-
-            return data
-        except Exception as excep:
-            self.logger.error(
+            [
                 {
-                    "message": "Failed to get protected areas",
-                    "exception": str(excep),
-                }
-            )
-            raise excep
-
-    def update_pas(self, pas: list[dict]) -> dict:
-        """
-        Bulk update existing PAs
-        """
-        try:
-            response = requests.put(
-                f"{self.BASE_URL}pas",
-                headers={**self.auth_headers, **self.default_headers},
-                timeout=600,  # Wait ten minutes
-                json={"data": pas},
-            )
-            return response.json()
-        except Exception as excep:
-            self.logger.error(
-                {
-                    "message": "Failed to create protected areas",
-                    "exception": str(excep),
-                }
-            )
-            raise excep
-
-    def create_pas(self, pas: list[dict]) -> dict:
-        """
-        Bulk create existing PAs
+                    id: 33,
+                    "name": "aba", *
+                    "area": 54819.04, *
+                    "year": 2022,
+                    "bbox": [
+                        -88.987016503,
+                        4.529014728999982,
+                        -86.367012456,
+                        6.237020961999974
+                    ], *
+                    "coverage": 9.15, *
+                    "wdpaid": 170,
+                    "wdpa_p_id": "2_a",
+                    "zone_id": null,
+                    "designation": "National Park",
+                    "protection_status": "pa", *
+                    "environment": "terrestrial", *
+                    "location": "CRI", *
+                    "data_source": "protected-planet", *
+                    "mpaa_protection_level": null,
+                    "iucn_category": "V",
+                    "mpaa_establishment_stage": null,
+                    "children": [
+                        {
+                            "wdpaid": 162,
+                            "wdpa_p_id": "162_a",
+                            "zone_id": 3,
+                            "environment": "terrestrial"
+                    }
+                    ],
+                    "parent": {
+                        "wdpaid": 170,
+                        "wdpa_p_id": "2_a",
+                        "zone_id": 3,
+                        "environment": "terrestrial"
+                    }
+                },
+                ...
+            ]
         """
         try:
             response = requests.post(
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
-                timeout=600,  # Wait ten minutes
+                timeout=1800,  # Wait thirty minutes
                 json={"data": pas},
             )
             return response.json()
         except Exception as excep:
             self.logger.error(
                 {
-                    "message": "Failed to update protected areas",
+                    "message": "Failed to upsert protected areas",
                     "exception": str(excep),
                 }
             )
@@ -155,6 +119,12 @@ class Strapi:
     def delete_pas(self, pas: list[int]) -> dict:
         """
         Bulk delete existing PAs
+
+        Parameters
+        -----------
+            pas: list[int]
+                list of PA database ids to be deleted,
+                relational fields will also be deleted
         """
         try:
             response = requests.patch(

@@ -305,11 +305,15 @@ resource "google_storage_bucket" "data_bucket" {
 locals {
   data_processing_cloud_function_env = {
     BUCKET              = google_storage_bucket.data_bucket.name
+    DATABASE_HOST       = module.database.database_host
+    DATABASE_NAME       = module.database.database_name
+    DATABASE_USERNAME   = module.database.database_user
     MAPBOX_USER         = var.mapbox_user
     PROJECT             = var.gcp_project_id
     STRAPI_API_URL      = local.api_lb_url
     STRAPI_USERNAME     = var.backend_write_user
   }
+
   data_processing_cloud_function_secrets = [{
     key        = "PP_API_KEY"
     project_id = var.gcp_project_id
@@ -327,6 +331,12 @@ locals {
     project_id = var.gcp_project_id
     secret     = "mapbox_token"
     version    = "latest"
+  },
+  {
+    key        = "DATABASE_PASSWORD"
+    project_id = var.gcp_project_id
+    secret     = module.postgres_application_user_password.secret_name
+    version    = module.postgres_application_user_password.latest_version
   }]
 }
 

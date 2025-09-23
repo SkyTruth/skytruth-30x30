@@ -6,6 +6,51 @@ import { factories } from '@strapi/strapi'
 
 import filterSovereigns from '../../../utils/filter-sovereigns';
 
+export type PARelations = {
+  id?: number,
+  wdpaid?: number,
+  wdpa_p_id?: string,
+  zone_id?: number,
+  environment?: string,
+  key?: string
+}
+
+export type ToUpdateRelations = {
+  id?: {
+    children: PARelations[]
+    parent: PARelations
+  }
+}
+
+export type PA = {
+  id?: number;
+  year?: number;
+  name?: string;
+  area?: number;
+  bbox?: number[] | null;
+  wdpaid?: number | null;
+  wdpa_p_id?: string | null;
+  zone_id?: number | null;
+  coverage?: number | null;
+  children?: number[] | null;
+  data_source?: number | null;
+  environment?: number | null;
+  protection_status?: number | null;
+  iucn_category?: number | null;
+  location?: number | null;
+  mpaa_protection_level?: number | null;
+  mpaa_establishment_stage?: number | null;
+  parent?: number | null;
+  created_at?: Date;
+  updated_at?: Date;
+};
+
+export type InputPA = {
+  parent: PARelations,
+  children: PARelations[],
+} & PA
+
+
 export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
   async find(ctx) {
     // TODO TECH-3174: Clean up
@@ -90,67 +135,142 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
       return await super.find(ctx);
     }
   },
-  async bulkUpdate(ctx) {
+  async bulkUpsert(ctx) {
     try {
-      if (!Array.isArray(ctx?.request?.body?.data)) {
+      const { data }: {data: InputPA[]} = ctx?.request?.body;
+      if (!Array.isArray(data)) {
         return ctx.badRequest('Invalid data format. Expected a body with an array of objects.');
       }
-      const data = ctx.request.body.data;
-      const knex = strapi.db.connection;
-      const errors = [];
-      const updated = []
-      await knex.transaction(async (trx) => {
+      const idMaps = await strapi.service('api::pa.pa').getRelationMaps()
+      const {
+        dataSourceMap,
+        environmentMap,
+        locationMap,
+        mpaaEstablishmentStageMap, 
+        mpaaIucnCategoryMap,
+        mpaaProtectionLevelMap,
+        protectionStatusMap,
+      } = idMaps;
+  
+      let updated = 0;
+      let created = 0;
+
+      const errors: {msg: string, err: string}[] = [];
+      const toUpdateRelations: ToUpdateRelations = {};
+      const newIdMap: IDMap = {};
+
+      await strapi.db.transaction(async () => {
         for (const pa of data) {
-          if (!pa.id) {
-            errors.push({ name: pa?.name, msg: "Missing PA ID"});
+
+          const areRelationsValid = strapi.service('api::pa.pa')
+            .validateFields(pa, idMaps, errors);
+          
+          if (!areRelationsValid) {
+            continue;
           }
-          const updateResponse = await strapi.service('api::pa.pa').upsertWithRelations(pa, trx);
-          if (updateResponse.error) {
-            errors.push({ name: pa?.name, msg: "Failed to update PA with ID " + pa.id + ": " + updateResponse.error });
+
+          const updatedPA = strapi.service('api::pa.pa').checkParentChild(pa, toUpdateRelations, newIdMap)
+          const {
+            id,
+            data_source,
+            environment,
+            location,
+            iucn_category,
+            mpaa_establishment_stage,
+            mpaa_protection_level,
+            protection_status,
+            ...attributes
+          } = updatedPA as PA;
+
+          // Record exists, update in place
+          if (id) {
+            await strapi.entityService.update("api::pa.pa", id, {
+              data: {
+                data_source: dataSourceMap[data_source],
+                environment: environmentMap[environment],
+                location: locationMap[location],
+                iucn_category: iucn_category ? mpaaIucnCategoryMap[iucn_category] : iucn_category,
+                mpaa_establishment_stage: mpaa_establishment_stage ?
+                  mpaaEstablishmentStageMap[mpaa_establishment_stage]: mpaa_establishment_stage,
+                mpaa_protection_level: mpaa_protection_level ?
+                  mpaaProtectionLevelMap[mpaa_protection_level]: mpaa_protection_level,
+                protection_status: protectionStatusMap[protection_status],
+                ...attributes
+              }
+            })
+            updated++;
+          // No database ID so create a new record
           } else {
-            updated.push(updateResponse.id)
+            //Break the required fields out just to keep the type checker happy
+            const { name, area, bbox, coverage, ...optionalAttributes } = attributes;
+            const newPA = await strapi.entityService.create("api::pa.pa", {
+              data: {
+                area,
+                bbox,
+                coverage,
+                name,
+                data_source: dataSourceMap[data_source],
+                environment: environmentMap[environment],
+                location: locationMap[location],
+                iucn_category: iucn_category ? mpaaIucnCategoryMap[iucn_category] : iucn_category,
+                mpaa_establishment_stage: mpaa_establishment_stage ?
+                  mpaaEstablishmentStageMap[mpaa_establishment_stage]: mpaa_establishment_stage,
+                mpaa_protection_level: mpaa_protection_level ?
+                  mpaaProtectionLevelMap[mpaa_protection_level]: mpaa_protection_level,
+                protection_status: protectionStatusMap[protection_status],
+                ...optionalAttributes
+              }
+            })
+            
+            /**
+             * Make the identifier key with the original data because the creat emethod doesn't
+             * return relational fields
+             */ 
+            const paKey = strapi.service('api::pa.pa').makePAKey(updatedPA);
+            newIdMap[paKey] = +newPA.id;
+
+            /**
+             * If the newly created Pa has relations to update later add its 
+             * new ID update relations map
+             */
+            if (toUpdateRelations[paKey]) {
+              toUpdateRelations[+newPA.id] = toUpdateRelations[paKey];
+              delete toUpdateRelations[paKey]
+            }
+            created++;
           }
         }
-      })
-      return ctx.send({
-          message: updated.length + ' Entries updated successfully.',
-          updated,
-          errors
-        });
+
+      /**
+       * First pass of PAs updated or created, now update PAs with relationships that didn't
+       * exist at the time the PA was handled
+       */
+      for (const toUpdate in toUpdateRelations) {
+        const relations = toUpdateRelations[toUpdate];
+        const id = Number.isNaN(+toUpdate) ? newIdMap[toUpdate] : toUpdate;
+
+        const children = relations?.children?.map(child => child?.id ? 
+          child.id : 
+          newIdMap[child.key])
+        
+        const parent = relations?.parent?.key ? newIdMap[relations.parent.key] : null;
+
+        await strapi.entityService.update('api::pa.pa', id, {
+          data: {
+            ...(children ? { children } : {}),
+            ...(parent ? { parent } : null)
+          }
+        })
+
+      }
+
+      return ctx.send({ message: 'PAs updated successfully', created, updated, errors });
+      });
+
     } catch (error) {
-      strapi.log.error('Error in PAS bulkUpdate:', error);
+      strapi.log.error('Error in PAS bulkupsert:', error);
       return ctx.internalServerError('An error occurred while processing the request.', { error });
     }
-  },
-  async bulkInsert(ctx) {
-    try {
-      if (!Array.isArray(ctx?.request?.body?.data)) {
-        return ctx.badRequest('Invalid data format. Expected a body with an array of objects.');
-      }
-      const data = ctx.request.body.data;
-      const knex = strapi.db.connection;
-      const errors = [];
-      const created = []
-
-      await knex.transaction(async (trx) => {
-        for (const pa of data) {
-          const updateResponse = await strapi.service('api::pa.pa').upsertWithRelations(pa, trx);
-          if (updateResponse.error) {
-            errors.push({ name: pa?.name, msg: "Failed to update PA with ID " + pa.id + ": " + updateResponse.error });
-          } else {
-            created.push(updateResponse.id)
-          }
-        }
-      });
-      return ctx.send({
-          message: created.length + ' Entries created successfully.',
-          created,
-          errors
-        });
-    } catch (error) {
-        strapi.log.error('Error in PAS bulkInsert:', error);
-      return ctx.internalServerError('An error occurred while processing the request.', { error });
-      }
   },
   async bulkPatch(ctx) {
     /**
@@ -180,7 +300,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
         }
       });
       return ctx.send({
-          message: deleted.length + ' Entries updated successfully.',
+          message: deleted.length + ' Entries deleted successfully.',
           deleted,
           errors
         });
