@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import { useSetAtom } from 'jotai';
+import { PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -20,8 +21,6 @@ import { LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schem
 
 import LocationDropdown from './location-dropdown';
 import LocationTypeToggle from './type-toggle';
-
-import { PlusCircle } from 'lucide-react';
 
 export const FILTERS = {
   all: ['country', 'highseas', 'region', 'worldwide'],
@@ -172,16 +171,23 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       )}
 
       <Button
-          className={cn({ [BUTTON_CLASSES]: true, 'h-auto py-0': true}, 'col-span-2 col-start-1, col-end-2 justify-start pb-2')}
-          type="button"
-          variant="text-link"
-          onClick={() => handleLocationSelected(isCustomRegionActive ? 'GLOB' : 'CREG')}
-        >
-          <PlusCircle className={cn({"rotate-45": isCustomRegionActive}, "mr-2 h-4 w-4 pb-px ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; transition-transform duration-300")} />
-          {isCustomRegionActive ? t('close-custom-region') : t('create-custom-region')}
-        </Button>
-
-      </div>
+        className={cn(
+          { [BUTTON_CLASSES]: true, 'h-auto py-0': true },
+          'col-start-1, col-span-2 col-end-2 justify-start pb-2'
+        )}
+        type="button"
+        variant="text-link"
+        onClick={() => handleLocationSelected(isCustomRegionActive ? 'GLOB' : 'CREG')}
+      >
+        <PlusCircle
+          className={cn(
+            { 'rotate-45': isCustomRegionActive },
+            'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
+          )}
+        />
+        {isCustomRegionActive ? t('close-custom-region') : t('create-custom-region')}
+      </Button>
+    </div>
   );
 };
 
@@ -192,4 +198,3 @@ LocationSelector.messages = [
 ];
 
 export default LocationSelector;
-

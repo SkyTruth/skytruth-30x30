@@ -25,6 +25,7 @@ import LocationSelector from '../../location-selector';
 
 import CountriesList from './countries-list';
 import DetailsButton from './details-button';
+import EmptyRegionWidget from './widgets/empty-region-widget';
 import MarineWidgets from './widgets/marine-widgets';
 import SummaryWidgets from './widgets/summary-widgets';
 import TerrestrialWidgets from './widgets/terrestrial-widgets';
@@ -181,8 +182,8 @@ const SidebarDetails: FCWithMessages = () => {
         <h1
           className={cn({
             'text-ellipsis font-black transition-all': true,
-            'text-5xl min-h-[3rem]': containerScroll === 0,
-            'text-xl min-h-[1.75rem]': containerScroll > 0,
+            'min-h-[3rem] text-5xl': containerScroll === 0,
+            'min-h-[1.75rem] text-xl': containerScroll > 0,
           })}
         >
           {titleCountry?.attributes?.[locationNameField]}
@@ -217,17 +218,32 @@ const SidebarDetails: FCWithMessages = () => {
       </div>
       <div ref={containerRef} className="flex-grow overflow-y-auto">
         <TabsContent value="summary">
-          <SummaryWidgets />
+          {isCustomRegion && customRegionLocations.length === 0 ? (
+            <EmptyRegionWidget />
+          ) : (
+            <SummaryWidgets />
+          )}
         </TabsContent>
         <TabsContent value="terrestrial">
-          <TerrestrialWidgets />
+          {isCustomRegion && customRegionLocations.length === 0 ? (
+            <EmptyRegionWidget />
+          ) : (
+            <TerrestrialWidgets />
+          )}
         </TabsContent>
         <TabsContent value="marine">
-          <MarineWidgets />
+          {isCustomRegion && customRegionLocations.length === 0 ? (
+            <EmptyRegionWidget />
+          ) : (
+            <MarineWidgets />
+          )}
         </TabsContent>
       </div>
       <div className="shrink-0 border-t border-t-black bg-white px-4 py-5 md:px-8">
-        <DetailsButton locationType={titleCountry?.attributes.type} />
+        <DetailsButton
+          disabled={isCustomRegion && customRegionLocations.length === 0}
+          locationType={titleCountry?.attributes.type}
+        />
       </div>
     </Tabs>
   );

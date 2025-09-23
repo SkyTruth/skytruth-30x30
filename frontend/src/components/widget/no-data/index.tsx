@@ -1,17 +1,21 @@
+import React, { ReactNode } from 'react';
+
 import { useTranslations } from 'next-intl';
 
+import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
 type NoDataProps = {
   error?: boolean;
-  message?: string;
+  message?: string | ReactNode;
+  className?: string;
 };
 
-const NoData: FCWithMessages<NoDataProps> = ({ error = false, message }) => {
+const NoData: FCWithMessages<NoDataProps> = ({ error = false, message, className }) => {
   const t = useTranslations('components.widget');
 
   return (
-    <div className="flex flex-col gap-8 px-14 py-12 text-center md:px-10 md:py-14">
+    <div className={cn('flex flex-col gap-8 px-14 py-12 text-center md:px-10 md:py-14', className)}>
       <p className="text-xs">
         {error && !message && t('not-visible-due-to-error')}
         {error && !!message && message}

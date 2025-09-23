@@ -11,9 +11,14 @@ import { FCWithMessages } from '@/types';
 type DetailsButtonProps = {
   className?: HTMLDivElement['className'];
   locationType: string;
+  disabled?: boolean;
 };
 
-const DetailsButton: FCWithMessages<DetailsButtonProps> = ({ className, locationType }) => {
+const DetailsButton: FCWithMessages<DetailsButtonProps> = ({
+  className,
+  locationType,
+  disabled = false,
+}) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
   const [{ tab, showDetails }, setSettings] = useSyncMapContentSettings();
@@ -28,11 +33,13 @@ const DetailsButton: FCWithMessages<DetailsButtonProps> = ({ className, location
         {
           'flex h-10 px-5 md:px-8': true,
           'border border-black bg-orange text-black hover:bg-orange': showDetails,
+          'bg-gray-600': disabled,
         },
         className
       )}
       size="full"
       onClick={handleButtonClick}
+      disabled={disabled}
     >
       <span className="font-mono text-xs font-semibold normal-case">
         {tab === 'summary' && locationType === 'worldwide' && t('show-global-insights-table')}

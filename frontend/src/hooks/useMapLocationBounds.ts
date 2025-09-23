@@ -30,7 +30,6 @@ export default function useMapLocationBounds() {
   const { data, isFetching } = useGetLocations<Location>(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['marine_bounds', 'terrestrial_bounds'],
       filters: {
