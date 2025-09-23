@@ -24,6 +24,7 @@ from src.core.params import (
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_META_FILE_NAME,
     MPATLAS_URL,
     PP_API_KEY,
     PROJECT,
@@ -35,11 +36,13 @@ from src.core.params import (
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_URL,
     WDPA_MARINE_FILE_NAME,
+    WDPA_META_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_URL,
 )
 from src.utils.gcp import (
     duplicate_blob,
+    read_json_from_gcs,
     upload_dataframe,
     upload_gdf,
 )
@@ -65,11 +68,13 @@ def download_mpatlas(
     bucket: str = BUCKET,
     project: str = PROJECT,
     mpatlas_filename: str = MPATLAS_FILE_NAME,
+    meta_file_name: str = MPATLAS_META_FILE_NAME,
     archive_mpatlas_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
     mpatlas_country_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
     mpatlas_country_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     verbose: bool = True,
+    project_id: str = PROJECT,
 ) -> None:
     download_mpatlas_country(
         bucket,
@@ -86,6 +91,12 @@ def download_mpatlas(
         archive_mpatlas_filename,
         verbose,
     )
+
+    if verbose:
+        print(f"saving metadata to {meta_file_name}")
+    mpa = read_json_from_gcs(bucket, mpatlas_filename)
+    mpa_meta = pd.DataFrame([feat["properties"] for feat in mpa["features"]])
+    upload_dataframe(bucket, mpa_meta, meta_file_name, project_id=project_id, verbose=verbose)
 
 
 def download_protected_seas(
@@ -221,9 +232,11 @@ def download_and_process_protected_planet_pas(
     wdpa_url: str = WDPA_URL,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    meta_file_name: str = WDPA_META_FILE_NAME,
     tolerances: list | tuple = TOLERANCES,
     verbose: bool = True,
     bucket: str = BUCKET,
+    project_id: str = PROJECT,
 ):
     base_zip_path = "wdpa.zip"
     pa_dir = "wdpa"
@@ -236,6 +249,11 @@ def download_and_process_protected_planet_pas(
 
     print(f"unpacking PAs from {pa_dir}")
     pas = print_peak_memory_allocation(unpack_pas, pa_dir)
+
+    print(f"saving wdpa metadata to {meta_file_name}")
+    upload_dataframe(
+        bucket, pas.drop(columns="geometry"), meta_file_name, project_id=project_id, verbose=verbose
+    )
 
     print("processing protected areas")
     process_protected_area_geoms(

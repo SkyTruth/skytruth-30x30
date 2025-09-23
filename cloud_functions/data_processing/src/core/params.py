@@ -92,6 +92,7 @@ LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
 
 MPATLAS_URL = "https://guide.mpatlas.org/api/v2/zone/geojson"
 MPATLAS_FILE_NAME = "raw/mpatlas_zone_assessment.geojson"
+MPATLAS_META_FILE_NAME = "intermediates/mpa_meta.csv"
 ARCHIVE_MPATLAS_FILE_NAME = f"archive/raw/mpatlas_zone_assessment_{today_formatted}.geojson"
 MPATLAS_COUNTRY_LEVEL_API_URL = "https://mpatlas.org/api/v1/internal/countries"
 MPATLAS_COUNTRY_LEVEL_FILE_NAME = "raw/mpatlas_country_level.csv"
@@ -126,6 +127,7 @@ WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_do
 WDPA_MPA_FILE_NAME = "raw/WDPA_marine_protected_areas.geojson"
 WDPA_TERRESTRIAL_FILE_NAME = "intermediates/protected_area_geoms/terrestrial_wdpa.geojson"
 WDPA_MARINE_FILE_NAME = "intermediates/protected_area_geoms/marine_wdpa.geojson"
+WDPA_META_FILE_NAME = "intermediates/wdpa_meta.csv"
 
 
 # ------------------------------------------------------------
