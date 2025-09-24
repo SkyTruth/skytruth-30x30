@@ -2,19 +2,18 @@ import { FC, useCallback } from 'react';
 
 import { useRouter } from 'next/router';
 
+import { useAtom } from 'jotai';
+import { PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { useAtom } from 'jotai';
-
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { customRegionLocationsAtom } from '@/containers/map/store';
+import { useSetCustomRegionLocations } from '@/hooks/useCustomRegionsLocations';
 import { formatKM } from '@/lib/utils/formats';
 
 import { POPUP_BUTTON_CONTENT_BY_SOURCE } from '../constants';
 
 import type { FormattedStat } from './hooks';
-import { useSetCustomRegionLocations } from '@/hooks/useCustomRegionsLocations';
-import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
-import { PlusCircle } from 'lucide-react';
-import { customRegionLocationsAtom } from '@/containers/map/store';
 
 interface StatCardProps {
   environment: string;
@@ -32,17 +31,31 @@ const StatCard: FC<StatCardProps> = ({
   const t = useTranslations('containers.map');
   const locale = useLocale();
   const {
-    query: { locationCode = 'GLOB'}
+    query: { locationCode = 'GLOB' },
   } = useRouter();
 
-  const [customRegionLocations] = useAtom(customRegionLocationsAtom)
+  const [customRegionLocations] = useAtom(customRegionLocationsAtom);
+  const setCustomRegionLocations = useSetCustomRegionLocations();
 
   const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
   const isCustomRegionActive = CUSTOM_REGION_CODE === code;
 
-  const handleAddToCustomRegion = useCallback((code: string) => {
-    // useSetCustomRegionLocations([...customRegionLocations, code])
-  },[])
+  const handleAddToCustomRegion = useCallback(
+    (code: string) => {
+      setCustomRegionLocations([...customRegionLocations, code]);
+    },
+    [setCustomRegionLocations, customRegionLocations]
+  );
+
+  const handleRemoveFromCustomRegion = useCallback(
+    (code: string) => {
+      const newLocs = [...customRegionLocations].filter((iso) => iso !== code);
+      setCustomRegionLocations(newLocs);
+    },
+    [setCustomRegionLocations, customRegionLocations]
+  );
+
+  const isLocatonInCustomRegion = customRegionLocations.has(formattedStat.iso);
 
   return (
     <>
@@ -71,15 +84,19 @@ const StatCard: FC<StatCardProps> = ({
           })}
         </div>
       </div>
-      {isCustomRegionActive ?
-        <button 
-          className="inline-flex w-full font-mono text-xs text-left py-2 justify-left"
-          onClick={() => handleAddToCustomRegion(formattedStat.iso)}
-          >
-            <PlusCircle className='mr-2 h-4 w-4 pb-px' />Add to Custom Region
+      {isCustomRegionActive ? (
+        <button
+          className="justify-left inline-flex w-full py-2 text-left font-mono text-xs"
+          onClick={
+            isLocatonInCustomRegion
+              ? () => handleRemoveFromCustomRegion(formattedStat.iso)
+              : () => handleAddToCustomRegion(formattedStat.iso)
+          }
+        >
+          <PlusCircle className="mr-2 h-4 w-4 pb-px" />
+          {isLocatonInCustomRegion ? t('remove-from-custom-region') : t('add-to-custom-region')}
         </button>
-        : null
-      }
+      ) : null}
       <button
         type="button"
         className="block w-full border border-black px-4 py-2.5 text-center font-mono text-xs"

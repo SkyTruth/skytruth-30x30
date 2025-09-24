@@ -56,7 +56,7 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
 
   const [chartReady, setChartReady] = useState(false);
   const maxRecord = useMemo(() => maxBy(data, (data) => data.percentage), [data]);
-  const chartRef = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const chartContainer = chartRef.current;
