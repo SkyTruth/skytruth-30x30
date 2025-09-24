@@ -13,6 +13,8 @@ import Sidebar from '@/containers/map/sidebar';
 import { drawStateAtom, modellingAtom } from '@/containers/map/store';
 import { FCWithMessages } from '@/types';
 
+import { useSyncCustomRegionLocations } from '@/hooks/useCustomRegionsLocations';
+
 const MobileDisclaimerDialog = dynamic(() => import('@/components/mobile-disclaimer-dialog'), {
   ssr: false,
 });
@@ -37,6 +39,7 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
 
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
+  const syncCustomRegionLocations = useSyncCustomRegionLocations();
 
   useEffect(() => {
     if (type !== LAYOUT_TYPES.conservation_builder) {
@@ -44,6 +47,10 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
       resetDrawState();
     }
   }, [resetDrawState, resetModelling, type]);
+
+  useEffect(() => {
+    syncCustomRegionLocations();
+  }, [])
 
   return (
     <>

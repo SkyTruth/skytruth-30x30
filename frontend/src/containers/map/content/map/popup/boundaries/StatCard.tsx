@@ -1,12 +1,20 @@
-import { FC } from 'react';
+import { FC, useCallback } from 'react';
+
+import { useRouter } from 'next/router';
 
 import { useLocale, useTranslations } from 'next-intl';
+
+import { useAtom } from 'jotai';
 
 import { formatKM } from '@/lib/utils/formats';
 
 import { POPUP_BUTTON_CONTENT_BY_SOURCE } from '../constants';
 
 import type { FormattedStat } from './hooks';
+import { useSetCustomRegionLocations } from '@/hooks/useCustomRegionsLocations';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { PlusCircle } from 'lucide-react';
+import { customRegionLocationsAtom } from '@/containers/map/store';
 
 interface StatCardProps {
   environment: string;
@@ -23,6 +31,18 @@ const StatCard: FC<StatCardProps> = ({
 }) => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
+  const {
+    query: { locationCode = 'GLOB'}
+  } = useRouter();
+
+  const [customRegionLocations] = useAtom(customRegionLocationsAtom)
+
+  const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
+  const isCustomRegionActive = CUSTOM_REGION_CODE === code;
+
+  const handleAddToCustomRegion = useCallback((code: string) => {
+    // useSetCustomRegionLocations([...customRegionLocations, code])
+  },[])
 
   return (
     <>
@@ -51,9 +71,18 @@ const StatCard: FC<StatCardProps> = ({
           })}
         </div>
       </div>
+      {isCustomRegionActive ?
+        <button 
+          className="inline-flex w-full font-mono text-xs text-left py-2 justify-left"
+          onClick={() => handleAddToCustomRegion(formattedStat.iso)}
+          >
+            <PlusCircle className='mr-2 h-4 w-4 pb-px' />Add to Custom Region
+        </button>
+        : null
+      }
       <button
         type="button"
-        className="mt-3 block w-full border border-black px-4 py-2.5 text-center font-mono text-xs"
+        className="block w-full border border-black px-4 py-2.5 text-center font-mono text-xs"
         onClick={() => handleLocationSelected(formattedStat.iso)}
       >
         {t(POPUP_BUTTON_CONTENT_BY_SOURCE[source?.['id']])}

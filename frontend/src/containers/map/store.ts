@@ -27,6 +27,7 @@ export const drawStateAtom = atomWithReset<{
   status: 'idle',
   feature: null,
 });
+export const customRegionLocationsAtom = atomWithReset<Set<string>>(null);
 
 // ? modelling state
 export const modellingAtom = atomWithReset<{

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import twTheme from 'lib/tailwind';
 
@@ -54,7 +54,25 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
 }) => {
   const t = useTranslations('components.chart-conservation');
 
+  const [chartReady, setChartReady] = useState(false);
   const maxRecord = useMemo(() => maxBy(data, (data) => data.percentage), [data]);
+  const chartRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const chartContainer = chartRef.current;
+    if (!chartContainer) return;
+
+    const isParentReady = () => {
+      const width = chartContainer.clientWidth;
+      const height = chartContainer.clientHeight;
+      setChartReady(width > 0 && height > 0);
+    };
+
+    isParentReady();
+    const observer = new ResizeObserver(isParentReady);
+    observer.observe(chartContainer);
+    return () => observer.disconnect();
+  }, []);
 
   const barChartData = useMemo(() => {
     // Last year of data available
@@ -167,114 +185,116 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
   }, [data, historicalLineData, projectedLineData]);
 
   return (
-    <div className={cn(className, 'text-xs text-black')}>
-      <ResponsiveContainer>
-        <ComposedChart data={chartData}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          {firstYearData.year !== activeYearData.year ? (
-            <>
-              <ReferenceLine
-                xAxisId={1}
-                x={firstYearData.year - 0.4}
-                label={{ position: 'insideTopLeft', value: t('historical'), fill: '#000' }}
-                stroke="#000"
-                strokeWidth={0}
-              />
-              <ReferenceLine
-                xAxisId={1}
-                x={activeYearData.year + 0.4}
-                label={getMultilineRenderer(t('future-projection'), 15)}
-                stroke="#000"
-              />
-            </>
-          ) : null}
-          <XAxis
-            xAxisId={1}
-            type="number"
-            dataKey="year"
-            ticks={xAxisTicks}
-            domain={[firstYearData.year - 0.4, lastYearData.year]}
-            stroke="#000"
-            tick={{ fill: '#000' }}
-            axisLine={{ stroke: '#000' }}
-            tickLine={{ stroke: '#000' }}
-          />
-          <Bar dataKey="percentage" xAxisId={1}>
-            {chartData.map((entry, index) => (
-              <Cell
-                stroke="black"
-                fill={entry?.active ? 'black' : 'transparent'}
-                key={`cell-${index}`}
-              />
-            ))}
-          </Bar>
-          <Line
-            xAxisId={2}
-            type="monotone"
-            strokeWidth={4}
-            dataKey="historical"
-            stroke={twTheme.colors.white as string}
-            dot={false}
-            activeDot={false}
-          />
-          <Line
-            xAxisId={2}
-            type="monotone"
-            strokeWidth={4}
-            dataKey="projected"
-            stroke={twTheme.colors.white as string}
-            dot={false}
-            activeDot={false}
-          />
-          <Line
-            xAxisId={2}
-            type="monotone"
-            strokeWidth={1}
-            dataKey="historical"
-            stroke={twTheme.colors.violet as string}
-            dot={false}
-            activeDot={false}
-          />
-          <Line
-            xAxisId={2}
-            type="monotone"
-            strokeWidth={1}
-            strokeDasharray="4 4"
-            dataKey="projected"
-            stroke={twTheme.colors.violet as string}
-            dot={false}
-            activeDot={false}
-          />
-          {displayTarget && (
-            <>
-              <ReferenceLine
-                xAxisId={1}
-                y={target}
-                strokeWidth={4}
-                stroke={twTheme.colors.white as string}
-              />
-              <ReferenceLine xAxisId={1} y={target} stroke="#FD8E28" strokeDasharray="3 3" />
-            </>
-          )}
-          <XAxis
-            xAxisId={2}
-            type="number"
-            dataKey="year"
-            hide={true}
-            domain={[firstYearData.year, lastYearData.year]}
-          />
-          <YAxis
-            domain={maxRecord.percentage < 55 ? [0, 55] : [0, 100]}
-            ticks={maxRecord.percentage < 55 ? [0, 15, 30, 45, 55] : []}
-            tickFormatter={(value) => `${value}%`}
-            stroke="#000"
-            tick={{ fill: '#000' }}
-            axisLine={{ stroke: '#000' }}
-            tickLine={{ stroke: '#000' }}
-          />
-          <Tooltip content={ChartTooltip} />
-        </ComposedChart>
-      </ResponsiveContainer>
+    <div className={cn(className, 'text-xs text-black')} ref={chartRef}>
+      {chartReady && (
+        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+          <ComposedChart data={chartData}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            {firstYearData.year !== activeYearData.year ? (
+              <>
+                <ReferenceLine
+                  xAxisId={1}
+                  x={firstYearData.year - 0.4}
+                  label={{ position: 'insideTopLeft', value: t('historical'), fill: '#000' }}
+                  stroke="#000"
+                  strokeWidth={0}
+                />
+                <ReferenceLine
+                  xAxisId={1}
+                  x={activeYearData.year + 0.4}
+                  label={getMultilineRenderer(t('future-projection'), 15)}
+                  stroke="#000"
+                />
+              </>
+            ) : null}
+            <XAxis
+              xAxisId={1}
+              type="number"
+              dataKey="year"
+              ticks={xAxisTicks}
+              domain={[firstYearData.year - 0.4, lastYearData.year]}
+              stroke="#000"
+              tick={{ fill: '#000' }}
+              axisLine={{ stroke: '#000' }}
+              tickLine={{ stroke: '#000' }}
+            />
+            <Bar dataKey="percentage" xAxisId={1}>
+              {chartData.map((entry, index) => (
+                <Cell
+                  stroke="black"
+                  fill={entry?.active ? 'black' : 'transparent'}
+                  key={`cell-${index}`}
+                />
+              ))}
+            </Bar>
+            <Line
+              xAxisId={2}
+              type="monotone"
+              strokeWidth={4}
+              dataKey="historical"
+              stroke={twTheme.colors.white as string}
+              dot={false}
+              activeDot={false}
+            />
+            <Line
+              xAxisId={2}
+              type="monotone"
+              strokeWidth={4}
+              dataKey="projected"
+              stroke={twTheme.colors.white as string}
+              dot={false}
+              activeDot={false}
+            />
+            <Line
+              xAxisId={2}
+              type="monotone"
+              strokeWidth={1}
+              dataKey="historical"
+              stroke={twTheme.colors.violet as string}
+              dot={false}
+              activeDot={false}
+            />
+            <Line
+              xAxisId={2}
+              type="monotone"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              dataKey="projected"
+              stroke={twTheme.colors.violet as string}
+              dot={false}
+              activeDot={false}
+            />
+            {displayTarget && (
+              <>
+                <ReferenceLine
+                  xAxisId={1}
+                  y={target}
+                  strokeWidth={4}
+                  stroke={twTheme.colors.white as string}
+                />
+                <ReferenceLine xAxisId={1} y={target} stroke="#FD8E28" strokeDasharray="3 3" />
+              </>
+            )}
+            <XAxis
+              xAxisId={2}
+              type="number"
+              dataKey="year"
+              hide={true}
+              domain={[firstYearData.year, lastYearData.year]}
+            />
+            <YAxis
+              domain={maxRecord.percentage < 55 ? [0, 55] : [0, 100]}
+              ticks={maxRecord.percentage < 55 ? [0, 15, 30, 45, 55] : []}
+              tickFormatter={(value) => `${value}%`}
+              stroke="#000"
+              tick={{ fill: '#000' }}
+              axisLine={{ stroke: '#000' }}
+              tickLine={{ stroke: '#000' }}
+            />
+            <Tooltip content={ChartTooltip} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      )}
       <ChartLegend
         displayTarget={displayTarget}
         target={target}
