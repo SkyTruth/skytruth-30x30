@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 
 import { PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { custom } from 'zod';
 
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { cn } from '@/lib/classnames';
@@ -13,7 +14,6 @@ import { useSyncCustomRegion } from '../../sync-settings';
 import { POPUP_BUTTON_CONTENT_BY_SOURCE, CUSTOM_REGION_ELIGABILITY_BY_SOURCE } from '../constants';
 
 import type { FormattedStat } from './hooks';
-import { custom } from 'zod';
 interface StatCardProps {
   environment: string;
   formattedStat: FormattedStat;

@@ -36,7 +36,7 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
   defaultValue,
   value,
   onChange,
-  isCustomRegionActive
+  isCustomRegionActive,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
@@ -46,9 +46,9 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
         className,
         {
           'grid-cols-4': isCustomRegionActive,
-        'grid-cols-3': !isCustomRegionActive
-      },
-        'grid w-full items-center align-center justify-center border border-black'
+          'grid-cols-3': !isCustomRegionActive,
+        },
+        'align-center grid w-full items-center justify-center border border-black'
       )}
       type="single"
       defaultValue={defaultValue}
@@ -76,18 +76,16 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
       >
         {t('regions-and-high-seas')}
       </ToggleGroup.Item>
-      {isCustomRegionActive ? 
+      {isCustomRegionActive ? (
         <ToggleGroup.Item
-        className={toggleVariants({ theme })}
-        value="customRegion"
-        aria-label={t('custom-region')}
-      >
-        région personnalisée
-
-        {/* {t('custom-region')} */}
-      </ToggleGroup.Item>
-      : null
-    }
+          className={toggleVariants({ theme })}
+          value="customRegion"
+          aria-label={t('custom-region')}
+        >
+          région personnalisée
+          {/* {t('custom-region')} */}
+        </ToggleGroup.Item>
+      ) : null}
     </ToggleGroup.Root>
   );
 };
