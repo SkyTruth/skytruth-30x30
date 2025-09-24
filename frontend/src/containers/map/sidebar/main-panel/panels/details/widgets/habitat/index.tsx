@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -8,26 +8,28 @@ import {
   MARINE_HABITAT_CHART_COLORS,
   TERRESTRIAL_HABITAT_CHART_COLORS,
 } from '@/constants/habitat-chart-colors';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { FCWithMessages } from '@/types';
+import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import { useGetHabitatStats } from '@/types/generated/habitat-stat';
-import type {
-  HabitatStatHabitatData,
-  LocationGroupsDataItemAttributes,
-} from '@/types/generated/strapi.schemas';
+import type { AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
 type HabitatWidgetProps = {
-  location: LocationGroupsDataItemAttributes;
+  location: string;
 };
 
-const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
+const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
 
+  const [customRegionLocations] = useSyncCustomRegion();
+
+  const locations = location === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location;
+
   const [{ tab }] = useSyncMapContentSettings();
 
-  const [HABITAT_CHART_COLORS, total_habitats] = useMemo(() => {
+  const [HABITAT_CHART_COLORS] = useMemo(() => {
     const total =
       tab === 'marine'
         ? Object.keys(MARINE_HABITAT_CHART_COLORS).length
@@ -44,8 +46,7 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
       filters: {
         slug: Object.keys(HABITAT_CHART_COLORS),
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
+      // @ts-expect-error
       populate: {
         data_sources: {
           fields: ['title', 'url'],
@@ -71,7 +72,7 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
     }
   );
 
-  const { data: chartData, isFetching } = useGetHabitatStats<
+  const { data: chartData, isFetching } = useGetAggregatedStats<
     {
       title: string;
       slug: string;
@@ -85,57 +86,30 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
   >(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      populate: {
-        habitat: {
-          // This part is for the English version only
-          populate: {
-            // This part is for the Spanish and French versions
-            localizations: {
-              fields: ['slug', 'name', 'locale'],
-            },
-          },
-        },
-      },
-      'sort[year]': 'desc',
-      'pagination[limit]': total_habitats,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      fields: ['protected_area', 'total_area', 'updatedAt'],
-      filters: {
-        location: {
-          code: location?.code,
-        },
-        environment: {
-          slug: {
-            $eq: tab === 'marine' ? tab : 'terrestrial',
-          },
-        },
-      },
+      stats: 'habitat',
+      environment: tab === 'marine' ? tab : 'terrestrial',
+      locations,
     },
     {
       query: {
-        select: ({ data }) => {
-          if (!data) {
+        select: ({ data: { habitat: habitatStats } }) => {
+          if (!habitatStats?.length) {
             return [];
           }
 
           const parsedHabitats = new Set();
-          const parsedData = data.reduce((parsed, entry) => {
-            if (parsedHabitats.has(entry.attributes.habitat.data.attributes.slug)) {
+          // Reverse the array first because the endpoint returns data from oldest
+          // to newest. This allows us to take only the newest recrods
+          const reversedStats = [...habitatStats].reverse();
+
+          const parsedData = reversedStats.reduce((parsed, entry) => {
+            if (parsedHabitats.has(entry.habitat.slug)) {
               return parsed;
             }
-            parsedHabitats.add(entry.attributes.habitat.data.attributes.slug);
+            parsedHabitats.add(entry.habitat.slug);
 
-            const stats = entry?.attributes;
-
-            let habitat = stats?.habitat?.data.attributes;
-            if (habitat.locale !== locale) {
-              habitat = (habitat.localizations.data as HabitatStatHabitatData[]).find(
-                (localization) => localization.attributes.locale === locale
-              )?.attributes;
-            }
+            const stats = entry;
+            const habitat = stats?.habitat;
 
             const metadata = habitatMetadatas?.find(({ slug }) => slug === habitat?.slug);
 
@@ -159,7 +133,7 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
             })
             .filter(({ totalArea }) => totalArea !== 0);
         },
-        placeholderData: [],
+        placeholderData: { data: [] } as AggregatedStatsEnvelope,
         refetchOnWindowFocus: false,
       },
     }
@@ -195,7 +169,7 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
   return (
     <Widget
       title={t('proportion-habitat-within-protected-areas')}
-      lastUpdated={chartData[0]?.updatedAt}
+      lastUpdated={chartData[chartData.length - 1]?.updatedAt}
       noData={!chartData.length}
       loading={isFetching}
       info={metadata?.info}
@@ -213,10 +187,15 @@ const HabitatWidget: FCWithMessages<HabitatWidgetProps> = ({ location }) => {
   );
 };
 
-HabitatWidget.messages = [
+type Messages = Parameters<typeof useTranslations>[0][];
+type MemoizedWidgetType = React.FC<HabitatWidgetProps> & { messages: Messages };
+
+const MemoizedWidget = memo(HabitatWidget) as unknown as MemoizedWidgetType;
+
+MemoizedWidget.messages = [
   'containers.map-sidebar-main-panel',
   ...Widget.messages,
   ...HorizontalBarChart.messages,
 ];
 
-export default HabitatWidget;
+export default MemoizedWidget;

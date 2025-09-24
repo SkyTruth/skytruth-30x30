@@ -24,7 +24,8 @@ export default {
                 { name: 'environment', in: 'query', required: false, schema: { type: 'string', nullable: true } },
                 { name: 'habitat', in: 'query', required: false, schema: { type: 'string', nullable: true } },
                 { name: 'fishing_protection_level', in: 'query', required: false, schema: { type: 'string', nullable: true } },
-                { name: 'mpaa_protection_level', in: 'query', required: false, schema: { type: 'string', nullable: true } }
+                { name: 'mpaa_protection_level', in: 'query', required: false, schema: { type: 'string', nullable: true } },
+                { name: 'locale', in: 'query', required: false, schema: { type: 'string', nullable: true}}
               ],
               responses: {
                 200: { description: 'OK', content: { 'application/json': { schema: { $ref: '#/components/schemas/AggregatedStatsEnvelope' } } } },
@@ -45,10 +46,23 @@ export default {
                 locations: { type: 'array', items: { type: 'string' } },
                 total_area: { type: 'number' },
                 environment: { type: 'string', nullable: true },
-                fishing_protection_level: { type: 'string', nullable: true },
-                mpaa_protection_level: { type: 'string', nullable: true },
-                habitat: { type: 'string', nullable: true },
-                year: { type: 'integer', format: 'int32', nullable: true }
+                fishing_protection_level: { type: 'object', nullable: true, properties: {
+                  slug: { type: 'string' },
+                  name: { type: 'string'}
+                  }
+                },
+                mpaa_protection_level: { type: 'object', nullable: true, properties: {
+                  slug: { type: 'string' },
+                  name: { type: 'string'}
+                  }
+                },
+                habitat: { type: 'object', nullable: true, properties: {
+                  slug: { type: 'string' },
+                  name: { type: 'string'}
+                  }
+                },
+                year: { type: 'integer', format: 'int32', nullable: true },
+                updatedAt: {type: 'string'}
               }
             },
             StatsResponse: {

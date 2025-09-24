@@ -6,14 +6,17 @@ import { useLocale, useTranslations } from 'next-intl';
 import ConservationChart from '@/components/charts/conservation-chart';
 import { Button } from '@/components/ui/button';
 import Widget from '@/components/widget';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { formatKM, formatPercentage } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
+import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import type {
   LocationGroupsDataItemAttributes,
-  ProtectionCoverageStatListResponseDataItem,
+  AggregatedStats,
+  AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
 
 type MarineConservationWidgetProps = {
@@ -25,57 +28,36 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const locale = useLocale();
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
+  const [customRegionLocations] = useSyncCustomRegion();
 
-  const { data, isFetching } = useGetProtectionCoverageStats<
-    ProtectionCoverageStatListResponseDataItem[]
-  >(
+  const locations =
+    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+
+  const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {
-      locale,
-      // @ts-expect-error
-      populate: {
-        location: {
-          fields: ['code', 'total_marine_area', 'marine_target', 'marine_target_year'],
-        },
-        environment: {
-          fields: ['slug'],
-        },
-      },
-      sort: 'year:asc',
-      'pagination[limit]': -1,
-      // @ts-expect-error
-      fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
-      filters: {
-        location: {
-          code: {
-            $eq: location?.code || 'GLOB',
-          },
-        },
-        environment: {
-          slug: {
-            $eq: 'marine',
-          },
-        },
-      },
+      stats: 'protection_coverage',
+      locations,
+      environment: 'marine',
     },
     {
       query: {
-        select: ({ data }) => data ?? [],
-        placeholderData: [],
+        select: ({ data }) => data?.protection_coverage ?? [],
+        placeholderData: { data: [] } as AggregatedStatsEnvelope,
         refetchOnWindowFocus: false,
       },
     }
   );
 
   const aggregatedData = useMemo(() => {
-    if (!data.length) return [];
+    if (!data?.length) return [];
 
-    const groupedByYear = groupBy(data, 'attributes.year');
+    const groupedByYear = groupBy(data, 'year');
 
     return Object.keys(groupedByYear).map((year) => {
       const entries = groupedByYear[year];
-      const protectedArea = entries[0].attributes.protected_area;
-      const coverage = entries[0].attributes.coverage;
-      const totalArea = entries[0].attributes.total_area ?? location.total_marine_area;
+      const protectedArea = entries[0].protected_area;
+      const coverage = entries[0].coverage;
+      const totalArea = entries[0].total_area ?? location.total_marine_area;
 
       return {
         year: Number(year),
@@ -145,7 +127,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       return {
         // We only want to show up to 55%, so we'll cap the percentage here
         // Some of the data seems incorrect; this is a quick fix in order to not blow the chart
-        percentage: percentage > 55 ? 55 : percentage,
+        percentage,
         year,
         active: isLastYear,
         totalArea: Number(entry.totalArea),
@@ -173,7 +155,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   return (
     <Widget
       title={t('marine-conservation-coverage')}
-      lastUpdated={data[data.length - 1]?.attributes.updatedAt}
+      lastUpdated={data[data.length - 1]?.updatedAt}
       noData={noData}
       loading={isFetching}
       info={metadata?.info}

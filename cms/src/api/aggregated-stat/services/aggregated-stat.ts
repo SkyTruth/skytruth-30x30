@@ -1,11 +1,12 @@
 /**
  * aggregated-stats service
- */
+ * */
 import { AggregatedStats } from '../controllers/aggregated-stat';
 
 type AggregatedStatsParams = {
     locations: string[],
     apiNamespace: string,
+    locale?: string,
     environment?: string, 
     year?: number,
     subFieldName?: string,
@@ -17,12 +18,12 @@ export default () => ({
   async getAggregatedStats({
     locations,
     apiNamespace,
+    locale,
     environment = null, 
     year = null,
     subFieldName = null,
     subFieldValue = null
   }: AggregatedStatsParams): Promise<AggregatedStats[]> {
-
      const stats = await strapi.db.query(apiNamespace).findMany({
       where: {
         location: {
@@ -32,12 +33,23 @@ export default () => ({
         },
         ...(year ? { year } : {}),
         ...(environment ? { environment: { slug: environment } } : {}),
-        ...(subFieldName && subFieldValue ? { [subFieldName]: { slug: subFieldValue } } : {})
+        ...(subFieldName && subFieldValue ? {
+          [subFieldName]: {
+              slug: subFieldValue,
+          },
+        } : {})
       },
       populate: {
-        location: { fields: 'code' },
-        environment: { fields: 'slug' },
-        [subFieldName]: { fields: 'slug' },
+        location: true,
+        environment: true,
+          [subFieldName]: {
+          populate: {
+            localizations: {
+          filters: { locale },             // ← ask for the sibling in the desired locale
+          fields: ['id', 'slug', 'locale'] // optional
+      }
+          }
+        },
       },
       ...(year ? { orderBy: { year: 'asc' }} : {})
     })
@@ -46,17 +58,23 @@ export default () => ({
         const location = stat.location.code;
         const environment = stat?.environment?.slug;
         const year = stat?.year;
-        const sub = stat[subFieldName]?.slug;
+        const sub = {
+          slug: stat[subFieldName]?.slug,
+          name: stat[subFieldName]?.localizations[0]?.name ?? stat[subFieldName]?.name
+        };
 
         // Some tables call protected area protected_area, others call it area
         const protected_area = stat?.protected_area ?? stat?.area 
         let totalArea = +stat.total_area;
 
         if (!totalArea) {
-          totalArea = (protected_area * 100) / stat.coverage;
+          totalArea = 
+            environment === 'terrestrial' 
+            ? +stat.location.total_terrestrial_area : +stat.location.total_marine_area 
+
         }
 
-        const recordKey = `${year ?? ''}-${environment ?? ''}-${sub ?? ''}`
+        const recordKey = `${year ?? ''}-${environment ?? ''}-${sub.slug ?? ''}`
         if (!acc[recordKey]) {
           acc[recordKey] = {
             year,
@@ -65,18 +83,25 @@ export default () => ({
             total_area: 0,
             protected_area: 0,
             locations: [],
-            coverage: 0
+            coverage: 0,
+            updatedAt: null
           };
         }
 
         acc[recordKey].total_area += totalArea;
         acc[recordKey].protected_area += protected_area;
-        acc[recordKey].locations.push(location);
         acc[recordKey].coverage = 
-          (acc[recordKey].protected_area / acc[recordKey].total_area) * 100;
-        return acc;
-      }, {});
+        (acc[recordKey].protected_area / acc[recordKey].total_area) * 100;
+        acc[recordKey].locations.push(location);
+        acc[recordKey].updatedAt = 
+          acc[recordKey].updatedAt && new Date(acc[recordKey].updatedAt) > new Date(stat.updatedAt)
+           ? acc[recordKey].updatedAt : stat.updatedAt
 
-    return Object.values(aggregatedStats);
+        return acc;
+    }, {});
+      
+    const sortedStats = Object.values(aggregatedStats).sort((a,b) => a.year - b.year);
+      
+    return sortedStats;
   }
 });

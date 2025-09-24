@@ -19,9 +19,16 @@ export type AggregatedStats = {
   protected_area: number,
   locations: string[],
   total_area: number,
+  updatedAt: string,
   environment?: string,
-  fishing_protection_level?: string,
-  mpaa_protection_level?: string,
+  fishing_protection_level?: {
+    slug: string,
+    name: string
+  },
+  mpaa_protection_level?: {
+    slug: string,
+    name: string
+  },
   habitat?: string,
   year?: number
 }
@@ -36,6 +43,7 @@ export default {
       const {
         year,
         locations,
+        locale='en',
         environment=null,
         stats=Stats.ProtectionCoverage,
         fishing_protection_level=null,
@@ -47,7 +55,7 @@ export default {
         return ctx.badRequest('locations is not defined');
       }
 
-      const formattedLocs: string[] = locations.split(',');
+      const formattedLocs: string[] = locations.toUpperCase().split(',');
       const requestedStats: Set<Stats> = new Set(stats.split(','));
       const response = {} as StatsResponse;
 
@@ -60,6 +68,7 @@ export default {
         },
         [Stats.Habitat]: {
           locations: formattedLocs,
+          locale,
           apiNamespace: HABITAT_STATS_NAMESPACE,
           environment, 
           year,
@@ -68,12 +77,14 @@ export default {
         },
         [Stats.FishingProtectionLevel]: {
           locations: formattedLocs,
+          locale,
           apiNamespace: FISHING_PROTECTION_LEVEL_STATS_NAMESPACE,
           subFieldName: 'fishing_protection_level',
-          subFieldValue: fishing_protection_level
+          subFieldValue: fishing_protection_level,
         },
         [Stats.MpaaProtectionLevel]: {
           locations: formattedLocs,
+          locale,
           apiNamespace: MPAA_PROTECTION_LEVEL_STATS_NAMESPACE,
           subFieldName: 'mpaa_protection_level',
           subFieldValue: mpaa_protection_level

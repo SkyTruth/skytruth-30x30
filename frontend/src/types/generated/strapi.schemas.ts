@@ -23,6 +23,7 @@ export type GetAggregatedStatsParams = {
   habitat?: string | null;
   fishing_protection_level?: string | null;
   mpaa_protection_level?: string | null;
+  locale?: string | null;
 };
 
 export type GetStaticIndicatorsIdParams = {
@@ -1211,17 +1212,12 @@ export type GetContactDetailParams = {
   locale?: string;
 };
 
-export interface AggregatedStats {
-  coverage: number;
-  protected_area: number;
-  locations: string[];
-  total_area: number;
-  environment?: string | null;
-  fishing_protection_level?: string | null;
-  mpaa_protection_level?: string | null;
-  habitat?: string | null;
-  year?: number | null;
-}
+export type UsersPermissionsRoleRequestBody = {
+  name?: string;
+  description?: string;
+  type?: string;
+  permissions?: UsersPermissionsPermissionsTree;
+};
 
 export interface StatsResponse {
   protection_coverage?: AggregatedStats[];
@@ -1232,6 +1228,34 @@ export interface StatsResponse {
 
 export interface AggregatedStatsEnvelope {
   data: StatsResponse;
+}
+
+export type AggregatedStatsHabitat = {
+  slug?: string;
+  name?: string;
+} | null;
+
+export type AggregatedStatsMpaaProtectionLevel = {
+  slug?: string;
+  name?: string;
+} | null;
+
+export type AggregatedStatsFishingProtectionLevel = {
+  slug?: string;
+  name?: string;
+} | null;
+
+export interface AggregatedStats {
+  coverage: number;
+  protected_area: number;
+  locations: string[];
+  total_area: number;
+  environment?: string | null;
+  fishing_protection_level?: AggregatedStatsFishingProtectionLevel;
+  mpaa_protection_level?: AggregatedStatsMpaaProtectionLevel;
+  habitat?: AggregatedStatsHabitat;
+  year?: number | null;
+  updatedAt?: string;
 }
 
 /**
@@ -1252,13 +1276,6 @@ export interface UsersPermissionsPermissionsTree {
     controllers?: UsersPermissionsPermissionsTreeControllers;
   };
 }
-
-export type UsersPermissionsRoleRequestBody = {
-  name?: string;
-  description?: string;
-  type?: string;
-  permissions?: UsersPermissionsPermissionsTree;
-};
 
 export interface UsersPermissionsUser {
   id?: number;
