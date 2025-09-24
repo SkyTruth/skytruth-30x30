@@ -386,7 +386,7 @@ def download_protected_planet(
 ) -> None:
     """
     Downloads and processes data from Protected Planet, including:
-    - The main WDPA ZIP archive
+    - Terrestrial and Marine protected areas
     - Global-level protected area statistics
     - Country-level protected area statistics
 
@@ -412,10 +412,12 @@ def download_protected_planet(
         URL for the WDPA ZIP file.
     api_url : str
         URL for the Protected Planet API (used for country-level stats).
-    wdpa_file_name : str
-        GCS blob name for the current WDPA ZIP file.
-    archive_wdpa_file_name : str
-        GCS blob name for the archived WDPA ZIP file.
+    terrestrial_pa_file_name : str
+        Root of GCS blob name for terrestrial protected areas.
+    marine_pa_file_name : str
+        Root of GCS blob name for marine protected areas.
+    tolerances: list
+        Tolerances to simplify geometries by for further processing.
     bucket : str
         Name of the GCS bucket to upload all files to.
     verbose : bool, optional

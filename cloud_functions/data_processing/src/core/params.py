@@ -113,7 +113,6 @@ ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted
 #                 Protected Planet (WDPA)
 # ------------------------------------------------------------
 WDPA_API_URL = "http://api.protectedplanet.net/v3/"
-# WDPA_URL = f"https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_{today_formatted}_Public.zip"
 WDPA_URL = (
     f"https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_WDOECM_{today_formatted}_Public_all.zip"
 )
