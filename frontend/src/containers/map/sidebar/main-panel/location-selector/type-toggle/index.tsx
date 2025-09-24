@@ -8,7 +8,7 @@ import { FCWithMessages } from '@/types';
 import { FILTERS } from '../index';
 
 const toggleVariants = cva(
-  'focus-visible:ring-slate-950 data-[state=on]:text-slate-950 dark:ring-offset-slate-950 dark:data-[state=on]:bg-slate-950 self-center justify-center whitespace-nowrap ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=on]:shadow-sm dark:focus-visible:ring-slate-300 dark:data-[state=on]:text-slate-50 group flex flex-1 items-center space-x-1 rounded-none border-r last:border-r-0 border-black py-2 whitespace-pre-line font-mono text-xs font-bold uppercase leading-none text-black last:border-l-0 h-full',
+  'focus-visible:ring-slate-950 data-[state=on]:text-slate-950 dark:ring-offset-slate-950 dark:data-[state=on]:bg-slate-950 justify-center whitespace-nowrap ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=on]:shadow-sm dark:focus-visible:ring-slate-300 dark:data-[state=on]:text-slate-50 group flex flex-1 items-center space-x-1 rounded-none border-r last:border-r-0 border-black py-2 whitespace-pre-line font-mono text-xs font-bold uppercase leading-none text-black last:border-l-0 h-full',
   {
     variants: {
       theme: {
@@ -36,7 +36,7 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
   defaultValue,
   value,
   onChange,
-  isCustomRegionActive,
+  isCustomRegionActive
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
@@ -46,8 +46,8 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
         className,
         {
           'grid-cols-4': isCustomRegionActive,
-          'grid-cols-3': !isCustomRegionActive,
-        },
+        'grid-cols-3': !isCustomRegionActive
+      },
         'grid w-full items-center justify-center border border-black'
       )}
       type="single"
@@ -59,33 +59,33 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
         onChange(value);
       }}
     >
-      <ToggleGroup.Item className={toggleVariants({ theme })} value="all" aria-label={t('all')}>
+      <ToggleGroup.Item className={cn(toggleVariants({ theme }), {'text-[.65rem]': isCustomRegionActive})} value="all" aria-label={t('all')}>
         {t('all')}
       </ToggleGroup.Item>
       <ToggleGroup.Item
-        className={toggleVariants({ theme })}
+        className={cn(toggleVariants({ theme }), {'text-[.65rem]': isCustomRegionActive})}
         value="country"
         aria-label={t('countries')}
       >
         {t('countries')}
       </ToggleGroup.Item>
       <ToggleGroup.Item
-        className={toggleVariants({ theme })}
+        className={cn(toggleVariants({ theme }), {'text-[.65rem]': isCustomRegionActive})}
         value="regionsHighseas"
         aria-label={t('regions-and-high-seas')}
       >
         {t('regions-and-high-seas')}
       </ToggleGroup.Item>
-      {isCustomRegionActive ? (
+      {isCustomRegionActive ? 
         <ToggleGroup.Item
-          className={toggleVariants({ theme })}
-          value="customRegion"
-          aria-label={t('custom-region')}
-        >
-          région personnalisée
-          {/* {t('custom-region')} */}
-        </ToggleGroup.Item>
-      ) : null}
+        className={cn(toggleVariants({ theme }), {'text-[.65rem]': isCustomRegionActive})}
+        value="customRegion"
+        aria-label={t('custom-region')}
+      >
+        {t('custom-region')}
+      </ToggleGroup.Item>
+      : null
+    }
     </ToggleGroup.Root>
   );
 };

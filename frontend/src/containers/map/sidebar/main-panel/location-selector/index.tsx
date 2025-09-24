@@ -60,7 +60,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
 
   const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
-  const prevLocation = useRef(code);
+  const prevLocation = useRef(code !== CUSTOM_REGION_CODE ? code : 'GLOB');
 
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
