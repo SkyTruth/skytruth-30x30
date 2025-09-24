@@ -36,7 +36,7 @@ export default factories.createCoreService('api::protection-coverage-stat.protec
                 }
             }
         }
-    ) as StatsMapStats[];
+      ) as StatsMapStats[];
 
       const statsMap: IDMap = {};
       stats.forEach((stat) => {
@@ -48,5 +48,5 @@ export default factories.createCoreService('api::protection-coverage-stat.protec
       });
 
       return statsMap;
-    }
+  }
 }));

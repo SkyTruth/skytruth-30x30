@@ -5,14 +5,17 @@ import { useLocale, useTranslations } from 'next-intl';
 import ConservationChart from '@/components/charts/conservation-chart';
 import { Button } from '@/components/ui/button';
 import Widget from '@/components/widget';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { formatKM, formatPercentage } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
+import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
-import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import type {
   LocationGroupsDataItemAttributes,
-  ProtectionCoverageStatListResponseDataItem,
+  AggregatedStats,
+  AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
 
 type TerrestrialConservationWidgetProps = {
@@ -26,44 +29,21 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   const locale = useLocale();
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
+  const [customRegionLocations] = useSyncCustomRegion();
 
-  const { data, isFetching } = useGetProtectionCoverageStats<
-    ProtectionCoverageStatListResponseDataItem[]
-  >(
+  const locations =
+    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+
+  const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {
-      locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      populate: {
-        location: {
-          fields: ['code', 'total_terrestrial_area'],
-        },
-        environment: {
-          fields: ['slug'],
-        },
-      },
-      sort: 'year:desc',
-      'pagination[pageSize]': 1,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      fields: ['year', 'protected_area', 'updatedAt', 'coverage', 'total_area'],
-      filters: {
-        location: {
-          code: {
-            $eq: location?.code || 'GLOB',
-          },
-        },
-        environment: {
-          slug: {
-            $eq: 'terrestrial',
-          },
-        },
-      },
+      stats: 'protection_coverage',
+      locations,
+      environment: 'terrestrial',
     },
     {
       query: {
-        select: ({ data }) => data ?? [],
-        placeholderData: [],
+        select: ({ data }) => data?.protection_coverage ?? [],
+        placeholderData: { data: [] } as AggregatedStatsEnvelope,
         refetchOnWindowFocus: false,
       },
     }
@@ -72,10 +52,10 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   const aggregatedData = useMemo(() => {
     if (!data.length) return null;
     return {
-      year: Number(data[0].attributes.year),
-      protectedArea: data[0].attributes.protected_area,
-      coverage: data[0].attributes.coverage,
-      totalArea: Number(data[0]?.attributes.total_area ?? location.total_terrestrial_area),
+      year: Number(data[data.length - 1].year),
+      protectedArea: data[data.length - 1].protected_area,
+      coverage: data[data.length - 1].coverage,
+      totalArea: Number(data[data.length - 1]?.total_area ?? location.total_terrestrial_area),
     };
   }, [data, location]);
 
@@ -133,7 +113,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   return (
     <Widget
       title={t('terrestrial-conservation-coverage')}
-      lastUpdated={data[data.length - 1]?.attributes.updatedAt}
+      lastUpdated={data[data.length - 1]?.updatedAt}
       noData={noData}
       loading={isFetching}
       info={metadata?.info}

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import twTheme from 'lib/tailwind';
 
+import { maxBy } from 'lodash-es';
 import { useTranslations } from 'next-intl';
 import {
   ComposedChart,
@@ -52,6 +53,8 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
   data,
 }) => {
   const t = useTranslations('components.chart-conservation');
+
+  const maxRecord = useMemo(() => maxBy(data, (data) => data.percentage), [data]);
 
   const barChartData = useMemo(() => {
     // Last year of data available
@@ -168,19 +171,23 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
       <ResponsiveContainer>
         <ComposedChart data={chartData}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <ReferenceLine
-            xAxisId={1}
-            x={firstYearData.year - 0.4}
-            label={{ position: 'insideTopLeft', value: t('historical'), fill: '#000' }}
-            stroke="#000"
-            strokeWidth={0}
-          />
-          <ReferenceLine
-            xAxisId={1}
-            x={activeYearData.year + 0.4}
-            label={getMultilineRenderer(t('future-projection'), 15)}
-            stroke="#000"
-          />
+          {firstYearData.year !== activeYearData.year ? (
+            <>
+              <ReferenceLine
+                xAxisId={1}
+                x={firstYearData.year - 0.4}
+                label={{ position: 'insideTopLeft', value: t('historical'), fill: '#000' }}
+                stroke="#000"
+                strokeWidth={0}
+              />
+              <ReferenceLine
+                xAxisId={1}
+                x={activeYearData.year + 0.4}
+                label={getMultilineRenderer(t('future-projection'), 15)}
+                stroke="#000"
+              />
+            </>
+          ) : null}
           <XAxis
             xAxisId={1}
             type="number"
@@ -257,8 +264,8 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
             domain={[firstYearData.year, lastYearData.year]}
           />
           <YAxis
-            domain={[0, 55]}
-            ticks={[0, 15, 30, 45, 55]}
+            domain={maxRecord.percentage < 55 ? [0, 55] : [0, 100]}
+            ticks={maxRecord.percentage < 55 ? [0, 15, 30, 45, 55] : []}
             tickFormatter={(value) => `${value}%`}
             stroke="#000"
             tick={{ fill: '#000' }}

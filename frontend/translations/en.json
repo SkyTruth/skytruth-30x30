@@ -173,7 +173,6 @@
       "national-level-contribution": "National level contribution",
       "global": "Global",
       "level-of-fishing-protection": "Level of Fishing Protection",
-      "highly-protected-from-fishing": "Highly protected from fishing",
       "summary": "Summary",
       "terrestrial": "Terrestrial",
       "marine": "Marine",
@@ -262,7 +261,8 @@
       "next-page": "Next page",
       "page-number": "<a>Page</a> {number}",
       "collapse-sub-rows": "Collapse sub-rows",
-      "expand-sub-rows": "Expand sub-rows"
+      "expand-sub-rows": "Expand sub-rows",
+      "eez-multi-claim": "EEZ claimed by multiple countries"
     }
   },
   "components": {

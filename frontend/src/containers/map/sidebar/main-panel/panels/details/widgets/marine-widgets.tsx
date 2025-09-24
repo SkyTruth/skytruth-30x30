@@ -48,9 +48,9 @@ const MarineWidgets: FCWithMessages = () => {
       })}
     >
       <MarineConservationWidget location={locationData} />
-      <ProtectionTypesWidget location={locationData} />
-      <FishingProtectionWidget location={locationData} />
-      <HabitatWidget location={locationData} />
+      <ProtectionTypesWidget location={locationData.code} />
+      <FishingProtectionWidget location={locationData.code} />
+      <HabitatWidget location={locationData.code} />
     </div>
   );
 };

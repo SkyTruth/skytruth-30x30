@@ -4,6 +4,9 @@
   "type": "public",
   "permissions": [
     {
+      "action": "api::aggregated-stat.aggregated-stat.getStats"
+    },
+    {
       "action": "api::contact-detail.contact-detail.find"
     },
     {

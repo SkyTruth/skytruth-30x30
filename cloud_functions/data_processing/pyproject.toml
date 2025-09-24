@@ -24,6 +24,7 @@ dependencies = [
     "numpy (>=2.3.2,<3.0.0)",
     "tippecanoe (>=2.72.0,<3.0.0)",
     "boto3 (>=1.40.18,<2.0.0)",
+    "psycopg (>=3.2.10,<4.0.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]

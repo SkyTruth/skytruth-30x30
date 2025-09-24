@@ -17,3 +17,5 @@ export const LOCATION_TYPES_FILTER_OPTIONS = [
     value: 'region',
   },
 ];
+
+export const CUSTOM_REGION_CODE = 'CREG';

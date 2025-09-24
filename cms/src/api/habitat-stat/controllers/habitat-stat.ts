@@ -6,7 +6,9 @@ import { factories } from '@strapi/strapi'
 
 import filterSovereigns from '../../../utils/filter-sovereigns';
 
-export default factories.createCoreController('api::habitat-stat.habitat-stat', ({ strapi }) => ({
+export const HABITAT_STATS_NAMESPACE = 'api::habitat-stat.habitat-stat';
+
+export default factories.createCoreController(HABITAT_STATS_NAMESPACE, ({ strapi }) => ({
     async find(ctx) {
           // TODO TECH-3174: Clean up
         const { query } = ctx;
@@ -26,7 +28,7 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
             sort: { updatedAt: 'desc' },
             limit: 1
         };
-        const updatedAt = await strapi.entityService.findMany('api::habitat-stat.habitat-stat', newQuery).then((data) => {
+        const updatedAt = await strapi.entityService.findMany(HABITAT_STATS_NAMESPACE, newQuery).then((data) => {
             return data[0]?.updatedAt ?? null;
         });
         // run the original find function
@@ -50,7 +52,7 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
             let environmentMap: IDMap | null = null;
 
             const habitatStatMap: IDMap = await strapi
-                .service('api::habitat-stat.habitat-stat')
+                .service(HABITAT_STATS_NAMESPACE)
                 .getHabitatStatMap(year);
 
             await strapi.db.transaction(async () => {
@@ -97,7 +99,7 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
                             continue;
                         }
                         await strapi.entityService.create(
-                            'api::habitat-stat.habitat-stat',
+                            HABITAT_STATS_NAMESPACE,
                             {
                                 data: {
                                     year,
@@ -112,7 +114,7 @@ export default factories.createCoreController('api::habitat-stat.habitat-stat', 
                     } else {
                         // Existing record, update it
                         await strapi.entityService.update(
-                            'api::habitat-stat.habitat-stat',
+                            HABITAT_STATS_NAMESPACE,
                             habitatStatMap[statKey],
                             {
                                 data: { total_area, protected_area }

@@ -54,9 +54,9 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
     }
   );
 
-  const { source } = layerQuery.data;
-
   const DATA = useMemo(() => {
+    const source = layerQuery?.data?.source;
+
     if (source?.type === 'vector' && rendered && popup && map) {
       const point = map.project(popup.lngLat);
 
@@ -85,7 +85,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
     }
 
     return DATA_REF.current;
-  }, [popup, source, layersInteractiveIds, map, rendered]);
+  }, [popup, layerQuery, layersInteractiveIds, map, rendered]);
 
   const locationQuery = useGetLocations(
     {
@@ -119,7 +119,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
   if (!DATA) return null;
 
   const globalCoveragePercentage =
-    (DATA.REP_M_AREA / Number(locationQuery.data?.attributes?.total_marine_area)) * 100;
+    (DATA.GIS_AREA / Number(locationQuery.data?.attributes?.total_marine_area)) * 100;
 
   const classNameByMPAType = cn({
     'text-green': DATA?.PA_DEF === '1',
@@ -151,7 +151,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
                 {t('area-km2', {
                   area: format({
                     locale,
-                    value: DATA?.REP_M_AREA,
+                    value: DATA?.GIS_AREA,
                     id: 'formatKM',
                     options: {
                       maximumSignificantDigits: 3,

@@ -33,6 +33,7 @@ module.exports = {
       target: '../cms/src/extensions/documentation/documentation/1.0.0/full_documentation.json',
       filters: {
         tags: [
+          'Aggregated-stats',
           'Location',
           'Habitat',
           'Habitat-stat',
