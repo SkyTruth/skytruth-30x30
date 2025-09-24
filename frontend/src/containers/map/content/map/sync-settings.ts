@@ -27,7 +27,7 @@ const parseAsSet = createParser({
   serialize(value: Set<string>) {
     const valueAsArray = [...value];
     return valueAsArray.join(',');
-  }
+  },
 });
 
 export const useSyncMapSettings = () => {

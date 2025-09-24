@@ -2,21 +2,17 @@ import { FC, useCallback } from 'react';
 
 import { useRouter } from 'next/router';
 
-import { useAtom } from 'jotai';
-import { Code2, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
-import { customRegionLocationsAtom } from '@/containers/map/store';
-import { useSetCustomRegionLocations } from '@/hooks/useCustomRegionsLocations';
-import { useSyncCustomRegion } from '../../sync-settings';
 import { cn } from '@/lib/classnames';
 import { formatKM } from '@/lib/utils/formats';
 
+import { useSyncCustomRegion } from '../../sync-settings';
 import { POPUP_BUTTON_CONTENT_BY_SOURCE, CUSTOM_REGION_ELIGABILITY_BY_SOURCE } from '../constants';
 
 import type { FormattedStat } from './hooks';
-
 interface StatCardProps {
   environment: string;
   formattedStat: FormattedStat;
@@ -36,8 +32,6 @@ const StatCard: FC<StatCardProps> = ({
     query: { locationCode = 'GLOB' },
   } = useRouter();
 
-  // const [customRegionLocations] = useAtom(customRegionLocationsAtom);
-  // const setCustomRegionLocations = useSetCustomRegionLocations();
   const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
 
   const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
@@ -47,7 +41,7 @@ const StatCard: FC<StatCardProps> = ({
   const handleAddToCustomRegion = useCallback(
     (code: string) => {
       const newLocs = new Set(customRegionLocations);
-      newLocs.add(code)
+      newLocs.add(code);
       setCustomRegionLocations(newLocs);
     },
     [setCustomRegionLocations, customRegionLocations]

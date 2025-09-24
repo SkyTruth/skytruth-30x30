@@ -25,7 +25,8 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
 
   const [customRegionLocations] = useSyncCustomRegion();
 
-  const locations = location === CUSTOM_REGION_CODE ? [...customRegionLocations].join(',') : location;
+  const locations =
+    location === CUSTOM_REGION_CODE ? [...customRegionLocations].join(',') : location;
 
   const [{ tab }] = useSyncMapContentSettings();
 
