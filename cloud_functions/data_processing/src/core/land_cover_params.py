@@ -33,7 +33,7 @@ def reclass_function(ndata: np.ndarray) -> np.ndarray:
     ndata = np.where(ndata == 501, 5, ndata)  # open water - Wetlands/open water
     ndata = np.where(ndata == 505, 5, ndata)  # open water - Wetlands/open water
     ndata = np.where((ndata >= 500) & (ndata < 600), 5, ndata)  # wetlands - Wetlands/open water
-    ndata = np.where(ndata == 984, 5, ndata)  # wetlands - Wetlands/open  water
+    ndata = np.where(ndata == 984, 5, ndata)  # wetlands - Wetlands/open water
     ndata = np.where(ndata == 910, 5, ndata)  # wetlands - Wetlands/open water
     ndata = np.where((ndata >= 600) & (ndata < 800), 6, ndata)  # rocky/mountains
     ndata = np.where((ndata >= 800) & (ndata < 900), 7, ndata)  # desert
