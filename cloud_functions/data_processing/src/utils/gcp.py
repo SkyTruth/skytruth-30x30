@@ -151,11 +151,11 @@ def download_zip_to_gcs(
     url: str,
     bucket_name: str,
     blob_name: str,
-    project_id: str = PROJECT,
     data: dict | None = None,
     params: dict | None = None,
     headers: dict | None = None,
     chunk_size: int = 8192,
+    project_id: str = PROJECT,
     verbose: bool = True,
 ) -> None:
     """
@@ -344,11 +344,11 @@ def upload_gdf(
         print("Upload complete.")
 
 
-def upload_file_to_gcs(bucket, file_name, blob_name, project_id=PROJECT):
+def upload_file_to_gcs(bucket, file_name, blob_name, project_id=PROJECT, timeout=600):
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket)
     blob = bucket.blob(blob_name)
-    blob.upload_from_filename(file_name)
+    blob.upload_from_filename(file_name, timeout=timeout)
 
 
 def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefile_path: str = ""):
@@ -703,12 +703,14 @@ def load_gdb_layer_from_gcs(
 
             print("Extracting layers:", layers)
 
-            gdf = gpd.GeoDataFrame()
+            to_append = []
             for layer in layers:
                 print(f"Loading layer: {layer}")
-                gdf0 = gpd.read_file(gdb_path, layer=layer)
-                gdf0["gdb_layer_name"] = layer
-                gdf = pd.concat((gdf, gdf0), axis=0)
+                gdf = gpd.read_file(gdb_path, layer=layer)
+                gdf["gdb_layer_name"] = layer
+                to_append.append(gdf)
+
+            return pd.concat((to_append), axis=0)
 
             return gdf
 
