@@ -165,7 +165,9 @@ def process_protected_area_geoms(
         if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
             # build a 1-row GeoDataFrame with the same CRS
             row_gdf = gpd.GeoDataFrame(
-                row.to_frame().T, geometry="geometry", crs=crs  # 1-row DataFrame
+                row.to_frame().T,
+                geometry="geometry",
+                crs=crs,  # 1-row DataFrame
             )
             buffed = create_buffer(row_gdf)  # your existing function
             return buffed.geometry.iloc[0]

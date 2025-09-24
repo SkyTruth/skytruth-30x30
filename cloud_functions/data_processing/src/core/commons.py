@@ -36,6 +36,9 @@ from src.utils.gcp import (
     save_file_bucket,
 )
 from src.utils.geo import compute_pixel_area_map_km2
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
@@ -265,7 +268,7 @@ def download_mpatlas_zone(
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
-def download_file_with_progress(url: str, filename: str):
+def download_file_with_progress(url: str, filename: str, verbose: bool = True):
     """
     Downloads a file from a given URL and displays a progress bar.
 
@@ -282,17 +285,26 @@ def download_file_with_progress(url: str, filename: str):
         total_size = int(response.headers.get("content-length", 0))
 
         # Open the local file in binary write mode and create a tqdm progress bar
-        with open(filename, "wb") as file, tqdm(
-            desc=filename, total=total_size, unit="iB", unit_scale=True, unit_divisor=1024
-        ) as progress_bar:
+        with (
+            open(filename, "wb") as file,
+            tqdm(
+                desc=filename, total=total_size, unit="iB", unit_scale=True, unit_divisor=1024
+            ) as progress_bar,
+        ):
             # Iterate over the content in chunks and write to the file
             for data in response.iter_content(chunk_size=8192):
                 size = file.write(data)
                 progress_bar.update(size)  # Update the progress bar with the written size
-        print(f"Download of '{filename}' completed successfully.")
+        if verbose:
+            print(f"Download of '{filename}' completed successfully.")
         return True
     except requests.exceptions.RequestException as e:
-        print(f"Download error: {e}")
+        logger.error(
+            {
+                "message": "Download error",
+                "exception": str(e),
+            }
+        )
         return False
 
 
@@ -308,5 +320,5 @@ def print_peak_memory_allocation(func, *args, **kwargs):
         _, peak = tracemalloc.get_traced_memory()
     finally:
         tracemalloc.stop()
-    print(f"max allocated memory: {peak/(1024**3):.3f} GB")
+    print(f"max allocated memory: {peak / (1024**3):.3f} GB")
     return out
