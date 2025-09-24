@@ -11,6 +11,7 @@ import Icon from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { popupAtom } from '@/containers/map/store';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import { cn } from '@/lib/classnames';
@@ -27,6 +28,7 @@ export const FILTERS = {
   all: ['country', 'highseas', 'region', 'worldwide'],
   country: ['country'],
   regionsHighseas: ['region', 'highseas'],
+  customRegion: ['country', 'highseas'],
 };
 
 const BUTTON_CLASSES =
@@ -59,8 +61,10 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const [locationsFilter, setLocationsFilter] = useState<keyof typeof FILTERS>('all');
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
 
-  const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
-  const prevLocation = useRef(code !== CUSTOM_REGION_CODE ? code : 'GLOB');
+  const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
+
+  const currentLocation = Array.isArray(locationCode) ? locationCode[0] : locationCode;
+  const prevLocation = useRef(currentLocation !== CUSTOM_REGION_CODE ? currentLocation : 'GLOB');
 
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
@@ -95,6 +99,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       all: t('search-country-region'),
       country: t('search-country'),
       regionsHighseas: t('search-region-high-seas'),
+      customRegion: t('search-country'),
     }),
     [t]
   );
@@ -105,26 +110,36 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
   const handleLocationSelected = useCallback(
     async (locationCode: LocationGroupsDataItemAttributes['code']) => {
-      setLocationPopoverOpen(false);
+      if (!isCustomRegionActive) setLocationPopoverOpen(false);
       setPopup({});
       onChange(locationCode.toUpperCase());
     },
-    [setPopup, onChange]
+    [setPopup, onChange, isCustomRegionActive]
+  );
+
+  const handleCustomRegionUpdated = useCallback(
+    (code: string) => {
+      const newLocs = new Set(customRegionLocations);
+      if (customRegionLocations.has(code)) {
+        newLocs.delete(code);
+      } else {
+        newLocs.add(code);
+      }
+      setCustomRegionLocations(newLocs);
+    },
+    [customRegionLocations, setCustomRegionLocations]
   );
 
   const handleToggleCustomRegion = useCallback(() => {
     if (!isCustomRegionActive) {
-      const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
-
-      if (code !== CUSTOM_REGION_CODE) {
-        prevLocation.current = code;
+      if (currentLocation !== CUSTOM_REGION_CODE) {
+        prevLocation.current = currentLocation;
       }
-
       handleLocationSelected(CUSTOM_REGION_CODE);
     } else {
       handleLocationSelected(prevLocation.current);
     }
-  }, [isCustomRegionActive, prevLocation, handleLocationSelected, locationCode]);
+  }, [isCustomRegionActive, prevLocation, handleLocationSelected, currentLocation]);
 
   const reorderedLocations = useMemo(() => {
     const globalLocation = locationsData.find(({ attributes }) => attributes.type === 'worldwide');
@@ -140,13 +155,31 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         ? reorderedLocations
         : reorderedLocations.filter(({ attributes }) => !NEW_LOCS.has(attributes.code));
     }
-    return reorderedLocations.filter(
+    let filtered = reorderedLocations.filter(
       ({ attributes }) =>
         // TODO TECH-3174: Clean up NEW_LOCS filter
         FILTERS[locationsFilter].includes(attributes.type) &&
         (areTerritoriesActive || !NEW_LOCS.has(attributes.code))
     );
-  }, [locationsFilter, reorderedLocations, areTerritoriesActive]);
+
+    if (locationsFilter === 'customRegion') {
+      const top = [];
+      const bottom = [];
+      for (const location of filtered) {
+        const {
+          attributes: { code },
+        } = location;
+
+        if (customRegionLocations.has(code)) {
+          top.push(location);
+        } else {
+          bottom.push(location);
+        }
+        filtered = [...top, ...bottom];
+      }
+    }
+    return filtered;
+  }, [locationsFilter, reorderedLocations, areTerritoriesActive, customRegionLocations]);
 
   return (
     <div className={cn('flex gap-4 gap-y-0', className, 'grid grid-cols-2')}>
@@ -168,12 +201,22 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             value={locationsFilter}
             className="mb-4"
             onChange={handleLocationsFilterChange}
-            isCustomRegionActive={locationCode === CUSTOM_REGION_CODE}
+            isCustomRegionActive={isCustomRegionActive}
           />
           <LocationDropdown
             searchPlaceholder={filtersSearchLabels[locationsFilter]}
-            locations={filteredLocations}
-            onSelected={handleLocationSelected}
+            filteredLocations={filteredLocations}
+            selectedLocation={
+              locationsFilter === 'customRegion'
+                ? customRegionLocations
+                : new Set([currentLocation])
+            }
+            isCustomRegionTab={locationsFilter === 'customRegion'}
+            onSelected={
+              locationsFilter === 'customRegion'
+                ? handleCustomRegionUpdated
+                : handleLocationSelected
+            }
           />
         </PopoverContent>
       </Popover>
