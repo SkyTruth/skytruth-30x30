@@ -115,7 +115,11 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const handleToggleCustomRegion = useCallback(() => {
     if (!isCustomRegionActive) {
       const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
-      prevLocation.current = code;
+
+      if (code !== CUSTOM_REGION_CODE) {
+        prevLocation.current = code;
+      }
+
       handleLocationSelected(CUSTOM_REGION_CODE);
     } else {
       handleLocationSelected(prevLocation.current);

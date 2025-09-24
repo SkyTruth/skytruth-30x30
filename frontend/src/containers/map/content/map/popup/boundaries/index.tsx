@@ -51,7 +51,6 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
   }>(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['config', 'slug'],
       // TODO TECH 3174: Clean up slug, only needed to filter correct layers
@@ -60,7 +59,6 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
           $eq: layerSlug,
         },
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
         environment: {
