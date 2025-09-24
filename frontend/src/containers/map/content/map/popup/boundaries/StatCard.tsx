@@ -13,6 +13,7 @@ import { useSyncCustomRegion } from '../../sync-settings';
 import { POPUP_BUTTON_CONTENT_BY_SOURCE, CUSTOM_REGION_ELIGABILITY_BY_SOURCE } from '../constants';
 
 import type { FormattedStat } from './hooks';
+import { custom } from 'zod';
 interface StatCardProps {
   environment: string;
   formattedStat: FormattedStat;
@@ -49,7 +50,8 @@ const StatCard: FC<StatCardProps> = ({
 
   const handleRemoveFromCustomRegion = useCallback(
     (code: string) => {
-      const newLocs = [...customRegionLocations].filter((iso) => iso !== code);
+      const newLocs = new Set(customRegionLocations);
+      newLocs.delete(code);
       setCustomRegionLocations(new Set(newLocs));
     },
     [setCustomRegionLocations, customRegionLocations]

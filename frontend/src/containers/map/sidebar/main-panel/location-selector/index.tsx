@@ -168,6 +168,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             value={locationsFilter}
             className="mb-4"
             onChange={handleLocationsFilterChange}
+            isCustomRegionActive={locationCode === CUSTOM_REGION_CODE}
           />
           <LocationDropdown
             searchPlaceholder={filtersSearchLabels[locationsFilter]}
