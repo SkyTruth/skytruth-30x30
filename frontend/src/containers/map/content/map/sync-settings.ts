@@ -1,4 +1,4 @@
-import { parseAsArrayOf, parseAsString, parseAsJson, useQueryState } from 'nuqs';
+import { parseAsArrayOf, parseAsString, parseAsJson, useQueryState, createParser } from 'nuqs';
 import { z } from 'zod';
 
 import {
@@ -15,6 +15,21 @@ const mapSettingsSchema = z.object({
 
 type MapSettings = z.infer<typeof mapSettingsSchema>;
 
+const parseAsSet = createParser({
+  parse(queryValue: string) {
+    if (queryValue.length === 0) {
+      return null;
+    }
+
+    const valueAsArray = queryValue.split(',');
+    return new Set(valueAsArray);
+  },
+  serialize(value: Set<string>) {
+    const valueAsArray = [...value];
+    return valueAsArray.join(',');
+  }
+});
+
 export const useSyncMapSettings = () => {
   return useQueryState(
     'settings',
@@ -27,7 +42,7 @@ export const useSyncMapLayers = () => {
 };
 
 export const useSyncCustomRegion = () => {
-  return useQueryState('region', parseAsArrayOf(parseAsString).withDefault([]));
+  return useQueryState('region', parseAsSet.withDefault(null));
 };
 
 const useSyncRunAsOf = () => {
@@ -81,8 +96,8 @@ export const useMapSearchParams = (): URLSearchParams => {
 
   if (runAsOf) currentSearchparams.set('run-as-of', runAsOf);
 
-  if (customRegion.length) {
-    currentSearchparams.set('region', parseAsArrayOf(parseAsString).serialize(customRegion));
+  if (customRegion?.size) {
+    currentSearchparams.set('region', parseAsSet.serialize(customRegion));
   }
 
   return currentSearchparams;

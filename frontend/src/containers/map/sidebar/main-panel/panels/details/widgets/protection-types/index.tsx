@@ -22,7 +22,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
 
   const [customRegionLocations] = useSyncCustomRegion();
 
-  const locations = location === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location;
+  const locations = location === CUSTOM_REGION_CODE ? [...customRegionLocations].join(',') : location;
 
   const { data: protectionLevelData, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {

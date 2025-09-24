@@ -31,7 +31,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const [customRegionLocations] = useSyncCustomRegion();
 
   const locations =
-    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+    location.code === CUSTOM_REGION_CODE ? [...customRegionLocations].join(',') : location.code;
 
   const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {

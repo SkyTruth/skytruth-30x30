@@ -11,7 +11,6 @@ import MobileDisclaimerDialogStatic from '@/components/mobile-disclaimer-dialog'
 import Content from '@/containers/map/content';
 import Sidebar from '@/containers/map/sidebar';
 import { drawStateAtom, modellingAtom } from '@/containers/map/store';
-import { useSyncCustomRegionLocations } from '@/hooks/useCustomRegionsLocations';
 import { FCWithMessages } from '@/types';
 
 const MobileDisclaimerDialog = dynamic(() => import('@/components/mobile-disclaimer-dialog'), {
@@ -38,7 +37,6 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
 
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
-  const syncCustomRegionLocations = useSyncCustomRegionLocations();
 
   useEffect(() => {
     if (type !== LAYOUT_TYPES.conservation_builder) {
@@ -46,10 +44,6 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
       resetDrawState();
     }
   }, [resetDrawState, resetModelling, type]);
-
-  useEffect(() => {
-    syncCustomRegionLocations();
-  });
 
   return (
     <>

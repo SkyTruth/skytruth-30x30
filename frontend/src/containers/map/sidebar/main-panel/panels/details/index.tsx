@@ -51,7 +51,7 @@ const SidebarDetails: FCWithMessages = () => {
 
   const isCustomRegion = locationCode === CUSTOM_REGION_CODE;
   const location = isCustomRegion
-    ? [...customRegionLocations.map((loc) => loc.toUpperCase()), locationCode]
+    ? [...[...customRegionLocations].map((loc) => loc.toUpperCase()), locationCode]
     : [locationCode];
 
   const { data: locationsData } = useGetLocations(
@@ -204,7 +204,7 @@ const SidebarDetails: FCWithMessages = () => {
             countries={sovereignCountries}
           />
         ) : null}
-        {areTerritoriesActive && memberCountries?.length ? t('related-countries') : ''}
+        {areTerritoriesActive && memberCountries?.length ? t('includes') : ''}
         <CountriesList
           className="w-full shrink-0"
           bgColorClassName="bg-orange"
@@ -218,21 +218,21 @@ const SidebarDetails: FCWithMessages = () => {
       </div>
       <div ref={containerRef} className="flex-grow overflow-y-auto">
         <TabsContent value="summary">
-          {isCustomRegion && customRegionLocations.length === 0 ? (
+          {isCustomRegion && !customRegionLocations?.size ? (
             <EmptyRegionWidget />
           ) : (
             <SummaryWidgets />
           )}
         </TabsContent>
         <TabsContent value="terrestrial">
-          {isCustomRegion && customRegionLocations.length === 0 ? (
+          {isCustomRegion && !customRegionLocations?.size ? (
             <EmptyRegionWidget />
           ) : (
             <TerrestrialWidgets />
           )}
         </TabsContent>
         <TabsContent value="marine">
-          {isCustomRegion && customRegionLocations.length === 0 ? (
+          {isCustomRegion && !customRegionLocations?.size ? (
             <EmptyRegionWidget />
           ) : (
             <MarineWidgets />
@@ -241,7 +241,7 @@ const SidebarDetails: FCWithMessages = () => {
       </div>
       <div className="shrink-0 border-t border-t-black bg-white px-4 py-5 md:px-8">
         <DetailsButton
-          disabled={isCustomRegion && customRegionLocations.length === 0}
+          disabled={isCustomRegion && !customRegionLocations?.size}
           locationType={titleCountry?.attributes.type}
         />
       </div>

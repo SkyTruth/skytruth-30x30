@@ -3,12 +3,13 @@ import { FC, useCallback } from 'react';
 import { useRouter } from 'next/router';
 
 import { useAtom } from 'jotai';
-import { PlusCircle } from 'lucide-react';
+import { Code2, PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { customRegionLocationsAtom } from '@/containers/map/store';
 import { useSetCustomRegionLocations } from '@/hooks/useCustomRegionsLocations';
+import { useSyncCustomRegion } from '../../sync-settings';
 import { cn } from '@/lib/classnames';
 import { formatKM } from '@/lib/utils/formats';
 
@@ -35,8 +36,9 @@ const StatCard: FC<StatCardProps> = ({
     query: { locationCode = 'GLOB' },
   } = useRouter();
 
-  const [customRegionLocations] = useAtom(customRegionLocationsAtom);
-  const setCustomRegionLocations = useSetCustomRegionLocations();
+  // const [customRegionLocations] = useAtom(customRegionLocationsAtom);
+  // const setCustomRegionLocations = useSetCustomRegionLocations();
+  const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
 
   const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
   const isCustomRegionActive =
@@ -44,7 +46,9 @@ const StatCard: FC<StatCardProps> = ({
 
   const handleAddToCustomRegion = useCallback(
     (code: string) => {
-      setCustomRegionLocations([...customRegionLocations, code]);
+      const newLocs = new Set(customRegionLocations);
+      newLocs.add(code)
+      setCustomRegionLocations(newLocs);
     },
     [setCustomRegionLocations, customRegionLocations]
   );
@@ -52,7 +56,7 @@ const StatCard: FC<StatCardProps> = ({
   const handleRemoveFromCustomRegion = useCallback(
     (code: string) => {
       const newLocs = [...customRegionLocations].filter((iso) => iso !== code);
-      setCustomRegionLocations(newLocs);
+      setCustomRegionLocations(new Set(newLocs));
     },
     [setCustomRegionLocations, customRegionLocations]
   );

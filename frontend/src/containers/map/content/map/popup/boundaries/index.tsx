@@ -113,12 +113,13 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
 
     return geometryDataRef.current;
   }, [popup, source, layersInteractiveIds, map, rendered]);
-
+  
   const locationCodes = useMemo(() => {
     const locKeys = POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.ids ?? [];
     const codes = [];
     locKeys.forEach((key: string) => geometryData?.[key] && codes.push(geometryData[key]));
-
+    
+    console.log("locatiom DATA", codes)
     return codes;
   }, [geometryData, source]);
 
