@@ -141,6 +141,10 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     }
   }, [isCustomRegionActive, prevLocation, handleLocationSelected, currentLocation]);
 
+  const handleClearCustomRegion = useCallback(() => {
+    setCustomRegionLocations(new Set());
+  }, [setCustomRegionLocations]);
+
   const reorderedLocations = useMemo(() => {
     const globalLocation = locationsData.find(({ attributes }) => attributes.type === 'worldwide');
     return [globalLocation, ...locationsData.filter(({ id }) => id !== globalLocation.id)].filter(
@@ -220,6 +224,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             dividerIndex={
               locationsFilter === 'customRegion' ? customRegionLocations.size - 1 : null
             }
+            handleClearCustomRegion={handleClearCustomRegion}
           />
         </PopoverContent>
       </Popover>

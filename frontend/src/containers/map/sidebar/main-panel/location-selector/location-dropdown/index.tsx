@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { Check, XCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandGroup,
@@ -21,6 +22,7 @@ type LocationDropdownProps = {
   selectedLocation: Set<string>;
   isCustomRegionTab: boolean;
   onSelected: (code: string) => void;
+  handleClearCustomRegion: () => void;
   dividerIndex?: number;
 };
 
@@ -38,43 +40,63 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   selectedLocation,
   isCustomRegionTab,
   onSelected,
+  handleClearCustomRegion,
   dividerIndex,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
   const [searchTerm, setSearchTerm] = useState<string>('');
 
-  const handleFiltering = (value: string, search: string) => {
-    if (value.toLocaleLowerCase().includes(search.toLocaleLowerCase())) return 1;
-    return 0;
-  };
+  const normalize = (s: string) => s.normalize?.('NFKD').toLowerCase() || s.toLowerCase();
+
+  const getName = useCallback(
+    (location: LocationListResponseDataItem['attributes']) => {
+      if (locale === 'es' && location.name_es) return location.name_es;
+      if (locale === 'fr' && location.name_fr) return location.name_fr;
+      return location.name;
+    },
+    [locale]
+  );
+
+  const visibleLocations = useMemo(() => {
+    if (!searchTerm) return filteredLocations;
+
+    const query = normalize(searchTerm);
+    return filteredLocations.filter(({ attributes }) => {
+      const name = getName(attributes);
+      return normalize(name).includes(query);
+    });
+  }, [filteredLocations, searchTerm, getName]);
 
   return (
-    <Command label={searchPlaceholder} className={cn(className)} filter={handleFiltering}>
+    <Command label={searchPlaceholder} className={cn(className)} shouldFilter={false}>
       <CommandInput
         value={searchTerm}
         onValueChange={setSearchTerm}
         placeholder={searchPlaceholder}
       />
+      {isCustomRegionTab ? (
+        <Button
+          variant="white"
+          size="full"
+          className="mt-2 py-1 text-xs font-semibold"
+          onClick={handleClearCustomRegion}
+        >
+          {t('clear-custom-region')}
+        </Button>
+      ) : null}
       <CommandEmpty>{t('no-result')}</CommandEmpty>
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
-        {filteredLocations.map(({ attributes }, idx) => {
-          const { name, name_es, name_fr, code, type } = attributes;
-
-          let locationName = name;
-          if (locale === 'es') {
-            locationName = name_es;
-          }
-          if (locale === 'fr') {
-            locationName = name_fr;
-          }
+        {visibleLocations.map(({ attributes }, idx) => {
+          const { code, type } = attributes;
+          const locationName = getName(attributes);
 
           const locationType = LocationType[type] || LocationType.country;
           const Selected = isCustomRegionTab ? XCircle : Check;
 
           return (
-            <>
-              <CommandItem key={code} value={locationName} onSelect={() => onSelected(code)}>
+            <div key={code}>
+              <CommandItem value={locationName} onSelect={() => onSelected(code)}>
                 <div className="flex w-full cursor-pointer justify-between gap-x-4">
                   <div className="flex text-base font-bold">
                     {selectedLocation.has(code) && (
@@ -90,7 +112,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
               {dividerIndex && searchTerm.length === 0 && idx === dividerIndex ? (
                 <hr className="w-full" />
               ) : null}
-            </>
+            </div>
           );
         })}
       </CommandGroup>
