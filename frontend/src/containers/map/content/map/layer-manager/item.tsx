@@ -49,7 +49,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
   const [customRegionLocations] = useSyncCustomRegion();
 
   const isCustomRegionActive = locationCode === CUSTOM_REGION_CODE;
-  
+
   const customRegionMap = useMemo(() => {
     const map = {};
     for (const loc of customRegionLocations) {
@@ -70,7 +70,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
         customRegionLocations: isCustomRegionActive ? customRegionMap : {},
       },
     }),
-    [config, locationCode, params_config, settings, customRegionMap]
+    [config, locationCode, params_config, settings, customRegionMap, isCustomRegionActive]
   );
 
   const parsedConfig = useResolvedConfig(configParams);

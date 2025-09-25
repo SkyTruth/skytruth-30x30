@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { Check, XCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -19,6 +21,7 @@ type LocationDropdownProps = {
   selectedLocation: Set<string>;
   isCustomRegionTab: boolean;
   onSelected: (code: string) => void;
+  dividerIndex?: number;
 };
 
 enum LocationType {
@@ -35,9 +38,11 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   selectedLocation,
   isCustomRegionTab,
   onSelected,
+  dividerIndex,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const handleFiltering = (value: string, search: string) => {
     if (value.toLocaleLowerCase().includes(search.toLocaleLowerCase())) return 1;
@@ -46,10 +51,14 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
 
   return (
     <Command label={searchPlaceholder} className={cn(className)} filter={handleFiltering}>
-      <CommandInput placeholder={searchPlaceholder} />
+      <CommandInput
+        value={searchTerm}
+        onValueChange={setSearchTerm}
+        placeholder={searchPlaceholder}
+      />
       <CommandEmpty>{t('no-result')}</CommandEmpty>
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
-        {filteredLocations.map(({ attributes }) => {
+        {filteredLocations.map(({ attributes }, idx) => {
           const { name, name_es, name_fr, code, type } = attributes;
 
           let locationName = name;
@@ -64,20 +73,24 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
           const Selected = isCustomRegionTab ? XCircle : Check;
 
           return (
-            <CommandItem key={code} value={locationName} onSelect={() => onSelected(code)}>
-              <div className="flex w-full cursor-pointer justify-between gap-x-4">
-                <div className="flex text-base font-bold">
-                  {selectedLocation.has(code) && (
-                    <Selected className="relative top-1 mr-1 inline-block h-4 w-4 flex-shrink-0" />
-                    // <Check className="relative top-1 mr-1 inline-block h-4 w-4 flex-shrink-0" />
-                  )}
-                  {locationName}
+            <>
+              <CommandItem key={code} value={locationName} onSelect={() => onSelected(code)}>
+                <div className="flex w-full cursor-pointer justify-between gap-x-4">
+                  <div className="flex text-base font-bold">
+                    {selectedLocation.has(code) && (
+                      <Selected className="relative top-1 mr-1 inline-block h-4 w-4 flex-shrink-0" />
+                    )}
+                    {locationName}
+                  </div>
+                  <span className="flex flex-shrink-0 items-center font-mono text-xs capitalize text-gray-300">
+                    {t(locationType)}
+                  </span>
                 </div>
-                <span className="flex flex-shrink-0 items-center font-mono text-xs capitalize text-gray-300">
-                  {t(locationType)}
-                </span>
-              </div>
-            </CommandItem>
+              </CommandItem>
+              {dividerIndex && searchTerm.length === 0 && idx === dividerIndex ? (
+                <hr className="w-full" />
+              ) : null}
+            </>
           );
         })}
       </CommandGroup>

@@ -217,6 +217,9 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
                 ? handleCustomRegionUpdated
                 : handleLocationSelected
             }
+            dividerIndex={
+              locationsFilter === 'customRegion' ? customRegionLocations.size - 1 : null
+            }
           />
         </PopoverContent>
       </Popover>
