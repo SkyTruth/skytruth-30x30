@@ -56,9 +56,9 @@ from src.core.processors import (
     rename_habitats,
     update_mpatlas_asterisk,
 )
-from src.core.strapi import Strapi
 from src.methods.marine_habitats import process_marine_habitats
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
+from src.utils.database import get_pas
 from src.utils.gcp import (
     read_dataframe,
     upload_dataframe,
@@ -224,17 +224,6 @@ def generate_protected_areas_table(
     return protected_areas
 
 
-def pull_current_pa_db(page_size=10000):
-    client = Strapi()
-    pas = client.get_pas(page_size=page_size)
-    current_db = [{**{"id": d["id"]}, **d["attributes"]} for d in pas["data"]]
-    while len(pas["data"]) > 0:
-        pas = client.get_pas(page_size=page_size)
-        current_db.append([{**{"id": d["id"]}, **d["attributes"]} for d in pas["data"]])
-
-    return pd.DataFrame(current_db)
-
-
 def database_updates(current_db, updated_pas, verbose=True):
     # TODO: Add DB index to parent/children
 
@@ -267,6 +256,9 @@ def database_updates(current_db, updated_pas, verbose=True):
         .sort_values(by="identifier")
         .reset_index(drop=True)
     )
+    static_updated = pd.merge(
+        static_updated, current_db[["identifier", "id"]], on="identifier", how="left"
+    )
 
     # Find indices where one of the priority columns has significantly changed
     change_indx = (
@@ -285,8 +277,10 @@ def database_updates(current_db, updated_pas, verbose=True):
         print(f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}")
 
     return {
-        "new": updated_pas[updated_pas["identifier"].isin(new)].to_dict(orient="records"),
-        "changed": changed.to_dict(orient="records"),
+        "new": updated_pas[updated_pas["identifier"].isin(new)]
+        .drop(columns="identifier")
+        .to_dict(orient="records"),
+        "changed": changed.drop(columns="identifier").to_dict(orient="records"),
         "deleted": list(current_db[current_db["identifier"].isin(deleted)]["id"]),
     }
 
@@ -305,15 +299,15 @@ def update_protected_areas_table(
     )
 
     # Get the current database
-    # TODO: What is the best page_size? We loop through 300,000 - will be slow!
-    # is there instead a way to download the entire database not via API?
-    current_db = pull_current_pa_db(page_size=10000)
+    current_db = get_pas()
+    current_db_df = pd.DataFrame(current_db)
+    current_db_df = current_db_df.rename(columns={"wdpaid": "wdpa_id", "wdpa_p_id": "wdpa_pid"})
 
     # TODO: Do we want to have an identifier as a string of the 3-4 identifiers?
     # This is mainly for what to pass into delete_pas
     cols_for_id = ["environment", "wdpa_id", "wdpa_pid", "zone_id"]
     updated_pas["identifier"] = updated_pas[cols_for_id].astype(str).agg("_".join, axis=1)
-    current_db["identifier"] = current_db[cols_for_id].astype(str).agg("_".join, axis=1)
+    current_db_df["identifier"] = current_db_df[cols_for_id].astype(str).agg("_".join, axis=1)
 
     db_changes = database_updates(current_db, updated_pas, verbose=verbose)
 
