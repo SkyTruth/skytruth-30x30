@@ -13,6 +13,8 @@ import requests
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
+import tracemalloc
+from tqdm.auto import tqdm
 
 from src.core.params import (
     ARCHIVE_MPATLAS_FILE_NAME,
@@ -34,6 +36,9 @@ from src.utils.gcp import (
     save_file_bucket,
 )
 from src.utils.geo import compute_pixel_area_map_km2
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
@@ -261,3 +266,59 @@ def download_mpatlas_zone(
         verbose=verbose,
     )
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
+
+
+def download_file_with_progress(url: str, filename: str, verbose: bool = True):
+    """
+    Downloads a file from a given URL and displays a progress bar.
+
+    Args:
+        url (str): The URL of the file to download.
+        filename (str): The local filename to save the downloaded file as.
+    """
+    try:
+        # Send a GET request with stream=True to handle large files efficiently
+        response = requests.get(url, stream=True)
+        response.raise_for_status()  # Raise an exception for bad status codes
+
+        # Get the total file size from the Content-Length header, default to 0 if not present
+        total_size = int(response.headers.get("content-length", 0))
+
+        # Open the local file in binary write mode and create a tqdm progress bar
+        with (
+            open(filename, "wb") as file,
+            tqdm(
+                desc=filename, total=total_size, unit="iB", unit_scale=True, unit_divisor=1024
+            ) as progress_bar,
+        ):
+            # Iterate over the content in chunks and write to the file
+            for data in response.iter_content(chunk_size=8192):
+                size = file.write(data)
+                progress_bar.update(size)  # Update the progress bar with the written size
+        if verbose:
+            print(f"Download of '{filename}' completed successfully.")
+        return True
+    except requests.exceptions.RequestException as e:
+        logger.error(
+            {
+                "message": "Download error",
+                "exception": str(e),
+            }
+        )
+        return False
+
+
+def unzip_file(base_zip_path, destination_folder):
+    with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
+        zip_ref.extractall(destination_folder)
+
+
+def print_peak_memory_allocation(func, *args, **kwargs):
+    tracemalloc.start()
+    try:
+        out = func(*args, **kwargs)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    print(f"max allocated memory: {peak / (1024**3):.3f} GB")
+    return out
