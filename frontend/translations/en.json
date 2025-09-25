@@ -197,7 +197,7 @@
       "close-custom-region": "Close custom region",
       "empty-custom-region": "Add countries to your Custom Region by selecting them on the map and clicking the <addIcon></addIcon> icon, or by clicking on <searchIcon></searchIcon> Change Location and choosing from the list of countries in the Custom Region tab.",
       "add-country-custom-region": "Add Countries to Your Custom Region to See Stats",
-      "clear-custom-region": "Clear Custom Region"
+      "clear-all": "Clear All"
     },
     "map-sidebar-layers-panel": {
       "map-layers": "Map Layers",

@@ -56,7 +56,7 @@ const StatCard: FC<StatCardProps> = ({
     [setCustomRegionLocations, customRegionLocations]
   );
 
-  const isLocatonInCustomRegion = customRegionLocations.has(iso);
+  const isLocatonInCustomRegion = customRegionLocations?.has(iso);
 
   return (
     <>

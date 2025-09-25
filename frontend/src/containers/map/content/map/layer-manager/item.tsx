@@ -52,6 +52,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
 
   const customRegionMap = useMemo(() => {
     const map = {};
+    if (!customRegionLocations) return map;
     for (const loc of customRegionLocations) {
       map[loc] = true;
     }

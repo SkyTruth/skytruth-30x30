@@ -55,7 +55,7 @@ const MapDetails: FCWithMessages = () => {
   const tablesSettings = useMemo(
     () => ({
       worldwideRegion: {
-        locationTypes: ['worldwide', 'region'],
+        locationTypes: ['worldwide', 'region', 'custom_region'],
         component: GlobalRegionalTable,
         title: {
           summary: {
@@ -107,12 +107,14 @@ const MapDetails: FCWithMessages = () => {
   );
 
   const table = useMemo(() => {
-    // TODO: Improve to support more entries (although not needed right now)
-    const tableSettings = tablesSettings.worldwideRegion.locationTypes.includes(
-      locationsQuery.data?.type
-    )
-      ? tablesSettings.worldwideRegion
-      : tablesSettings.countryHighseas;
+    const type = locationsQuery.data?.type;
+    let selectedTable = tablesSettings.worldwideRegion;
+
+    for (const table in tablesSettings) {
+      if (tablesSettings[table].locationTypes.includes(type)) {
+        selectedTable = tablesSettings[table];
+      }
+    }
 
     let locationName = locationsQuery.data?.name;
     if (locale === 'es') {
@@ -123,12 +125,12 @@ const MapDetails: FCWithMessages = () => {
     }
 
     const parsedTitle =
-      tableSettings.title[tab][locationsQuery.data?.type]?.replace('{location}', locationName) ||
-      tableSettings.title[tab].fallback;
+      selectedTable.title[tab][locationsQuery.data?.type]?.replace('{location}', locationName) ||
+      selectedTable.title[tab].fallback;
 
     return {
       title: parsedTitle,
-      component: tableSettings.component,
+      component: selectedTable.component,
     };
   }, [locale, tablesSettings, tab, locationsQuery.data]);
 

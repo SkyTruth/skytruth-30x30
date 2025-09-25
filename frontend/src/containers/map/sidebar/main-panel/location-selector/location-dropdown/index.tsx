@@ -3,7 +3,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { Check, XCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandGroup,
@@ -22,7 +21,6 @@ type LocationDropdownProps = {
   selectedLocation: Set<string>;
   isCustomRegionTab: boolean;
   onSelected: (code: string) => void;
-  handleClearCustomRegion: () => void;
   dividerIndex?: number;
 };
 
@@ -40,7 +38,6 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   selectedLocation,
   isCustomRegionTab,
   onSelected,
-  handleClearCustomRegion,
   dividerIndex,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
@@ -75,16 +72,6 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
         onValueChange={setSearchTerm}
         placeholder={searchPlaceholder}
       />
-      {isCustomRegionTab ? (
-        <Button
-          variant="white"
-          size="full"
-          className="mt-2 py-1 text-xs font-semibold"
-          onClick={handleClearCustomRegion}
-        >
-          {t('clear-custom-region')}
-        </Button>
-      ) : null}
       <CommandEmpty>{t('no-result')}</CommandEmpty>
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
         {visibleLocations.map(({ attributes }, idx) => {
@@ -109,7 +96,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
                   </span>
                 </div>
               </CommandItem>
-              {dividerIndex && searchTerm.length === 0 && idx === dividerIndex ? (
+              {dividerIndex !== null && searchTerm.length === 0 && idx === dividerIndex ? (
                 <hr className="w-full" />
               ) : null}
             </div>

@@ -50,9 +50,10 @@ const SidebarDetails: FCWithMessages = () => {
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
   const isCustomRegion = locationCode === CUSTOM_REGION_CODE;
-  const location = isCustomRegion
-    ? [...[...customRegionLocations].map((loc) => loc.toUpperCase()), locationCode]
-    : [locationCode];
+  const location =
+    isCustomRegion && customRegionLocations
+      ? [...[...customRegionLocations].map((loc) => loc.toUpperCase()), locationCode]
+      : [locationCode];
 
   const { data: locationsData } = useGetLocations(
     {

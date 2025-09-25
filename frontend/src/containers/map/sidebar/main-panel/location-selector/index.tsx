@@ -19,7 +19,10 @@ import GlobeIcon from '@/styles/icons/globe.svg';
 import MagnifyingGlassIcon from '@/styles/icons/magnifying-glass.svg';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
-import { LocationGroupsDataItemAttributes } from '@/types/generated/strapi.schemas';
+import {
+  LocationGroupsDataItemAttributes,
+  LocationListResponseDataItem,
+} from '@/types/generated/strapi.schemas';
 
 import LocationDropdown from './location-dropdown';
 import LocationTypeToggle from './type-toggle';
@@ -119,13 +122,17 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
   const handleCustomRegionUpdated = useCallback(
     (code: string) => {
-      const newLocs = new Set(customRegionLocations);
-      if (customRegionLocations.has(code)) {
-        newLocs.delete(code);
+      if (code === 'clear') {
+        setCustomRegionLocations(new Set());
       } else {
-        newLocs.add(code);
+        const newLocs = new Set(customRegionLocations);
+        if (customRegionLocations && customRegionLocations.has(code)) {
+          newLocs.delete(code);
+        } else {
+          newLocs.add(code);
+        }
+        setCustomRegionLocations(newLocs);
       }
-      setCustomRegionLocations(newLocs);
     },
     [customRegionLocations, setCustomRegionLocations]
   );
@@ -140,10 +147,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       handleLocationSelected(prevLocation.current);
     }
   }, [isCustomRegionActive, prevLocation, handleLocationSelected, currentLocation]);
-
-  const handleClearCustomRegion = useCallback(() => {
-    setCustomRegionLocations(new Set());
-  }, [setCustomRegionLocations]);
 
   const reorderedLocations = useMemo(() => {
     const globalLocation = locationsData.find(({ attributes }) => attributes.type === 'worldwide');
@@ -167,7 +170,17 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     );
 
     if (locationsFilter === 'customRegion') {
-      const top = [];
+      if (!customRegionLocations?.size) return filtered;
+      const clearAll = {
+        attributes: {
+          code: 'clear',
+          name: t('clear-all'),
+          name_es: t('clear-all'),
+          name_fr: t('clear-all'),
+        },
+      } as LocationListResponseDataItem;
+
+      const top = [clearAll];
       const bottom = [];
       for (const location of filtered) {
         const {
@@ -183,7 +196,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       }
     }
     return filtered;
-  }, [locationsFilter, reorderedLocations, areTerritoriesActive, customRegionLocations]);
+  }, [locationsFilter, reorderedLocations, areTerritoriesActive, customRegionLocations, t]);
 
   return (
     <div className={cn('flex gap-4 gap-y-0', className, 'grid grid-cols-2')}>
@@ -212,7 +225,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             filteredLocations={filteredLocations}
             selectedLocation={
               locationsFilter === 'customRegion'
-                ? customRegionLocations
+                ? (customRegionLocations ?? new Set())
                 : new Set([currentLocation])
             }
             isCustomRegionTab={locationsFilter === 'customRegion'}
@@ -222,9 +235,10 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
                 : handleLocationSelected
             }
             dividerIndex={
-              locationsFilter === 'customRegion' ? customRegionLocations.size - 1 : null
+              locationsFilter === 'customRegion' && customRegionLocations?.size
+                ? customRegionLocations.size
+                : null
             }
-            handleClearCustomRegion={handleClearCustomRegion}
           />
         </PopoverContent>
       </Popover>
