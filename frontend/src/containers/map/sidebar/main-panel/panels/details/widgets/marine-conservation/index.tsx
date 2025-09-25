@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { groupBy } from 'lodash-es';
+import { groupBy, maxBy } from 'lodash-es';
 import { useLocale, useTranslations } from 'next-intl';
 
 import ConservationChart from '@/components/charts/conservation-chart';
@@ -18,6 +18,8 @@ import type {
   AggregatedStats,
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
+
+import MissingCountriesList from '../missing-countries-list.tsx';
 
 type MarineConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -60,15 +62,30 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       const protectedArea = entries[0].protected_area;
       const coverage = entries[0].coverage;
       const totalArea = entries[0].total_area ?? location.total_marine_area;
+      const locations = entries[0].locations;
 
       return {
         year: Number(year),
         protectedArea,
         coverage,
         totalArea,
+        locations,
       };
     });
   }, [data, location]);
+
+  const { locations: mostLocsByYear } = useMemo(() => {
+    if (!aggregatedData.length) return { locations: [] };
+
+    return maxBy(aggregatedData, (entry) => entry.locations.length);
+  }, [aggregatedData]);
+
+  const missingLocations = useMemo(() => {
+    const included = new Set(mostLocsByYear);
+    const total = new Set(locations.split(','));
+
+    return [...total.difference(included)];
+  }, [mostLocsByYear, locations]);
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -121,25 +138,27 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const chartData = useMemo(() => {
     if (!aggregatedData.length) return [];
 
-    const data = aggregatedData.map((entry, index) => {
+    const data = aggregatedData.reduce((acc, entry, index) => {
+      if (entry.locations.length < mostLocsByYear.length) return acc;
+
       const isLastYear = index + 1 === aggregatedData.length;
       const { year, protectedArea, coverage } = entry;
       const percentage = coverage ?? (protectedArea * 100) / Number(entry.totalArea);
 
-      return {
-        // We only want to show up to 55%, so we'll cap the percentage here
-        // Some of the data seems incorrect; this is a quick fix in order to not blow the chart
+      acc.push({
         percentage,
         year,
         active: isLastYear,
         totalArea: Number(entry.totalArea),
         protectedArea,
         future: false,
-      };
-    });
+      });
+
+      return acc;
+    }, []);
 
     return data;
-  }, [aggregatedData]);
+  }, [aggregatedData, mostLocsByYear]);
 
   const noData = useMemo(() => {
     if (!chartData.length) {
@@ -202,6 +221,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
           </span>
         </Button>
       )}
+      <MissingCountriesList countries={missingLocations} />
     </Widget>
   );
 };

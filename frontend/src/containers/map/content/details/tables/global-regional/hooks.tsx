@@ -394,7 +394,6 @@ export const useData = (
   } = useGetLocations<string>(
     {
       locale,
-
       // @ts-ignore
       fields: ['type'],
       filters: {

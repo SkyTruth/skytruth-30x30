@@ -15,6 +15,8 @@ import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type { AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
+import MissingCountriesList from '../missing-countries-list.tsx';
+
 type HabitatWidgetProps = {
   location: string;
 };
@@ -82,6 +84,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       background: string;
       totalArea: number;
       protectedArea: number;
+      missingLocations: string[];
       info?: string;
       sources?: { id: number; title: string; url: string }[];
       updatedAt: string;
@@ -102,8 +105,9 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
 
           const parsedHabitats = new Set();
           // Reverse the array first because the endpoint returns data from oldest
-          // to newest. This allows us to take only the newest recrods
+          // to newest. This allows us to take only the newest records
           const reversedStats = [...habitatStats].reverse();
+          const allLocations = new Set(locations.split(','));
 
           const parsedData = reversedStats.reduce((parsed, entry) => {
             if (parsedHabitats.has(entry.habitat.slug)) {
@@ -113,8 +117,9 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
 
             const stats = entry;
             const habitat = stats?.habitat;
-
             const metadata = habitatMetadatas?.find(({ slug }) => slug === habitat?.slug);
+            const habitatLocations = new Set(entry?.locations ?? []);
+            const missingLocations = [...allLocations.difference(habitatLocations)];
 
             parsed.push({
               title: habitat?.name,
@@ -122,6 +127,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
               background: HABITAT_CHART_COLORS[habitat?.slug],
               totalArea: stats.total_area,
               protectedArea: stats.protected_area,
+              missingLocations,
               info: metadata?.info,
               sources: metadata?.sources,
               updatedAt: stats.updatedAt,
@@ -179,12 +185,15 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       sources={metadata?.sources}
     >
       {chartData.map((chartData) => (
-        <HorizontalBarChart
-          key={chartData.slug}
-          className="py-2"
-          data={chartData}
-          showTarget={false}
-        />
+        <>
+          <HorizontalBarChart
+            key={chartData.slug}
+            className="py-2"
+            data={chartData}
+            showTarget={false}
+          />
+          <MissingCountriesList countries={chartData.missingLocations} />
+        </>
       ))}
     </Widget>
   );

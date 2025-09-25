@@ -12,6 +12,8 @@ import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type { AggregatedStats, AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
+import MissingCountriesList from '../missing-countries-list.tsx';
+
 type ProtectionTypesWidgetProps = {
   location: string;
 };
@@ -70,6 +72,13 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
     }
   );
 
+  const missingLocations = useMemo(() => {
+    const allLocations = new Set(locations.split(','));
+    const includedLocaitons = new Set(protectionLevelData[0]?.locations);
+
+    return [...allLocations.difference(includedLocaitons)];
+  }, [locations, protectionLevelData]);
+
   // Go through all the relevant stats, find the last updated one's value
   const lastUpdated = useMemo(() => {
     const updatedAtValues = protectionLevelData?.reduce(
@@ -124,6 +133,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
           data={chartData}
         />
       ))}
+      <MissingCountriesList countries={missingLocations} />
     </Widget>
   );
 };

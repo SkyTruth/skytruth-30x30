@@ -12,6 +12,8 @@ import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type { AggregatedStats, AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
+import MissingCountriesList from '../missing-countries-list.tsx';
+
 type FishingProtectionWidgetProps = {
   location: string;
 };
@@ -38,11 +40,18 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
     {
       query: {
         select: ({ data }) => data?.fishing_protection_level ?? [],
-        placeholderData: { data: [] } as AggregatedStatsEnvelope,
+        placeholderData: { data: {} } as AggregatedStatsEnvelope,
         refetchOnWindowFocus: false,
       },
     }
   );
+
+  const missingLocations = useMemo(() => {
+    const allLocations = new Set(locations.split(','));
+    const includedLocaitons = new Set(fishingProtectionLevelsData[0]?.locations);
+
+    return [...allLocations.difference(includedLocaitons)];
+  }, [locations, fishingProtectionLevelsData]);
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -126,6 +135,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
           showTarget={false}
         />
       ))}
+      <MissingCountriesList countries={missingLocations} />
     </Widget>
   );
 };
