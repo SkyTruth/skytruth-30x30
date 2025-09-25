@@ -171,6 +171,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
     if (locationsFilter === 'customRegion') {
       if (!customRegionLocations?.size) return filtered;
+
+      // Bit of a hack to add the "clear all" button to teh custom regions list
       const clearAll = {
         attributes: {
           code: 'clear',
@@ -186,6 +188,9 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         const {
           attributes: { code },
         } = location;
+
+        // Prevent adding soverigns to custom regions
+        if (code.endsWith('*')) continue;
 
         if (customRegionLocations.has(code)) {
           top.push(location);

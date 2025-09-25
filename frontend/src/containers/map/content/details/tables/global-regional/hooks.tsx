@@ -381,7 +381,7 @@ export const useData = (
   const customRegionLocationFilter = useMemo(() => {
     return {
       code: {
-        $in: [...customRegionLocations],
+        $in: customRegionLocations?.size ? [...customRegionLocations] : [''],
       },
     };
   }, [customRegionLocations]);
