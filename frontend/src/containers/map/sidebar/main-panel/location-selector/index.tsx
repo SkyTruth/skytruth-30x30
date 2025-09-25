@@ -42,6 +42,7 @@ type LocationSelectorProps = {
   theme: 'orange' | 'blue';
   size?: 'default' | 'small';
   isCustomRegionActive: boolean;
+  isShrunk: boolean;
   onChange: (locationCode: string) => void;
 };
 
@@ -50,6 +51,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   theme,
   size = 'default',
   isCustomRegionActive,
+  isShrunk,
   onChange,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
@@ -64,10 +66,10 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const [locationsFilter, setLocationsFilter] = useState<keyof typeof FILTERS>('all');
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
 
-  const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
-
   const currentLocation = Array.isArray(locationCode) ? locationCode[0] : locationCode;
   const prevLocation = useRef(currentLocation !== CUSTOM_REGION_CODE ? currentLocation : 'GLOB');
+
+  const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
 
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
@@ -260,8 +262,12 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       )}
       <Button
         className={cn(
-          { [BUTTON_CLASSES]: true, 'h-auto py-0': true },
-          'col-start-1, col-span-2 col-end-2 justify-start pb-2'
+          {
+            [BUTTON_CLASSES]: true,
+            'py-2': isShrunk,
+            'py-0': !isShrunk,
+          },
+          'col-start-1, col-span-2 col-end-2 h-auto justify-start pb-2'
         )}
         type="button"
         variant="text-link"
@@ -269,7 +275,9 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       >
         <PlusCircle
           className={cn(
-            { 'rotate-45': isCustomRegionActive },
+            {
+              'rotate-45': isCustomRegionActive,
+            },
             'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
           )}
         />

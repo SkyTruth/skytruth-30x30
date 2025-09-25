@@ -194,6 +194,7 @@ const SidebarDetails: FCWithMessages = () => {
           theme="orange"
           size={containerScroll > 0 ? 'small' : 'default'}
           isCustomRegionActive={isCustomRegion}
+          isShrunk={containerScroll > 0}
           onChange={handleLocationSelected}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}
