@@ -64,6 +64,7 @@ def save_file_bucket(
     bucket_name: str,
     verbose: bool = True,
     chunk_size_mb: int = 5,
+    project_id: str = PROJECT,
 ) -> None:
     """
     Uploads a binary file to a Google Cloud Storage (GCS) bucket using a resumable upload
@@ -85,7 +86,7 @@ def save_file_bucket(
         Size of each upload chunk in megabytes. Must be a multiple of 256 KB.
         Default is 5 MB.
     """
-    client = storage.Client()
+    client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
 
@@ -115,7 +116,11 @@ def save_file_bucket(
 
 
 def duplicate_blob(
-    bucket_name: str, filename_in: str, filename_out: str, verbose: bool = True
+    bucket_name: str,
+    filename_in: str,
+    filename_out: str,
+    project_id: str = PROJECT,
+    verbose: bool = True,
 ) -> None:
     """
     Duplicates a file (blob) within a Google Cloud Storage (GCS) bucket by copying
@@ -132,7 +137,7 @@ def duplicate_blob(
     verbose : bool, optional
         If True, prints a message confirming the copy. Default is True.
     """
-    client = storage.Client()
+    client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
 
     source_blob = bucket.blob(filename_in)
@@ -150,6 +155,7 @@ def download_zip_to_gcs(
     params: dict | None = None,
     headers: dict | None = None,
     chunk_size: int = 8192,
+    project_id: str = PROJECT,
     verbose: bool = True,
 ) -> None:
     """
@@ -216,7 +222,7 @@ def download_zip_to_gcs(
         tqdm_buffer = TqdmBytesIO(raw_buffer.read(), total_size=total_size, chunk_size=chunk_size)
         tqdm_buffer.seek(0)
 
-        storage_client = storage.Client()
+        storage_client = storage.Client(project=project_id)
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
 
@@ -338,11 +344,11 @@ def upload_gdf(
         print("Upload complete.")
 
 
-def upload_file_to_gcs(bucket, file_name, blob_name):
-    client = storage.Client()
+def upload_file_to_gcs(bucket, file_name, blob_name, project_id=PROJECT, timeout=600):
+    client = storage.Client(project=project_id)
     bucket = client.bucket(bucket)
     blob = bucket.blob(blob_name)
-    blob.upload_from_filename(file_name)
+    blob.upload_from_filename(file_name, timeout=timeout)
 
 
 def load_zipped_shapefile_from_gcs(filename: str, bucket: str, internal_shapefile_path: str = ""):
@@ -697,18 +703,24 @@ def load_gdb_layer_from_gcs(
 
             print("Extracting layers:", layers)
 
-            gdf = gpd.GeoDataFrame()
+            to_append = []
             for layer in layers:
                 print(f"Loading layer: {layer}")
-                gdf0 = gpd.read_file(gdb_path, layer=layer)
-                gdf0["gdb_layer_name"] = layer
-                gdf = pd.concat((gdf, gdf0), axis=0)
+                gdf = gpd.read_file(gdb_path, layer=layer)
+                gdf["gdb_layer_name"] = layer
+                to_append.append(gdf)
+
+            return pd.concat((to_append), axis=0)
 
             return gdf
 
 
 def download_file_from_gcs(
-    bucket_name: str, blob_name: str, destination_file_name: str, verbose: bool = True
+    bucket_name: str,
+    blob_name: str,
+    destination_file_name: str,
+    project_id: str = PROJECT,
+    verbose: bool = True,
 ) -> None:
     """
     Downloads a file from a GCS bucket to the local filesystem.
@@ -722,7 +734,7 @@ def download_file_from_gcs(
     destination_file_name : str
         Local path to save the file (e.g., './my_file.txt').
     """
-    client = storage.Client()
+    client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
 
