@@ -184,7 +184,6 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
       })
       ?.slice(-MAX_NUM_YEARS);
   }, [data, historicalLineData, projectedLineData]);
-  console.log(chartData)
 
   return (
     <div className={cn(className, 'text-xs text-black')} ref={chartRef}>
@@ -286,7 +285,9 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
             />
             <YAxis
               domain={maxRecord.percentage < 55 ? [0, 55] : [0, 100]}
-              ticks={maxRecord.percentage < 55 ? [0, 15, 30, 45, 55] : [0, 15, 30, 45, 60, 75, 90, 100]}
+              ticks={
+                maxRecord.percentage < 55 ? [0, 15, 30, 45, 55] : [0, 15, 30, 45, 60, 75, 90, 100]
+              }
               tickFormatter={(value) => `${value}%`}
               stroke="#000"
               tick={{ fill: '#000' }}
