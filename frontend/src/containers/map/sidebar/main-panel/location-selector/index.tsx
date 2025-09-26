@@ -176,7 +176,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     if (locationsFilter === 'customRegion') {
       if (!customRegionLocations?.size) return filtered;
 
-      // Bit of a hack to add the "clear all" button to teh custom regions list
+      // Bit of a hack to add the "clear all" button to the custom regions list
       const clearAll = {
         attributes: {
           code: 'clear',
@@ -272,7 +272,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             'py-2': isShrunk,
             'py-0': !isShrunk,
           },
-          'h-auto justify-start pb-2'
+          'col-start-1 h-auto justify-start pb-2'
         )}
         type="button"
         variant="text-link"
