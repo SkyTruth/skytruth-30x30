@@ -3,7 +3,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 
 import { useSetAtom } from 'jotai';
-import { PlusCircle } from 'lucide-react';
+import { AlertTriangle, PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,7 @@ type LocationSelectorProps = {
   theme: 'orange' | 'blue';
   size?: 'default' | 'small';
   isCustomRegionActive: boolean;
+  hasSharedMarineAreaCountries: string[];
   isShrunk: boolean;
   onChange: (locationCode: string) => void;
 };
@@ -52,6 +53,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   size = 'default',
   isCustomRegionActive,
   isShrunk,
+  hasSharedMarineAreaCountries,
   onChange,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
@@ -210,7 +212,10 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
-            className={cn({ [BUTTON_CLASSES]: true, 'h-auto py-0': size === 'small' })}
+            className={cn(
+              { [BUTTON_CLASSES]: true, 'h-auto py-0': size === 'small' },
+              'justify-start'
+            )}
             type="button"
             variant="text-link"
           >
@@ -251,7 +256,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       </Popover>
       {locationCode !== 'GLOB' && (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true, 'h-auto py-0': true }, 'justify-end')}
+          className={cn({ [BUTTON_CLASSES]: true, 'h-auto py-0': true }, 'justify-start')}
           type="button"
           variant="text-link"
           onClick={() => handleLocationSelected('GLOB')}
@@ -267,7 +272,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             'py-2': isShrunk,
             'py-0': !isShrunk,
           },
-          'col-start-1, col-span-2 col-end-2 h-auto justify-start pb-2'
+          'h-auto justify-start pb-2'
         )}
         type="button"
         variant="text-link"
@@ -283,6 +288,33 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         />
         {isCustomRegionActive ? t('close-custom-region') : t('create-custom-region')}
       </Button>
+
+      {isCustomRegionActive && hasSharedMarineAreaCountries.length ? (
+        <Popover>
+          <PopoverTrigger
+            asChild
+            className={cn(
+              {
+                [BUTTON_CLASSES]: true,
+                'py-2': isShrunk,
+                'py-0': !isShrunk,
+              },
+              'col-start-2 h-auto justify-start pb-2'
+            )}
+          >
+            <span className="flex text-xs">
+              <AlertTriangle className="mr-2 h-4 w-4 pb-px" />
+              {t('overlapping-eez')}
+            </span>
+          </PopoverTrigger>
+
+          <PopoverContent className="w-96 max-w-screen" align="start">
+            <div>
+              {t('overlapping-eez-explainer') + ' ' + hasSharedMarineAreaCountries.join(', ')}
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : null}
     </div>
   );
 };

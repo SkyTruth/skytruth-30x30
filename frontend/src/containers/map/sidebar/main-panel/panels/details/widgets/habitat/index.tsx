@@ -15,7 +15,7 @@ import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type { AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
-import MissingCountriesList from '../missing-countries-list.tsx';
+import MissingCountriesList from '../widget-alerts/MissingCountriesList';
 
 type HabitatWidgetProps = {
   location: string;
@@ -185,15 +185,10 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       sources={metadata?.sources}
     >
       {chartData.map((chartData) => (
-        <>
-          <HorizontalBarChart
-            key={chartData.slug}
-            className="py-2"
-            data={chartData}
-            showTarget={false}
-          />
+        <div key={chartData.slug}>
+          <HorizontalBarChart className="py-2" data={chartData} showTarget={false} />
           <MissingCountriesList countries={chartData.missingLocations} />
-        </>
+        </div>
       ))}
     </Widget>
   );

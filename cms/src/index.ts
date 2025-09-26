@@ -44,6 +44,7 @@ export default {
                 coverage: { type: 'number' },
                 protected_area: { type: 'number' },
                 locations: { type: 'array', items: { type: 'string' } },
+                hasSharedMarineArea: { type: 'boolean' },
                 total_area: { type: 'number' },
                 environment: { type: 'string', nullable: true },
                 fishing_protection_level: { type: 'object', nullable: true, properties: {

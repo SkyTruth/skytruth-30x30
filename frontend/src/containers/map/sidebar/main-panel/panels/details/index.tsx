@@ -59,7 +59,7 @@ const SidebarDetails: FCWithMessages = () => {
     {
       locale,
       // @ts-ignore
-      fields: ['name', 'name_es', 'name_fr', 'type', 'code'],
+      fields: ['name', 'name_es', 'name_fr', 'type', 'code', 'has_shared_marine_area'],
       filters: {
         code: {
           $in: location,
@@ -122,20 +122,24 @@ const SidebarDetails: FCWithMessages = () => {
     return locationsData?.data[0];
   }, [locationsData, isCustomRegion]);
 
-  const memberCountries = useMemo(() => {
+  const [memberCountries, hasSharedMarineAreaCountries] = useMemo(() => {
     if (!isCustomRegion) {
-      return mapLocationRelations('members');
+      return [mapLocationRelations('members'), []];
     }
     const members = [];
+    const hasSharedMarineArea = [];
     for (const country of locationsData?.data) {
       if (country.attributes.code !== CUSTOM_REGION_CODE) {
         members.push({
           code: country.attributes.code,
           name: country.attributes[locationNameField],
         });
+        if (country.attributes.has_shared_marine_area) {
+          hasSharedMarineArea.push(country.attributes[locationNameField]);
+        }
       }
     }
-    return members;
+    return [members, hasSharedMarineArea];
   }, [mapLocationRelations, isCustomRegion, locationNameField, locationsData]);
 
   const sovereignCountries = useMemo(() => {
@@ -195,6 +199,7 @@ const SidebarDetails: FCWithMessages = () => {
           size={containerScroll > 0 ? 'small' : 'default'}
           isCustomRegionActive={isCustomRegion}
           isShrunk={containerScroll > 0}
+          hasSharedMarineAreaCountries={hasSharedMarineAreaCountries}
           onChange={handleLocationSelected}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}

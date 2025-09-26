@@ -1249,6 +1249,7 @@ export interface AggregatedStats {
   coverage: number;
   protected_area: number;
   locations: string[];
+  hasSharedMarineArea?: boolean;
   total_area: number;
   environment?: string | null;
   fishing_protection_level?: AggregatedStatsFishingProtectionLevel;

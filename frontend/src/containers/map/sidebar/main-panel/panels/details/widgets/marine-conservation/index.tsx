@@ -19,7 +19,7 @@ import type {
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
 
-import MissingCountriesList from '../missing-countries-list.tsx';
+import MissingCountriesList from '../widget-alerts/MissingCountriesList';
 
 type MarineConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
@@ -174,55 +174,59 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   }, [chartData]);
 
   return (
-    <Widget
-      title={t('marine-conservation-coverage')}
-      lastUpdated={data[data.length - 1]?.updatedAt}
-      noData={noData}
-      loading={isFetching}
-      info={metadata?.info}
-      sources={metadata?.sources}
-    >
-      {stats && (
-        <div className="mb-4 mt-6 flex flex-col">
-          <span className="space-x-1">
-            {t.rich('marine-protected-percentage', {
-              b1: (chunks) => <span className="text-[64px] font-bold leading-[90%]">{chunks}</span>,
-              b2: (chunks) => <span className="text-lg">{chunks}</span>,
-              percentage: stats?.protectedPercentage,
-            })}
-          </span>
-          <span className="space-x-1 text-xs">
-            <span>
-              {t('marine-protected-area', {
-                protectedArea: stats?.protectedArea,
-                totalArea: stats?.totalArea,
+    <>
+      <Widget
+        title={t('marine-conservation-coverage')}
+        lastUpdated={data[data.length - 1]?.updatedAt}
+        noData={noData}
+        loading={isFetching}
+        info={metadata?.info}
+        sources={metadata?.sources}
+      >
+        {stats && (
+          <div className="mb-4 mt-6 flex flex-col">
+            <span className="space-x-1">
+              {t.rich('marine-protected-percentage', {
+                b1: (chunks) => (
+                  <span className="text-[64px] font-bold leading-[90%]">{chunks}</span>
+                ),
+                b2: (chunks) => <span className="text-lg">{chunks}</span>,
+                percentage: stats?.protectedPercentage,
               })}
             </span>
-          </span>
-        </div>
-      )}
-      <ConservationChart
-        className="-ml-8 aspect-[16/10]"
-        tooltipSlug="30x30-marine-target"
-        data={chartData}
-        displayTarget={!!stats?.target}
-        target={stats?.target ?? undefined}
-        targetYear={stats?.targetYear ?? undefined}
-      />
-      {tab !== 'marine' && (
-        <Button
-          variant="white"
-          size="full"
-          className="mt-5 flex h-10 px-5 md:px-8"
-          onClick={() => setSettings((settings) => ({ ...settings, tab: 'marine' }))}
-        >
-          <span className="font-mono text-xs font-semibold normal-case">
-            {t('explore-marine-conservation')}
-          </span>
-        </Button>
-      )}
-      <MissingCountriesList countries={missingLocations} />
-    </Widget>
+            <span className="space-x-1 text-xs">
+              <span>
+                {t('marine-protected-area', {
+                  protectedArea: stats?.protectedArea,
+                  totalArea: stats?.totalArea,
+                })}
+              </span>
+            </span>
+          </div>
+        )}
+        <ConservationChart
+          className="-ml-8 aspect-[16/10]"
+          tooltipSlug="30x30-marine-target"
+          data={chartData}
+          displayTarget={!!stats?.target}
+          target={stats?.target ?? undefined}
+          targetYear={stats?.targetYear ?? undefined}
+        />
+        {tab !== 'marine' && (
+          <Button
+            variant="white"
+            size="full"
+            className="mt-5 flex h-10 px-5 md:px-8"
+            onClick={() => setSettings((settings) => ({ ...settings, tab: 'marine' }))}
+          >
+            <span className="font-mono text-xs font-semibold normal-case">
+              {t('explore-marine-conservation')}
+            </span>
+          </Button>
+        )}
+        <MissingCountriesList countries={missingLocations} />
+      </Widget>
+    </>
   );
 };
 

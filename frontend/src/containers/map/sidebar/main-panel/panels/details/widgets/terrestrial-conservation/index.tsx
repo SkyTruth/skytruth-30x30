@@ -18,7 +18,7 @@ import type {
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
 
-import MissingCountriesList from '../missing-countries-list.tsx';
+import MissingCountriesList from '../widget-alerts/MissingCountriesList';
 
 type TerrestrialConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
