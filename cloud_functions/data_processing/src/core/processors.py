@@ -39,14 +39,61 @@ def add_environment(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_oecm_status(df):
+def add_oecm_status(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add an 'protection_status' column derived from 'PA_DEF'.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Must contain a 'PA_DEF' column with values 0 or 1.
+    """
     status_dict = {0: "oecm", 1: "pa"}
     df = df.copy()
     df["protection_status"] = df["PA_DEF"].apply(lambda x: status_dict[x])
     return df
 
 
-def add_percent_coverage(df, eez, gadm):
+def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate percent coverage of protected areas relative to total area
+    from EEZ (marine) or GADM (terrestrial) reference datasets.
+
+    This function adds a new column ``coverage`` to the input DataFrame,
+    computed as:
+
+    - For rows where ``environment == "marine"``:
+      ``coverage = (area / eez_area) * 100``
+    - For rows where ``environment == "terrestrial"``:
+      ``coverage = (area / gadm_area) * 100``
+
+    The coverage is rounded to two decimal places and capped at 100.
+    If either the numerator or denominator is missing/invalid, the
+    result is set to ``None``.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input DataFrame. Must contain the columns:
+        - ``environment`` : str, either "marine" or "terrestrial".
+        - ``location`` : key to join with ``eez``/``gadm`` reference data.
+        - ``area`` : float, the protected area size (in km²).
+    eez : pandas.DataFrame
+        Marine reference DataFrame with columns:
+        - ``location`` : unique identifier for the marine region.
+        - ``AREA_KM2`` : total marine area (in km²).
+    gadm : pandas.DataFrame
+        Terrestrial reference DataFrame with columns:
+        - ``location`` : unique identifier for the terrestrial region.
+        - ``AREA_KM2`` : total terrestrial area (in km²).
+
+    Returns
+    -------
+    pandas.DataFrame
+        Copy of the input DataFrame with an additional column:
+        - ``coverage`` : float, percent coverage of area relative to
+          the reference dataset, rounded to 2 decimals and capped at 100.
+    """
     # build fast lookup dicts for area by location
     eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"]))
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"]))
