@@ -6,6 +6,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from shapely.geometry import MultiPolygon, Polygon
+from tqdm.auto import tqdm
 
 
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
@@ -35,6 +36,38 @@ def add_environment(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
     df["environment"] = df["MARINE"].map({0: "terrestrial", 1: "marine", 2: "marine"})
+    return df
+
+
+def add_oecm_status(df):
+    status_dict = {0: "oecm", 1: "pa"}
+    df = df.copy()
+    df["protection_status"] = df["PA_DEF"].apply(lambda x: status_dict[x])
+    return df
+
+
+def add_percent_coverage(df, eez, gadm):
+    # build fast lookup dicts for area by location
+    eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"]))
+    gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"]))
+
+    def _get_total_area(x):
+        if x["environment"] == "marine":
+            denom = eez_lookup.get(x["location"])
+        elif x["environment"] == "terrestrial":
+            denom = gadm_lookup.get(x["location"])
+        else:
+            return None
+
+        # safe guard: skip if denom or numerator is missing/invalid
+        if denom is None or pd.isna(denom) or pd.isna(x["area"]):
+            return None
+
+        return min(100, round(100 * x["area"] / denom, 2))
+
+    df = df.copy()
+    tqdm.pandas()
+    df["coverage"] = df.progress_apply(_get_total_area, axis=1)
     return df
 
 

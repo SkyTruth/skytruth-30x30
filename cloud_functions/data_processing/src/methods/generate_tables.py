@@ -16,6 +16,7 @@ from src.core.params import (
     EEZ_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
+    GADM_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     GLOBAL_MARINE_AREA_KM2,
     GLOBAL_TERRESTRIAL_AREA_KM2,
@@ -24,7 +25,6 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
-    MPATLAS_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROJECT,
@@ -34,7 +34,6 @@ from src.core.params import (
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_FILE_NAME,
     WDPA_META_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -42,11 +41,14 @@ from src.core.params import (
 from src.core.processors import (
     add_constants,
     add_environment,
+    add_oecm_status,
+    add_percent_coverage,
     add_pas_oecm,
     add_protected_from_fishing_area,
     add_protected_from_fishing_percent,
     add_total_area_mp,
     add_year,
+    calculate_area,
     convert_type,
     extract_column_dict_str,
     fp_location,
@@ -61,13 +63,16 @@ from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
 from src.utils.gcp import (
     read_dataframe,
+    read_json_df,
     upload_dataframe,
 )
 
 
 def generate_protected_areas_table(
-    wdpa_meta_file_name: str = WDPA_META_FILE_NAME,
-    mpatlas_meta_file_name: str = MPATLAS_META_FILE_NAME,
+    wdpa_file_name: str = WDPA_META_FILE_NAME,
+    mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
+    eez_file_name: str = EEZ_FILE_NAME,
+    gadm_file_name: str = GADM_FILE_NAME,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -119,18 +124,30 @@ def generate_protected_areas_table(
 
     if verbose:
         print("loading PA metadata")
-    mpatlas = read_dataframe(bucket, mpatlas_meta_file_name)
-    wdpa = read_dataframe(bucket, wdpa_meta_file_name)
+    mpatlas = read_dataframe(bucket, mpatlas_file_name)
+    wdpa = read_dataframe(bucket, wdpa_file_name)
+
+    eez_file_name = eez_file_name.replace(".geojson", "_0.001.geojson")
+    gadm_file_name = gadm_file_name.replace(".geojson", "_0.001.geojson")
+    if verbose:
+        print(f"loading eez from {eez_file_name}")
+    eez = read_json_df(BUCKET, eez_file_name)
+
+    if verbose:
+        print(f"loading eez from {gadm_file_name}")
+    gadm = read_json_df(BUCKET, gadm_file_name)
+    gadm = calculate_area(gadm, output_area_column="AREA_KM2")
 
     if verbose:
         print("processing WDPAs")
     wdpa_dict = {
         "NAME": "name",
-        "GIS_AREA": "area",
+        "calculated_area_km2": "area",
         "STATUS": "STATUS",
+        "PA_DEF": "PA_DEF",
         "STATUS_YR": "year",
-        "WDPAID": "wdpa_id",
-        "WDPA_PID": "wdpa_pid",
+        "WDPAID": "wdpaid",
+        "WDPA_PID": "wdpa_p_id",
         "DESIG_TYPE": "designation",
         "ISO3": "location",
         "IUCN_CAT": "iucn_category",
@@ -144,6 +161,7 @@ def generate_protected_areas_table(
         .rename(columns=wdpa_dict)
         .pipe(remove_non_designated_p)
         .pipe(add_environment)
+        .pipe(add_oecm_status)
         .pipe(
             add_constants,
             {
@@ -153,12 +171,12 @@ def generate_protected_areas_table(
                 "mpaa_protection_level": "",
             },
         )
-        .pipe(remove_columns, ["STATUS", "MARINE"])
+        .pipe(remove_columns, ["STATUS", "MARINE", "PA_DEF"])
         .pipe(
             convert_type,
             {
-                "wdpa_id": [pd.Int64Dtype(), str],
-                "wdpa_pid": [str],
+                "wdpaid": [pd.Int64Dtype(), str],
+                "wdpa_p_id": [str],
                 "zone_id": [pd.Int64Dtype(), str],
             },
         )
@@ -169,14 +187,14 @@ def generate_protected_areas_table(
 
     mpa_dict = {
         "name": "name",
-        "area_km2": "area",
+        "calculated_area_km2": "area",
         "designated_date": "designated_date",
-        "wdpa_id": "wdpa_id",
-        "wdpa_pid": "wdpa_pid",
+        "wdpa_id": "wdpaid",
+        "wdpa_pid": "wdpa_p_id",
         "zone_id": "zone_id",
         "designation": "designation",
         "establishment_stage": "mpaa_establishment_stage",
-        "sovereign": "location",
+        "country": "location",
         "protection_mpaguide_level": "mpaa_protection_level",
         "bbox": "bbox",
     }
@@ -186,36 +204,45 @@ def generate_protected_areas_table(
         .rename(columns=mpa_dict)
         .pipe(remove_non_designated_m)
         .pipe(add_year)
+        # TODO: Are all MPAtlas MPAs PAs (not OECMs)? Should protection_status be
+        # replaced with "pa" instead of blank?
         .pipe(
-            add_constants, {"environment": "marine", "data_source": "MPATLAS", "iucn_category": ""}
+            add_constants,
+            {
+                "protection_status": "",
+                "environment": "marine",
+                "data_source": "MPATLAS",
+                "iucn_category": "",
+            },
         )
         .pipe(remove_columns, "designated_date")
         .pipe(
             convert_type,
             {
-                "wdpa_id": [pd.Int64Dtype(), str],
-                "wdpa_pid": [str],
+                "wdpaid": [pd.Int64Dtype(), str],
+                "wdpa_p_id": [str],
                 "zone_id": [pd.Int64Dtype(), str],
             },
         )
     )
 
     pas = pd.concat((wdpa_pa[mpa_pa.columns], mpa_pa), axis=0)
-
-    pas = pas.sort_values(["wdpa_id", "wdpa_pid", "zone_id"])
+    pas["area"] = pd.to_numeric(pas["area"], errors="coerce")
+    pas = add_percent_coverage(pas, eez, gadm)
+    pas = pas.sort_values(["wdpaid", "wdpa_p_id", "zone_id"])
 
     results = []
     # Split by environment to ensure parent/children are of the same environment
     for environment, pa_env in pas.groupby("environment", sort=False):
         print(environment)
         for _, subset in tqdm(
-            pa_env.groupby("wdpa_id", sort=False),
-            total=pa_env["wdpa_id"].nunique(),
+            pa_env.groupby("wdpaid", sort=False),
+            total=pa_env["wdpaid"].nunique(),
             desc=f"{environment} wdpa_id groups",
         ):
             results.append(
                 add_parent_children(
-                    subset, fields=["wdpa_id", "wdpa_pid", "zone_id", "environment"]
+                    subset, fields=["wdpaid", "wdpa_p_id", "zone_id", "environment"]
                 )
             )
 
@@ -264,18 +291,26 @@ def database_updates(current_db, updated_pas, verbose=True):
         return (~both_na) & dif
 
     # Create unique identifier and attach to the current and updated PAs for comparison
+    if verbose:
+        print("adding unique identifier")
     cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id"]
     updated_pas["identifier"] = updated_pas[cols_for_id].astype(str).agg("_".join, axis=1)
     current_db["identifier"] = current_db[cols_for_id].astype(str).agg("_".join, axis=1)
 
     # Add identifier to parent/children
+    if verbose:
+        print("adding database identifier to parent column")
     updated_pas["parent"] = updated_pas["parent"].apply(
         get_identifier, args=(cols_for_id, current_db)
     )
+    if verbose:
+        print("adding database identifier to children column")
     updated_pas["children"] = updated_pas["children"].apply(
         get_identifier_children, args=(cols_for_id, current_db)
     )
 
+    if verbose:
+        print("finding new, deleted, and static PAs")
     new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
     deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
     static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
@@ -325,8 +360,8 @@ def database_updates(current_db, updated_pas, verbose=True):
 
 
 def update_protected_areas_table(
-    wdpa_file_name: str = WDPA_FILE_NAME,
-    mpatlas_file_name: str = MPATLAS_FILE_NAME,
+    wdpa_file_name: str = WDPA_META_FILE_NAME,
+    mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -338,6 +373,8 @@ def update_protected_areas_table(
     )
 
     # Get the current database
+    if verbose:
+        print("downloading current PA database")
     current_db = get_pas()
     current_db_df = pd.DataFrame(current_db)
     current_db_df = current_db_df.rename(columns={"wdpaid": "wdpa_id", "wdpa_p_id": "wdpa_pid"})
