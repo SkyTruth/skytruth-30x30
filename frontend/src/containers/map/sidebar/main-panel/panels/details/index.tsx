@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useRouter } from 'next/router';
 
+import { useSetAtom } from 'jotai';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,6 +13,7 @@ import {
   useMapSearchParams,
   useSyncCustomRegion,
 } from '@/containers/map/content/map/sync-settings';
+import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
@@ -48,6 +50,8 @@ const SidebarDetails: FCWithMessages = () => {
   const [customRegionLocations] = useSyncCustomRegion();
   const searchParams = useMapSearchParams();
   const [{ tab }, setSettings] = useSyncMapContentSettings();
+
+  const setSharedMarineAreasCountries = useSetAtom(sharedMarineAreaCountriesAtom);
 
   const isCustomRegion = locationCode === CUSTOM_REGION_CODE;
   const location =
@@ -122,7 +126,7 @@ const SidebarDetails: FCWithMessages = () => {
     return locationsData?.data[0];
   }, [locationsData, isCustomRegion]);
 
-  const [memberCountries, hasSharedMarineAreaCountries] = useMemo(() => {
+  const [memberCountries, sharedMarineAreaCountries] = useMemo(() => {
     if (!isCustomRegion) {
       return [mapLocationRelations('members'), []];
     }
@@ -142,6 +146,8 @@ const SidebarDetails: FCWithMessages = () => {
     return [members, hasSharedMarineArea];
   }, [mapLocationRelations, isCustomRegion, locationNameField, locationsData]);
 
+  setSharedMarineAreasCountries(sharedMarineAreaCountries);
+
   const sovereignCountries = useMemo(() => {
     if (isCustomRegion) {
       return [];
@@ -152,7 +158,9 @@ const SidebarDetails: FCWithMessages = () => {
 
   const handleLocationSelected = useCallback(
     (locationCode) => {
-      push(`${PAGES.progressTracker}/${locationCode}?${searchParams.toString()}`);
+      push(
+        `${PAGES.progressTracker}/${locationCode}?${decodeURIComponent(searchParams.toString())}`
+      );
     },
     [push, searchParams]
   );
@@ -196,9 +204,8 @@ const SidebarDetails: FCWithMessages = () => {
         <LocationSelector
           className="flex-shrink-0"
           theme="orange"
-          size={containerScroll > 0 ? 'small' : 'default'}
           isCustomRegionActive={isCustomRegion}
-          hasSharedMarineAreaCountries={hasSharedMarineAreaCountries}
+          sharedMarineAreaCountries={sharedMarineAreaCountries}
           onChange={handleLocationSelected}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}

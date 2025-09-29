@@ -40,18 +40,19 @@ const BUTTON_CLASSES =
 type LocationSelectorProps = {
   className?: HTMLDivElement['className'];
   theme: 'orange' | 'blue';
-  size?: 'default' | 'small';
   isCustomRegionActive: boolean;
-  hasSharedMarineAreaCountries: string[];
+  sharedMarineAreaCountries: {
+    code: string;
+    name: string;
+  }[];
   onChange: (locationCode: string) => void;
 };
 
 const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   className,
   theme,
-  size = 'default',
   isCustomRegionActive,
-  hasSharedMarineAreaCountries,
+  sharedMarineAreaCountries,
   onChange,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
@@ -258,6 +259,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
                 ? customRegionLocations.size
                 : null
             }
+            sharedMarineAreaCountries={sharedMarineAreaCountries}
           />
         </PopoverContent>
       </Popover>
@@ -292,29 +294,21 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         </Button>
       ) : null}
 
-      {isCustomRegionActive && hasSharedMarineAreaCountries.length ? (
+      {isCustomRegionActive && sharedMarineAreaCountries.length > 1 ? (
         <Popover>
-          <PopoverTrigger
-            asChild
-            className={cn(
-              {
-                [BUTTON_CLASSES]: true,
-                'py-2': size === 'small',
-                'py-0': size !== 'small',
-              },
-              'col-start-2 h-auto justify-start pb-2'
-            )}
-          >
-            <span className="flex text-xs">
+          <PopoverTrigger asChild>
+            <Button
+              className={cn({ [BUTTON_CLASSES]: true }, 'h-auto justify-start py-0')}
+              type="button"
+              variant="text-link"
+            >
               <AlertTriangle className="mr-2 h-4 w-4 pb-px" />
               {t('overlapping-eez')}
-            </span>
+            </Button>
           </PopoverTrigger>
 
           <PopoverContent className="w-96 max-w-screen" align="start">
-            <div>
-              {t('overlapping-eez-explainer') + ' ' + hasSharedMarineAreaCountries.join(', ')}
-            </div>
+            <div>{t('overlapping-eez-explainer') + ' ' + sharedMarineAreaCountries.join(', ')}</div>
           </PopoverContent>
         </Popover>
       ) : null}

@@ -2,10 +2,12 @@ import { FC, useCallback } from 'react';
 
 import { useRouter } from 'next/router';
 
-import { PlusCircle } from 'lucide-react';
+import { useAtom } from 'jotai';
+import { AlertTriangle, PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { formatKM } from '@/lib/utils/formats';
 
@@ -22,7 +24,7 @@ interface StatCardProps {
 
 const StatCard: FC<StatCardProps> = ({
   environment,
-  formattedStat: { iso, percentage, protectedArea, totalArea },
+  formattedStat: { iso, percentage, protectedArea, totalArea, hasSharedMarineArea },
   handleLocationSelected,
   source,
 }) => {
@@ -33,6 +35,7 @@ const StatCard: FC<StatCardProps> = ({
   } = useRouter();
 
   const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
+  const [sharedMarineAreaCountries] = useAtom(sharedMarineAreaCountriesAtom);
 
   const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
   const isCustomRegionActive =
@@ -86,22 +89,30 @@ const StatCard: FC<StatCardProps> = ({
         </div>
       </div>
       {isCustomRegionActive && !iso.endsWith('*') ? (
-        <button
-          className="justify-left inline-flex w-full py-2 text-left font-mono text-xs"
-          onClick={
-            isLocatonInCustomRegion
-              ? () => handleRemoveFromCustomRegion(iso)
-              : () => handleAddToCustomRegion(iso)
-          }
-        >
-          <PlusCircle
-            className={cn(
-              { 'rotate-45': isLocatonInCustomRegion },
-              'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
-            )}
-          />
-          {isLocatonInCustomRegion ? t('remove-from-custom-region') : t('add-to-custom-region')}
-        </button>
+        <>
+          <button
+            className="justify-left inline-flex w-full py-1 text-left font-mono text-xs"
+            onClick={
+              isLocatonInCustomRegion
+                ? () => handleRemoveFromCustomRegion(iso)
+                : () => handleAddToCustomRegion(iso)
+            }
+          >
+            <PlusCircle
+              className={cn(
+                { 'rotate-45': isLocatonInCustomRegion },
+                'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
+              )}
+            />
+            {isLocatonInCustomRegion ? t('remove-from-custom-region') : t('add-to-custom-region')}
+          </button>
+          {hasSharedMarineArea && sharedMarineAreaCountries.length > 0 ? (
+            <span className="justify-left inline-flex w-full pb-2 text-left font-mono text-xs">
+              <AlertTriangle className="mr-2 h-4 w-4 pb-px" color="#d60909" />
+              <p className="text-overlapping-eez">{t('may-contain-overlapping-eez')}</p>
+            </span>
+          ) : null}
+        </>
       ) : null}
       <button
         type="button"

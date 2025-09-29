@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import { Check, XCircle } from 'lucide-react';
+import { AlertTriangle, Check, XCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import {
@@ -22,6 +22,10 @@ type LocationDropdownProps = {
   isCustomRegionTab: boolean;
   onSelected: (code: string) => void;
   dividerIndex?: number;
+  sharedMarineAreaCountries: {
+    code: string;
+    name: string;
+  }[];
 };
 
 enum LocationType {
@@ -39,6 +43,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   isCustomRegionTab,
   onSelected,
   dividerIndex,
+  sharedMarineAreaCountries,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
@@ -86,9 +91,16 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
               <CommandItem value={locationName} onSelect={() => onSelected(code)}>
                 <div className="flex w-full cursor-pointer justify-between gap-x-4">
                   <div className="flex text-base font-bold">
-                    {selectedLocation.has(code) && (
+                    {selectedLocation.has(code) ? (
                       <Selected className="relative top-1 mr-1 inline-block h-4 w-4 flex-shrink-0" />
-                    )}
+                    ) : !selectedLocation.has(code) &&
+                      sharedMarineAreaCountries.length > 0 &&
+                      attributes.has_shared_marine_area ? (
+                      <AlertTriangle
+                        color="#d60909"
+                        className="relative top-1 mr-1 inline-block h-4 w-4 flex-shrink-0"
+                      />
+                    ) : null}
                     {locationName}
                   </div>
                   <span className="flex flex-shrink-0 items-center font-mono text-xs capitalize text-gray-300">

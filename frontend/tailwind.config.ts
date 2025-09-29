@@ -35,6 +35,7 @@ const config: Config = {
         violet: '#AD6CFF',
         'gray-300': '#999999',
         red: '#F43F4C',
+        'overlapping-eez': '#d60909'
       },
       maxWidth: {
         screen: '100vw',

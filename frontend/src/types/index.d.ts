@@ -28,3 +28,8 @@ export interface ForwadedComponentWithMessages<P = NonNullable<unknown>>
   extends React.ForwardRefExoticComponent<P & RefAttributes<HTMLElement>> {
   messages?: Parameters<typeof useTranslations>[0][];
 }
+
+export type SharedMarineAreaCountries = {
+  slug: string;
+  name: string;
+}[];
