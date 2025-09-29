@@ -207,6 +207,7 @@ const SidebarDetails: FCWithMessages = () => {
           isCustomRegionActive={isCustomRegion}
           sharedMarineAreaCountries={sharedMarineAreaCountries}
           onChange={handleLocationSelected}
+          isTerrestrial={tab === 'terrestrial'}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}
         {areTerritoriesActive && sovereignCountries?.length ? t('claimed-by') : ''}

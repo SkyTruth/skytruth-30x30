@@ -46,6 +46,7 @@ type LocationSelectorProps = {
     name: string;
   }[];
   onChange: (locationCode: string) => void;
+  isTerrestrial: boolean;
 };
 
 const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
@@ -54,6 +55,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   isCustomRegionActive,
   sharedMarineAreaCountries,
   onChange,
+  isTerrestrial,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
@@ -294,7 +296,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         </Button>
       ) : null}
 
-      {isCustomRegionActive && sharedMarineAreaCountries.length > 1 ? (
+      {isCustomRegionActive && !isTerrestrial && sharedMarineAreaCountries.length > 1 ? (
         <Popover>
           <PopoverTrigger asChild>
             <Button

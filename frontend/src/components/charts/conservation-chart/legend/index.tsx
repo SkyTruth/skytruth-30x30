@@ -9,6 +9,7 @@ interface ChartLegendProps {
   target?: number;
   targetYear?: number;
   tooltipSlug: string;
+  displayProjections?: boolean;
 }
 
 const ChartLegend: FCWithMessages<ChartLegendProps> = ({
@@ -16,6 +17,7 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
   target,
   targetYear,
   tooltipSlug,
+  displayProjections,
 }) => {
   const t = useTranslations('components.chart-conservation');
   const locale = useLocale();
@@ -37,14 +39,18 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
 
   return (
     <div className="ml-8 mt-2 flex flex-wrap justify-between gap-3">
-      <span className="inline-flex items-center gap-3">
-        <span className="block w-10 border-b border-violet"></span>
-        <span>{t('historical-trend')}</span>
-      </span>
-      <span className="inline-flex items-center gap-3">
-        <span className="block w-10 border-b border-dashed border-violet"></span>
-        <span>{t('future-projection')}</span>
-      </span>
+      {displayProjections && (
+        <>
+          <span className="inline-flex items-center gap-3">
+            <span className="block w-10 border-b border-violet"></span>
+            <span>{t('historical-trend')}</span>
+          </span>
+          <span className="inline-flex items-center gap-3">
+            <span className="block w-10 border-b border-dashed border-violet"></span>
+            <span>{t('future-projection')}</span>
+          </span>
+        </>
+      )}
       {displayTarget && (
         <span className="inline-flex w-full items-center gap-3">
           <span className="block w-10 border-b border-dashed border-orange"></span>

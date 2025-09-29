@@ -111,6 +111,9 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
   // Calculate data for the historical line; first and active year are known, years in between
   // need to be extrapolated.
   const historicalLineData = useMemo(() => {
+    if (Number.isNaN(historicalDelta)) {
+      return [];
+    }
     const missingYearsArr =
       activeYearData.year === firstYearData.year
         ? []
@@ -138,6 +141,9 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
   // Calculate data for the projected line; we know the active and target years; extrapolate
   // the projection based on the historical data.
   const projectedLineData = useMemo(() => {
+    if (Number.isNaN(historicalDelta)) {
+      return [];
+    }
     const yearsArray = [...Array(TARGET_YEAR - activeYearData.year).keys()].map(
       (i) => i + activeYearData.year + 1
     );
@@ -303,6 +309,7 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
         target={target}
         targetYear={targetYear}
         tooltipSlug={tooltipSlug}
+        displayProjections={numHistoricalYears > 0}
       />
     </div>
   );
