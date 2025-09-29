@@ -225,7 +225,28 @@ def generate_protected_areas_table(
 
 
 def database_updates(current_db, updated_pas, verbose=True):
-    # TODO: Add DB index to parent/children
+    def normalize_value(v):
+        # match Pandas .astype(str) behavior: np.nan -> '<NA>'
+        if pd.isna(v):
+            return "<NA>"
+        return str(v)
+
+    def get_identifier(x, cols, current_db):
+        if not isinstance(x, dict):
+            return None
+
+        # build identifier in the same way as updated_pas["identifier"]
+        identifier = "_".join(normalize_value(x.get(c)) for c in cols)
+
+        match = current_db.loc[current_db["identifier"] == identifier, "id"]
+        _id = int(match.iloc[0]) if not match.empty else None
+
+        return {**x, "id": _id}
+
+    def get_identifier_children(children, cols, current_db):
+        if not isinstance(children, list):
+            return None
+        return [get_identifier(child, cols, current_db) for child in children]
 
     def str_dif_idx(df1, df2, col):
         return (~df2[col].isnull()) & (df2[col] != df1[col])
@@ -241,6 +262,19 @@ def database_updates(current_db, updated_pas, verbose=True):
         both_na = p1.isna() & p2.isna()
         dif = p1.ne(p2)
         return (~both_na) & dif
+
+    # Create unique identifier and attach to the current and updated PAs for comparison
+    cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id"]
+    updated_pas["identifier"] = updated_pas[cols_for_id].astype(str).agg("_".join, axis=1)
+    current_db["identifier"] = current_db[cols_for_id].astype(str).agg("_".join, axis=1)
+
+    # Add identifier to parent/children
+    updated_pas["parent"] = updated_pas["parent"].apply(
+        get_identifier, args=(cols_for_id, current_db)
+    )
+    updated_pas["children"] = updated_pas["children"].apply(
+        get_identifier_children, args=(cols_for_id, current_db)
+    )
 
     new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
     deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
@@ -260,17 +294,22 @@ def database_updates(current_db, updated_pas, verbose=True):
         static_updated, current_db[["identifier", "id"]], on="identifier", how="left"
     )
 
-    # Find indices where one of the priority columns has significantly changed
-    change_indx = (
-        str_dif_idx(static_current, static_updated, "designation")
-        | str_dif_idx(static_current, static_updated, "mpaa_establishment_stage")
-        | str_dif_idx(static_current, static_updated, "mpaa_protection_level")
-        | str_dif_idx(static_current, static_updated, "iucn_category")
-        | area_dif_idx(static_current, static_updated)
-        | list_dict_dif_idx(static_current, static_updated, "parent")
-        | list_dict_dif_idx(static_current, static_updated, "children")
-    )
+    # specify which columns get which comparison
+    string_cols = list(set(updated_pas.columns) - set(["children", "parent", "area", "bbox"]))
+    list_cols = ["parent", "children"]
 
+    # build up combined mask
+    change_indx = pd.Series(False, index=static_current.index)
+
+    for col in string_cols:
+        change_indx |= str_dif_idx(static_current, static_updated, col)
+
+    for col in list_cols:
+        change_indx |= list_dict_dif_idx(static_current, static_updated, col)
+
+    change_indx |= area_dif_idx(static_current, static_updated)
+
+    # Updated version of changed entries
     changed = static_updated[change_indx]
 
     if verbose:
@@ -302,12 +341,6 @@ def update_protected_areas_table(
     current_db = get_pas()
     current_db_df = pd.DataFrame(current_db)
     current_db_df = current_db_df.rename(columns={"wdpaid": "wdpa_id", "wdpa_p_id": "wdpa_pid"})
-
-    # TODO: Do we want to have an identifier as a string of the 3-4 identifiers?
-    # This is mainly for what to pass into delete_pas
-    cols_for_id = ["environment", "wdpa_id", "wdpa_pid", "zone_id"]
-    updated_pas["identifier"] = updated_pas[cols_for_id].astype(str).agg("_".join, axis=1)
-    current_db_df["identifier"] = current_db_df[cols_for_id].astype(str).agg("_".join, axis=1)
 
     db_changes = database_updates(current_db, updated_pas, verbose=verbose)
 
