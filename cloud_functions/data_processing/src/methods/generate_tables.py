@@ -58,6 +58,7 @@ from src.core.processors import (
     rename_habitats,
     update_mpatlas_asterisk,
 )
+from src.core.strapi import Strapi
 from src.methods.marine_habitats import process_marine_habitats
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
@@ -76,20 +77,22 @@ def generate_protected_areas_table(
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
-    def add_parent_children(subset: pd.DataFrame) -> pd.DataFrame:
+    def add_parent_children(
+        subset: pd.DataFrame, fields=["wdpa_id", "wdpa_pid", "zone_id"]
+    ) -> pd.DataFrame:
         """
         Reorder rows by priority, then set the first row as parent and the rest as children.
         Priority (lower is earlier):
-          0: data_source=='Protected Planet' & wdpa_id==wdpa_pid
-          1: data_source=='Protected Planet'
-          2: data_source=='MPATLAS' & wdpa_id==wdpa_pid
-          3: all others
+            0: data_source=='Protected Planet' & wdpa_id==wdpa_pid
+            1: data_source=='Protected Planet'
+            2: data_source=='MPATLAS' & wdpa_id==wdpa_pid
+            3: all others
         """
         if subset.empty:
             return subset
 
         # Priority lists
-        same_id = subset["wdpa_id"].values == subset["wdpa_pid"].values
+        same_id = subset["wdpaid"].values == subset["wdpa_p_id"].values
         data_source_pp = subset["data_source"].values == "Protected Planet"
         data_source_mp = subset["data_source"].values == "MPATLAS"
 
@@ -112,7 +115,6 @@ def generate_protected_areas_table(
 
         if len(ordered) > 1:
             # create parent and list of children
-            fields = ["wdpa_id", "wdpa_pid", "zone_id"]
             parent_dict = ordered.iloc[0][fields].to_dict()
             children_list = ordered.iloc[1:][fields].to_dict("records")
 
@@ -377,9 +379,12 @@ def update_protected_areas_table(
         print("downloading current PA database")
     current_db = get_pas()
     current_db_df = pd.DataFrame(current_db)
-    current_db_df = current_db_df.rename(columns={"wdpaid": "wdpa_id", "wdpa_p_id": "wdpa_pid"})
 
-    db_changes = database_updates(current_db, updated_pas, verbose=verbose)
+    db_changes = database_updates(current_db_df, updated_pas, verbose=verbose)
+
+    strapi = Strapi()
+    strapi.upsert_pas(db_changes["new"] + db_changes["changed"])
+    strapi.delete_pas(db_changes["deleted"])
 
     return db_changes
 
