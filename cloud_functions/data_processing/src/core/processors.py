@@ -165,6 +165,27 @@ def add_year(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def calculate_area(
+    gdf: gpd.GeoDataFrame, output_area_column="area_km2", round: None | int = 2
+) -> gpd.GeoDataFrame:
+    """
+    Calculate polygon area in square kilometers and add it as a column.
+
+    Args:
+        gdf (gpd.GeoDataFrame): Input GeoDataFrame with a geometry column.
+        output_area_column (str, optional): Name of the new area column. Defaults to "area_km2".
+        round (int | None, optional): Decimal places to round the result. If None, no rounding.
+        Defaults to 2.
+
+    Returns:
+        gpd.GeoDataFrame: Copy of the input GeoDataFrame with the area column added.
+    """
+    col = gdf.geometry.to_crs("ESRI:53009").area / 1e6  # convert to km2
+    if round:
+        col = col.round(round)
+    return gdf.assign(**{output_area_column: col})
+
+
 def clean_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Make geometries valid (fix self-intersections, etc.).
