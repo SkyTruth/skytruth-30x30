@@ -43,7 +43,6 @@ type LocationSelectorProps = {
   size?: 'default' | 'small';
   isCustomRegionActive: boolean;
   hasSharedMarineAreaCountries: string[];
-  isShrunk: boolean;
   onChange: (locationCode: string) => void;
 };
 
@@ -52,7 +51,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   theme,
   size = 'default',
   isCustomRegionActive,
-  isShrunk,
   hasSharedMarineAreaCountries,
   onChange,
 }) => {
@@ -75,6 +73,9 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
+
+  // TODO TECH-3233 Clean up
+  const isCustomRegionEnabled = useFeatureFlag('is_custom_region_active');
 
   const locationNameField = useMemo(() => {
     let res = 'name';
@@ -148,9 +149,18 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       }
       handleLocationSelected(CUSTOM_REGION_CODE);
     } else {
+      if (locationsFilter === 'customRegion') {
+        setLocationsFilter('all');
+      }
       handleLocationSelected(prevLocation.current);
     }
-  }, [isCustomRegionActive, prevLocation, handleLocationSelected, currentLocation]);
+  }, [
+    isCustomRegionActive,
+    prevLocation,
+    handleLocationSelected,
+    currentLocation,
+    locationsFilter,
+  ]);
 
   const reorderedLocations = useMemo(() => {
     const globalLocation = locationsData.find(({ attributes }) => attributes.type === 'worldwide');
@@ -208,14 +218,11 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   }, [locationsFilter, reorderedLocations, areTerritoriesActive, customRegionLocations, t]);
 
   return (
-    <div className={cn('flex gap-4 gap-y-0', className, 'grid grid-cols-2')}>
+    <div className={cn('flex gap-4 gap-y-2', className, 'grid grid-cols-2')}>
       <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
-            className={cn(
-              { [BUTTON_CLASSES]: true, 'h-auto py-0': size === 'small' },
-              'justify-start'
-            )}
+            className={cn({ [BUTTON_CLASSES]: true }, 'h-auto justify-start py-0')}
             type="button"
             variant="text-link"
           >
@@ -256,7 +263,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       </Popover>
       {locationCode !== 'GLOB' && (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true, 'h-auto py-0': true }, 'justify-start')}
+          className={cn({ [BUTTON_CLASSES]: true }, 'h-auto justify-start py-0')}
           type="button"
           variant="text-link"
           onClick={() => handleLocationSelected('GLOB')}
@@ -265,29 +272,25 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           {t('global-view')}
         </Button>
       )}
-      <Button
-        className={cn(
-          {
-            [BUTTON_CLASSES]: true,
-            'py-2': isShrunk,
-            'py-0': !isShrunk,
-          },
-          'col-start-1 h-auto justify-start pb-2'
-        )}
-        type="button"
-        variant="text-link"
-        onClick={handleToggleCustomRegion}
-      >
-        <PlusCircle
-          className={cn(
-            {
-              'rotate-45': isCustomRegionActive,
-            },
-            'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
-          )}
-        />
-        {isCustomRegionActive ? t('close-custom-region') : t('create-custom-region')}
-      </Button>
+      {/* TODO TECH-3233: Clean up */}
+      {isCustomRegionEnabled ? (
+        <Button
+          className={cn({ [BUTTON_CLASSES]: true }, 'col-start-1 h-auto justify-start py-0')}
+          type="button"
+          variant="text-link"
+          onClick={handleToggleCustomRegion}
+        >
+          <PlusCircle
+            className={cn(
+              {
+                'rotate-45': isCustomRegionActive,
+              },
+              'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
+            )}
+          />
+          {isCustomRegionActive ? t('close-custom-region') : t('create-custom-region')}
+        </Button>
+      ) : null}
 
       {isCustomRegionActive && hasSharedMarineAreaCountries.length ? (
         <Popover>
@@ -296,8 +299,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             className={cn(
               {
                 [BUTTON_CLASSES]: true,
-                'py-2': isShrunk,
-                'py-0': !isShrunk,
+                'py-2': size === 'small',
+                'py-0': size !== 'small',
               },
               'col-start-2 h-auto justify-start pb-2'
             )}

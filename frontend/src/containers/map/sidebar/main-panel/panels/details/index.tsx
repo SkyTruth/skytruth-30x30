@@ -198,7 +198,6 @@ const SidebarDetails: FCWithMessages = () => {
           theme="orange"
           size={containerScroll > 0 ? 'small' : 'default'}
           isCustomRegionActive={isCustomRegion}
-          isShrunk={containerScroll > 0}
           hasSharedMarineAreaCountries={hasSharedMarineAreaCountries}
           onChange={handleLocationSelected}
         />
