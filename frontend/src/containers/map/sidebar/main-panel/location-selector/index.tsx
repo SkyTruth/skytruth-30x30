@@ -47,7 +47,6 @@ type LocationSelectorProps = {
   }[];
   onChange: (locationCode: string) => void;
   isTerrestrial: boolean;
-  size: 'small' | 'default';
 };
 
 const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
@@ -57,7 +56,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   sharedMarineAreaCountries,
   onChange,
   isTerrestrial,
-  size = 'default'
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
@@ -226,11 +224,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     <div className={cn('flex gap-2 gap-y-2', className, 'grid grid-cols-2')}>
       <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
         <PopoverTrigger asChild>
-          <Button
-            className={cn({ [BUTTON_CLASSES]: true })}
-            type="button"
-            variant="text-link"
-          >
+          <Button className={cn({ [BUTTON_CLASSES]: true })} type="button" variant="text-link">
             <Icon icon={MagnifyingGlassIcon} className="mr-2 h-4 w-4 pb-px" />
             {t('change-location')}
           </Button>
@@ -301,12 +295,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       {isCustomRegionActive && !isTerrestrial && sharedMarineAreaCountries.length > 1 ? (
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              className={cn({ [BUTTON_CLASSES]: true })}
-              type="button"
-              variant="text-link"
-            >
-              <AlertTriangle size={size === 'small' ? '16' : '24'} className="mr-2 max-h-4 pb-px" />
+            <Button className={cn({ [BUTTON_CLASSES]: true })} type="button" variant="text-link">
+              <AlertTriangle className="mr-2 max-h-4 w-auto min-w-4 pb-px" />
               {t('overlapping-eez')}
             </Button>
           </PopoverTrigger>

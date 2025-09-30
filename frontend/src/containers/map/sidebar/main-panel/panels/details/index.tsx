@@ -207,7 +207,6 @@ const SidebarDetails: FCWithMessages = () => {
           sharedMarineAreaCountries={sharedMarineAreaCountries}
           onChange={handleLocationSelected}
           isTerrestrial={tab === 'terrestrial'}
-          size={containerScroll > 0 && 'size'}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}
         {areTerritoriesActive && sovereignCountries?.length ? t('claimed-by') : ''}
