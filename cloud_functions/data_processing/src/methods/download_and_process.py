@@ -100,7 +100,7 @@ def download_mpatlas(
     )
 
     if verbose:
-        print(f"saving metadata to {meta_file_name}")
+        print(f"loading MPAtlas from {mpatlas_filename}")
     mpa = read_json_from_gcs(bucket, mpatlas_filename)
 
     mpa_all = gpd.GeoDataFrame(
@@ -113,12 +113,18 @@ def download_mpatlas(
     )
 
     # add area column
+    if verbose:
+        print("calculating MPA area (calculated_area_km2)")
     mpa_all = calculate_area(mpa_all, output_area_column="calculated_area_km2")
 
     # add bounding box column
+    if verbose:
+        print("calculating MPA bounding box (bbox)")
     mpa_all["bbox"] = mpa_all.geometry.apply(lambda g: g.bounds if g is not None else None)
 
     # Upload metadata (no geometry)
+    if verbose:
+        print(f"saving metadata to {meta_file_name}")
     upload_dataframe(
         bucket,
         mpa_all.drop(columns="geometry"),
