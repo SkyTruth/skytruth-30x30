@@ -138,17 +138,16 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const chartData = useMemo(() => {
     if (!aggregatedData.length) return [];
 
-    const data = aggregatedData.reduce((acc, entry, index) => {
+    const data = aggregatedData.reduce((acc, entry) => {
       if (entry.locations.length < mostLocsByYear.length) return acc;
 
-      const isLastYear = index + 1 === aggregatedData.length;
       const { year, protectedArea, coverage } = entry;
       const percentage = coverage ?? (protectedArea * 100) / Number(entry.totalArea);
 
       acc.push({
         percentage,
         year,
-        active: isLastYear,
+        active: false,
         totalArea: Number(entry.totalArea),
         protectedArea,
         future: false,
@@ -156,7 +155,9 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
       return acc;
     }, []);
-
+    if (data.length) {
+      data[data.length - 1].active = true;
+    }
     return data;
   }, [aggregatedData, mostLocsByYear]);
 
