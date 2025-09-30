@@ -88,7 +88,6 @@ const GlobalRegionalTable: FCWithMessages = () => {
 
     return (
       <Table
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         columns={newColumns}
         data={newData}
@@ -103,7 +102,6 @@ const GlobalRegionalTable: FCWithMessages = () => {
 
   return (
     <Table
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       columns={columns}
       data={data}

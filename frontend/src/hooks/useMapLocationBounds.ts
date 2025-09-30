@@ -30,7 +30,6 @@ export default function useMapLocationBounds() {
   const { data, isFetching } = useGetLocations<Location>(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['marine_bounds', 'terrestrial_bounds'],
       filters: {
@@ -66,7 +65,7 @@ export default function useMapLocationBounds() {
         locationBounds = terrestrial_bounds as CustomMapProps['bounds']['bbox'];
       } else if (tab === 'marine') {
         locationBounds = marine_bounds as CustomMapProps['bounds']['bbox'];
-      } else if (terrestrial_bounds !== undefined || marine_bounds !== undefined) {
+      } else if (terrestrial_bounds || marine_bounds) {
         locationBounds = combineBoundingBoxes(
           // Falling back to the marine bounds because some locations don't have terrestrial bounds
           // e.g. ABJN and Gibraltar

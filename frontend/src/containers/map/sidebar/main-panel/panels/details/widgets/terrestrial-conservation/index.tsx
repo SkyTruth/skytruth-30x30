@@ -18,6 +18,8 @@ import type {
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
 
+import MissingCountriesList from '../widget-alerts/MissingCountriesList';
+
 type TerrestrialConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
 };
@@ -32,7 +34,9 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   const [customRegionLocations] = useSyncCustomRegion();
 
   const locations =
-    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+    location.code === CUSTOM_REGION_CODE && customRegionLocations
+      ? [...customRegionLocations].join(',')
+      : location.code;
 
   const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {
@@ -56,8 +60,16 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
       protectedArea: data[data.length - 1].protected_area,
       coverage: data[data.length - 1].coverage,
       totalArea: Number(data[data.length - 1]?.total_area ?? location.total_terrestrial_area),
+      locations: data[data.length - 1].locations,
     };
   }, [data, location]);
+
+  const missingLocations = useMemo(() => {
+    const included = new Set(aggregatedData?.locations ?? []);
+    const total = new Set(locations.split(','));
+
+    return [...total.difference(included)];
+  }, [aggregatedData, locations]);
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -150,6 +162,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
           </span>
         </Button>
       )}
+      <MissingCountriesList countries={missingLocations} />
     </Widget>
   );
 };

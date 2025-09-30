@@ -14,7 +14,10 @@ import HeaderItem from '@/containers/map/content/details/table/header-item';
 import { cellFormatter } from '@/containers/map/content/details/table/helpers';
 import SortingButton from '@/containers/map/content/details/table/sorting-button';
 import TooltipButton from '@/containers/map/content/details/table/tooltip-button';
-import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
+import {
+  useMapSearchParams,
+  useSyncCustomRegion,
+} from '@/containers/map/content/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
@@ -107,7 +110,6 @@ const useFiltersOptions = () => {
   const { data: environmentOptions } = useGetEnvironments<{ name: string; value: string }[]>(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
       'pagination[limit]': -1,
@@ -341,6 +343,8 @@ export const useData = (
   pagination: PaginationState
 ) => {
   const locale = useLocale();
+  const [customRegionLocations] = useSyncCustomRegion();
+
   // TODO TECH-3174: Clean up,
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
@@ -374,6 +378,14 @@ export const useData = (
     };
   }, [areTerritoriesActive, locationCode]);
 
+  const customRegionLocationFilter = useMemo(() => {
+    return {
+      code: {
+        $in: customRegionLocations?.size ? [...customRegionLocations] : [''],
+      },
+    };
+  }, [customRegionLocations]);
+
   const {
     data: locationType,
     isSuccess: isLocationSuccess,
@@ -382,7 +394,6 @@ export const useData = (
   } = useGetLocations<string>(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['type'],
       filters: {
@@ -412,10 +423,8 @@ export const useData = (
     [GlobalRegionalTableColumns[], ProtectionCoverageStatListResponseMetaPagination]
   >(
     {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['coverage', 'protected_area', 'pas', 'oecms', 'global_contribution'],
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
         location: {
@@ -452,11 +461,13 @@ export const useData = (
         location: {
           ...(locationType === 'region'
             ? regionLocationFilter
-            : {
-                type: {
-                  $in: ['country', 'highseas'],
-                },
-              }),
+            : locationType === 'custom_region'
+              ? customRegionLocationFilter
+              : {
+                  type: {
+                    $in: ['country', 'highseas'],
+                  },
+                }),
         },
         is_last_year: {
           $eq: true,

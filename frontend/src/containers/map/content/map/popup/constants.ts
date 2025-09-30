@@ -99,3 +99,5 @@ export const POPUP_BUTTON_CONTENT_BY_SOURCE = {
   countries: 'open-country-insights',
   'gadm-regions': 'open-region-insights',
 };
+
+export const CUSTOM_REGION_ELIGABILITY_BY_SOURCE = new Set(['countries', EEZ_SOURCE]);

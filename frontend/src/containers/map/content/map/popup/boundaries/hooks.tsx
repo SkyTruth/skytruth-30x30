@@ -13,6 +13,7 @@ export type FormattedStat = {
   percentage: string;
   protectedArea: number;
   totalArea: number;
+  hasSharedMarineArea: boolean;
 };
 
 const useFormattedStats = (
@@ -58,7 +59,13 @@ const useFormattedStats = (
       // @ts-expect-error
       populate: {
         location: {
-          fields: [nameField, 'code', 'total_marine_area', 'total_terrestrial_area'],
+          fields: [
+            nameField,
+            'code',
+            'total_marine_area',
+            'total_terrestrial_area',
+            'has_shared_marine_area',
+          ],
         },
       },
       // @ts-expect-error
@@ -79,6 +86,8 @@ const useFormattedStats = (
         const iso = item?.attributes?.location?.data?.attributes?.['code'] ?? locationCodes[idx];
         const location = item?.attributes?.location?.data?.attributes?.[nameField ?? iso];
         const coverage = item?.attributes?.coverage;
+        const hasSharedMarineArea =
+          item?.attributes?.location?.data?.attributes?.has_shared_marine_area;
         const percentage =
           coverage !== null && coverage !== undefined
             ? formatPercentage(locale, coverage, {
@@ -104,6 +113,7 @@ const useFormattedStats = (
           percentage,
           protectedArea,
           totalArea,
+          hasSharedMarineArea,
         };
       });
 

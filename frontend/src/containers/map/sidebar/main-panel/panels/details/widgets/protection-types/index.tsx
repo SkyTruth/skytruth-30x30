@@ -12,6 +12,8 @@ import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type { AggregatedStats, AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
 
+import MissingCountriesList from '../widget-alerts/MissingCountriesList';
+
 type ProtectionTypesWidgetProps = {
   location: string;
 };
@@ -22,7 +24,10 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
 
   const [customRegionLocations] = useSyncCustomRegion();
 
-  const locations = location === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location;
+  const locations =
+    location === CUSTOM_REGION_CODE && customRegionLocations
+      ? [...customRegionLocations].join(',')
+      : location;
 
   const { data: protectionLevelData, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {
@@ -66,6 +71,13 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
       },
     }
   );
+
+  const missingLocations = useMemo(() => {
+    const allLocations = new Set(locations.split(','));
+    const includedLocaitons = new Set(protectionLevelData[0]?.locations);
+
+    return [...allLocations.difference(includedLocaitons)];
+  }, [locations, protectionLevelData]);
 
   // Go through all the relevant stats, find the last updated one's value
   const lastUpdated = useMemo(() => {
@@ -121,6 +133,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
           data={chartData}
         />
       ))}
+      <MissingCountriesList countries={missingLocations} />
     </Widget>
   );
 };

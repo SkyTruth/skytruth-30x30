@@ -45,8 +45,8 @@ export default () => ({
           [subFieldName]: {
           populate: {
             localizations: {
-          filters: { locale },             // ← ask for the sibling in the desired locale
-          fields: ['id', 'slug', 'locale'] // optional
+          filters: { locale },
+          fields: ['id', 'slug', 'locale']
       }
           }
         },
@@ -56,6 +56,7 @@ export default () => ({
 
       const aggregatedStats = stats.reduce<Record<string, AggregatedStats>>((acc, stat) => {
         const location = stat.location.code;
+        const hasSharedMarineArea = stat.location.has_shared_marine_area;
         const environment = stat?.environment?.slug;
         const year = stat?.year;
         const sub = {
@@ -83,6 +84,7 @@ export default () => ({
             total_area: 0,
             protected_area: 0,
             locations: [],
+            hasSharedMarineArea: false,
             coverage: 0,
             updatedAt: null
           };
@@ -93,6 +95,7 @@ export default () => ({
         acc[recordKey].coverage = 
         (acc[recordKey].protected_area / acc[recordKey].total_area) * 100;
         acc[recordKey].locations.push(location);
+        acc[recordKey].hasSharedMarineArea ||= hasSharedMarineArea;
         acc[recordKey].updatedAt = 
           acc[recordKey].updatedAt && new Date(acc[recordKey].updatedAt) > new Date(stat.updatedAt)
            ? acc[recordKey].updatedAt : stat.updatedAt

@@ -27,6 +27,7 @@ type LocationTypeToggleProps = VariantProps<typeof toggleVariants> & {
   defaultValue: keyof typeof FILTERS;
   value: keyof typeof FILTERS;
   onChange: (value: keyof typeof FILTERS) => void;
+  isCustomRegionActive: boolean;
 };
 
 const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
@@ -35,6 +36,7 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
   defaultValue,
   value,
   onChange,
+  isCustomRegionActive,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
@@ -42,7 +44,11 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
     <ToggleGroup.Root
       className={cn(
         className,
-        'grid w-full grid-cols-3 items-center justify-center border border-black'
+        {
+          'grid-cols-4': isCustomRegionActive,
+          'grid-cols-3': !isCustomRegionActive,
+        },
+        'grid w-full items-center justify-center border border-black'
       )}
       type="single"
       defaultValue={defaultValue}
@@ -53,23 +59,36 @@ const LocationTypeToggle: FCWithMessages<LocationTypeToggleProps> = ({
         onChange(value);
       }}
     >
-      <ToggleGroup.Item className={toggleVariants({ theme })} value="all" aria-label={t('all')}>
+      <ToggleGroup.Item
+        className={cn(toggleVariants({ theme }), { 'text-[.65rem]': isCustomRegionActive })}
+        value="all"
+        aria-label={t('all')}
+      >
         {t('all')}
       </ToggleGroup.Item>
       <ToggleGroup.Item
-        className={toggleVariants({ theme })}
+        className={cn(toggleVariants({ theme }), { 'text-[.65rem]': isCustomRegionActive })}
         value="country"
         aria-label={t('countries')}
       >
         {t('countries')}
       </ToggleGroup.Item>
       <ToggleGroup.Item
-        className={toggleVariants({ theme })}
+        className={cn(toggleVariants({ theme }), { 'text-[.65rem]': isCustomRegionActive })}
         value="regionsHighseas"
         aria-label={t('regions-and-high-seas')}
       >
         {t('regions-and-high-seas')}
       </ToggleGroup.Item>
+      {isCustomRegionActive ? (
+        <ToggleGroup.Item
+          className={cn(toggleVariants({ theme }), { 'text-[.65rem]': isCustomRegionActive })}
+          value="customRegion"
+          aria-label={t('custom-region')}
+        >
+          {t('custom-region')}
+        </ToggleGroup.Item>
+      ) : null}
     </ToggleGroup.Root>
   );
 };

@@ -18,6 +18,7 @@ export type AggregatedStats = {
   coverage: number,
   protected_area: number,
   locations: string[],
+  hasSharedMarineArea: boolean;
   total_area: number,
   updatedAt: string,
   environment?: string,

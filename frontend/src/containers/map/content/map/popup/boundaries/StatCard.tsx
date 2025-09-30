@@ -1,28 +1,65 @@
-import { FC } from 'react';
+import { FC, useCallback } from 'react';
 
+import { useRouter } from 'next/router';
+
+import { useAtom } from 'jotai';
+import { AlertTriangle, PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
+import { cn } from '@/lib/classnames';
 import { formatKM } from '@/lib/utils/formats';
 
-import { POPUP_BUTTON_CONTENT_BY_SOURCE } from '../constants';
+import { useSyncCustomRegion } from '../../sync-settings';
+import { POPUP_BUTTON_CONTENT_BY_SOURCE, CUSTOM_REGION_ELIGABILITY_BY_SOURCE } from '../constants';
 
 import type { FormattedStat } from './hooks';
-
 interface StatCardProps {
   environment: string;
   formattedStat: FormattedStat;
   handleLocationSelected: (iso: string) => void;
-  source: string;
+  source: { [key: string]: string };
 }
 
 const StatCard: FC<StatCardProps> = ({
   environment,
-  formattedStat,
+  formattedStat: { iso, percentage, protectedArea, totalArea, hasSharedMarineArea },
   handleLocationSelected,
   source,
 }) => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
+  const {
+    query: { locationCode = 'GLOB' },
+  } = useRouter();
+
+  const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
+  const [sharedMarineAreaCountries] = useAtom(sharedMarineAreaCountriesAtom);
+
+  const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
+  const isCustomRegionActive =
+    CUSTOM_REGION_CODE === code && CUSTOM_REGION_ELIGABILITY_BY_SOURCE.has(source.id);
+
+  const handleAddToCustomRegion = useCallback(
+    (code: string) => {
+      const newLocs = new Set(customRegionLocations);
+      newLocs.add(code);
+      setCustomRegionLocations(newLocs);
+    },
+    [setCustomRegionLocations, customRegionLocations]
+  );
+
+  const handleRemoveFromCustomRegion = useCallback(
+    (code: string) => {
+      const newLocs = new Set(customRegionLocations);
+      newLocs.delete(code);
+      setCustomRegionLocations(new Set(newLocs));
+    },
+    [setCustomRegionLocations, customRegionLocations]
+  );
+
+  const isLocatonInCustomRegion = customRegionLocations?.has(iso);
 
   return (
     <>
@@ -33,28 +70,56 @@ const StatCard: FC<StatCardProps> = ({
             : t('terrestrial-conservation-coverage')}
         </div>
         <div className="space-x-1 font-mono tracking-tighter text-black">
-          {formattedStat.percentage !== '-' &&
+          {percentage !== '-' &&
             t.rich('percentage-bold', {
-              percentage: formattedStat.percentage,
+              percentage: percentage,
               b1: (chunks) => <span className="text-[32px] font-bold leading-none">{chunks}</span>,
               b2: (chunks) => <span className="text-lg">{chunks}</span>,
             })}
-          {formattedStat.percentage === '-' && (
-            <span className="text-xl font-bold leading-none">{formattedStat.percentage}</span>
+          {percentage === '-' && (
+            <span className="text-xl font-bold leading-none">{percentage}</span>
           )}
         </div>
         <div className="space-x-1 font-mono font-medium text-black">
           {t.rich('protected-area', {
             br: () => <br />,
-            protectedArea: formattedStat.protectedArea,
-            totalArea: formatKM(locale, Number(formattedStat.totalArea)),
+            protectedArea: protectedArea,
+            totalArea: formatKM(locale, Number(totalArea)),
           })}
         </div>
       </div>
+      {isCustomRegionActive && !iso.endsWith('*') ? (
+        <>
+          <button
+            className="justify-left inline-flex w-full py-1 text-left font-mono text-xs"
+            onClick={
+              isLocatonInCustomRegion
+                ? () => handleRemoveFromCustomRegion(iso)
+                : () => handleAddToCustomRegion(iso)
+            }
+          >
+            <PlusCircle
+              className={cn(
+                { 'rotate-45': isLocatonInCustomRegion },
+                'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
+              )}
+            />
+            {isLocatonInCustomRegion ? t('remove-from-custom-region') : t('add-to-custom-region')}
+          </button>
+          {hasSharedMarineArea &&
+          source?.id === 'eez-countries-source' &&
+          sharedMarineAreaCountries.length > 0 ? (
+            <span className="justify-left inline-flex w-full pb-2 text-left font-mono text-xs">
+              <AlertTriangle className="mr-2 h-4 w-4 pb-px" color="#d60909" />
+              <p className="text-overlapping-eez">{t('may-contain-overlapping-eez')}</p>
+            </span>
+          ) : null}
+        </>
+      ) : null}
       <button
         type="button"
-        className="mt-3 block w-full border border-black px-4 py-2.5 text-center font-mono text-xs"
-        onClick={() => handleLocationSelected(formattedStat.iso)}
+        className="block w-full border border-black px-4 py-2.5 text-center font-mono text-xs"
+        onClick={() => handleLocationSelected(iso)}
       >
         {t(POPUP_BUTTON_CONTENT_BY_SOURCE[source?.['id']])}
       </button>

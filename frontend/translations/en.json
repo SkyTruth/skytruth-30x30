@@ -140,6 +140,7 @@
       "all": "All",
       "countries": "Countries",
       "regions-and-high-seas": "Regions & High Seas",
+      "custom-region": "Custom Region",
       "no-result": "No result",
       "view-all-countries": "View all countries",
       "hide-some-countries": "Hide some countries",
@@ -185,13 +186,21 @@
       "not-assessed": "Not assessed",
       "data-disclaimer": "Data disclaimer",
       "claimed-by": "Claimed By",
-      "related-countries": "Related Countries",
+      "includes": "Includes",
       "territory-of": "Territory of",
       "also-claimed-by": "also claimed by",
       "country": "Country",
       "region": "Region",
       "highseas": "High Seas",
-      "worldwide": "Worldwide"
+      "worldwide": "Worldwide",
+      "create-custom-region": "Create a custom region",
+      "close-custom-region": "Close custom region",
+      "empty-custom-region": "Add countries to your Custom Region by selecting them on the map and clicking the <addIcon></addIcon> icon, or by clicking on <searchIcon></searchIcon> Change Location and choosing from the list of countries in the Custom Region tab.",
+      "add-country-custom-region": "Add Countries to Your Custom Region to See Stats",
+      "clear-all": "Clear All",
+      "no-data-for": "No data for",
+      "overlapping-eez-explainer": "The following countries in your Custom Region have some overlapping EEZ boundaries with at least one other country. This could mean that some statistics are double counted:",
+      "overlapping-eez": "Overlapping EEZs"
     },
     "map-sidebar-layers-panel": {
       "map-layers": "Map Layers",
@@ -262,7 +271,10 @@
       "page-number": "<a>Page</a> {number}",
       "collapse-sub-rows": "Collapse sub-rows",
       "expand-sub-rows": "Expand sub-rows",
-      "eez-multi-claim": "EEZ claimed by multiple countries"
+      "eez-multi-claim": "EEZ claimed by multiple countries",
+      "add-to-custom-region": "Add to Custom Region",
+      "remove-from-custom-region": "Remove from Custom Region",
+      "may-contain-overlapping-eez": "May contain overlapping EEZ"
     }
   },
   "components": {
