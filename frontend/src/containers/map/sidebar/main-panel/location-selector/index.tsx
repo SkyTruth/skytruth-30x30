@@ -35,7 +35,7 @@ export const FILTERS = {
 };
 
 const BUTTON_CLASSES =
-  'font-mono text-xs font-semibold no-underline normal-case ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all px-0';
+  'font-mono text-xs font-semibold no-underline normal-case ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all px-0 text-left h-auto justify-start py-0';
 
 type LocationSelectorProps = {
   className?: HTMLDivElement['className'];
@@ -47,15 +47,17 @@ type LocationSelectorProps = {
   }[];
   onChange: (locationCode: string) => void;
   isTerrestrial: boolean;
+  size: 'small' | 'default';
 };
 
 const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
-  className,
+  className = '',
   theme,
   isCustomRegionActive,
   sharedMarineAreaCountries,
   onChange,
   isTerrestrial,
+  size = 'default'
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
@@ -221,11 +223,11 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   }, [locationsFilter, reorderedLocations, areTerritoriesActive, customRegionLocations, t]);
 
   return (
-    <div className={cn('flex gap-4 gap-y-2', className, 'grid grid-cols-2')}>
+    <div className={cn('flex gap-2 gap-y-2', className, 'grid grid-cols-2')}>
       <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
-            className={cn({ [BUTTON_CLASSES]: true }, 'h-auto justify-start py-0')}
+            className={cn({ [BUTTON_CLASSES]: true })}
             type="button"
             variant="text-link"
           >
@@ -267,7 +269,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       </Popover>
       {locationCode !== 'GLOB' && (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true }, 'h-auto justify-start py-0')}
+          className={cn({ [BUTTON_CLASSES]: true })}
           type="button"
           variant="text-link"
           onClick={() => handleLocationSelected('GLOB')}
@@ -279,7 +281,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       {/* TODO TECH-3233: Clean up */}
       {isCustomRegionEnabled ? (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true }, 'col-start-1 h-auto justify-start py-0')}
+          className={cn({ [BUTTON_CLASSES]: true }, 'col-start-1')}
           type="button"
           variant="text-link"
           onClick={handleToggleCustomRegion}
@@ -300,11 +302,11 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         <Popover>
           <PopoverTrigger asChild>
             <Button
-              className={cn({ [BUTTON_CLASSES]: true }, 'h-auto justify-start py-0')}
+              className={cn({ [BUTTON_CLASSES]: true })}
               type="button"
               variant="text-link"
             >
-              <AlertTriangle className="mr-2 h-4 w-4 pb-px" />
+              <AlertTriangle size={size === 'small' ? '16' : '24'} className="mr-2 max-h-4 pb-px" />
               {t('overlapping-eez')}
             </Button>
           </PopoverTrigger>
