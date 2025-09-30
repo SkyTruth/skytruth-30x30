@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import requests
 from shapely.geometry import MultiPoint, Point, shape
-
-from tqdm.auto import tqdm
 import zipfile
 
 from src.core.commons import (
@@ -64,46 +62,6 @@ def download_mpatlas_country(
 
     upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
-
-
-def download_mpatlas_zone_from_api(mpa_api_url: str = "https://guide.mpatlas.org/api/v2/zone/"):
-    """
-    Downloads the MPAtlas Zone Assessment dataset - this is hopefully
-    a temporary function and is only used for getting zone_id
-
-    Parameters:
-    ----------
-    mpa_api_url : str
-        URL of the MPAtlas Zone Assessment API
-    """
-
-    session = requests.Session()
-
-    all_rows = []
-    pbar = None
-    url = mpa_api_url
-
-    while url:
-        r = session.get(url, params={} if url == mpa_api_url else None, timeout=30)
-        r.raise_for_status()
-        data = r.json()
-
-        if pbar is None:
-            total = data.get("count")
-            if isinstance(total, int) and total > 0:
-                pbar = tqdm(total=total, desc="Downloading zones", unit="items")
-
-        results = data.get("results", [])
-        all_rows.extend(results)
-        if pbar:
-            pbar.update(len(results))
-
-        url = data.get("next")
-
-    if pbar:
-        pbar.close()
-
-    return pd.DataFrame(all_rows)
 
 
 def download_mpatlas(
