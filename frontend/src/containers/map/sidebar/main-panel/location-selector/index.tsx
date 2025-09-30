@@ -220,6 +220,12 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     return filtered;
   }, [locationsFilter, reorderedLocations, areTerritoriesActive, customRegionLocations, t]);
 
+  const customRegionCTA = isCustomRegionActive
+    ? t('close-custom-region')
+    : customRegionLocations?.size
+      ? t('view-custom-region')
+      : t('create-custom-region');
+
   return (
     <div className={cn('flex gap-2 gap-y-2', className, 'grid grid-cols-2')}>
       <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
@@ -288,7 +294,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
               'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
             )}
           />
-          {isCustomRegionActive ? t('close-custom-region') : t('create-custom-region')}
+          {customRegionCTA}
         </Button>
       ) : null}
 
