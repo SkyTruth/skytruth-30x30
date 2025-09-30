@@ -177,7 +177,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
     <>
       <Widget
         title={t('marine-conservation-coverage')}
-        lastUpdated={data[data.length - 1]?.updatedAt}
+        lastUpdated={data[data?.length - 1]?.updatedAt}
         noData={noData}
         loading={isFetching}
         info={metadata?.info}

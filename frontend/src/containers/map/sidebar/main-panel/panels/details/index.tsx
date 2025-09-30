@@ -189,7 +189,7 @@ const SidebarDetails: FCWithMessages = () => {
           'flex flex-shrink-0 gap-x-5 gap-y-2 border-b border-black bg-orange px-4 pt-4 md:px-8 md:pt-6':
             true,
           'flex-col': containerScroll === 0,
-          'flex-row flex-wrap': containerScroll > 0,
+          'flex-wrap': containerScroll > 0,
         })}
       >
         <h1
@@ -202,7 +202,6 @@ const SidebarDetails: FCWithMessages = () => {
           {titleCountry?.attributes?.[locationNameField]}
         </h1>
         <LocationSelector
-          className="flex-shrink-0"
           theme="orange"
           isCustomRegionActive={isCustomRegion}
           sharedMarineAreaCountries={sharedMarineAreaCountries}
