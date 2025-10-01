@@ -1,16 +1,21 @@
 import { BBox } from '@turf/helpers';
 
 /**
- * Combines two bounding boxes into a single bounding box that encompasses both
- * @param bbox1 First bounding box [minLon, minLat, maxLon, maxLat]
- * @param bbox2 Second bounding box [minLon, minLat, maxLon, maxLat]
- * @returns Combined bounding box
+ * Unions any number of bounding boxes into a single bbox
+ * @param bboxes array of boundign boxes Array<[minLon, minLat, maxLon, maxLat]>
+ * @returns uni
  */
-export const combineBoundingBoxes = (bbox1: BBox, bbox2: BBox): BBox => {
-  return [
-    Math.min(bbox1[0], bbox2[0]),
-    Math.min(bbox1[1], bbox2[1]),
-    Math.max(bbox1[2], bbox2[2]),
-    Math.max(bbox1[3], bbox2[3]),
-  ];
+export const combineBoundingBoxes = (bboxes: BBox[]): BBox => {
+  let west = Infinity;
+  let south = Infinity;
+  let east = -Infinity;
+  let north = -Infinity;
+  for (let i = 0; i < bboxes.length; i++) {
+    const b = bboxes[i];
+    if (b[0] < west) west = b[0];
+    if (b[1] < south) south = b[1];
+    if (b[2] > east) east = b[2];
+    if (b[3] > north) north = b[3];
+  }
+  return [west, south, east, north] as const;
 };
