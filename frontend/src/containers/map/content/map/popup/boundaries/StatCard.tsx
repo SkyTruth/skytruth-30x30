@@ -106,9 +106,7 @@ const StatCard: FC<StatCardProps> = ({
             />
             {isLocatonInCustomRegion ? t('remove-from-custom-region') : t('add-to-custom-region')}
           </button>
-          {hasSharedMarineArea &&
-          source?.id === 'eez-countries-source' &&
-          sharedMarineAreaCountries.length > 0 ? (
+          {hasSharedMarineArea && sharedMarineAreaCountries.length > 0 ? (
             <span className="justify-left inline-flex w-full pb-2 text-left font-mono text-xs">
               <AlertTriangle className="mr-2 h-4 w-4 pb-px" color="#d60909" />
               <p className="text-overlapping-eez">{t('may-contain-overlapping-eez')}</p>
