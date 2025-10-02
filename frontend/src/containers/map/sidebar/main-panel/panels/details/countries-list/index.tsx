@@ -93,13 +93,13 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
       </div>
       <div className="mt-2">
         <span
-          className="cursor-pointer font-semibold underline pr-3"
+          className="cursor-pointer pr-3 font-semibold underline"
           onClick={() => setListOpen(!isListOpen)}
         >
           {isListOpen && t('hide-some-countries')}
           {!isListOpen && needsTruncate && t('view-all-countries')}
         </span>
-      {isCustomRegion && <ClearCustomRegionButton />}
+        {isCustomRegion && <ClearCustomRegionButton />}
       </div>
     </div>
   );
