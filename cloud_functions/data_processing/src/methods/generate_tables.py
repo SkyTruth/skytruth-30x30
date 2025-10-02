@@ -255,17 +255,22 @@ def generate_protected_areas_table(
 
 def database_updates(current_db, updated_pas, verbose=True):
     def normalize_value(v):
-        # match Pandas .astype(str) behavior: np.nan -> '<NA>'
-        if pd.isna(v):
-            return "<NA>"
-        return str(v)
+        return "<NA>" if pd.isna(v) else str(v)
+
+    def get_unique_identifier(row, cols):
+        return "_".join(normalize_value(row[c]) for c in cols)
 
     def get_identifier(x, cols, current_db):
+        """
+        get database ID associated with a unique identifier (combination
+        of environment, wdpaid, wdpa_pid, zone_id) if one exists. Used to
+        add id to parent/children columns
+        """
         if not isinstance(x, dict):
             return None
 
         # build identifier in the same way as updated_pas["identifier"]
-        identifier = "_".join(normalize_value(x.get(c)) for c in cols)
+        identifier = get_unique_identifier(x, cols)
 
         match = current_db.loc[current_db["identifier"] == identifier, "id"]
         _id = int(match.iloc[0]) if not match.empty else None
@@ -296,8 +301,12 @@ def database_updates(current_db, updated_pas, verbose=True):
     if verbose:
         print("adding unique identifier")
     cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id"]
-    updated_pas["identifier"] = updated_pas[cols_for_id].astype(str).agg("_".join, axis=1)
-    current_db["identifier"] = current_db[cols_for_id].astype(str).agg("_".join, axis=1)
+    updated_pas["identifier"] = updated_pas.apply(
+        lambda x: get_unique_identifier(x, cols_for_id), axis=1
+    )
+    current_db["identifier"] = current_db.apply(
+        lambda x: get_unique_identifier(x, cols_for_id), axis=1
+    )
 
     # Add identifier to parent/children
     if verbose:
@@ -380,11 +389,25 @@ def update_protected_areas_table(
     current_db = get_pas()
     current_db_df = pd.DataFrame(current_db)
 
+    if verbose:
+        print("finding database changes")
     db_changes = database_updates(current_db_df, updated_pas, verbose=verbose)
 
     strapi = Strapi()
     strapi.upsert_pas(db_changes["new"] + db_changes["changed"])
     strapi.delete_pas(db_changes["deleted"])
+    # import pickle
+    # from google.cloud import storage
+    # source_file = "db_changes.pkl"
+    # destination_blob = "tmp/db_changes.pkl"
+    # with open(source_file, "wb") as f:
+    #     pickle.dump(db_changes, f)
+
+    # client = storage.Client(project=PROJECT)
+    # bucket = client.bucket(bucket)
+    # blob = bucket.blob(destination_blob)
+    # blob.upload_from_filename(source_file)
+    # print(f"Uploaded {source_file} to gs://{bucket}/{destination_blob}")
 
     return db_changes
 
