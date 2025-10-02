@@ -209,15 +209,14 @@ const SidebarDetails: FCWithMessages = () => {
           isTerrestrial={tab === 'terrestrial'}
         />
         {/* TODO TECH-3174: Clean up Feature flag checks */}
-        {areTerritoriesActive && sovereignCountries?.length ? t('claimed-by') : ''}
         {areTerritoriesActive ? (
           <CountriesList
             className="w-full shrink-0"
             bgColorClassName="bg-orange"
             countries={sovereignCountries}
+            title={t('claimed-by')}
           />
         ) : null}
-        {areTerritoriesActive && memberCountries?.length ? t('includes') : ''}
         <CountriesList
           className="w-full shrink-0"
           bgColorClassName="bg-orange"
