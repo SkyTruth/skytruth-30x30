@@ -222,6 +222,7 @@ const SidebarDetails: FCWithMessages = () => {
           className="w-full shrink-0"
           bgColorClassName="bg-orange"
           countries={memberCountries}
+          isCustomRegion={isCustomRegion}
         />
         <TabsList className="relative top-px mt-5 w-full flex-shrink-0">
           <TabsTrigger value="summary">{t('summary')}</TabsTrigger>
