@@ -40,7 +40,9 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
   const customRegionsSync = useSyncCustomRegion();
   const setCustomRegionLocations = customRegionsSync[1];
 
-  const { containerRef, needsTruncate } = useNeedsTruncate<HTMLDivElement>(12, 2, [countries]);
+  // Setting max rows to 4 to allow 2 rows and account for the space for buttons under the list
+  //  Kind of a guess and check hack, but works for now
+  const { containerRef, needsTruncate } = useNeedsTruncate<HTMLDivElement>(12, 4, [countries]);
 
   useEffect(() => {
     setListOpen(false);

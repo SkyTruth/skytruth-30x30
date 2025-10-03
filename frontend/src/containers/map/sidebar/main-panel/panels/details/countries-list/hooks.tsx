@@ -10,11 +10,11 @@ export function useNeedsTruncate<T extends HTMLElement>(
   const [needsTruncate, setNeedsTruncate] = useState(false);
 
   const measure = useCallback(() => {
-    const cotaniner = containerRef.current;
-    if (!cotaniner) return;
+    const container = containerRef.current;
+    if (!container) return;
 
     const allowed = rowHeightPx * maxRows;
-    setNeedsTruncate(cotaniner.scrollHeight > allowed + 1);
+    setNeedsTruncate(container.scrollHeight > allowed + 1);
   }, [containerRef, maxRows, rowHeightPx]);
 
   useLayoutEffect(() => {
@@ -23,14 +23,14 @@ export function useNeedsTruncate<T extends HTMLElement>(
   }, [maxRows, measure, rowHeightPx, ...deps]);
 
   useEffect(() => {
-    const cotaniner = containerRef.current;
-    if (!cotaniner) return;
+    const container = containerRef.current;
+    if (!container) return;
 
     const ro = new ResizeObserver(measure);
-    ro.observe(cotaniner);
+    ro.observe(container);
 
     const mo = new MutationObserver(measure);
-    mo.observe(cotaniner, { childList: true, subtree: true, characterData: true });
+    mo.observe(container, { childList: true, subtree: true, characterData: true });
 
     return () => {
       ro.disconnect();
