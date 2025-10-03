@@ -195,12 +195,15 @@
       "worldwide": "Worldwide",
       "create-custom-region": "Create a custom region",
       "close-custom-region": "Close custom region",
+      "view-custom-region": "View custom region",
       "empty-custom-region": "Add countries to your Custom Region by selecting them on the map and clicking the <addIcon></addIcon> icon, or by clicking on <searchIcon></searchIcon> Change Location and choosing from the list of countries in the Custom Region tab.",
       "add-country-custom-region": "Add Countries to Your Custom Region to See Stats",
       "clear-all": "Clear All",
+      "clear-custom-region": "Clear custom region",
       "no-data-for": "No data for",
       "overlapping-eez-explainer": "The following countries in your Custom Region have some overlapping EEZ boundaries with at least one other country. This could mean that some statistics are double counted:",
-      "overlapping-eez": "Overlapping EEZs"
+      "overlapping-eez": "Overlapping EEZs",
+      "remove-from-custom-region": "Remove from Custom Region"
     },
     "map-sidebar-layers-panel": {
       "map-layers": "Map Layers",

@@ -103,10 +103,10 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
   const firstYearData = barChartData[0];
   const lastYearData = barChartData[barChartData?.length - 1];
   const activeYearData = barChartData.find(({ active }) => active);
-  const xAxisTicks = [firstYearData.year, activeYearData.year, lastYearData.year];
+  const xAxisTicks = [firstYearData?.year, activeYearData?.year, lastYearData?.year];
   const numHistoricalYears = activeYearData?.year - firstYearData?.year;
   const historicalDelta =
-    (activeYearData.percentage - firstYearData.percentage) / numHistoricalYears;
+    (activeYearData?.percentage - firstYearData?.percentage) / numHistoricalYears;
 
   // Calculate data for the historical line; first and active year are known, years in between
   // need to be extrapolated.
@@ -197,7 +197,7 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
         <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
           <ComposedChart data={chartData}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            {firstYearData.year !== activeYearData.year ? (
+            {firstYearData?.year !== activeYearData?.year ? (
               <>
                 <ReferenceLine
                   xAxisId={1}
@@ -219,7 +219,7 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
               type="number"
               dataKey="year"
               ticks={xAxisTicks}
-              domain={[firstYearData.year - 0.4, lastYearData.year]}
+              domain={[firstYearData.year - 0.4, lastYearData.year + 0.4]}
               stroke="#000"
               tick={{ fill: '#000' }}
               axisLine={{ stroke: '#000' }}
