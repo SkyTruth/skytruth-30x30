@@ -263,7 +263,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
                 ? customRegionLocations.size
                 : null
             }
-            sharedMarineAreaCountries={sharedMarineAreaCountries}
           />
         </PopoverContent>
       </Popover>
