@@ -201,8 +201,8 @@
       "clear-all": "Clear All",
       "clear-custom-region": "Clear custom region",
       "no-data-for": "No data for",
-      "overlapping-eez-explainer": "The following countries in your Custom Region have some overlapping EEZ boundaries with at least one other country. This could mean that some statistics are double counted:",
-      "overlapping-eez": "Overlapping EEZs",
+      "overlapping-eez-explainer": "Some selected countries may have overlapping EEZs (red dashed outline), which could affect statistics. Reach out to us to request analysis. Hide warning",
+      "warning": "Warning",
       "remove-from-custom-region": "Remove from Custom Region"
     },
     "map-sidebar-layers-panel": {

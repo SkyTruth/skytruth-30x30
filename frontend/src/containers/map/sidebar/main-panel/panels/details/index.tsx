@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -38,6 +38,8 @@ const SidebarDetails: FCWithMessages = () => {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerScroll = useScrollPosition(containerRef);
+
+  const [isWarningCollapsed, setIsWarningCollapsed] = useState(false);
 
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
@@ -170,6 +172,9 @@ const SidebarDetails: FCWithMessages = () => {
     [setSettings]
   );
 
+  const handleToggleWarning = () => setIsWarningCollapsed(!isWarningCollapsed);
+  console.log('is collapsesd', isWarningCollapsed);
+
   // Scroll to the top when the tab changes (whether that's initiated by clicking on the tab trigger
   // or programmatically via `setSettings` in a different component) or when the location changes
   useEffect(() => {
@@ -206,8 +211,9 @@ const SidebarDetails: FCWithMessages = () => {
           isCustomRegionActive={isCustomRegion}
           sharedMarineAreaCountries={sharedMarineAreaCountries}
           onChange={handleLocationSelected}
-          isTerrestrial={tab === 'terrestrial'}
+          toggleWarning={handleToggleWarning}
         />
+        {!isWarningCollapsed ? <div>{t('overlapping-eez-explainer')}</div> : null}
         {/* TODO TECH-3174: Clean up Feature flag checks */}
         {areTerritoriesActive ? (
           <CountriesList

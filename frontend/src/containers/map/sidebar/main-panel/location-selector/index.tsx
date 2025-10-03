@@ -46,7 +46,7 @@ type LocationSelectorProps = {
     name: string;
   }[];
   onChange: (locationCode: string) => void;
-  isTerrestrial: boolean;
+  toggleWarning: () => void;
 };
 
 const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
@@ -55,7 +55,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   isCustomRegionActive,
   sharedMarineAreaCountries,
   onChange,
-  isTerrestrial,
+  toggleWarning,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
@@ -298,19 +298,16 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         </Button>
       ) : null}
 
-      {isCustomRegionActive && !isTerrestrial && sharedMarineAreaCountries.length > 1 ? (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button className={cn({ [BUTTON_CLASSES]: true })} type="button" variant="text-link">
-              <AlertTriangle className="mr-2 max-h-4 w-auto min-w-4 pb-px" />
-              {t('overlapping-eez')}
-            </Button>
-          </PopoverTrigger>
-
-          <PopoverContent className="w-96 max-w-screen" align="start">
-            <div>{t('overlapping-eez-explainer') + ' ' + sharedMarineAreaCountries.join(', ')}</div>
-          </PopoverContent>
-        </Popover>
+      {isCustomRegionActive && sharedMarineAreaCountries.length > 1 ? (
+        <Button
+          className={cn({ [BUTTON_CLASSES]: true })}
+          type="button"
+          variant="text-link"
+          onClick={toggleWarning}
+        >
+          <AlertTriangle className="mr-2 max-h-4 w-auto min-w-4 pb-px" />
+          {t('warning')}
+        </Button>
       ) : null}
     </div>
   );
