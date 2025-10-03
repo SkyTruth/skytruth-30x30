@@ -201,7 +201,7 @@
       "clear-all": "Clear All",
       "clear-custom-region": "Clear custom region",
       "no-data-for": "No data for",
-      "overlapping-eez-explainer": "Some selected countries may have overlapping EEZs (red dashed outline), which could affect statistics. Reach out to us to request analysis. Hide warning",
+      "overlapping-eez-explainer": "Some selected countries may have overlapping EEZs (red dashed outline), which could affect statistics. <a>Reach out to us</a> to request analysis. <Button>Hide warning</Button>",
       "warning": "Warning",
       "remove-from-custom-region": "Remove from Custom Region"
     },

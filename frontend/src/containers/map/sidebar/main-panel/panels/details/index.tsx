@@ -27,6 +27,7 @@ import LocationSelector from '../../location-selector';
 
 import CountriesList from './countries-list';
 import DetailsButton from './details-button';
+import Warning from './warning';
 import EmptyRegionWidget from './widgets/empty-region-widget';
 import MarineWidgets from './widgets/marine-widgets';
 import SummaryWidgets from './widgets/summary-widgets';
@@ -173,7 +174,6 @@ const SidebarDetails: FCWithMessages = () => {
   );
 
   const handleToggleWarning = () => setIsWarningCollapsed(!isWarningCollapsed);
-  console.log('is collapsesd', isWarningCollapsed);
 
   // Scroll to the top when the tab changes (whether that's initiated by clicking on the tab trigger
   // or programmatically via `setSettings` in a different component) or when the location changes
@@ -213,7 +213,10 @@ const SidebarDetails: FCWithMessages = () => {
           onChange={handleLocationSelected}
           toggleWarning={handleToggleWarning}
         />
-        {!isWarningCollapsed ? <div>{t('overlapping-eez-explainer')}</div> : null}
+        {!isWarningCollapsed && isCustomRegion && sharedMarineAreaCountries.length > 1 ? (
+          <Warning toggleWarning={handleToggleWarning} />
+        ) : null}
+
         {/* TODO TECH-3174: Clean up Feature flag checks */}
         {areTerritoriesActive ? (
           <CountriesList
@@ -275,6 +278,7 @@ SidebarDetails.messages = [
   ...DetailsButton.messages,
   ...SummaryWidgets.messages,
   ...MarineWidgets.messages,
+  ...Warning.messages,
 ];
 
 export default SidebarDetails;
