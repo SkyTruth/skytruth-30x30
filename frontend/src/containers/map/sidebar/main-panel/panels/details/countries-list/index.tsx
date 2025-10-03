@@ -98,7 +98,7 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
       </div>
       <div className="mt-2">
         <span
-          className="cursor-pointer pr-3 font-semibold underline"
+          className={cn('cursor-pointer font-semibold underline', { 'pr-3': needsTruncate })}
           onClick={() => setListOpen(!isListOpen)}
         >
           {isListOpen && t('hide-some-countries')}

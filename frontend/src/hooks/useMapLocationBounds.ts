@@ -32,7 +32,9 @@ export default function useMapLocationBounds() {
   const [customRegionLocations] = useSyncCustomRegion();
 
   const locationCodes =
-    locationCode === CUSTOM_REGION_CODE ? [...customRegionLocations] : [locationCode];
+    locationCode === CUSTOM_REGION_CODE && customRegionLocations
+      ? [...customRegionLocations]
+      : [locationCode];
 
   const { data, isFetching } = useGetLocations<Array<LocationListResponseDataItem>>(
     {
