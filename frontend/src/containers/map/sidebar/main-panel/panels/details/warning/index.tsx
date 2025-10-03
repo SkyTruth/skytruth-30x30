@@ -32,7 +32,7 @@ const Warning: FCWithMessages<WarningProps> = ({ toggleWarning }) => {
               variant="text-link"
               size="sm"
               onClick={toggleWarning}
-              className="p-0 text-xs font-normal capitalize"
+              className="pl-1 py-0 pr-0 text-xs font-normal capitalize"
             >
               {chunks}
             </Button>

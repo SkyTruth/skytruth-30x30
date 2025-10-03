@@ -241,7 +241,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const showEEZWarning = isCustomRegionActive && sharedMarineAreaCountries.length > 1;
 
   return (
-    <div className={cn('flex gap-2 gap-y-2', className, 'grid grid-cols-3 grid-cols-[auto__1fr]')}>
+    <div className={cn('flex gap-2 gap-y-2', className, 'grid grid-cols-3 grid-cols-[auto_auto_1fr]')}>
       <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -298,7 +298,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       {/* TODO TECH-3233: Clean up */}
       {isCustomRegionEnabled ? (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true, 'justify-center': showEEZWarning })}
+          className={cn({ [BUTTON_CLASSES]: true})}
           type="button"
           variant="text-link"
           onClick={handleToggleCustomRegion}
@@ -321,9 +321,9 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           type="button"
           variant="text-link"
           onClick={toggleWarning}
+          aria-label={t('warning')}
         >
           <AlertTriangle className="mr-2 max-h-4 w-auto min-w-4 pb-px" />
-          {t('warning')}
         </Button>
       ) : null}
     </div>
