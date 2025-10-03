@@ -252,7 +252,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             variant="text-link"
           >
             <Icon icon={MagnifyingGlassIcon} className="mr-2 h-4 w-4 pb-px" />
-            {isCustomRegionActive ? t('change-location-edit-custom-region') : t('change-location')}
+            {isCustomRegionActive ? t('change-or-edit-location') : t('change-location')}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-96 max-w-screen" align="start">
@@ -300,7 +300,10 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       {/* TODO TECH-3233: Clean up */}
       {isCustomRegionEnabled ? (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true })}
+          className={cn({
+            [BUTTON_CLASSES]: true,
+            'row-start-2': locale === 'fr' && !isCustomRegionActive,
+          })}
           type="button"
           variant="text-link"
           onClick={handleToggleCustomRegion}

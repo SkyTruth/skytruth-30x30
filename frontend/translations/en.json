@@ -132,7 +132,7 @@
     },
     "map-sidebar-main-panel": {
       "change-location": "Change location",
-      "change-location-edit-custom-region": "Change location or edit custom region",
+      "change-or-edit-location": "Change or edit location",
       "global-view": "Global view",
       "search-country-region": "Search Country or Region",
       "search-country": "Search Country",
