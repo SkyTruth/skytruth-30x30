@@ -22,6 +22,7 @@ type CountriesListProps = {
     name: string;
   }[];
   isCustomRegion?: boolean;
+  title?: string;
 };
 
 type ClearCustomRegionButtonProps = {
@@ -32,6 +33,7 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
   countries,
   bgColorClassName,
   isCustomRegion = false,
+  title,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
@@ -66,7 +68,7 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
   if (!countries?.length) return null;
 
   return (
-    <div className={cn('font-mono text-xs leading-5', className)}>
+    <div className={cn('pt-2 font-mono text-xs leading-5', className)}>
       <div
         ref={containerRef}
         className={cn({
@@ -75,6 +77,7 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
           'max-h-full': isListOpen,
         })}
       >
+        {!!title && <span className="mr-2 font-semibold">{title + ':'}</span>}
         {countries.map(({ code, name }, idx) => (
           <span key={code}>
             <Link
@@ -95,7 +98,7 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
       </div>
       <div className="mt-2">
         <span
-          className="cursor-pointer pr-3 font-semibold underline"
+          className={cn('cursor-pointer font-semibold underline', { 'pr-3': needsTruncate })}
           onClick={() => setListOpen(!isListOpen)}
         >
           {isListOpen && t('hide-some-countries')}

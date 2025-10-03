@@ -131,7 +131,8 @@
       "toggle-sidebar": "Toggle sidebar"
     },
     "map-sidebar-main-panel": {
-      "change-location": "Change Location",
+      "change-location": "Change location",
+      "change-or-edit-location": "Change or edit location",
       "global-view": "Global view",
       "search-country-region": "Search Country or Region",
       "search-country": "Search Country",
@@ -185,7 +186,7 @@
       "terrestrial-existing-conservation": "Existing terrestrial conservation coverage",
       "not-assessed": "Not assessed",
       "data-disclaimer": "Data disclaimer",
-      "claimed-by": "Claimed By",
+      "claimed-by": "Claimed by",
       "includes": "Includes",
       "territory-of": "Territory of",
       "also-claimed-by": "also claimed by",
@@ -201,8 +202,8 @@
       "clear-all": "Clear All",
       "clear-custom-region": "Clear custom region",
       "no-data-for": "No data for",
-      "overlapping-eez-explainer": "The following countries in your Custom Region have some overlapping EEZ boundaries with at least one other country. This could mean that some statistics are double counted:",
-      "overlapping-eez": "Overlapping EEZs",
+      "overlapping-eez-explainer": "Some selected countries may have overlapping EEZs (red dashed outline), which could affect statistics. <a>Reach out to us</a> to request analysis. <Button>Hide warning</Button>",
+      "warning": "Warning",
       "remove-from-custom-region": "Remove from Custom Region"
     },
     "map-sidebar-layers-panel": {

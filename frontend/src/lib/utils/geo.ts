@@ -17,5 +17,9 @@ export const combineBoundingBoxes = (bboxes: BBox[]): BBox => {
     if (b[2] > east) east = b[2];
     if (b[3] > north) north = b[3];
   }
-  return [west, south, east, north] as const;
+  const bounds = [west, south, east, north] as BBox;
+  if (bounds.includes(Infinity) || bounds.includes(-Infinity)) {
+    return null;
+  }
+  return bounds;
 };

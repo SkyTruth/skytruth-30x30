@@ -13,7 +13,6 @@ export type FormattedStat = {
   percentage: string;
   protectedArea: number;
   totalArea: number;
-  hasSharedMarineArea: boolean;
 };
 
 const useFormattedStats = (
@@ -86,8 +85,6 @@ const useFormattedStats = (
         const iso = item?.attributes?.location?.data?.attributes?.['code'] ?? locationCodes[idx];
         const location = item?.attributes?.location?.data?.attributes?.[nameField ?? iso];
         const coverage = item?.attributes?.coverage;
-        const hasSharedMarineArea =
-          item?.attributes?.location?.data?.attributes?.has_shared_marine_area;
         const percentage =
           coverage !== null && coverage !== undefined
             ? formatPercentage(locale, coverage, {
@@ -113,7 +110,6 @@ const useFormattedStats = (
           percentage,
           protectedArea,
           totalArea,
-          hasSharedMarineArea,
         };
       });
 

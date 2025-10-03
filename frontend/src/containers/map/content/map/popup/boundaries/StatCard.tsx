@@ -2,12 +2,10 @@ import { FC, useCallback } from 'react';
 
 import { useRouter } from 'next/router';
 
-import { useAtom } from 'jotai';
-import { AlertTriangle, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
-import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { formatKM } from '@/lib/utils/formats';
 
@@ -24,7 +22,7 @@ interface StatCardProps {
 
 const StatCard: FC<StatCardProps> = ({
   environment,
-  formattedStat: { iso, percentage, protectedArea, totalArea, hasSharedMarineArea },
+  formattedStat: { iso, percentage, protectedArea, totalArea },
   handleLocationSelected,
   source,
 }) => {
@@ -35,7 +33,6 @@ const StatCard: FC<StatCardProps> = ({
   } = useRouter();
 
   const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
-  const [sharedMarineAreaCountries] = useAtom(sharedMarineAreaCountriesAtom);
 
   const code = Array.isArray(locationCode) ? locationCode[0] : locationCode;
   const isCustomRegionActive =
@@ -106,12 +103,6 @@ const StatCard: FC<StatCardProps> = ({
             />
             {isLocatonInCustomRegion ? t('remove-from-custom-region') : t('add-to-custom-region')}
           </button>
-          {hasSharedMarineArea && sharedMarineAreaCountries.length > 0 ? (
-            <span className="justify-left inline-flex w-full pb-2 text-left font-mono text-xs">
-              <AlertTriangle className="mr-2 h-4 w-4 pb-px" color="#d60909" />
-              <p className="text-overlapping-eez">{t('may-contain-overlapping-eez')}</p>
-            </span>
-          ) : null}
         </>
       ) : null}
       <button

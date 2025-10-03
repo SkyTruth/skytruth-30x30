@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -27,6 +27,7 @@ import LocationSelector from '../../location-selector';
 
 import CountriesList from './countries-list';
 import DetailsButton from './details-button';
+import Warning from './warning';
 import EmptyRegionWidget from './widgets/empty-region-widget';
 import MarineWidgets from './widgets/marine-widgets';
 import SummaryWidgets from './widgets/summary-widgets';
@@ -38,6 +39,8 @@ const SidebarDetails: FCWithMessages = () => {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerScroll = useScrollPosition(containerRef);
+
+  const [isWarningCollapsed, setIsWarningCollapsed] = useState(false);
 
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
@@ -170,6 +173,8 @@ const SidebarDetails: FCWithMessages = () => {
     [setSettings]
   );
 
+  const handleToggleWarning = () => setIsWarningCollapsed(!isWarningCollapsed);
+
   // Scroll to the top when the tab changes (whether that's initiated by clicking on the tab trigger
   // or programmatically via `setSettings` in a different component) or when the location changes
   useEffect(() => {
@@ -184,14 +189,7 @@ const SidebarDetails: FCWithMessages = () => {
 
   return (
     <Tabs value={tab} onValueChange={handleTabChange} className="flex h-full w-full flex-col">
-      <div
-        className={cn({
-          'flex flex-shrink-0 gap-x-5 gap-y-2 border-b border-black bg-orange px-4 pt-4 md:px-8 md:pt-6':
-            true,
-          'flex-col': containerScroll === 0,
-          'flex-wrap': containerScroll > 0,
-        })}
-      >
+      <div className="flex flex-shrink-0 flex-col gap-x-5 gap-y-2 border-b border-black bg-orange px-4 pt-4 md:px-8 md:pt-6">
         <h1
           className={cn({
             'text-ellipsis font-black transition-all': true,
@@ -206,18 +204,21 @@ const SidebarDetails: FCWithMessages = () => {
           isCustomRegionActive={isCustomRegion}
           sharedMarineAreaCountries={sharedMarineAreaCountries}
           onChange={handleLocationSelected}
-          isTerrestrial={tab === 'terrestrial'}
+          toggleWarning={handleToggleWarning}
         />
+        {!isWarningCollapsed && isCustomRegion && sharedMarineAreaCountries.length > 1 ? (
+          <Warning toggleWarning={handleToggleWarning} />
+        ) : null}
+
         {/* TODO TECH-3174: Clean up Feature flag checks */}
-        {areTerritoriesActive && sovereignCountries?.length ? t('claimed-by') : ''}
         {areTerritoriesActive ? (
           <CountriesList
             className="w-full shrink-0"
             bgColorClassName="bg-orange"
             countries={sovereignCountries}
+            title={t('claimed-by')}
           />
         ) : null}
-        {areTerritoriesActive && memberCountries?.length ? t('includes') : ''}
         <CountriesList
           className="w-full shrink-0"
           bgColorClassName="bg-orange"
@@ -270,6 +271,7 @@ SidebarDetails.messages = [
   ...DetailsButton.messages,
   ...SummaryWidgets.messages,
   ...MarineWidgets.messages,
+  ...Warning.messages,
 ];
 
 export default SidebarDetails;

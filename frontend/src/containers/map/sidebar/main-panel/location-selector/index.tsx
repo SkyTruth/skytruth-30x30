@@ -46,7 +46,7 @@ type LocationSelectorProps = {
     name: string;
   }[];
   onChange: (locationCode: string) => void;
-  isTerrestrial: boolean;
+  toggleWarning: () => void;
 };
 
 const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
@@ -55,7 +55,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   isCustomRegionActive,
   sharedMarineAreaCountries,
   onChange,
-  isTerrestrial,
+  toggleWarning,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
@@ -179,6 +179,11 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         ? reorderedLocations
         : reorderedLocations.filter(({ attributes }) => !NEW_LOCS.has(attributes.code));
     }
+
+    if (currentLocation !== CUSTOM_REGION_CODE && locationsFilter === 'customRegion') {
+      setLocationsFilter('all');
+    }
+
     let filtered = reorderedLocations.filter(
       ({ attributes }) =>
         // TODO TECH-3174: Clean up NEW_LOCS filter
@@ -218,7 +223,14 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       }
     }
     return filtered;
-  }, [locationsFilter, reorderedLocations, areTerritoriesActive, customRegionLocations, t]);
+  }, [
+    currentLocation,
+    locationsFilter,
+    reorderedLocations,
+    areTerritoriesActive,
+    customRegionLocations,
+    t,
+  ]);
 
   const customRegionCTA = isCustomRegionActive
     ? t('close-custom-region')
@@ -226,13 +238,21 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       ? t('view-custom-region')
       : t('create-custom-region');
 
+  const showEEZWarning = isCustomRegionActive && sharedMarineAreaCountries.length > 1;
+
   return (
-    <div className={cn('flex gap-2 gap-y-2', className, 'grid grid-cols-2')}>
+    <div
+      className={cn('flex gap-2 gap-y-2', className, 'grid grid-cols-3 grid-cols-[auto_auto_1fr]')}
+    >
       <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
         <PopoverTrigger asChild>
-          <Button className={cn({ [BUTTON_CLASSES]: true })} type="button" variant="text-link">
+          <Button
+            className={cn({ [BUTTON_CLASSES]: true, 'col-span-3': isCustomRegionActive })}
+            type="button"
+            variant="text-link"
+          >
             <Icon icon={MagnifyingGlassIcon} className="mr-2 h-4 w-4 pb-px" />
-            {t('change-location')}
+            {isCustomRegionActive ? t('change-or-edit-location') : t('change-location')}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-96 max-w-screen" align="start">
@@ -263,13 +283,12 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
                 ? customRegionLocations.size
                 : null
             }
-            sharedMarineAreaCountries={sharedMarineAreaCountries}
           />
         </PopoverContent>
       </Popover>
       {locationCode !== 'GLOB' && (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true })}
+          className={cn({ [BUTTON_CLASSES]: true, 'col-start-1': isCustomRegionActive })}
           type="button"
           variant="text-link"
           onClick={() => handleLocationSelected('GLOB')}
@@ -281,7 +300,12 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       {/* TODO TECH-3233: Clean up */}
       {isCustomRegionEnabled ? (
         <Button
-          className={cn({ [BUTTON_CLASSES]: true }, 'col-start-1')}
+          className={cn({
+            [BUTTON_CLASSES]: true,
+            'row-start-2':
+              (locationCode !== 'GLOB' && !isCustomRegionActive) ||
+              (locale === 'fr' && !isCustomRegionActive),
+          })}
           type="button"
           variant="text-link"
           onClick={handleToggleCustomRegion}
@@ -298,19 +322,16 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         </Button>
       ) : null}
 
-      {isCustomRegionActive && !isTerrestrial && sharedMarineAreaCountries.length > 1 ? (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button className={cn({ [BUTTON_CLASSES]: true })} type="button" variant="text-link">
-              <AlertTriangle className="mr-2 max-h-4 w-auto min-w-4 pb-px" />
-              {t('overlapping-eez')}
-            </Button>
-          </PopoverTrigger>
-
-          <PopoverContent className="w-96 max-w-screen" align="start">
-            <div>{t('overlapping-eez-explainer') + ' ' + sharedMarineAreaCountries.join(', ')}</div>
-          </PopoverContent>
-        </Popover>
+      {showEEZWarning ? (
+        <Button
+          className={cn({ [BUTTON_CLASSES]: true })}
+          type="button"
+          variant="text-link"
+          onClick={toggleWarning}
+          aria-label={t('warning')}
+        >
+          <AlertTriangle className="mr-2 max-h-4 w-auto min-w-4 pb-px" />
+        </Button>
       ) : null}
     </div>
   );
