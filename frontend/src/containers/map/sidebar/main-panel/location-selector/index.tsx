@@ -302,7 +302,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         <Button
           className={cn({
             [BUTTON_CLASSES]: true,
-            'row-start-2': locale === 'fr' && !isCustomRegionActive,
+            'row-start-2': (locationCode !== 'GLOB' && !isCustomRegionActive) || (locale === 'fr' && !isCustomRegionActive),
           })}
           type="button"
           variant="text-link"
