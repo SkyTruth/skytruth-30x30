@@ -94,10 +94,10 @@ export default function useMapLocationBounds() {
         return acc;
       }, []);
 
-      const UnionBounds = combineBoundingBoxes(bounds) as CustomMapProps['bounds']['bbox'];
+      const unionBounds = combineBoundingBoxes(bounds) as CustomMapProps['bounds']['bbox'];
 
-      if (UnionBounds !== null) {
-        setBboxLocation(UnionBounds);
+      if (unionBounds !== null) {
+        setBboxLocation(unionBounds);
       }
     }
 
