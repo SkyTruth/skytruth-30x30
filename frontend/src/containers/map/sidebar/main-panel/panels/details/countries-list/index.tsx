@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { useTranslations } from 'next-intl';
 
+import { CustomRegionActions, customRegionEngaged } from '@/components/analytics/heap';
 import { PAGES } from '@/constants/pages';
 import {
   useMapSearchParams,
@@ -13,8 +14,6 @@ import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
 import { useNeedsTruncate } from './hooks';
-
-import { CustomRegionActions, customRegionEngaged } from '@/components/analytics/heap';
 
 type CountriesListProps = {
   className?: HTMLDivElement['className'];
@@ -56,7 +55,7 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
     setCustomRegionLocations(new Set());
     customRegionEngaged({
       action: CustomRegionActions.Clear,
-    })
+    });
   };
 
   const ClearCustomRegionButton: FC<ClearCustomRegionButtonProps> = ({ className = '' }) => {
