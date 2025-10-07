@@ -6,6 +6,7 @@ import { useSetAtom } from 'jotai';
 import { AlertTriangle, PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { CustomRegionActions, customRegionEngaged } from '@/components/analytics/heap';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -132,14 +133,25 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     (code: string) => {
       if (code === 'clear') {
         setCustomRegionLocations(new Set());
+        customRegionEngaged({
+          action: CustomRegionActions.Clear,
+        });
       } else {
         const newLocs = new Set(customRegionLocations);
+        let action: CustomRegionActions;
         if (customRegionLocations && customRegionLocations.has(code)) {
           newLocs.delete(code);
+          action = CustomRegionActions.Remove;
         } else {
           newLocs.add(code);
+          action = CustomRegionActions.Add;
         }
         setCustomRegionLocations(newLocs);
+        customRegionEngaged({
+          action,
+          country: code,
+          custom_region: [...newLocs],
+        });
       }
     },
     [customRegionLocations, setCustomRegionLocations]
@@ -151,18 +163,27 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         prevLocation.current = currentLocation;
       }
       handleLocationSelected(CUSTOM_REGION_CODE);
+      customRegionEngaged({
+        action: customRegionLocations?.size ? CustomRegionActions.View : CustomRegionActions.Create,
+        custom_region: customRegionLocations?.size ? [...customRegionLocations] : [],
+      });
     } else {
       if (locationsFilter === 'customRegion') {
         setLocationsFilter('all');
       }
       handleLocationSelected(prevLocation.current);
+      customRegionEngaged({
+        action: CustomRegionActions.Close,
+        custom_region: customRegionLocations?.size ? [...customRegionLocations] : [],
+      });
     }
   }, [
-    isCustomRegionActive,
-    prevLocation,
-    handleLocationSelected,
     currentLocation,
+    customRegionLocations,
+    handleLocationSelected,
+    isCustomRegionActive,
     locationsFilter,
+    prevLocation,
   ]);
 
   const reorderedLocations = useMemo(() => {
