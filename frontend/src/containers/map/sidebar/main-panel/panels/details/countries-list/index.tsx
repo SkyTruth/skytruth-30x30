@@ -14,6 +14,8 @@ import { FCWithMessages } from '@/types';
 
 import { useNeedsTruncate } from './hooks';
 
+import { CustomRegionActions, customRegionEngaged } from '@/components/analytics/heap';
+
 type CountriesListProps = {
   className?: HTMLDivElement['className'];
   bgColorClassName: string;
@@ -52,6 +54,9 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
 
   const handleClearCustomRegion = (): void => {
     setCustomRegionLocations(new Set());
+    customRegionEngaged({
+      action: CustomRegionActions.Clear,
+    })
   };
 
   const ClearCustomRegionButton: FC<ClearCustomRegionButtonProps> = ({ className = '' }) => {
