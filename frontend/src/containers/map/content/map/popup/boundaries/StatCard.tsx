@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { PlusCircle } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { CustomRegionActions, customRegionEngaged } from '@/components/analytics/heap';
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { cn } from '@/lib/classnames';
 import { formatKM } from '@/lib/utils/formats';
@@ -43,6 +44,11 @@ const StatCard: FC<StatCardProps> = ({
       const newLocs = new Set(customRegionLocations);
       newLocs.add(code);
       setCustomRegionLocations(newLocs);
+      customRegionEngaged({
+        action: CustomRegionActions.Add,
+        country: code,
+        custom_region: [...newLocs],
+      });
     },
     [setCustomRegionLocations, customRegionLocations]
   );
@@ -52,6 +58,11 @@ const StatCard: FC<StatCardProps> = ({
       const newLocs = new Set(customRegionLocations);
       newLocs.delete(code);
       setCustomRegionLocations(new Set(newLocs));
+      customRegionEngaged({
+        action: CustomRegionActions.Remove,
+        country: code,
+        custom_region: [...newLocs],
+      });
     },
     [setCustomRegionLocations, customRegionLocations]
   );

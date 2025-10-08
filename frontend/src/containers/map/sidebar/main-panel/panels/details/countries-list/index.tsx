@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { useTranslations } from 'next-intl';
 
+import { CustomRegionActions, customRegionEngaged } from '@/components/analytics/heap';
 import { PAGES } from '@/constants/pages';
 import {
   useMapSearchParams,
@@ -52,6 +53,9 @@ const CountriesList: FCWithMessages<CountriesListProps> = ({
 
   const handleClearCustomRegion = (): void => {
     setCustomRegionLocations(new Set());
+    customRegionEngaged({
+      action: CustomRegionActions.Clear,
+    });
   };
 
   const ClearCustomRegionButton: FC<ClearCustomRegionButtonProps> = ({ className = '' }) => {
