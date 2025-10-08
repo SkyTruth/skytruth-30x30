@@ -19,6 +19,7 @@ import {
   useSyncCustomRegion,
 } from '@/containers/map/content/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
+import useNameField from '@/hooks/use-name-field';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 import { useGetDataInfos } from '@/types/generated/data-info';
@@ -139,6 +140,7 @@ export const useColumns = (
 ) => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
+  const nameField = useNameField();
 
   const searchParams = useMapSearchParams();
   const tooltips = useTooltips();
@@ -146,17 +148,10 @@ export const useColumns = (
   const filtersOptions = useFiltersOptions();
 
   const columns: AccessorKeyColumnDef<GlobalRegionalTableColumns>[] = useMemo(() => {
-    let locationNameKey = 'name';
-    if (locale === 'es') {
-      locationNameKey = 'name_es';
-    } else if (locale === 'fr') {
-      locationNameKey = 'name_fr';
-    }
-
     return [
       {
-        id: `location.${locationNameKey}`,
-        accessorKey: `location.${locationNameKey}`,
+        id: `location.${nameField}`,
+        accessorKey: `location.${nameField}`,
         header: ({ column }) => (
           <HeaderItem className="ml-1">
             <SortingButton column={column} />
@@ -331,7 +326,17 @@ export const useColumns = (
         },
       },
     ];
-  }, [locale, environment, t, tooltips, searchParams, filters, onChangeFilters, filtersOptions]);
+  }, [
+    locale,
+    environment,
+    t,
+    tooltips,
+    searchParams,
+    filters,
+    onChangeFilters,
+    filtersOptions,
+    nameField,
+  ]);
 
   return columns;
 };

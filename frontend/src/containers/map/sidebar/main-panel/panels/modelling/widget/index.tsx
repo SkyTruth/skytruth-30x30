@@ -71,7 +71,7 @@ WidgetLegend.messages = ['containers.map-sidebar-main-panel'];
 const ModellingWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
-  const nameField = useNameField();
+  const locationNameField = useNameField();
 
   const [{ tab }] = useSyncMapContentSettings();
 
@@ -284,13 +284,7 @@ const ModellingWidget: FCWithMessages = () => {
   );
 
   const administrativeBoundaries = nationalLevelContributions?.map((contribution) => {
-    let locationName = contribution.location.name;
-    if (locale === 'es') {
-      locationName = contribution.location.name_es;
-    }
-    if (locale === 'fr') {
-      locationName = contribution.location.name_fr;
-    }
+    const locationName = contribution.location[locationNameField];
     return locationName;
   });
 
@@ -322,7 +316,7 @@ const ModellingWidget: FCWithMessages = () => {
             <WidgetLegend />
           </div>
           {nationalLevelContributions?.map((contribution) => {
-            const locationName = contribution.location[nameField];
+            const locationName = contribution.location[locationNameField];
 
             return (
               <StackedHorizontalBarChart
