@@ -11,6 +11,9 @@ export const fetchTranslations = async (
 
   const isDefaultLocale = locale === 'en';
 
+  // Aliasing for consistency and map layers expect locale to just be pt
+  locale = locale === 'pt' ? 'pt_BR' : locale;
+
   if (process.env.LOCALAZY_CDN?.length > 0) {
     const cdn = await CdnClient.create({
       metafile: process.env.LOCALAZY_CDN,

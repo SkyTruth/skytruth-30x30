@@ -7,6 +7,8 @@ import { formatPercentage, formatKM } from '@/lib/utils/formats';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { ProtectionCoverageStatListResponseDataItem } from '@/types/generated/strapi.schemas';
 
+import useNameField from '@/hooks/use-name-field';
+
 export type FormattedStat = {
   location: string;
   iso: string;
@@ -24,16 +26,7 @@ const useFormattedStats = (
 
   const DEFAULT_VALUE = '-';
 
-  const nameField = useMemo(() => {
-    let res = 'name';
-    if (locale === 'es') {
-      res = 'name_es';
-    }
-    if (locale === 'fr') {
-      res = 'name_fr';
-    }
-    return res;
-  }, [locale]);
+  const nameField = useNameField();
 
   const { data: protectionCoverageStats, isFetching } = useGetProtectionCoverageStats<
     ProtectionCoverageStatListResponseDataItem[]
