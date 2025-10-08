@@ -1,8 +1,9 @@
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 
+import useNameField from '@/hooks/use-name-field';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
-import { Location, LocationListResponseDataItem } from '@/types/generated/strapi.schemas';
+import { LocationListResponseDataItem } from '@/types/generated/strapi.schemas';
 
 type MissingCountriesListProps = {
   countries: string[];
@@ -10,13 +11,13 @@ type MissingCountriesListProps = {
 
 const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ countries }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const locale = useLocale();
+  const nameField = useNameField();
 
   const { data: locations, isFetching } = useGetLocations<LocationListResponseDataItem[]>(
     {
       //@ts-ignore
       populate: {
-        fields: ['name', 'name_es', 'name_fr'],
+        fields: ['name', 'name_es', 'name_fr', 'name_pt'],
       },
       filters: {
         code: {
@@ -31,12 +32,6 @@ const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ count
     }
   );
 
-  const getName = (location: Location) => {
-    if (locale === 'es' && location.name_es) return location.name_es;
-    if (locale === 'fr' && location.name_fr) return location.name_fr;
-    return location.name;
-  };
-
   if (countries.length === 0 || isFetching) {
     return null;
   }
@@ -44,7 +39,7 @@ const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ count
     <div className="mt-2 text-xs">
       {'* ' + t('no-data-for') + ' '}
       {locations.map(
-        (loc, idx) => getName(loc.attributes) + `${idx !== locations.length - 1 ? ', ' : ''}`
+        (loc, idx) => loc.attributes[nameField] + `${idx !== locations.length - 1 ? ', ' : ''}`
       )}
     </div>
   );

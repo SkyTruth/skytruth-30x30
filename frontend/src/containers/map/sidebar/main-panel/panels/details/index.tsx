@@ -17,6 +17,7 @@ import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
+import useNameField from '@/hooks/use-name-field';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
 import { cn } from '@/lib/classnames';
@@ -36,6 +37,7 @@ import TerrestrialWidgets from './widgets/terrestrial-widgets';
 const SidebarDetails: FCWithMessages = () => {
   const locale = useLocale();
   const t = useTranslations('containers.map-sidebar-main-panel');
+  const locationNameField = useNameField();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerScroll = useScrollPosition(containerRef);
@@ -66,7 +68,7 @@ const SidebarDetails: FCWithMessages = () => {
     {
       locale,
       // @ts-ignore
-      fields: ['name', 'name_es', 'name_fr', 'type', 'code', 'has_shared_marine_area'],
+      fields: ['name', 'name_es', 'name_fr', 'name_pt', 'type', 'code', 'has_shared_marine_area'],
       filters: {
         code: {
           $in: location,
@@ -77,10 +79,10 @@ const SidebarDetails: FCWithMessages = () => {
         ? {
             populate: {
               members: {
-                fields: ['code', 'name', 'name_es', 'name_fr'],
+                fields: ['code', 'name', 'name_es', 'name_fr', 'name_pt'],
               },
               groups: {
-                fields: ['code', 'name', 'name_es', 'name_fr'],
+                fields: ['code', 'name', 'name_es', 'name_fr', 'name_pt'],
               },
             },
           }
@@ -92,17 +94,6 @@ const SidebarDetails: FCWithMessages = () => {
       },
     }
   );
-
-  const locationNameField = useMemo(() => {
-    let res = 'name';
-    if (locale === 'es') {
-      res = 'name_es';
-    }
-    if (locale === 'fr') {
-      res = 'name_fr';
-    }
-    return res;
-  }, [locale]);
 
   const mapLocationRelations = useCallback(
     (relation: string) => {

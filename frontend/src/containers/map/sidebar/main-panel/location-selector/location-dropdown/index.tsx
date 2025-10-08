@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Check, XCircle } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 
 import {
   Command,
@@ -10,6 +10,7 @@ import {
   CommandItem,
   CommandEmpty,
 } from '@/components/ui/command';
+import useNameField from '@/hooks/use-name-field';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { LocationListResponseDataItem } from '@/types/generated/strapi.schemas';
@@ -41,29 +42,21 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   dividerIndex,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const locale = useLocale();
+  const nameField = useNameField();
+
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const normalize = (s: string) => s.normalize?.('NFKD').toLowerCase() || s.toLowerCase();
-
-  const getName = useCallback(
-    (location: LocationListResponseDataItem['attributes']) => {
-      if (locale === 'es' && location.name_es) return location.name_es;
-      if (locale === 'fr' && location.name_fr) return location.name_fr;
-      return location.name;
-    },
-    [locale]
-  );
 
   const visibleLocations = useMemo(() => {
     if (!searchTerm) return filteredLocations;
 
     const query = normalize(searchTerm);
     return filteredLocations.filter(({ attributes }) => {
-      const name = getName(attributes);
+      const name = attributes?.[nameField];
       return normalize(name).includes(query);
     });
-  }, [filteredLocations, searchTerm, getName]);
+  }, [filteredLocations, searchTerm, nameField]);
 
   return (
     <Command label={searchPlaceholder} className={cn(className)} shouldFilter={false}>
@@ -76,7 +69,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
         {visibleLocations.map(({ attributes }, idx) => {
           const { code, type } = attributes;
-          const locationName = getName(attributes);
+          const locationName = attributes?.[nameField];
 
           const locationType = LocationType[type] || LocationType.country;
           const Selected = isCustomRegionTab ? XCircle : Check;

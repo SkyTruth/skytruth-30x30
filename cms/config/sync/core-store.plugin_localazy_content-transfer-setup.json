@@ -119,7 +119,8 @@
             }
           },
           "default": null,
-          "environment": null
+          "environment": null,
+          "slug": false
         }
       },
       {

@@ -9,6 +9,7 @@ import Icon from '@/components/ui/icon';
 import GlobalRegionalTable from '@/containers/map/content/details/tables/global-regional';
 import NationalHighSeasTable from '@/containers/map/content/details/tables/national-highseas';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import useNameField from '@/hooks/use-name-field';
 import CloseIcon from '@/styles/icons/close.svg';
 import { FCWithMessages } from '@/types';
 import { getGetLocationsQueryOptions, useGetLocations } from '@/types/generated/location';
@@ -16,6 +17,7 @@ import { getGetLocationsQueryOptions, useGetLocations } from '@/types/generated/
 const MapDetails: FCWithMessages = () => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
+  const nameField = useNameField();
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
   const {
@@ -116,13 +118,7 @@ const MapDetails: FCWithMessages = () => {
       }
     }
 
-    let locationName = locationsQuery.data?.name;
-    if (locale === 'es') {
-      locationName = locationsQuery.data?.name_es;
-    }
-    if (locale === 'fr') {
-      locationName = locationsQuery.data?.name_fr;
-    }
+    const locationName = locationsQuery.data?.[nameField];
 
     const parsedTitle =
       selectedTable.title[tab][locationsQuery.data?.type]?.replace('{location}', locationName) ||
@@ -132,7 +128,7 @@ const MapDetails: FCWithMessages = () => {
       title: parsedTitle,
       component: selectedTable.component,
     };
-  }, [locale, tablesSettings, tab, locationsQuery.data]);
+  }, [tablesSettings, tab, locationsQuery.data, nameField]);
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-white px-4 py-4 md:px-6">

@@ -32,6 +32,7 @@ export type GlobalRegionalTableColumns = {
     name: string;
     name_es: string;
     name_fr: string;
+    name_pt: string;
     code: string;
     mpaa_protection_level_stats: {
       percentage: number;
@@ -428,7 +429,7 @@ export const useData = (
       // @ts-ignore
       populate: {
         location: {
-          fields: ['name', 'name_es', 'name_fr', 'code'],
+          fields: ['name', 'name_es', 'name_fr', 'name_pt', 'code'],
           populate: {
             ...(environment === 'marine'
               ? {
@@ -514,6 +515,7 @@ export const useData = (
                   name: location?.name,
                   name_es: location?.name_es,
                   name_fr: location?.name_fr,
+                  name_pt: location?.name_pt,
                   code: location.code,
                   mpaa_protection_level_stats: {
                     percentage: location?.mpaa_protection_level_stats?.data?.attributes.percentage,
