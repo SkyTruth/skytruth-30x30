@@ -3,11 +3,10 @@ import { useMemo } from 'react';
 import { sortBy } from 'lodash-es';
 import { useLocale } from 'next-intl';
 
+import useNameField from '@/hooks/use-name-field';
 import { formatPercentage, formatKM } from '@/lib/utils/formats';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { ProtectionCoverageStatListResponseDataItem } from '@/types/generated/strapi.schemas';
-
-import useNameField from '@/hooks/use-name-field';
 
 export type FormattedStat = {
   location: string;

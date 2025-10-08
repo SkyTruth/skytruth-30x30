@@ -38,7 +38,7 @@ const d3Locales = {
   en,
   es,
   fr,
-  pt
+  pt,
 };
 
 const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
