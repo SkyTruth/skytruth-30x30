@@ -171,7 +171,7 @@ export const useColumns = (
                 className="font-semibold underline"
                 href={`${PAGES.progressTracker}/${location.code}?${searchParams.toString()}`}
               >
-                {location[locationNameKey]}
+                {location[nameField]}
               </Link>
             </HeaderItem>
           );

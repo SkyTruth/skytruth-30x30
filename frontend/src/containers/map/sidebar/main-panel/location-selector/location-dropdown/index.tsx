@@ -74,6 +74,8 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
           const locationType = LocationType[type] || LocationType.country;
           const Selected = isCustomRegionTab ? XCircle : Check;
 
+          if (!locationName) return null;
+
           return (
             <div key={code}>
               <CommandItem value={locationName} onSelect={() => onSelected(code)}>

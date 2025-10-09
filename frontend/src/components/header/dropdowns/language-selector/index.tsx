@@ -28,6 +28,7 @@ const LanguageSelector: FCWithMessages = () => {
         <SelectItem value="en">English{locale !== 'en' && ` (${t('english')})`}</SelectItem>
         <SelectItem value="es">Español{locale !== 'es' && ` (${t('spanish')})`}</SelectItem>
         <SelectItem value="fr">Français{locale !== 'fr' && ` (${t('french')})`}</SelectItem>
+        <SelectItem value="pt">Português{locale !== 'pt' && ` (${t('portuguese')})`}</SelectItem>
       </SelectContent>
     </Select>
   );

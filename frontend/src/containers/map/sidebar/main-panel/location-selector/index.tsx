@@ -268,7 +268,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             {isCustomRegionActive ? t('change-or-edit-location') : t('change-location')}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-96 max-w-screen" align="start">
+        <PopoverContent className="max-w-[26rem]" align="start">
           <LocationTypeToggle
             theme={theme}
             defaultValue={locationsFilter}
@@ -317,7 +317,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             [BUTTON_CLASSES]: true,
             'row-start-2':
               (locationCode !== 'GLOB' && !isCustomRegionActive) ||
-              (locale === 'fr' && !isCustomRegionActive),
+              (['fr', 'pt'].includes(locale) && !isCustomRegionActive),
           })}
           type="button"
           variant="text-link"

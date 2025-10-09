@@ -353,7 +353,8 @@
       "selected-language": "Selected language: {language}",
       "english": "English",
       "spanish": "Spanish",
-      "french": "French"
+      "french": "French",
+      "portuguese": "Portuguese"
     }
   }
 }
