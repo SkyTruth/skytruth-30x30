@@ -317,7 +317,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             [BUTTON_CLASSES]: true,
             'row-start-2':
               (locationCode !== 'GLOB' && !isCustomRegionActive) ||
-              (['fr', 'pt'].includes(locale) && !isCustomRegionActive),
+              (locale !== 'en' && !isCustomRegionActive),
           })}
           type="button"
           variant="text-link"
