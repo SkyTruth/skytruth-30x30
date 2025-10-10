@@ -96,6 +96,7 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
     """
     # build fast lookup dicts for area by location
     eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"]))
+    eez_lookup["ATA"] = eez_lookup["ABNJ"]
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"]))
 
     def _get_total_area(x):
@@ -241,7 +242,25 @@ def add_year(df: pd.DataFrame) -> pd.DataFrame:
         Must include 'designated_date' string column.
     """
     df = df.copy()
-    df["year"] = df["designated_date"].apply(lambda x: int(x.split("-")[0]) if x != "" else -9999)
+    df["year"] = df["designated_date"].apply(lambda x: int(x.split("-")[0]) if x != "" else np.nan)
+    return df
+
+
+def update_mpaa_establishment_stage(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Updates mpaa_establishment_stage to the correct slugs
+    """
+    conversion_dict = {
+        "actively managed": "actively-managed",
+        "designated": "designated",
+        "implemented": "implemented",
+        "unknown": "unknown",
+        "proposed/committed": "proposed-committed",
+    }
+    df = df.copy()
+    df["mpaa_establishment_stage"] = df["mpaa_establishment_stage"].apply(
+        lambda x: conversion_dict[x] if x is not None else None
+    )
     return df
 
 
@@ -264,6 +283,32 @@ def calculate_area(
     if round:
         col = col.round(round)
     return gdf.assign(**{output_area_column: col})
+
+
+def choose_pa_area(df):
+    df = df.copy()
+
+    # Choose columns based on MARINE flag
+    # TODO: should we just use marine area for marine PAs? This gets messy
+    # with coastal PAs that sometimes have _M_AREA=0
+    gis_area = df["GIS_AREA"]
+    rep_area = df["REP_AREA"]
+    # gis_area = np.where(df["MARINE"] == 0, df["GIS_AREA"], df["GIS_M_AREA"])
+    # rep_area = np.where(df["MARINE"] == 0, df["REP_AREA"], df["REP_M_AREA"])
+
+    # Force to numeric safely (non-numeric → NaN)
+    gis_area = pd.to_numeric(gis_area, errors="coerce")
+    rep_area = pd.to_numeric(rep_area, errors="coerce")
+
+    # Replace non-positive with NaN
+    gis_area = np.where(gis_area > 0, gis_area, np.nan)
+    rep_area = np.where(rep_area > 0, rep_area, np.nan)
+
+    # # Prefer GIS area if valid, otherwise REP area, otherwise 0
+    df["calculated_area_km2"] = np.where(
+        ~np.isnan(gis_area), gis_area, np.where(~np.isnan(rep_area), rep_area, 0)
+    )
+    return df
 
 
 def clean_geometries(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:

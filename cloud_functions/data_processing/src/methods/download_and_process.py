@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import requests
 from shapely.geometry import MultiPoint, Point, shape
+import shutil
 import zipfile
 
 from src.core.commons import (
@@ -40,7 +41,7 @@ from src.core.params import (
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_URL,
 )
-from src.core.processors import calculate_area
+from src.core.processors import calculate_area, choose_pa_area
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
@@ -262,8 +263,15 @@ def unpack_pas(pa_dir):
                 gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
                 gdf["layer_name"] = shp.replace(".shp", "")
                 to_append.append(gdf)
+        try:
+            os.remove(zip_path)
+            print(f"Deleted {zip_path}")
+        except Exception as e:
+            print(f"Warning: failed to delete {zip_path}: {e}")
 
-    return pd.concat((to_append), axis=0)
+    if not to_append:
+        raise ValueError(f"No shapefiles found in {pa_dir}")
+    return pd.concat(to_append, axis=0)
 
 
 def download_and_process_protected_planet_pas(
@@ -276,8 +284,11 @@ def download_and_process_protected_planet_pas(
     bucket: str = BUCKET,
     project_id: str = PROJECT,
 ):
-    base_zip_path = "wdpa.zip"
-    pa_dir = "wdpa"
+    dir = "/tmp"
+    os.makedirs(dir, exist_ok=True)
+
+    base_zip_path = os.path.join(dir, "wdpa.zip")
+    pa_dir = os.path.join(dir, "wdpa")
 
     if verbose:
         print(f"downloading {wdpa_url}")
@@ -291,12 +302,17 @@ def download_and_process_protected_planet_pas(
         print(f"unpacking PAs from {pa_dir}")
     pas = print_peak_memory_allocation(unpack_pas, pa_dir)
 
+    try:
+        shutil.rmtree(pa_dir)
+        print(f"Deleted directory {pa_dir}")
+    except Exception as e:
+        print(f"Warning: failed to delete directory {pa_dir}: {e}")
+
     if verbose:
         print("adding bbox and area columns")
+
     pas["bbox"] = pas.geometry.apply(lambda g: g.bounds if g is not None else None)
-    pas["calculated_area_km2"] = pas.apply(
-        lambda x: x["GIS_AREA"] if x["GIS_AREA"] is not None else x["REP_AREA"], axis=1
-    )
+    pas = choose_pa_area(pas)
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")

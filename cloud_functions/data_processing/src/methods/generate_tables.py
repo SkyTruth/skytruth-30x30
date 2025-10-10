@@ -1,5 +1,6 @@
 import geopandas as gpd
 import numpy as np
+import os
 import pandas as pd
 from tqdm.auto import tqdm
 
@@ -56,6 +57,7 @@ from src.core.processors import (
     remove_non_designated_m,
     remove_non_designated_p,
     rename_habitats,
+    update_mpaa_establishment_stage,
     update_mpatlas_asterisk,
 )
 from src.core.strapi import Strapi
@@ -67,6 +69,8 @@ from src.utils.gcp import (
     read_json_df,
     upload_dataframe,
 )
+
+os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
 
 
 def generate_protected_areas_table(
@@ -124,6 +128,95 @@ def generate_protected_areas_table(
 
         return ordered
 
+    def process_wdpa(wdpa):
+        wdpa_dict = {
+            "NAME": "name",
+            "calculated_area_km2": "area",
+            "STATUS": "STATUS",
+            "PA_DEF": "PA_DEF",
+            "STATUS_YR": "year",
+            "WDPAID": "wdpaid",
+            "WDPA_PID": "wdpa_p_id",
+            "DESIG_TYPE": "designation",
+            "ISO3": "location",
+            "IUCN_CAT": "iucn_category",
+            "MARINE": "MARINE",
+            "bbox": "bbox",
+        }
+        cols = [i for i in wdpa_dict]
+
+        wdpa_pa = (
+            wdpa[cols]
+            .rename(columns=wdpa_dict)
+            .pipe(remove_non_designated_p)
+            .pipe(add_environment)
+            .pipe(add_oecm_status)
+            .pipe(
+                add_constants,
+                {
+                    "zone_id": None,
+                    "data_source": "protected-planet",
+                    "mpaa_establishment_stage": None,
+                    "mpaa_protection_level": None,
+                },
+            )
+            .pipe(remove_columns, ["STATUS", "MARINE", "PA_DEF"])
+            .pipe(
+                convert_type,
+                {
+                    "wdpaid": [pd.Int64Dtype(), str],
+                    "wdpa_p_id": [str],
+                    "zone_id": [pd.Int64Dtype(), str],
+                },
+            )
+        )
+
+        return wdpa_pa
+
+    def process_mpa(mpatlas):
+        mpa_dict = {
+            "name": "name",
+            "calculated_area_km2": "area",
+            "designated_date": "designated_date",
+            "wdpa_id": "wdpaid",
+            "wdpa_pid": "wdpa_p_id",
+            "zone_id": "zone_id",
+            "designation": "designation",
+            "establishment_stage": "mpaa_establishment_stage",
+            "country": "location",
+            "protection_mpaguide_level": "mpaa_protection_level",
+            "bbox": "bbox",
+        }
+        cols = [i for i in mpa_dict]
+        mpa_pa = (
+            mpatlas[cols]
+            .rename(columns=mpa_dict)
+            .pipe(remove_non_designated_m)
+            .pipe(update_mpaa_establishment_stage)
+            .pipe(add_year)
+            # TODO: Are all MPAtlas MPAs PAs (not OECMs)?
+            .pipe(
+                add_constants,
+                {
+                    "protection_status": "pa",
+                    "environment": "marine",
+                    "data_source": "mpatlas",
+                    "iucn_category": None,
+                },
+            )
+            .pipe(remove_columns, "designated_date")
+            .pipe(
+                convert_type,
+                {
+                    "wdpaid": [pd.Int64Dtype(), str],
+                    "wdpa_p_id": [str],
+                    "zone_id": [pd.Int64Dtype(), str],
+                },
+            )
+        )
+
+        return mpa_pa
+
     if verbose:
         print("loading PA metadata")
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
@@ -136,97 +229,17 @@ def generate_protected_areas_table(
     eez = read_json_df(BUCKET, eez_file_name)
 
     if verbose:
-        print(f"loading eez from {gadm_file_name}")
+        print(f"loading gadm from {gadm_file_name}")
     gadm = read_json_df(BUCKET, gadm_file_name)
     gadm = calculate_area(gadm, output_area_column="AREA_KM2")
 
     if verbose:
         print("processing WDPAs")
-    wdpa_dict = {
-        "NAME": "name",
-        "calculated_area_km2": "area",
-        "STATUS": "STATUS",
-        "PA_DEF": "PA_DEF",
-        "STATUS_YR": "year",
-        "WDPAID": "wdpaid",
-        "WDPA_PID": "wdpa_p_id",
-        "DESIG_TYPE": "designation",
-        "ISO3": "location",
-        "IUCN_CAT": "iucn_category",
-        "MARINE": "MARINE",
-        "bbox": "bbox",
-    }
-    cols = [i for i in wdpa_dict]
-
-    wdpa_pa = (
-        wdpa[cols]
-        .rename(columns=wdpa_dict)
-        .pipe(remove_non_designated_p)
-        .pipe(add_environment)
-        .pipe(add_oecm_status)
-        .pipe(
-            add_constants,
-            {
-                "zone_id": "",
-                "data_source": "Protected Planet",
-                "mpaa_establishment_stage": "",
-                "mpaa_protection_level": "",
-            },
-        )
-        .pipe(remove_columns, ["STATUS", "MARINE", "PA_DEF"])
-        .pipe(
-            convert_type,
-            {
-                "wdpaid": [pd.Int64Dtype(), str],
-                "wdpa_p_id": [str],
-                "zone_id": [pd.Int64Dtype(), str],
-            },
-        )
-    )
+    wdpa_pa = process_wdpa(wdpa)
 
     if verbose:
         print("processing MPAs")
-
-    mpa_dict = {
-        "name": "name",
-        "calculated_area_km2": "area",
-        "designated_date": "designated_date",
-        "wdpa_id": "wdpaid",
-        "wdpa_pid": "wdpa_p_id",
-        "zone_id": "zone_id",
-        "designation": "designation",
-        "establishment_stage": "mpaa_establishment_stage",
-        "country": "location",
-        "protection_mpaguide_level": "mpaa_protection_level",
-        "bbox": "bbox",
-    }
-    cols = [i for i in mpa_dict]
-    mpa_pa = (
-        mpatlas[cols]
-        .rename(columns=mpa_dict)
-        .pipe(remove_non_designated_m)
-        .pipe(add_year)
-        # TODO: Are all MPAtlas MPAs PAs (not OECMs)? Should protection_status be
-        # replaced with "pa" instead of blank?
-        .pipe(
-            add_constants,
-            {
-                "protection_status": "",
-                "environment": "marine",
-                "data_source": "MPATLAS",
-                "iucn_category": "",
-            },
-        )
-        .pipe(remove_columns, "designated_date")
-        .pipe(
-            convert_type,
-            {
-                "wdpaid": [pd.Int64Dtype(), str],
-                "wdpa_p_id": [str],
-                "zone_id": [pd.Int64Dtype(), str],
-            },
-        )
-    )
+    mpa_pa = process_mpa(mpatlas)
 
     pas = pd.concat((wdpa_pa[mpa_pa.columns], mpa_pa), axis=0)
     pas["area"] = pd.to_numeric(pas["area"], errors="coerce")
@@ -326,6 +339,7 @@ def database_updates(current_db, updated_pas, verbose=True):
     deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
     static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
 
+    print("getting static tables")
     static_current = (
         current_db[current_db["identifier"].isin(static)]
         .sort_values(by="identifier")
@@ -393,21 +407,53 @@ def update_protected_areas_table(
         print("finding database changes")
     db_changes = database_updates(current_db_df, updated_pas, verbose=verbose)
 
-    strapi = Strapi()
-    strapi.upsert_pas(db_changes["new"] + db_changes["changed"])
-    strapi.delete_pas(db_changes["deleted"])
-    # import pickle
-    # from google.cloud import storage
-    # source_file = "db_changes.pkl"
-    # destination_blob = "tmp/db_changes.pkl"
-    # with open(source_file, "wb") as f:
-    #     pickle.dump(db_changes, f)
+    def clean_for_json(obj):
+        import math
 
-    # client = storage.Client(project=PROJECT)
-    # bucket = client.bucket(bucket)
-    # blob = bucket.blob(destination_blob)
-    # blob.upload_from_filename(source_file)
-    # print(f"Uploaded {source_file} to gs://{bucket}/{destination_blob}")
+        """Recursively replace NaN/Infinity with None (-> JSON null)."""
+        if isinstance(obj, float):
+            if math.isnan(obj) or math.isinf(obj):
+                return None
+            return obj
+        elif isinstance(obj, str):
+            if obj == "":
+                return None
+            return obj
+        elif isinstance(obj, dict):
+            return {k: clean_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [clean_for_json(v) for v in obj]
+        else:
+            return obj
+
+    db_changes["new"] = clean_for_json(db_changes["new"])
+    db_changes["changed"] = clean_for_json(db_changes["changed"])
+
+    import pickle
+    from google.cloud import storage
+
+    source_file = "db_changes.pkl"
+    destination_blob = "tmp/db_changes.pkl"
+    with open(source_file, "wb") as f:
+        pickle.dump(db_changes, f)
+
+    client = storage.Client(project=PROJECT)
+    bucket = client.bucket(bucket)
+    blob = bucket.blob(destination_blob)
+    blob.upload_from_filename(source_file)
+    print(f"Uploaded {source_file} to gs://{bucket}/{destination_blob}")
+
+    strapi = Strapi()
+
+    deleted = db_changes["deleted"]
+    print(f"deleting {len(deleted)} entries")
+    delete_response = strapi.delete_pas(deleted)
+    print("delete_response", delete_response)
+
+    upserted = db_changes["new"] + db_changes["changed"]
+    print(f"upserting {len(upserted)} entries")
+    upsert_response = strapi.upsert_pas(upserted)
+    print("upsert response", upsert_response)
 
     return db_changes
 
