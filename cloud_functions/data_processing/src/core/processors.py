@@ -97,6 +97,7 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
     # build fast lookup dicts for area by location
     eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"]))
     eez_lookup["ATA"] = eez_lookup["ABNJ"]
+    eez_lookup["HKG"] = eez_lookup["CHN"]
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"]))
 
     def _get_total_area(x):

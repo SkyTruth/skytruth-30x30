@@ -390,23 +390,6 @@ def update_protected_areas_table(
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
-    updated_pas = generate_protected_areas_table(
-        wdpa_file_name=wdpa_file_name,
-        mpatlas_file_name=mpatlas_file_name,
-        bucket=bucket,
-        verbose=verbose,
-    )
-
-    # Get the current database
-    if verbose:
-        print("downloading current PA database")
-    current_db = get_pas()
-    current_db_df = pd.DataFrame(current_db)
-
-    if verbose:
-        print("finding database changes")
-    db_changes = database_updates(current_db_df, updated_pas, verbose=verbose)
-
     def clean_for_json(obj):
         import math
 
@@ -425,6 +408,23 @@ def update_protected_areas_table(
             return [clean_for_json(v) for v in obj]
         else:
             return obj
+
+    updated_pas = generate_protected_areas_table(
+        wdpa_file_name=wdpa_file_name,
+        mpatlas_file_name=mpatlas_file_name,
+        bucket=bucket,
+        verbose=verbose,
+    )
+
+    # Get the current database
+    if verbose:
+        print("downloading current PA database")
+    current_db = get_pas()
+    current_db_df = pd.DataFrame(current_db)
+
+    if verbose:
+        print("finding database changes")
+    db_changes = database_updates(current_db_df, updated_pas, verbose=verbose)
 
     db_changes["new"] = clean_for_json(db_changes["new"])
     db_changes["changed"] = clean_for_json(db_changes["changed"])
