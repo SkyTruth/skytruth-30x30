@@ -49,3 +49,4 @@ tsconfig.tsbuildinfo
 # translations
 translations/*
 !translations/en.json
+!translations/pt.json

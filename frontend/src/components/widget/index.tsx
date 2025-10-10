@@ -7,6 +7,8 @@ import en from 'd3-time-format/locale/en-US';
 import es from 'd3-time-format/locale/es-ES';
 // @ts-ignore
 import fr from 'd3-time-format/locale/fr-FR';
+// @ts-ignore
+import pt from 'd3-time-format/locale/pt-BR';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/classnames';
@@ -36,6 +38,7 @@ const d3Locales = {
   en,
   es,
   fr,
+  pt,
 };
 
 const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({

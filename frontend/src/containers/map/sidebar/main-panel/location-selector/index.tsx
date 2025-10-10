@@ -15,6 +15,7 @@ import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { popupAtom } from '@/containers/map/store';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
+import useNameField from '@/hooks/use-name-field';
 import { cn } from '@/lib/classnames';
 import GlobeIcon from '@/styles/icons/globe.svg';
 import MagnifyingGlassIcon from '@/styles/icons/magnifying-glass.svg';
@@ -60,6 +61,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
+  const locationNameField = useNameField();
 
   const {
     query: { locationCode = 'GLOB' },
@@ -80,17 +82,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
   // TODO TECH-3233 Clean up
   const isCustomRegionEnabled = useFeatureFlag('is_custom_region_active');
-
-  const locationNameField = useMemo(() => {
-    let res = 'name';
-    if (locale === 'es') {
-      res = 'name_es';
-    }
-    if (locale === 'fr') {
-      res = 'name_fr';
-    }
-    return res;
-  }, [locale]);
 
   const { data: locationsData } = useGetLocations(
     {
@@ -222,6 +213,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           name: t('clear-all'),
           name_es: t('clear-all'),
           name_fr: t('clear-all'),
+          name_pt: t('clear-all'),
         },
       } as LocationListResponseDataItem;
 
@@ -276,7 +268,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             {isCustomRegionActive ? t('change-or-edit-location') : t('change-location')}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-96 max-w-screen" align="start">
+        <PopoverContent className="max-w-[26rem]" align="start">
           <LocationTypeToggle
             theme={theme}
             defaultValue={locationsFilter}
@@ -325,7 +317,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
             [BUTTON_CLASSES]: true,
             'row-start-2':
               (locationCode !== 'GLOB' && !isCustomRegionActive) ||
-              (locale === 'fr' && !isCustomRegionActive),
+              (locale !== 'en' && !isCustomRegionActive),
           })}
           type="button"
           variant="text-link"

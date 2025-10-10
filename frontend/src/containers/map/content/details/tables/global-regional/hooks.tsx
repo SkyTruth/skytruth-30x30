@@ -19,6 +19,7 @@ import {
   useSyncCustomRegion,
 } from '@/containers/map/content/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
+import useNameField from '@/hooks/use-name-field';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 import { useGetDataInfos } from '@/types/generated/data-info';
@@ -32,6 +33,7 @@ export type GlobalRegionalTableColumns = {
     name: string;
     name_es: string;
     name_fr: string;
+    name_pt: string;
     code: string;
     mpaa_protection_level_stats: {
       percentage: number;
@@ -138,6 +140,7 @@ export const useColumns = (
 ) => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
+  const nameField = useNameField();
 
   const searchParams = useMapSearchParams();
   const tooltips = useTooltips();
@@ -145,17 +148,10 @@ export const useColumns = (
   const filtersOptions = useFiltersOptions();
 
   const columns: AccessorKeyColumnDef<GlobalRegionalTableColumns>[] = useMemo(() => {
-    let locationNameKey = 'name';
-    if (locale === 'es') {
-      locationNameKey = 'name_es';
-    } else if (locale === 'fr') {
-      locationNameKey = 'name_fr';
-    }
-
     return [
       {
-        id: `location.${locationNameKey}`,
-        accessorKey: `location.${locationNameKey}`,
+        id: `location.${nameField}`,
+        accessorKey: `location.${nameField}`,
         header: ({ column }) => (
           <HeaderItem className="ml-1">
             <SortingButton column={column} />
@@ -175,7 +171,7 @@ export const useColumns = (
                 className="font-semibold underline"
                 href={`${PAGES.progressTracker}/${location.code}?${searchParams.toString()}`}
               >
-                {location[locationNameKey]}
+                {location[nameField]}
               </Link>
             </HeaderItem>
           );
@@ -330,7 +326,17 @@ export const useColumns = (
         },
       },
     ];
-  }, [locale, environment, t, tooltips, searchParams, filters, onChangeFilters, filtersOptions]);
+  }, [
+    locale,
+    environment,
+    t,
+    tooltips,
+    searchParams,
+    filters,
+    onChangeFilters,
+    filtersOptions,
+    nameField,
+  ]);
 
   return columns;
 };
@@ -428,7 +434,7 @@ export const useData = (
       // @ts-ignore
       populate: {
         location: {
-          fields: ['name', 'name_es', 'name_fr', 'code'],
+          fields: ['name', 'name_es', 'name_fr', 'name_pt', 'code'],
           populate: {
             ...(environment === 'marine'
               ? {
@@ -514,6 +520,7 @@ export const useData = (
                   name: location?.name,
                   name_es: location?.name_es,
                   name_fr: location?.name_fr,
+                  name_pt: location?.name_pt,
                   code: location.code,
                   mpaa_protection_level_stats: {
                     percentage: location?.mpaa_protection_level_stats?.data?.attributes.percentage,

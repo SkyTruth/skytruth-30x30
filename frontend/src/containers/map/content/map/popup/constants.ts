@@ -47,6 +47,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
       en: 'name',
       es: 'name_es',
       fr: 'name_fr',
+      pt: 'name_pt',
     },
   },
   'marine-regions-source': {
@@ -55,6 +56,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
       en: 'name',
       es: 'name_es',
       fr: 'name_fr',
+      pt: 'name_pt',
     },
   },
   countries: {
@@ -64,6 +66,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
       en: 'name',
       es: 'name_es',
       fr: 'name_fr',
+      pt: 'name_pt',
     },
   },
   'terrestrial-regions': {
@@ -72,6 +75,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
       en: 'name',
       es: 'name_es',
       fr: 'name_fr',
+      pt: 'name_pt',
     },
   },
 };
