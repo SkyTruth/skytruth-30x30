@@ -36,12 +36,12 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
     const mpaaEstablishmentStageMap = await strapi
       .service('api::mpaa-establishment-stage.mpaa-establishment-stage')
       .getMpaaEstablishmentStageMap();
-    
+
       return {
         dataSourceMap,
         environmentMap,
         locationMap,
-        mpaaEstablishmentStageMap, 
+        mpaaEstablishmentStageMap,
         mpaaIucnCategoryMap,
         mpaaProtectionLevelMap,
         protectionStatusMap,
@@ -51,7 +51,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
   /**
    * Method to concatenate key fields of a PA that, together, for a unique idnetifier
    * allowing us to relaibly map a PA from WDPA or MPAtlas to a PA within our database
-   * @param pa 
+   * @param pa
    * @returns uniquely identifiying pa string
    */
   makePAKey(pa: PA | PARelations): string {
@@ -86,7 +86,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         dataSourceMap,
         environmentMap,
         locationMap,
-        mpaaEstablishmentStageMap, 
+        mpaaEstablishmentStageMap,
         mpaaIucnCategoryMap,
         mpaaProtectionLevelMap,
         protectionStatusMap,
@@ -167,7 +167,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         })
         return false
       }
-      if (!coverage) {
+      if (coverage !== 0 && !coverage) {
         errors.push({
           msg: `Failed to create PA, name: ${pa?.name}`,
           err: "Missing required field, 'coverage'"
@@ -182,14 +182,14 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
   /**
    * This function checks a PAs parent and child realtions, if they exist as records in the database
    * then they are passed through and allowd to be created as relationships. If they don't yet exist
-   * in the database we record a uniquely identifying key for the relationship and map that key to 
+   * in the database we record a uniquely identifying key for the relationship and map that key to
    * the current PA so that relationships can be made after the parent or children are added to the DB
    * and have IDs.
    * @param pa Protected Arae
    * @param toUpdateRelations Mapping of parent and child relations that must be updated
    * after first pass of upserting
    * @param newIdMap Map of identifying strings to IDs of newly created PAs
-   * @returns 
+   * @returns
    */
   checkParentChild(pa: InputPA, toUpdateRelations: ToUpdateRelations, newIdMap: IDMap): PA {
     const { children, parent } = pa;
@@ -201,14 +201,14 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
 
         children.forEach(child => {
           toUpdateRelations[paIdentifier].children.push({
-            id: child?.id, 
+            id: child?.id,
             key: this.makePAKey(child)
           })
         })
-        /** 
+        /**
          * If we're in this block it means the Pa has childnred
          * and at least one child is missing an ID (i.e. isn't created yet)
-         * So we will skip updating children for this PA and make that update 
+         * So we will skip updating children for this PA and make that update
          * after all new PAs are created
          * */
         delete pa.children
@@ -229,7 +229,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
           key: this.makePAKey(parent)
         }
         /**
-         * Parent doesn't yet exist, so save updating that relationship 
+         * Parent doesn't yet exist, so save updating that relationship
          * until all new PAs are created
          */
         delete pa.parent
