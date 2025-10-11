@@ -112,7 +112,7 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
         if denom is None or pd.isna(denom) or pd.isna(x["area"]):
             return None
 
-        return min(100, round(100 * x["area"] / denom, 2))
+        return min(100, 100 * x["area"] / denom)
 
     df = df.copy()
     tqdm.pandas()
