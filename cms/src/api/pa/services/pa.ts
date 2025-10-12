@@ -110,7 +110,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
     if (!locationMap[location]) {
       errors.push({
           msg: `Failed to find location for PA, name: ${pa?.name}, id: ${id}`,
-          err: `Locaiton ${location} not found`
+          err: `Location ${location} not found`
       });
       return false;
     }
@@ -153,7 +153,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         })
         return false
       }
-      if (!area) {
+      if (area !== 0 && !area) {
         errors.push({
           msg: `Failed to create PA, name: ${pa?.name}`,
           err: "Missing required field, 'area'"
