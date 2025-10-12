@@ -257,9 +257,16 @@ def generate_protected_areas_table(
 
     pas = pd.concat((wdpa_pa[mpa_pa.columns], mpa_pa), axis=0)
     pas["area"] = pd.to_numeric(pas["area"], errors="coerce")
+    pas["wdpa_p_id"] = pas["wdpa_p_id"].replace("", None)
     pas = add_percent_coverage(pas, eez, gadm)
     pas = pas.sort_values(["wdpaid", "wdpa_p_id", "zone_id"])
 
+    # TODO: Currently this will not add ATA (terrestrial), ALA (marine), and
+    # BVT (marine) because there is not GADM/EEZ lookup so the coverage
+    # is None. Do we want to roll them up, add polygons, or ignore?
+    pas = pas[~pas["coverage"].isnull()]
+
+    print("adding parent/child relationships")
     results = []
     # Split by country to ensure parent/children are of the same country
     for _, pa_cnt in tqdm(
@@ -283,7 +290,13 @@ def generate_protected_areas_table(
 
 def database_updates(current_db, updated_pas, verbose=True):
     def normalize_value(v):
-        return "<NA>" if pd.isna(v) else str(v)
+        if isinstance(v, float):
+            func = "<NA>" if (pd.isna(v) or v is None) else int(v)
+        elif v is None:
+            func = "<NA>"
+        else:
+            func = v
+        return str(func)
 
     def get_unique_identifier(row, cols):
         return "_".join(normalize_value(row[c]) for c in cols)
@@ -300,8 +313,11 @@ def database_updates(current_db, updated_pas, verbose=True):
         # build identifier in the same way as updated_pas["identifier"]
         identifier = get_unique_identifier(x, cols)
 
-        match = current_db.loc[current_db["identifier"] == identifier, "id"]
-        _id = int(match.iloc[0]) if not match.empty else None
+        if len(current_db) > 0:
+            match = current_db.loc[current_db["identifier"] == identifier, "id"]
+            _id = int(match.iloc[0]) if not match.empty else None
+        else:
+            _id = None
 
         return {**x, "id": _id}
 
@@ -334,13 +350,17 @@ def database_updates(current_db, updated_pas, verbose=True):
     # Create unique identifier and attach to the current and updated PAs for comparison
     if verbose:
         print("adding unique identifier")
+    # TODO: I added location as an identifier because sometimes a PA is shared by
+    # multiple countries - in this case, I give the PA to each country (just for)
+    # the PA table. Do we need to update something in the DB structure?
     cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id", "location"]
     updated_pas["identifier"] = updated_pas.apply(
         lambda x: get_unique_identifier(x, cols_for_id), axis=1
     )
-    current_db["identifier"] = current_db.apply(
-        lambda x: get_unique_identifier(x, cols_for_id), axis=1
-    )
+    if len(current_db) > 0:
+        current_db["identifier"] = current_db.apply(
+            lambda x: get_unique_identifier(x, cols_for_id), axis=1
+        )
 
     # Add identifier to parent/children
     if verbose:
@@ -356,70 +376,87 @@ def database_updates(current_db, updated_pas, verbose=True):
 
     if verbose:
         print("finding new, deleted, and static PAs")
-    new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
-    deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
-    static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
 
-    print("getting static tables")
-    # Current DB entries for PAs that are in updated table
-    static_current = (
-        current_db[current_db["identifier"].isin(static)]
-        .sort_values(by="identifier")
-        .reset_index(drop=True)
-    )
-    # Updated table entries for PAs that are in the current DB
-    static_updated = (
-        updated_pas[updated_pas["identifier"].isin(static)]
-        .sort_values(by="identifier")
-        .reset_index(drop=True)
-    )
-    # Add DB id to static updated table
-    static_updated = pd.merge(
-        static_updated, current_db[["identifier", "id"]], on="identifier", how="left"
-    )
+    if len(current_db) > 0:
+        new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
+        deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
+        static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
 
-    # Pull out parent and children DB ids
-    static_updated_0 = static_updated.copy()
-    static_updated_0["parent"] = static_updated_0["parent"].apply(
-        lambda x: x["id"] if x is not None else None
-    )
-    static_updated_0["children"] = static_updated_0["children"].apply(
-        lambda x: [i["id"] for i in x] if x is not None else None
-    )
+        print("getting static tables")
+        # Current DB entries for PAs that are in updated table
+        static_current = (
+            current_db[current_db["identifier"].isin(static)]
+            .sort_values(by="identifier")
+            .reset_index(drop=True)
+        )
+        # Updated table entries for PAs that are in the current DB
+        static_updated = (
+            updated_pas[updated_pas["identifier"].isin(static)]
+            .sort_values(by="identifier")
+            .reset_index(drop=True)
+        )
+        # Add DB id to static updated table
+        static_updated = pd.merge(
+            static_updated, current_db[["identifier", "id"]], on="identifier", how="left"
+        )
 
-    # specify which columns get which comparison
-    string_cols = list(
-        set(updated_pas.columns) - set(["children", "parent", "area", "coverage", "bbox"])
-    )
-    num_cols = ["area", "coverage", "parent"]
-    list_cols = ["children"]
+        # Pull out parent and children DB ids
+        static_updated_0 = static_updated.copy()
+        static_updated_0["parent"] = static_updated_0["parent"].apply(
+            lambda x: x["id"] if x is not None else None
+        )
+        static_updated_0["children"] = static_updated_0["children"].apply(
+            lambda x: [i["id"] for i in x] if x is not None else None
+        )
 
-    # build up combined mask
-    change_indx = pd.Series(False, index=static_current.index)
+        # specify which columns get which comparison
+        string_cols = list(
+            set(updated_pas.columns) - set(["children", "parent", "area", "coverage", "bbox"])
+        )
+        num_cols = ["area", "coverage", "parent"]
+        list_cols = ["children"]
 
-    for col in string_cols:
-        change_indx |= str_dif_idx(static_current, static_updated_0, col)
+        # build up combined mask
+        change_indx = pd.Series(False, index=static_current.index)
+        changed_cols = pd.DataFrame()
+        for col in string_cols:
+            changed_cols[col] = str_dif_idx(static_current, static_updated_0, col)
+            change_indx |= str_dif_idx(static_current, static_updated_0, col)
 
-    for col in num_cols:
-        static_updated_0[col] = static_updated_0[col].round(2)
-        change_indx |= num_dif_idx(static_current, static_updated_0, col)
+        for col in num_cols:
+            static_updated_0[col] = static_updated_0[col].round(2)
+            changed_cols[col] = num_dif_idx(static_current, static_updated_0, col)
+            change_indx |= num_dif_idx(static_current, static_updated_0, col)
 
-    for col in list_cols:
-        change_indx |= list_dif_idx(static_current, static_updated_0, col)
+        for col in list_cols:
+            changed_cols[col] = list_dif_idx(static_current, static_updated_0, col)
+            change_indx |= list_dif_idx(static_current, static_updated_0, col)
 
-    # Updated version of changed entries
-    changed = static_updated[change_indx]
+        # Updated version of changed entries
+        changed = static_updated[change_indx]
 
-    if verbose:
-        print(f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}")
+        if verbose:
+            print(f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}")
 
-    return {
-        "new": updated_pas[updated_pas["identifier"].isin(new)]
-        .drop(columns="identifier")
-        .to_dict(orient="records"),
-        "changed": changed.drop(columns="identifier").to_dict(orient="records"),
-        "deleted": list(current_db[current_db["identifier"].isin(deleted)]["id"]),
-    }
+        return {
+            "new": updated_pas[updated_pas["identifier"].isin(new)]
+            .drop(columns="identifier")
+            .to_dict(orient="records"),
+            "changed": changed.drop(columns="identifier").to_dict(orient="records"),
+            "deleted": list(current_db[current_db["identifier"].isin(deleted)]["id"]),
+        }, changed_cols
+    else:
+        new = list(set(updated_pas["identifier"]))
+        if verbose:
+            print(f"new: {len(new)}")
+
+        return {
+            "new": updated_pas[updated_pas["identifier"].isin(new)]
+            .drop(columns="identifier")
+            .to_dict(orient="records"),
+            "changed": [],
+            "deleted": [],
+        }, None
 
 
 def update_protected_areas_table(
@@ -459,29 +496,30 @@ def update_protected_areas_table(
         print("downloading current PA database")
     current_db = get_pas()
     current_db_df = pd.DataFrame(current_db)
-    current_db_df["area"] = current_db_df["area"].apply(lambda x: float(x))
-    current_db_df["coverage"] = current_db_df["coverage"].apply(lambda x: float(x))
+    if len(current_db_df) > 0:
+        current_db_df["area"] = current_db_df["area"].apply(lambda x: float(x))
+        current_db_df["coverage"] = current_db_df["coverage"].apply(
+            lambda x: float(x) if x is not None else None
+        )
+
+    if verbose:
+        print(f"current database length: {len(current_db)}")
 
     if verbose:
         print("finding database changes")
-    db_changes = database_updates(current_db_df, updated_pas, verbose=verbose)
+    db_changes, change_cols = database_updates(current_db_df, updated_pas, verbose=verbose)
+
+    # Print which values have changed
+    if verbose:
+        for col in change_cols.columns:
+            tmp = len(change_cols[change_cols[col]])
+            if tmp > 0:
+                print(f"{col}: {tmp} rows changed")
 
     db_changes["new"] = clean_for_json(db_changes["new"])
     db_changes["changed"] = clean_for_json(db_changes["changed"])
 
-    import pickle
-    from google.cloud import storage
-
-    source_file = "db_changes.pkl"
-    destination_blob = "tmp/db_changes.pkl"
-    with open(source_file, "wb") as f:
-        pickle.dump(db_changes, f)
-
-    client = storage.Client(project=PROJECT)
-    bucket = client.bucket(bucket)
-    blob = bucket.blob(destination_blob)
-    blob.upload_from_filename(source_file)
-    print(f"Uploaded {source_file} to gs://{bucket}/{destination_blob}")
+    upserted = db_changes["new"] + db_changes["changed"]
 
     strapi = Strapi()
 
@@ -491,14 +529,14 @@ def update_protected_areas_table(
     print("delete response:", delete_response)
 
     upserted = db_changes["new"] + db_changes["changed"]
-    print(f"upserting {len(upserted)} entries")
+    if verbose:
+        print(f"upserting {len(upserted)} entries")
 
+    wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
     chunk_size = 20000
-    # TODO: Currently this will not add ATA (terrestrial), ALA (marine), and
-    # BVT (marine) because there is not GADM/EEZ lookup so the coverage
-    # is None. Do we want to roll them up, add polygons, or ignore?
-    for i in tqdm(range(0, len(upserted), chunk_size), desc="Upserting to Strapi"):
-        chunk = upserted[i : i + chunk_size]
+    for i in tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"):
+        ids = wdpaids[i : i + chunk_size]
+        chunk = [u for u in upserted if u["wdpaid"] in ids]
         try:
             upsert_response = strapi.upsert_pas(chunk)
             print("upsert response:", upsert_response)
