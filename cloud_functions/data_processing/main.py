@@ -35,8 +35,8 @@ from src.methods.generate_tables import (
     generate_fishing_protection_table,
     generate_habitat_protection_table,
     generate_marine_protection_level_stats_table,
-    generate_protected_areas_table,
     generate_protection_coverage_stats_table,
+    update_protected_areas_table,
 )
 from src.methods.static_processes import (
     download_marine_habitats,
@@ -186,9 +186,6 @@ def main(request: Request) -> tuple[str, int]:
             # ------------------
             #   Table updates
             # ------------------
-            case "generate_protected_areas_table":
-                # TODO: incomplete!
-                _ = generate_protected_areas_table(verbose=verbose)
 
             case "generate_habitat_protection_table":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
@@ -212,6 +209,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case "update_locations":
                 return upload_locations(request=data, verbose=verbose)
+
+            case "update_protected_areas_table":
+                _ = update_protected_areas_table(verbose=verbose)
 
             case "update_protection_coverage_stats":
                 client = Strapi()
