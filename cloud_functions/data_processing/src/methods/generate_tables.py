@@ -424,7 +424,9 @@ def database_updates(current_db, updated_pas, verbose=True):
             change_indx |= str_dif_idx(static_current, static_updated_0, col)
 
         for col in num_cols:
-            static_updated_0[col] = static_updated_0[col].round(2)
+            static_updated_0[col] = (static_updated_0[col] + 1e-6).round(
+                2
+            )  # Force 0.005 to round up
             changed_cols[col] = num_dif_idx(static_current, static_updated_0, col)
             change_indx |= num_dif_idx(static_current, static_updated_0, col)
 
