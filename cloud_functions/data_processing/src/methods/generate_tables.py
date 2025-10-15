@@ -85,7 +85,7 @@ def generate_protected_areas_table(
     verbose: bool = True,
 ):
     def add_parent_children(
-        subset: pd.DataFrame, fields=["wdpa_id", "wdpa_pid", "zone_id"]
+        subset: pd.DataFrame, fields=["wdpa_id", "wdpa_pid", "zone_id", "location"]
     ) -> pd.DataFrame:
         """
         Reorder rows by priority, then set the first row as parent and the rest as children.
@@ -136,6 +136,8 @@ def generate_protected_areas_table(
 
         # Create one row per country
         wdpa["ISO3"] = wdpa["ISO3"].str.split(";")
+        wdpa = wdpa.explode("ISO3")
+        wdpa["ISO3"] = wdpa["ISO3"].str.strip()
 
         wdpa_dict = {
             "NAME": "name",
@@ -186,6 +188,8 @@ def generate_protected_areas_table(
 
         # Create one row per country
         mpatlas["country"] = mpatlas["country"].str.split(";")
+        mpatlas = mpatlas.explode("country")
+        mpatlas["country"] = mpatlas["country"].str.strip()
 
         mpa_dict = {
             "name": "name",
@@ -267,16 +271,20 @@ def generate_protected_areas_table(
 
     print("adding parent/child relationships")
     results = []
-    # Split by environment to ensure parent/children are of the same environment
-    for _, pa_env in pas.groupby("environment", sort=False):
-        for _, subset in tqdm(
-            pa_env.groupby("wdpaid", sort=False), total=len(pa_env), desc="processing PAs"
-        ):
-            results.append(
-                add_parent_children(
-                    subset, fields=["wdpaid", "wdpa_p_id", "zone_id", "environment"]
+    # Split by country to ensure parent/children are of the same country
+    for _, pa_cnt in tqdm(
+        pas.groupby("location", sort=False),
+        total=pas["location"].nunique(),
+        desc="processing countries",
+    ):
+        # Split by environment to ensure parent/children are of the same environment
+        for _, pa_env in pa_cnt.groupby("environment", sort=False):
+            for _, subset in pa_env.groupby("wdpaid", sort=False):
+                results.append(
+                    add_parent_children(
+                        subset, fields=["wdpaid", "wdpa_p_id", "zone_id", "environment", "location"]
+                    )
                 )
-            )
 
     protected_areas = pd.concat(results, ignore_index=True)
 
@@ -345,7 +353,7 @@ def database_updates(current_db, updated_pas, verbose=True):
     # Create unique identifier and attach to the current and updated PAs for comparison
     if verbose:
         print("adding unique identifier")
-    cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id"]
+    cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id", "location"]
     updated_pas["identifier"] = updated_pas.apply(
         lambda x: get_unique_identifier(x, cols_for_id), axis=1
     )
