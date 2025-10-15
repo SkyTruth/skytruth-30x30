@@ -1,7 +1,9 @@
 import geopandas as gpd
+from google.cloud import storage
 import numpy as np
 import os
 import pandas as pd
+import pickle
 from tqdm.auto import tqdm
 
 from src.core.commons import (
@@ -12,6 +14,7 @@ from src.core.commons import (
 )
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
+    ARCHIVE_WDPA_PA_FILE_NAME,
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
@@ -133,8 +136,6 @@ def generate_protected_areas_table(
 
         # Create one row per country
         wdpa["ISO3"] = wdpa["ISO3"].str.split(";")
-        wdpa = wdpa.explode("ISO3")
-        wdpa["ISO3"] = wdpa["ISO3"].str.strip()
 
         wdpa_dict = {
             "NAME": "name",
@@ -185,8 +186,6 @@ def generate_protected_areas_table(
 
         # Create one row per country
         mpatlas["country"] = mpatlas["country"].str.split(";")
-        mpatlas = mpatlas.explode("country")
-        mpatlas["country"] = mpatlas["country"].str.strip()
 
         mpa_dict = {
             "name": "name",
@@ -268,20 +267,16 @@ def generate_protected_areas_table(
 
     print("adding parent/child relationships")
     results = []
-    # Split by country to ensure parent/children are of the same country
-    for _, pa_cnt in tqdm(
-        pas.groupby("location", sort=False),
-        total=pas["location"].nunique(),
-        desc="processing countries",
-    ):
-        # Split by environment to ensure parent/children are of the same environment
-        for _, pa_env in pa_cnt.groupby("environment", sort=False):
-            for _, subset in pa_env.groupby("wdpaid", sort=False):
-                results.append(
-                    add_parent_children(
-                        subset, fields=["wdpaid", "wdpa_p_id", "zone_id", "environment", "location"]
-                    )
+    # Split by environment to ensure parent/children are of the same environment
+    for _, pa_env in pas.groupby("environment", sort=False):
+        for _, subset in tqdm(
+            pa_env.groupby("wdpaid", sort=False), total=len(pa_env), desc="processing PAs"
+        ):
+            results.append(
+                add_parent_children(
+                    subset, fields=["wdpaid", "wdpa_p_id", "zone_id", "environment"]
                 )
+            )
 
     protected_areas = pd.concat(results, ignore_index=True)
 
@@ -350,10 +345,7 @@ def database_updates(current_db, updated_pas, verbose=True):
     # Create unique identifier and attach to the current and updated PAs for comparison
     if verbose:
         print("adding unique identifier")
-    # TODO: I added location as an identifier because sometimes a PA is shared by
-    # multiple countries - in this case, I give the PA to each country (just for)
-    # the PA table. Do we need to update something in the DB structure?
-    cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id", "location"]
+    cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id"]
     updated_pas["identifier"] = updated_pas.apply(
         lambda x: get_unique_identifier(x, cols_for_id), axis=1
     )
@@ -462,7 +454,9 @@ def database_updates(current_db, updated_pas, verbose=True):
 def update_protected_areas_table(
     wdpa_file_name: str = WDPA_META_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
+    archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
+    project: str = PROJECT,
     verbose: bool = True,
 ):
     def clean_for_json(obj):
@@ -521,6 +515,18 @@ def update_protected_areas_table(
 
     upserted = db_changes["new"] + db_changes["changed"]
 
+    # Save archive DB changes
+    source_file = "db_changes.pkl"
+    with open(source_file, "wb") as f:
+        pickle.dump(db_changes, f)
+
+    client = storage.Client(project=project)
+    bucket = client.bucket(bucket)
+    blob = bucket.blob(archive_pa_file_name)
+    blob.upload_from_filename(source_file)
+    print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
+
+    # Update DB
     strapi = Strapi()
 
     deleted = db_changes["deleted"]
