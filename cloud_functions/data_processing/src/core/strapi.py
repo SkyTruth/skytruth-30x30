@@ -131,7 +131,7 @@ class Strapi:
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
                 timeout=600,  # Wait ten minutes
-                json={"data": pas},
+                json={"data": {"method": "DELETE", "ids": pas}},
             )
             return response.json()
         except Exception as excep:

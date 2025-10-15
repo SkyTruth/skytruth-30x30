@@ -9,8 +9,8 @@ import gcsfs
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import requests
 from rasterio.mask import mask
+import requests
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
 import tracemalloc
