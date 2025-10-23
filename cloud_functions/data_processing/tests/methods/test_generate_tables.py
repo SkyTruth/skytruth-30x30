@@ -1,6 +1,7 @@
+from copy import deepcopy
+
 import pandas as pd
 import pytest
-from copy import deepcopy
 
 from src.methods.generate_tables import database_updates
 

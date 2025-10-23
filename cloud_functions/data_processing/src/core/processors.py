@@ -95,10 +95,10 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
           the reference dataset, rounded to 2 decimals and capped at 100.
     """
     # build fast lookup dicts for area by location
-    eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"]))
+    eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"], strict=False))
     eez_lookup["ATA"] = eez_lookup["ABNJ"]
     eez_lookup["HKG"] = eez_lookup["CHN"]
-    gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"]))
+    gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
 
     def _get_total_area(x):
         if x["environment"] == "marine":
@@ -362,9 +362,7 @@ def convert_type(
     for col, dtypes in conversion.items():
         for con in dtypes:
             try:
-                if con in ("int", "Int64", int):
-                    df[col] = pd.to_numeric(df[col], errors="coerce").astype(con)
-                elif con in ("float", "Float64", float):
+                if con in ("int", "Int64", int) or con in ("float", "Float64", float):
                     df[col] = pd.to_numeric(df[col], errors="coerce").astype(con)
                 else:
                     df[col] = df[col].astype(con)

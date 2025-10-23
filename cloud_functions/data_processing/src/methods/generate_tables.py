@@ -1,9 +1,10 @@
-import geopandas as gpd
-from google.cloud import storage
-import numpy as np
 import os
-import pandas as pd
 import pickle
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+from google.cloud import storage
 from tqdm.auto import tqdm
 
 from src.core.commons import (
@@ -38,16 +39,16 @@ from src.core.params import (
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_META_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
+    WDPA_META_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
     add_environment,
     add_oecm_status,
-    add_percent_coverage,
     add_pas_oecm,
+    add_percent_coverage,
     add_protected_from_fishing_area,
     add_protected_from_fishing_percent,
     add_total_area_mp,
@@ -84,9 +85,7 @@ def generate_protected_areas_table(
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
-    def add_parent_children(
-        subset: pd.DataFrame, fields=["wdpa_id", "wdpa_pid", "zone_id", "location"]
-    ) -> pd.DataFrame:
+    def add_parent_children(subset: pd.DataFrame, fields=None) -> pd.DataFrame:
         """
         Reorder rows by priority, then set the first row as parent and the rest as children.
         Priority (lower is earlier):
@@ -97,6 +96,9 @@ def generate_protected_areas_table(
         """
         if subset.empty:
             return subset
+
+        if fields is None:
+            fields = ["wdpa_id", "wdpa_pid", "zone_id", "location"]
 
         # Priority lists
         same_id = subset["wdpaid"].values == subset["wdpa_p_id"].values

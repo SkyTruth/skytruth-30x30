@@ -1,5 +1,6 @@
 import io
 import tempfile
+import tracemalloc
 import zipfile
 from io import BytesIO
 
@@ -9,11 +10,10 @@ import gcsfs
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from rasterio.mask import mask
 import requests
+from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
-import tracemalloc
 from tqdm.auto import tqdm
 
 from src.core.params import (

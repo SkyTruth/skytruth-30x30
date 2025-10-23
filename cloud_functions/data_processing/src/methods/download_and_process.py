@@ -1,17 +1,18 @@
-from io import BytesIO
-import os
-import geopandas as gpd
 import glob
+import os
+import shutil
+import zipfile
+from io import BytesIO
+
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
 from shapely.geometry import MultiPoint, Point, shape
-import shutil
-import zipfile
 
 from src.core.commons import (
-    download_mpatlas_zone,
     download_file_with_progress,
+    download_mpatlas_zone,
     print_peak_memory_allocation,
     unzip_file,
 )
