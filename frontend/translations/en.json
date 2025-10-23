@@ -131,7 +131,8 @@
       "toggle-sidebar": "Toggle sidebar"
     },
     "map-sidebar-main-panel": {
-      "change-location": "Change Location",
+      "change-location": "Change location",
+      "change-or-edit-location": "Change or edit location",
       "global-view": "Global view",
       "search-country-region": "Search Country or Region",
       "search-country": "Search Country",
@@ -140,6 +141,7 @@
       "all": "All",
       "countries": "Countries",
       "regions-and-high-seas": "Regions & High Seas",
+      "custom-region": "Custom Region",
       "no-result": "No result",
       "view-all-countries": "View all countries",
       "hide-some-countries": "Hide some countries",
@@ -184,14 +186,25 @@
       "terrestrial-existing-conservation": "Existing terrestrial conservation coverage",
       "not-assessed": "Not assessed",
       "data-disclaimer": "Data disclaimer",
-      "claimed-by": "Claimed By",
-      "related-countries": "Related Countries",
+      "claimed-by": "Claimed by",
+      "includes": "Includes",
       "territory-of": "Territory of",
       "also-claimed-by": "also claimed by",
       "country": "Country",
       "region": "Region",
       "highseas": "High Seas",
-      "worldwide": "Worldwide"
+      "worldwide": "Worldwide",
+      "create-custom-region": "Create a custom region",
+      "close-custom-region": "Close custom region",
+      "view-custom-region": "View custom region",
+      "empty-custom-region": "Add countries to your Custom Region by selecting them on the map and clicking the <addIcon></addIcon> icon, or by clicking on <searchIcon></searchIcon> Change Location and choosing from the list of countries in the Custom Region tab.",
+      "add-country-custom-region": "Add Countries to Your Custom Region to See Stats",
+      "clear-all": "Clear All",
+      "clear-custom-region": "Clear custom region",
+      "no-data-for": "No data for",
+      "overlapping-eez-explainer": "Some selected countries may have overlapping EEZs (red dashed outline), which could affect statistics. <a>Reach out to us</a> to request analysis. <Button>Hide warning</Button>",
+      "warning": "Warning",
+      "remove-from-custom-region": "Remove from Custom Region"
     },
     "map-sidebar-layers-panel": {
       "map-layers": "Map Layers",
@@ -262,7 +275,10 @@
       "page-number": "<a>Page</a> {number}",
       "collapse-sub-rows": "Collapse sub-rows",
       "expand-sub-rows": "Expand sub-rows",
-      "eez-multi-claim": "EEZ claimed by multiple countries"
+      "eez-multi-claim": "EEZ claimed by multiple countries",
+      "add-to-custom-region": "Add to Custom Region",
+      "remove-from-custom-region": "Remove from Custom Region",
+      "may-contain-overlapping-eez": "May overlap with other EEZs"
     }
   },
   "components": {
@@ -337,7 +353,8 @@
       "selected-language": "Selected language: {language}",
       "english": "English",
       "spanish": "Spanish",
-      "french": "French"
+      "french": "French",
+      "portuguese": "Portuguese"
     }
   }
 }

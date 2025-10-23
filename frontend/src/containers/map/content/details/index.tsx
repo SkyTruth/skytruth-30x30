@@ -9,6 +9,7 @@ import Icon from '@/components/ui/icon';
 import GlobalRegionalTable from '@/containers/map/content/details/tables/global-regional';
 import NationalHighSeasTable from '@/containers/map/content/details/tables/national-highseas';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import useNameField from '@/hooks/use-name-field';
 import CloseIcon from '@/styles/icons/close.svg';
 import { FCWithMessages } from '@/types';
 import { getGetLocationsQueryOptions, useGetLocations } from '@/types/generated/location';
@@ -16,6 +17,7 @@ import { getGetLocationsQueryOptions, useGetLocations } from '@/types/generated/
 const MapDetails: FCWithMessages = () => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
+  const nameField = useNameField();
 
   const [{ tab }, setSettings] = useSyncMapContentSettings();
   const {
@@ -55,7 +57,7 @@ const MapDetails: FCWithMessages = () => {
   const tablesSettings = useMemo(
     () => ({
       worldwideRegion: {
-        locationTypes: ['worldwide', 'region'],
+        locationTypes: ['worldwide', 'region', 'custom_region'],
         component: GlobalRegionalTable,
         title: {
           summary: {
@@ -107,30 +109,26 @@ const MapDetails: FCWithMessages = () => {
   );
 
   const table = useMemo(() => {
-    // TODO: Improve to support more entries (although not needed right now)
-    const tableSettings = tablesSettings.worldwideRegion.locationTypes.includes(
-      locationsQuery.data?.type
-    )
-      ? tablesSettings.worldwideRegion
-      : tablesSettings.countryHighseas;
+    const type = locationsQuery.data?.type;
+    let selectedTable = tablesSettings.worldwideRegion;
 
-    let locationName = locationsQuery.data?.name;
-    if (locale === 'es') {
-      locationName = locationsQuery.data?.name_es;
+    for (const table in tablesSettings) {
+      if (tablesSettings[table].locationTypes.includes(type)) {
+        selectedTable = tablesSettings[table];
+      }
     }
-    if (locale === 'fr') {
-      locationName = locationsQuery.data?.name_fr;
-    }
+
+    const locationName = locationsQuery.data?.[nameField];
 
     const parsedTitle =
-      tableSettings.title[tab][locationsQuery.data?.type]?.replace('{location}', locationName) ||
-      tableSettings.title[tab].fallback;
+      selectedTable.title[tab][locationsQuery.data?.type]?.replace('{location}', locationName) ||
+      selectedTable.title[tab].fallback;
 
     return {
       title: parsedTitle,
-      component: tableSettings.component,
+      component: selectedTable.component,
     };
-  }, [locale, tablesSettings, tab, locationsQuery.data]);
+  }, [tablesSettings, tab, locationsQuery.data, nameField]);
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-white px-4 py-4 md:px-6">

@@ -1,9 +1,25 @@
 import { useTranslations } from 'next-intl';
 
+interface Heap {
+  track: (event: string, properties?: object) => void;
+  identify: (identity: string) => void;
+  resetIdentity: () => void;
+  addUserProperties: (properties: object) => void;
+  addEventProperties: (properties: object) => void;
+  removeEventProperty: (property: string) => void;
+  clearEventProperties: () => void;
+  appid: string;
+  userId: string;
+  identity: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config: any;
+}
+
 declare global {
   interface Window {
-    // ? As we are using explicitily window to access the `gtag` property we need to declare it before using it
+    // ? As we are using explicitily window to access the `gtag`/'heap' property we need to declare it before using it
     gtag: UniversalAnalytics.ga;
+    heap?: Heap;
   }
 }
 
@@ -28,3 +44,8 @@ export interface ForwadedComponentWithMessages<P = NonNullable<unknown>>
   extends React.ForwardRefExoticComponent<P & RefAttributes<HTMLElement>> {
   messages?: Parameters<typeof useTranslations>[0][];
 }
+
+export type SharedMarineAreaCountries = {
+  slug: string;
+  name: string;
+}[];

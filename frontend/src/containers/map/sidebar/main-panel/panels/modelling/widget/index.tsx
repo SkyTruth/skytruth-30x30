@@ -11,6 +11,7 @@ import TooltipButton from '@/components/tooltip-button';
 import Widget from '@/components/widget';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import useNameField from '@/hooks/use-name-field';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import {
@@ -70,6 +71,7 @@ WidgetLegend.messages = ['containers.map-sidebar-main-panel'];
 const ModellingWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
+  const locationNameField = useNameField();
 
   const [{ tab }] = useSyncMapContentSettings();
 
@@ -109,7 +111,6 @@ const ModellingWidget: FCWithMessages = () => {
           },
         },
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
         location: {
@@ -117,7 +118,6 @@ const ModellingWidget: FCWithMessages = () => {
         },
       },
       'pagination[limit]': 1,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['protected_area'],
     },
@@ -185,14 +185,14 @@ const ModellingWidget: FCWithMessages = () => {
               },
             },
           },
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           populate: {
             location: {
               fields: [
                 'name',
                 'name_es',
-                'name_es',
+                'name_fr',
+                'name_pt',
                 'code',
                 'total_marine_area',
                 'total_terrestrial_area',
@@ -200,7 +200,6 @@ const ModellingWidget: FCWithMessages = () => {
             },
           },
           'pagination[limit]': 1,
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore
           fields: ['protected_area'],
         },
@@ -285,13 +284,7 @@ const ModellingWidget: FCWithMessages = () => {
   );
 
   const administrativeBoundaries = nationalLevelContributions?.map((contribution) => {
-    let locationName = contribution.location.name;
-    if (locale === 'es') {
-      locationName = contribution.location.name_es;
-    }
-    if (locale === 'fr') {
-      locationName = contribution.location.name_fr;
-    }
+    const locationName = contribution.location[locationNameField];
     return locationName;
   });
 
@@ -323,13 +316,7 @@ const ModellingWidget: FCWithMessages = () => {
             <WidgetLegend />
           </div>
           {nationalLevelContributions?.map((contribution) => {
-            let locationName = contribution.location.name;
-            if (locale === 'es') {
-              locationName = contribution.location.name_es;
-            }
-            if (locale === 'fr') {
-              locationName = contribution.location.name_fr;
-            }
+            const locationName = contribution.location[locationNameField];
 
             return (
               <StackedHorizontalBarChart

@@ -1,15 +1,14 @@
 import { ComponentProps, PropsWithChildren, ReactNode, useMemo } from 'react';
 
 import { timeFormatLocale } from 'd3-time-format';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import en from 'd3-time-format/locale/en-US';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import es from 'd3-time-format/locale/es-ES';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import fr from 'd3-time-format/locale/fr-FR';
+// @ts-ignore
+import pt from 'd3-time-format/locale/pt-BR';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/classnames';
@@ -26,6 +25,7 @@ type WidgetProps = {
   lastUpdated?: string;
   noData?: boolean;
   noDataMessage?: ComponentProps<typeof NoData>['message'];
+  noDataClassName?: string;
   loading?: boolean;
   error?: boolean;
   errorMessage?: ComponentProps<typeof NoData>['message'];
@@ -38,6 +38,7 @@ const d3Locales = {
   en,
   es,
   fr,
+  pt,
 };
 
 const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
@@ -46,6 +47,7 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
   lastUpdated,
   noData = false,
   noDataMessage = undefined,
+  noDataClassName,
   loading = false,
   error = false,
   errorMessage = undefined,
@@ -85,8 +87,12 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
         )}
       </div>
       {loading && <Loading />}
-      {!loading && error && <NoData error={error} message={errorMessage} />}
-      {!loading && !error && noData && <NoData error={error} message={noDataMessage} />}
+      {!loading && error && (
+        <NoData error={error} message={errorMessage} className={noDataClassName} />
+      )}
+      {!loading && !error && noData && (
+        <NoData error={error} message={noDataMessage} className={noDataClassName} />
+      )}
       {!loading && !error && !noData && <div>{children}</div>}
     </div>
   );

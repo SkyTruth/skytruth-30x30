@@ -5,6 +5,7 @@ import { atom } from 'jotai';
 import { atomWithReset } from 'jotai/utils';
 
 import { CustomMapProps } from '@/components/map/types';
+import type { SharedMarineAreaCountries } from '@/types';
 import type { Layer } from '@/types/generated/strapi.schemas';
 import type { ModellingData } from '@/types/modelling';
 
@@ -27,6 +28,7 @@ export const drawStateAtom = atomWithReset<{
   status: 'idle',
   feature: null,
 });
+export const sharedMarineAreaCountriesAtom = atom<SharedMarineAreaCountries>([]);
 
 // ? modelling state
 export const modellingAtom = atomWithReset<{

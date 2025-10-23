@@ -7,12 +7,13 @@ import { factories } from '@strapi/strapi'
 import filterSovereigns from '../../../utils/filter-sovereigns';
 
 export type PARelations = {
-  id?: number,
-  wdpaid?: number,
-  wdpa_p_id?: string,
-  zone_id?: number,
-  environment?: string,
-  key?: string
+  id?: number;
+  wdpaid?: number;
+  wdpa_p_id?: string;
+  zone_id?: number;
+  environment?: string;
+  location?: string;
+  key?: string;
 }
 
 export type ToUpdateRelations = {
@@ -169,7 +170,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             continue;
           }
 
-          const updatedPA = strapi.service('api::pa.pa').checkParentChild(pa, toUpdateRelations, newIdMap)
+          const updatedPA = strapi.service('api::pa.pa').checkParentChild(pa, toUpdateRelations)
           const {
             id,
             data_source,
@@ -223,7 +224,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             })
             
             /**
-             * Make the identifier key with the original data because the creat emethod doesn't
+             * Make the identifier key with the original data because the create method doesn't
              * return relational fields
              */ 
             const paKey = strapi.service('api::pa.pa').makePAKey(updatedPA);

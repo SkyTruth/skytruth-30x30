@@ -49,13 +49,13 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
 
   },
   /**
-   * Method to concatenate key fields of a PA that, together, for a unique idnetifier
-   * allowing us to relaibly map a PA from WDPA or MPAtlas to a PA within our database
-   * @param pa
+   * Method to concatenate key fields of a PA that, together, form a unique identifier
+   * allowing us to reliably map a PA from WDPA or MPAtlas to a PA within our database
+   * @param pa 
    * @returns uniquely identifiying pa string
    */
   makePAKey(pa: PA | PARelations): string {
-    return `${pa?.environment ?? 'xxx'}-${pa?.wdpaid ?? 'xxx'}-${pa?.wdpa_p_id ?? 'xxx'}-${pa?.zone_id ?? 'xxx'}`
+    return `${pa?.environment ?? 'xxx'}-${pa?.wdpaid ?? 'xxx'}-${pa?.wdpa_p_id ?? 'xxx'}-${pa?.zone_id ?? 'xxx'}-${pa?.location ?? 'xxx'}`
   },
   /**
    * Check to make sure string values of relational data exist in the database
@@ -181,17 +181,16 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
   },
   /**
    * This function checks a PAs parent and child realtions, if they exist as records in the database
-   * then they are passed through and allowd to be created as relationships. If they don't yet exist
-   * in the database we record a uniquely identifying key for the relationship and map that key to
+   * then they are passed through and allowed to be created as relationships. If they don't yet exist
+   * in the database we record a uniquely identifying key for the relationship and map that key to 
    * the current PA so that relationships can be made after the parent or children are added to the DB
    * and have IDs.
    * @param pa Protected Arae
    * @param toUpdateRelations Mapping of parent and child relations that must be updated
    * after first pass of upserting
-   * @param newIdMap Map of identifying strings to IDs of newly created PAs
-   * @returns
+   * @returns 
    */
-  checkParentChild(pa: InputPA, toUpdateRelations: ToUpdateRelations, newIdMap: IDMap): PA {
+  checkParentChild(pa: InputPA, toUpdateRelations: ToUpdateRelations): PA {
     const { children, parent } = pa;
     const paIdentifier = pa?.id ?? this.makePAKey(pa);
 

@@ -14,8 +14,12 @@ import HeaderItem from '@/containers/map/content/details/table/header-item';
 import { cellFormatter } from '@/containers/map/content/details/table/helpers';
 import SortingButton from '@/containers/map/content/details/table/sorting-button';
 import TooltipButton from '@/containers/map/content/details/table/tooltip-button';
-import { useMapSearchParams } from '@/containers/map/content/map/sync-settings';
+import {
+  useMapSearchParams,
+  useSyncCustomRegion,
+} from '@/containers/map/content/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
+import useNameField from '@/hooks/use-name-field';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 import { useGetDataInfos } from '@/types/generated/data-info';
@@ -29,6 +33,7 @@ export type GlobalRegionalTableColumns = {
     name: string;
     name_es: string;
     name_fr: string;
+    name_pt: string;
     code: string;
     mpaa_protection_level_stats: {
       percentage: number;
@@ -107,7 +112,6 @@ const useFiltersOptions = () => {
   const { data: environmentOptions } = useGetEnvironments<{ name: string; value: string }[]>(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
       'pagination[limit]': -1,
@@ -136,6 +140,7 @@ export const useColumns = (
 ) => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
+  const nameField = useNameField();
 
   const searchParams = useMapSearchParams();
   const tooltips = useTooltips();
@@ -143,17 +148,10 @@ export const useColumns = (
   const filtersOptions = useFiltersOptions();
 
   const columns: AccessorKeyColumnDef<GlobalRegionalTableColumns>[] = useMemo(() => {
-    let locationNameKey = 'name';
-    if (locale === 'es') {
-      locationNameKey = 'name_es';
-    } else if (locale === 'fr') {
-      locationNameKey = 'name_fr';
-    }
-
     return [
       {
-        id: `location.${locationNameKey}`,
-        accessorKey: `location.${locationNameKey}`,
+        id: `location.${nameField}`,
+        accessorKey: `location.${nameField}`,
         header: ({ column }) => (
           <HeaderItem className="ml-1">
             <SortingButton column={column} />
@@ -173,7 +171,7 @@ export const useColumns = (
                 className="font-semibold underline"
                 href={`${PAGES.progressTracker}/${location.code}?${searchParams.toString()}`}
               >
-                {location[locationNameKey]}
+                {location[nameField]}
               </Link>
             </HeaderItem>
           );
@@ -328,7 +326,17 @@ export const useColumns = (
         },
       },
     ];
-  }, [locale, environment, t, tooltips, searchParams, filters, onChangeFilters, filtersOptions]);
+  }, [
+    locale,
+    environment,
+    t,
+    tooltips,
+    searchParams,
+    filters,
+    onChangeFilters,
+    filtersOptions,
+    nameField,
+  ]);
 
   return columns;
 };
@@ -341,6 +349,8 @@ export const useData = (
   pagination: PaginationState
 ) => {
   const locale = useLocale();
+  const [customRegionLocations] = useSyncCustomRegion();
+
   // TODO TECH-3174: Clean up,
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
@@ -374,6 +384,14 @@ export const useData = (
     };
   }, [areTerritoriesActive, locationCode]);
 
+  const customRegionLocationFilter = useMemo(() => {
+    return {
+      code: {
+        $in: customRegionLocations?.size ? [...customRegionLocations] : [''],
+      },
+    };
+  }, [customRegionLocations]);
+
   const {
     data: locationType,
     isSuccess: isLocationSuccess,
@@ -382,7 +400,6 @@ export const useData = (
   } = useGetLocations<string>(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['type'],
       filters: {
@@ -412,14 +429,12 @@ export const useData = (
     [GlobalRegionalTableColumns[], ProtectionCoverageStatListResponseMetaPagination]
   >(
     {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['coverage', 'protected_area', 'pas', 'oecms', 'global_contribution'],
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
         location: {
-          fields: ['name', 'name_es', 'name_fr', 'code'],
+          fields: ['name', 'name_es', 'name_fr', 'name_pt', 'code'],
           populate: {
             ...(environment === 'marine'
               ? {
@@ -452,11 +467,13 @@ export const useData = (
         location: {
           ...(locationType === 'region'
             ? regionLocationFilter
-            : {
-                type: {
-                  $in: ['country', 'highseas'],
-                },
-              }),
+            : locationType === 'custom_region'
+              ? customRegionLocationFilter
+              : {
+                  type: {
+                    $in: ['country', 'highseas'],
+                  },
+                }),
         },
         is_last_year: {
           $eq: true,
@@ -503,6 +520,7 @@ export const useData = (
                   name: location?.name,
                   name_es: location?.name_es,
                   name_fr: location?.name_fr,
+                  name_pt: location?.name_pt,
                   code: location.code,
                   mpaa_protection_level_stats: {
                     percentage: location?.mpaa_protection_level_stats?.data?.attributes.percentage,

@@ -27,6 +27,9 @@ ProgressTrackerPage.layout = {
     if (locale === 'fr') {
       locationNameField = 'name_fr';
     }
+    if (locale === 'pt') {
+      locationNameField = 'name_pt';
+    }
 
     return {
       title: location?.[locationNameField],

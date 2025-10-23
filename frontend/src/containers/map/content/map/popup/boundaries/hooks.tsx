@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { sortBy } from 'lodash-es';
 import { useLocale } from 'next-intl';
 
+import useNameField from '@/hooks/use-name-field';
 import { formatPercentage, formatKM } from '@/lib/utils/formats';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { ProtectionCoverageStatListResponseDataItem } from '@/types/generated/strapi.schemas';
@@ -24,16 +25,7 @@ const useFormattedStats = (
 
   const DEFAULT_VALUE = '-';
 
-  const nameField = useMemo(() => {
-    let res = 'name';
-    if (locale === 'es') {
-      res = 'name_es';
-    }
-    if (locale === 'fr') {
-      res = 'name_fr';
-    }
-    return res;
-  }, [locale]);
+  const nameField = useNameField();
 
   const { data: protectionCoverageStats, isFetching } = useGetProtectionCoverageStats<
     ProtectionCoverageStatListResponseDataItem[]
@@ -58,7 +50,13 @@ const useFormattedStats = (
       // @ts-expect-error
       populate: {
         location: {
-          fields: [nameField, 'code', 'total_marine_area', 'total_terrestrial_area'],
+          fields: [
+            nameField,
+            'code',
+            'total_marine_area',
+            'total_terrestrial_area',
+            'has_shared_marine_area',
+          ],
         },
       },
       // @ts-expect-error

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { groupBy } from 'lodash-es';
+import { groupBy, maxBy } from 'lodash-es';
 import { useLocale, useTranslations } from 'next-intl';
 
 import ConservationChart from '@/components/charts/conservation-chart';
@@ -19,6 +19,8 @@ import type {
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
 
+import MissingCountriesList from '../widget-alerts/MissingCountriesList';
+
 type MarineConservationWidgetProps = {
   location: LocationGroupsDataItemAttributes;
 };
@@ -31,7 +33,9 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const [customRegionLocations] = useSyncCustomRegion();
 
   const locations =
-    location.code === CUSTOM_REGION_CODE ? customRegionLocations.join(',') : location.code;
+    location.code === CUSTOM_REGION_CODE && customRegionLocations
+      ? [...customRegionLocations].join(',')
+      : location.code;
 
   const { data, isFetching } = useGetAggregatedStats<AggregatedStats[]>(
     {
@@ -58,15 +62,30 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       const protectedArea = entries[0].protected_area;
       const coverage = entries[0].coverage;
       const totalArea = entries[0].total_area ?? location.total_marine_area;
+      const locations = entries[0].locations;
 
       return {
         year: Number(year),
         protectedArea,
         coverage,
         totalArea,
+        locations,
       };
     });
   }, [data, location]);
+
+  const { locations: mostLocsByYear } = useMemo(() => {
+    if (!aggregatedData.length) return { locations: [] };
+
+    return maxBy(aggregatedData, (entry) => entry.locations.length);
+  }, [aggregatedData]);
+
+  const missingLocations = useMemo(() => {
+    const included = new Set(mostLocsByYear);
+    const total = new Set(locations.split(','));
+
+    return [...total.difference(included)];
+  }, [mostLocsByYear, locations]);
 
   const { data: metadata } = useGetDataInfos(
     {
@@ -119,25 +138,28 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   const chartData = useMemo(() => {
     if (!aggregatedData.length) return [];
 
-    const data = aggregatedData.map((entry, index) => {
-      const isLastYear = index + 1 === aggregatedData.length;
+    const data = aggregatedData.reduce((acc, entry) => {
+      if (entry.locations.length < mostLocsByYear.length) return acc;
+
       const { year, protectedArea, coverage } = entry;
       const percentage = coverage ?? (protectedArea * 100) / Number(entry.totalArea);
 
-      return {
-        // We only want to show up to 55%, so we'll cap the percentage here
-        // Some of the data seems incorrect; this is a quick fix in order to not blow the chart
+      acc.push({
         percentage,
         year,
-        active: isLastYear,
+        active: false,
         totalArea: Number(entry.totalArea),
         protectedArea,
         future: false,
-      };
-    });
+      });
 
+      return acc;
+    }, []);
+    if (data.length) {
+      data[data.length - 1].active = true;
+    }
     return data;
-  }, [aggregatedData]);
+  }, [aggregatedData, mostLocsByYear]);
 
   const noData = useMemo(() => {
     if (!chartData.length) {
@@ -153,54 +175,59 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
   }, [chartData]);
 
   return (
-    <Widget
-      title={t('marine-conservation-coverage')}
-      lastUpdated={data[data.length - 1]?.updatedAt}
-      noData={noData}
-      loading={isFetching}
-      info={metadata?.info}
-      sources={metadata?.sources}
-    >
-      {stats && (
-        <div className="mb-4 mt-6 flex flex-col">
-          <span className="space-x-1">
-            {t.rich('marine-protected-percentage', {
-              b1: (chunks) => <span className="text-[64px] font-bold leading-[90%]">{chunks}</span>,
-              b2: (chunks) => <span className="text-lg">{chunks}</span>,
-              percentage: stats?.protectedPercentage,
-            })}
-          </span>
-          <span className="space-x-1 text-xs">
-            <span>
-              {t('marine-protected-area', {
-                protectedArea: stats?.protectedArea,
-                totalArea: stats?.totalArea,
+    <>
+      <Widget
+        title={t('marine-conservation-coverage')}
+        lastUpdated={data[data?.length - 1]?.updatedAt}
+        noData={noData}
+        loading={isFetching}
+        info={metadata?.info}
+        sources={metadata?.sources}
+      >
+        {stats && (
+          <div className="mb-4 mt-6 flex flex-col">
+            <span className="space-x-1">
+              {t.rich('marine-protected-percentage', {
+                b1: (chunks) => (
+                  <span className="text-[64px] font-bold leading-[90%]">{chunks}</span>
+                ),
+                b2: (chunks) => <span className="text-lg">{chunks}</span>,
+                percentage: stats?.protectedPercentage,
               })}
             </span>
-          </span>
-        </div>
-      )}
-      <ConservationChart
-        className="-ml-8 aspect-[16/10]"
-        tooltipSlug="30x30-marine-target"
-        data={chartData}
-        displayTarget={!!stats?.target}
-        target={stats?.target ?? undefined}
-        targetYear={stats?.targetYear ?? undefined}
-      />
-      {tab !== 'marine' && (
-        <Button
-          variant="white"
-          size="full"
-          className="mt-5 flex h-10 px-5 md:px-8"
-          onClick={() => setSettings((settings) => ({ ...settings, tab: 'marine' }))}
-        >
-          <span className="font-mono text-xs font-semibold normal-case">
-            {t('explore-marine-conservation')}
-          </span>
-        </Button>
-      )}
-    </Widget>
+            <span className="space-x-1 text-xs">
+              <span>
+                {t('marine-protected-area', {
+                  protectedArea: stats?.protectedArea,
+                  totalArea: stats?.totalArea,
+                })}
+              </span>
+            </span>
+          </div>
+        )}
+        <ConservationChart
+          className="-ml-8 aspect-[16/10]"
+          tooltipSlug="30x30-marine-target"
+          data={chartData}
+          displayTarget={!!stats?.target}
+          target={stats?.target ?? undefined}
+          targetYear={stats?.targetYear ?? undefined}
+        />
+        {tab !== 'marine' && (
+          <Button
+            variant="white"
+            size="full"
+            className="mt-5 flex h-10 px-5 md:px-8"
+            onClick={() => setSettings((settings) => ({ ...settings, tab: 'marine' }))}
+          >
+            <span className="font-mono text-xs font-semibold normal-case">
+              {t('explore-marine-conservation')}
+            </span>
+          </Button>
+        )}
+        <MissingCountriesList countries={missingLocations} />
+      </Widget>
+    </>
   );
 };
 

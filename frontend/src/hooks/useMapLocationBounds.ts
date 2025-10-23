@@ -7,11 +7,13 @@ import { useAtom } from 'jotai';
 import { useLocale } from 'next-intl';
 
 import { CustomMapProps } from '@/components/map/types';
+import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
+import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { bboxLocationAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { combineBoundingBoxes } from '@/lib/utils/geo';
 import { useGetLocations } from '@/types/generated/location';
-import { Location } from '@/types/generated/strapi.schemas';
+import { LocationListResponseDataItem } from '@/types/generated/strapi.schemas';
 
 export default function useMapLocationBounds() {
   const locale = useLocale();
@@ -27,20 +29,28 @@ export default function useMapLocationBounds() {
   const pendingLocationChangeRef = useRef(false); // Waiting for data after a location change
   const tabWhenLocationChangedRef = useRef(tab);
 
-  const { data, isFetching } = useGetLocations<Location>(
+  const [customRegionLocations] = useSyncCustomRegion();
+
+  const locationCodes =
+    locationCode === CUSTOM_REGION_CODE && customRegionLocations
+      ? [...customRegionLocations]
+      : [locationCode];
+
+  const { data, isFetching } = useGetLocations<Array<LocationListResponseDataItem>>(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['marine_bounds', 'terrestrial_bounds'],
       filters: {
-        code: locationCode,
+        code: {
+          $in: locationCodes,
+        },
       },
     },
     {
       query: {
         placeholderData: { data: [] },
-        select: ({ data }) => data[0]?.attributes ?? {},
+        select: ({ data }) => data,
       },
     }
   );
@@ -48,7 +58,7 @@ export default function useMapLocationBounds() {
   useEffect(() => {
     const hasLocationChanged =
       locationCode !== previousLocationCodeRef.current && !!previousLocationCodeRef.current;
-    const isDataReady = !isFetching && data;
+    const isDataReady = !isFetching && data?.length;
 
     if (hasLocationChanged) {
       pendingLocationChangeRef.current = true;
@@ -58,27 +68,38 @@ export default function useMapLocationBounds() {
     if (pendingLocationChangeRef.current && isDataReady) {
       pendingLocationChangeRef.current = false;
 
-      const { terrestrial_bounds, marine_bounds } = data;
+      const bounds: BBox[] = data.reduce((acc, loc) => {
+        const {
+          attributes: { marine_bounds = null, terrestrial_bounds = null },
+        } = loc;
+        switch (tab) {
+          case 'marine':
+            if (marine_bounds) {
+              acc.push(marine_bounds);
+            }
+            return acc;
+          case 'terrestrial':
+            if (terrestrial_bounds) {
+              acc.push(terrestrial_bounds);
+            }
+            return acc;
+          case 'summary':
+            if (marine_bounds) {
+              acc.push(marine_bounds);
+            }
+            if (terrestrial_bounds) {
+              acc.push(terrestrial_bounds);
+            }
 
-      let locationBounds: CustomMapProps['bounds']['bbox'] = null;
+            return acc;
+        }
+        return acc;
+      }, []);
 
-      if (tab === 'terrestrial') {
-        locationBounds = terrestrial_bounds as CustomMapProps['bounds']['bbox'];
-      } else if (tab === 'marine') {
-        locationBounds = marine_bounds as CustomMapProps['bounds']['bbox'];
-      } else if (terrestrial_bounds !== undefined || marine_bounds !== undefined) {
-        locationBounds = combineBoundingBoxes(
-          // Falling back to the marine bounds because some locations don't have terrestrial bounds
-          // e.g. ABJN and Gibraltar
-          (terrestrial_bounds ?? marine_bounds) as BBox,
-          // Falling back to the terrestrial bounds because some locations don't have marine bounds
-          // e.g. any country without coast
-          (marine_bounds ?? terrestrial_bounds) as BBox
-        ) as CustomMapProps['bounds']['bbox'];
-      }
+      const unionBounds = combineBoundingBoxes(bounds) as CustomMapProps['bounds']['bbox'];
 
-      if (locationBounds !== null) {
-        setBboxLocation(locationBounds);
+      if (unionBounds !== null) {
+        setBboxLocation(unionBounds);
       }
     }
 
