@@ -371,3 +371,4 @@ def test_new_child_has_no_id(base_entry):
     result = database_updates(current_db, updated_pas, verbose=False)[0]
     changed_record = result["changed"][0]
     assert changed_record["children"][0]["id"] is None
+    assert changed_record["children"][0] == updated_entry["children"]
