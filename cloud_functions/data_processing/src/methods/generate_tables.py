@@ -385,11 +385,6 @@ def database_updates(current_db, updated_pas, verbose=True):
     updated_pas["children"] = updated_pas["children"].apply(
         get_identifier_children, args=(cols_for_id, current_db)
     )
-    """
-    Add identifier to updated pas parents and children in addition to db id so we can detect
-    changes from
-    null
-    """
 
     if verbose:
         print("finding new, deleted, and static PAs")
@@ -418,15 +413,6 @@ def database_updates(current_db, updated_pas, verbose=True):
             static_updated, current_db[["identifier", "id"]], on="identifier", how="left"
         )
 
-        # Pull out parent and children DB ids
-        # static_updated_0 = static_updated.copy()
-        # static_updated_0["parent"] = static_updated_0["parent"].apply(
-        #     lambda x: x["id"] if x is not None else None
-        # )
-        # static_updated_0["children"] = static_updated_0["children"].apply(
-        #     lambda x: [i["id"] for i in x] if x is not None else None
-        # )
-
         # specify which columns get which comparison
         string_cols = list(
             set(updated_pas.columns) - set(["children", "parent", "area", "coverage", "bbox"])
@@ -441,9 +427,6 @@ def database_updates(current_db, updated_pas, verbose=True):
             changed_cols[col] = str_dif_idx(static_current, static_updated, col)
             change_indx |= str_dif_idx(static_current, static_updated, col)
 
-        """
-        Expand this to Children
-        """
         changed_cols["parent"] = realation_diff_index(static_current, static_updated, "parent")
         change_indx |= realation_diff_index(static_current, static_updated, "parent")
 
