@@ -48,7 +48,8 @@ def test_detect_new_entry(base_entry):
 
     updated_pas = make_df([{k: v for k, v in base_entry.items() if k != "id"}, new_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)
+    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    print("RESULT", result)
     assert len(result["new"]) == 1
     assert result["new"][0]["wdpaid"] == 999
 
@@ -60,7 +61,7 @@ def test_detect_deleted_entry(base_entry):
     updated_pas = pd.DataFrame(columns=[c for c in current_db.columns if c != "id"])
 
     result = database_updates(current_db, updated_pas, verbose=False)
-    assert result["deleted"] == [1]
+    assert result[0]["deleted"] == [1]
 
 
 def test_detect_changed_string(base_entry):
@@ -72,23 +73,26 @@ def test_detect_changed_string(base_entry):
 
     updated_pas = make_df([updated_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)
+    result = database_updates(current_db, updated_pas, verbose=False)[0]
     assert len(result["changed"]) == 1
     assert result["changed"][0]["designation"] == "International"
 
 
 def test_detect_changed_area_large(base_entry):
-    """Detects when the area value changes by more than 1%."""
+    """
+    Happy path test when the area value changes by more than 1% is dected and rounds to 2 decimals.
+    """
     current_db = make_df([base_entry])
     updated_entry = deepcopy(base_entry)
+    # 0.0130905404
     updated_entry["area"] = base_entry["area"] * 1.2
     updated_entry.pop("id", None)
 
     updated_pas = make_df([updated_entry])
 
     result = database_updates(current_db, updated_pas, verbose=False)
-    assert len(result["changed"]) == 1
-    assert pytest.approx(result["changed"][0]["area"], rel=1e-9) == updated_entry["area"]
+    assert len(result[0]["changed"]) == 1
+    assert result[0]["changed"][0]["area"] == round(updated_entry["area"], 2)
 
 
 def test_ignore_small_area_change(base_entry):
@@ -97,11 +101,10 @@ def test_ignore_small_area_change(base_entry):
     updated_entry = deepcopy(base_entry)
     updated_entry["area"] = base_entry["area"] * 1.001
     updated_entry.pop("id", None)
-
     updated_pas = make_df([updated_entry])
 
     result = database_updates(current_db, updated_pas, verbose=False)
-    assert len(result["changed"]) == 0
+    assert len(result[0]["changed"]) == 0
 
 
 def test_detect_changed_parent(base_entry):
@@ -113,15 +116,17 @@ def test_detect_changed_parent(base_entry):
         "wdpa_p_id": base_entry["wdpa_p_id"] + "_A",
         "zone_id": None,
         "environment": base_entry["environment"],
+        "location": base_entry["location"],
         "id": None,
     }
     updated_entry.pop("id", None)
 
     updated_pas = make_df([updated_entry])
-
     result = database_updates(current_db, updated_pas, verbose=False)
-    assert len(result["changed"]) == 1
-    assert isinstance(result["changed"][0]["parent"], dict)
+
+    assert len(result[0]["changed"]) == 1
+    assert isinstance(result[0]["changed"][0]["parent"], dict)
+    assert result[0]["changed"][0]["parent"] == updated_entry["parent"]
 
 
 def test_detect_changed_children(base_entry):
@@ -134,6 +139,7 @@ def test_detect_changed_children(base_entry):
             "wdpa_p_id": base_entry["wdpa_p_id"] + "_B",
             "zone_id": None,
             "environment": base_entry["environment"],
+            "location": base_entry["location"],
             "id": None,
         }
     ]
@@ -142,12 +148,12 @@ def test_detect_changed_children(base_entry):
     updated_pas = make_df([updated_entry])
 
     result = database_updates(current_db, updated_pas, verbose=False)
-    assert len(result["changed"]) == 1
-    assert isinstance(result["changed"][0]["children"], list)
+    assert len(result[0]["changed"]) == 1
+    assert isinstance(result[0]["changed"][0]["children"], list)
 
 
 def test_parent_child_linkage_consistency():
-    """Confirms that if a parent lists a child, the child lists that parent."""
+    """Test if a parent lists a child, the child lists that parent."""
     parent_entry = {
         "id": 1,
         "name": "Balam Kin (A)",
@@ -170,6 +176,7 @@ def test_parent_child_linkage_consistency():
                 "wdpa_p_id": "555783753_B",
                 "zone_id": None,
                 "environment": "terrestrial",
+                "location": "MEX",
                 "id": 2,
             }
         ],
@@ -198,6 +205,7 @@ def test_parent_child_linkage_consistency():
             "wdpa_p_id": "555783753_A",
             "zone_id": None,
             "environment": "terrestrial",
+            "location": "MEX",
             "id": 1,
         },
         "children": None,
@@ -214,7 +222,7 @@ def test_parent_child_linkage_consistency():
         ]
     )
 
-    result = database_updates(current_db, updated_pas, verbose=False)
+    result = database_updates(current_db, updated_pas, verbose=False)[0]
     assert result["new"] == []
     assert result["deleted"] == []
     assert result["changed"] == []
@@ -227,7 +235,7 @@ def test_no_changes(base_entry):
     updated_entry.pop("id", None)
     updated_pas = make_df([updated_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)
+    result = database_updates(current_db, updated_pas, verbose=False)[0]
     assert result["new"] == []
     assert result["changed"] == []
     assert result["deleted"] == []
@@ -245,7 +253,7 @@ def test_new_entry_has_no_id(base_entry):
     updated_pas = make_df([{k: v for k, v in base_entry.items() if k != "id"}, new_entry])
 
     result = database_updates(current_db, updated_pas, verbose=False)
-    new_record = result["new"][0]
+    new_record = result[0]["new"][0]
     assert "id" not in new_record
 
 
@@ -257,7 +265,7 @@ def test_existing_entry_keeps_id(base_entry):
     updated_entry.pop("id", None)
 
     updated_pas = make_df([updated_entry])
-    result = database_updates(current_db, updated_pas, verbose=False)
+    result = database_updates(current_db, updated_pas, verbose=False)[0]
     changed_record = result["changed"][0]
     assert changed_record["id"] == base_entry["id"]
 
@@ -286,6 +294,7 @@ def test_existing_child_keeps_id():
                 "wdpa_p_id": "123_B",
                 "zone_id": None,
                 "environment": "terrestrial",
+                "location": "MEX",
                 "id": 2,
             }
         ],
@@ -314,6 +323,7 @@ def test_existing_child_keeps_id():
             "wdpa_p_id": "123_A",
             "zone_id": None,
             "environment": "terrestrial",
+            "location": "MEX",
             "id": 1,
         },
         "children": None,
@@ -330,7 +340,7 @@ def test_existing_child_keeps_id():
         ]
     )
 
-    result = database_updates(current_db, updated_pas, verbose=False)
+    result = database_updates(current_db, updated_pas, verbose=False)[0]
 
     # No new or changed records expected
     assert result["new"] == []
@@ -351,12 +361,13 @@ def test_new_child_has_no_id(base_entry):
             "wdpa_p_id": base_entry["wdpa_p_id"] + "_B",
             "zone_id": None,
             "environment": "terrestrial",
+            "location": base_entry["location"],
             "id": None,
         }
     ]
     updated_entry.pop("id", None)
 
     updated_pas = make_df([updated_entry])
-    result = database_updates(current_db, updated_pas, verbose=False)
+    result = database_updates(current_db, updated_pas, verbose=False)[0]
     changed_record = result["changed"][0]
     assert changed_record["children"][0]["id"] is None

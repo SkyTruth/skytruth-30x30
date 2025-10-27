@@ -133,7 +133,7 @@ def test_download_zip_to_gcs_happy_path_GET(monkeypatch, capsys):
     monkeypatch.setattr(
         gcp.storage,
         "Client",
-        lambda: MockClient(mock_bucket),
+        lambda project: MockClient(mock_bucket, project),
     )
 
     download_zip_to_gcs(url, bucket_name, blob_name, verbose=True)
@@ -183,7 +183,7 @@ def test_download_zip_to_gcs_happy_path_POST(monkeypatch):
     monkeypatch.setattr(
         gcp.storage,
         "Client",
-        lambda: MockClient(mock_bucket),
+        lambda project: MockClient(mock_bucket, project),
     )
 
     download_zip_to_gcs(
@@ -262,7 +262,7 @@ def test_upload_exception_is_logged_and_raised(monkeypatch, capsys):
     monkeypatch.setattr(
         gcp.storage,
         "Client",
-        lambda: MockClient(mock_bucket),
+        lambda project: MockClient(mock_bucket, project),
     )
 
     with pytest.raises(RuntimeError):

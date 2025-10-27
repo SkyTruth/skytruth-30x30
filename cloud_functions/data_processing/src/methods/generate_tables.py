@@ -306,17 +306,17 @@ def database_updates(current_db, updated_pas, verbose=True):
     def get_unique_identifier(row, cols):
         return "_".join(normalize_value(row[c]) for c in cols)
 
-    def get_identifier(x, cols, current_db):
+    def get_identifier(pa, cols, current_db):
         """
         get database ID associated with a unique identifier (combination
-        of environment, wdpaid, wdpa_pid, zone_id) if one exists. Used to
+        of environment, wdpaid, wdpa_pid, zone_id, location) if one exists. Used to
         add id to parent/children columns
         """
-        if not isinstance(x, dict):
+        if not isinstance(pa, dict):
             return None
 
         # build identifier in the same way as updated_pas["identifier"]
-        identifier = get_unique_identifier(x, cols)
+        identifier = get_unique_identifier(pa, cols)
 
         if len(current_db) > 0:
             match = current_db.loc[current_db["identifier"] == identifier, "id"]
@@ -324,7 +324,7 @@ def database_updates(current_db, updated_pas, verbose=True):
         else:
             _id = None
 
-        return {**x, "id": _id}
+        return {**pa, "id": _id}
 
     def get_identifier_children(children, cols, current_db):
         if not isinstance(children, list):
@@ -337,6 +337,16 @@ def database_updates(current_db, updated_pas, verbose=True):
     def num_dif_idx(df1, df2, col):
         return (~df2[col].isna()) & (
             (df1[col].isna()) | (abs(df2[col] - df1[col]) / df1[col] > 0.01)
+        )
+
+    def realation_diff_index(df1: pd.DataFrame, df2: pd.DataFrame, col: str) -> pd.Series:
+        df1_relation = df1[col]
+        df2_relation = df2[col]
+
+        return (
+            (df1_relation.isnull() & ~df2_relation.isnull())
+            | (~df1_relation.isnull() & df2_relation.isnull())
+            | (df1_relation.get("id", None) != df2_relation.get("id", None))
         )
 
     def list_dif_idx(df1, df2, col):
@@ -375,6 +385,11 @@ def database_updates(current_db, updated_pas, verbose=True):
     updated_pas["children"] = updated_pas["children"].apply(
         get_identifier_children, args=(cols_for_id, current_db)
     )
+    """
+    Add identifier to updated pas parents and children in addition to db id so we can detect
+    changes from
+    null
+    """
 
     if verbose:
         print("finding new, deleted, and static PAs")
@@ -384,7 +399,8 @@ def database_updates(current_db, updated_pas, verbose=True):
         deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
         static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
 
-        print("getting static tables")
+        if verbose:
+            print("getting static PA tables")
         # Current DB entries for PAs that are in updated table
         static_current = (
             current_db[current_db["identifier"].isin(static)]
@@ -403,38 +419,45 @@ def database_updates(current_db, updated_pas, verbose=True):
         )
 
         # Pull out parent and children DB ids
-        static_updated_0 = static_updated.copy()
-        static_updated_0["parent"] = static_updated_0["parent"].apply(
-            lambda x: x["id"] if x is not None else None
-        )
-        static_updated_0["children"] = static_updated_0["children"].apply(
-            lambda x: [i["id"] for i in x] if x is not None else None
-        )
+        # static_updated_0 = static_updated.copy()
+        # static_updated_0["parent"] = static_updated_0["parent"].apply(
+        #     lambda x: x["id"] if x is not None else None
+        # )
+        # static_updated_0["children"] = static_updated_0["children"].apply(
+        #     lambda x: [i["id"] for i in x] if x is not None else None
+        # )
 
         # specify which columns get which comparison
         string_cols = list(
             set(updated_pas.columns) - set(["children", "parent", "area", "coverage", "bbox"])
         )
-        num_cols = ["area", "coverage", "parent"]
+        num_cols = ["area", "coverage"]
         list_cols = ["children"]
 
         # build up combined mask
         change_indx = pd.Series(False, index=static_current.index)
         changed_cols = pd.DataFrame()
         for col in string_cols:
-            changed_cols[col] = str_dif_idx(static_current, static_updated_0, col)
-            change_indx |= str_dif_idx(static_current, static_updated_0, col)
+            changed_cols[col] = str_dif_idx(static_current, static_updated, col)
+            change_indx |= str_dif_idx(static_current, static_updated, col)
+
+        """
+        Expand this to Children
+        """
+        changed_cols["parent"] = realation_diff_index(static_current, static_updated, "parent")
+        change_indx |= realation_diff_index(static_current, static_updated, "parent")
 
         for col in num_cols:
-            static_updated_0[col] = (static_updated_0[col] + 1e-6).round(
-                2
-            )  # Force 0.005 to round up
-            changed_cols[col] = num_dif_idx(static_current, static_updated_0, col)
-            change_indx |= num_dif_idx(static_current, static_updated_0, col)
+            changed_cols[col] = num_dif_idx(static_current, static_updated, col)
+            change_indx |= num_dif_idx(static_current, static_updated, col)
+
+            # Round so that 0.005 rounds up. Be sure to round after change_indx is calculated to
+            # ensure we only catpure differences of greater than 1%
+            static_updated[col] = (static_updated[col] + 1e-6).round(2)
 
         for col in list_cols:
-            changed_cols[col] = list_dif_idx(static_current, static_updated_0, col)
-            change_indx |= list_dif_idx(static_current, static_updated_0, col)
+            changed_cols[col] = list_dif_idx(static_current, static_updated, col)
+            change_indx |= list_dif_idx(static_current, static_updated, col)
 
         # Updated version of changed entries
         changed = static_updated[change_indx]
@@ -524,8 +547,6 @@ def update_protected_areas_table(
 
     db_changes["new"] = clean_for_json(db_changes["new"])
     db_changes["changed"] = clean_for_json(db_changes["changed"])
-
-    upserted = db_changes["new"] + db_changes["changed"]
 
     # Save archive DB changes
     source_file = "db_changes.pkl"
