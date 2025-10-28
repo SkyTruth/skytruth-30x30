@@ -3,7 +3,7 @@ from copy import deepcopy
 import pandas as pd
 import pytest
 
-from src.methods.generate_tables import database_updates
+from src.methods.generate_tables import make_pa_updates
 
 
 @pytest.fixture
@@ -116,7 +116,7 @@ def test_detect_new_entry(base_entry):
 
     updated_pas = make_df([{k: v for k, v in base_entry.items() if k != "id"}, new_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
     assert len(result["deleted"]) == 0
     assert len(result["changed"]) == 0
@@ -132,7 +132,7 @@ def test_detect_deleted_entry(base_entry):
 
     updated_pas = pd.DataFrame(columns=[c for c in current_db.columns if c != "id"])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
     assert result["deleted"] == [1]
     assert len(result["deleted"]) == 1
@@ -149,7 +149,7 @@ def test_detect_changed_string(base_entry):
 
     updated_pas = make_df([updated_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
     assert len(result["changed"]) == 1
     assert len(result["deleted"]) == 0
@@ -171,7 +171,7 @@ def test_detect_changed_area_large(base_entry):
 
     updated_pas = make_df([updated_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
     assert len(result["changed"]) == 1
     assert len(result["deleted"]) == 0
@@ -191,7 +191,7 @@ def test_ignore_small_area_change(base_entry):
     updated_entry.pop("id", None)
     updated_pas = make_df([updated_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
     assert len(result["changed"]) == 0
     assert len(result["deleted"]) == 0
@@ -213,7 +213,7 @@ def test_detect_changed_parent(base_entry):
     updated_entry.pop("id", None)
 
     updated_pas = make_df([updated_entry])
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
     assert len(result["changed"]) == 1
     assert len(result["new"]) == 0
@@ -241,7 +241,7 @@ def test_detect_changed_children(base_entry):
 
     updated_pas = make_df([updated_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
     assert len(result["changed"]) == 1
     assert len(result["new"]) == 0
@@ -264,7 +264,7 @@ def test_happy_path_no_change(parent, child):
         ]
     )
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     assert result["new"] == []
     assert result["deleted"] == []
     assert result["changed"] == []
@@ -277,7 +277,7 @@ def test_no_changes(base_entry):
     updated_entry.pop("id", None)
     updated_pas = make_df([updated_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     assert result["new"] == []
     assert result["changed"] == []
     assert result["deleted"] == []
@@ -294,7 +294,7 @@ def test_new_entry_has_no_id(base_entry):
 
     updated_pas = make_df([{k: v for k, v in base_entry.items() if k != "id"}, new_entry])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     new_record = result["new"][0]
     assert "id" not in new_record
 
@@ -310,7 +310,7 @@ def test_existing_entry_keeps_id(base_entry):
     updated_entry.pop("id", None)
 
     updated_pas = make_df([updated_entry])
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     changed_record = result["changed"][0]
     assert changed_record["id"] == base_entry["id"]
 
@@ -332,7 +332,7 @@ def test_new_child_has_no_id(base_entry):
     updated_entry.pop("id", None)
 
     updated_pas = make_df([updated_entry])
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     changed_record = result["changed"][0]
 
     assert len(result["changed"]) == 1
@@ -397,7 +397,7 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     current_db = make_df([base_entry, second_entry, third_entry, parent, child])
     updated_pas = make_df([unchanged_pa, changed_pa, new_pa, changed_child, changed_parent])
 
-    result = database_updates(current_db, updated_pas, verbose=False)[0]
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     new = result["new"]
     changed = result["changed"]
     deleted = result["deleted"]

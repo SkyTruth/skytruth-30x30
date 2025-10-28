@@ -49,6 +49,9 @@ from src.utils.gcp import (
     upload_dataframe,
     upload_gdf,
 )
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def download_mpatlas_country(
@@ -255,7 +258,6 @@ def process_protected_area_geoms(
 def unpack_pas(pa_dir):
     to_append = []
     for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
-        print(zip_path)
         with zipfile.ZipFile(zip_path) as z:
             shp_paths = [n for n in z.namelist() if n.lower().endswith(".shp")]
 
@@ -267,8 +269,8 @@ def unpack_pas(pa_dir):
         try:
             os.remove(zip_path)
             print(f"Deleted {zip_path}")
-        except Exception as e:
-            print(f"Warning: failed to delete {zip_path}: {e}")
+        except Exception as excep:
+            logger.warning({"message": f"Warning: failed to delete {zip_path}", "error": excep})
 
     if not to_append:
         raise ValueError(f"No shapefiles found in {pa_dir}")

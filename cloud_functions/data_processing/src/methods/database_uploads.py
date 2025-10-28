@@ -1,13 +1,14 @@
 from ast import literal_eval
 
 import pandas as pd
+import tqdm
 
-from src.core.params import (
-    BUCKET,
-    LOCATIONS_FILE_NAME,
-)
+from src.core.params import ARCHIVE_WDPA_PA_FILE_NAME, BUCKET, LOCATIONS_FILE_NAME, PROJECT
 from src.core.strapi import Strapi
-from src.utils.gcp import read_dataframe
+from src.utils.gcp import load_pickle_from_gcs, read_dataframe
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def upload_locations(
@@ -83,7 +84,7 @@ def upload_stats(
 ):
     """
     Pass through function for writing generated CSV tables to the database via the API.
-    Reads teh CSV stored in a GCS bucket at bucket/filename, converts it to a dictionary and
+    Reads the CSV stored in a GCS bucket at bucket/filename, converts it to a dictionary and
     uplaods to the DB via the API by way of a passed in upload_function
     """
     stats_df = read_dataframe(bucket_name=bucket, filename=filename)
@@ -92,3 +93,43 @@ def upload_stats(
     if verbose:
         print(f"Uploading stats from {filename} via the API")
     return upload_function(stats_dict)
+
+
+def upload_protected_areas(
+    archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    strapi = Strapi()
+
+    db_changes = load_pickle_from_gcs(
+        bucket_name=bucket, blob_name=archive_pa_file_name, project_id=PROJECT, verbose=verbose
+    )
+
+    deleted = db_changes["deleted"]
+    if verbose:
+        print(f"deleting {len(deleted)} entries")
+    delete_response = strapi.delete_pas(deleted)
+    if verbose:
+        print("delete response:", delete_response)
+
+    upserted = db_changes["new"] + db_changes["changed"]
+    if verbose:
+        print(f"upserting {len(upserted)} entries")
+
+    wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
+    chunk_size = 20000
+    for i in tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"):
+        ids = wdpaids[i : i + chunk_size]
+        chunk = [u for u in upserted if u["wdpaid"] in ids]
+        try:
+            upsert_response = strapi.upsert_pas(chunk)
+
+            if verbose:
+                print("upsert response:", upsert_response)
+        except Exception as excep:
+            logger.error({"message": f"Error on chunk {i // chunk_size}", "error": excep})
+            continue
+
+    if verbose:
+        print("Upsert complete!")

@@ -23,6 +23,7 @@ from src.core.params import (
 from src.core.strapi import Strapi
 from src.methods.database_uploads import (
     upload_locations,
+    upload_protected_areas,
     upload_stats,
 )
 from src.methods.download_and_process import (
@@ -35,8 +36,8 @@ from src.methods.generate_tables import (
     generate_fishing_protection_table,
     generate_habitat_protection_table,
     generate_marine_protection_level_stats_table,
+    generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
-    update_protected_areas_table,
 )
 from src.methods.static_processes import (
     download_marine_habitats,
@@ -86,7 +87,7 @@ def main(request: Request) -> tuple[str, int]:
     - "download_protected_seas": Downloads Protected Seas JSON data and uploads it
     - "download_protected_planet_wdpa": Downloads full Protected Planet suite
             (WDPA ZIP + stats) and processes/simplifies polygons
-    - "generate_protected_areas_table": Updates protected areas table
+    - "generate_protected_areas_diff_table": Updates protected areas table
 
     Parameters:
     ----------
@@ -203,15 +204,15 @@ def main(request: Request) -> tuple[str, int]:
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
 
+            case "generate_protected_areas_table":
+                generate_protected_areas_diff_table(verbose=verbose)
+
             # ------------------
             #   Database updates
             # ------------------
 
             case "update_locations":
                 return upload_locations(request=data, verbose=verbose)
-
-            case "update_protected_areas_table":
-                _ = update_protected_areas_table(verbose=verbose)
 
             case "update_protection_coverage_stats":
                 client = Strapi()
@@ -244,6 +245,9 @@ def main(request: Request) -> tuple[str, int]:
                     upload_function=client.upsert_habitat_stats,
                     verbose=verbose,
                 )
+
+            case "update_protected_areas":
+                upload_protected_areas(verbose=verbose)
 
             # ------------------
             #   Map Tilesets Updates

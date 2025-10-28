@@ -42,7 +42,7 @@ def patched_all(monkeypatch, call_log):
         "download_mpatlas",
         "download_protected_seas",
         "download_protected_planet",
-        "update_protected_areas_table",
+        "generate_protected_areas_diff_table",
         "generate_terrestrial_biome_stats_pa",
         "generate_habitat_protection_table",
         "generate_protection_coverage_stats_table",
@@ -82,7 +82,7 @@ def patched_all(monkeypatch, call_log):
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
-        ("update_protected_areas_table", "update_protected_areas_table"),
+        ("generate_protected_areas_table", "generate_protected_areas_diff_table"),
         ("generate_protection_coverage_stats_table", "generate_protection_coverage_stats_table"),
         (
             "generate_marine_protection_level_stats_table",

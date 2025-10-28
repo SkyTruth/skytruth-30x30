@@ -1,11 +1,8 @@
-import os
 import pickle
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 from google.cloud import storage
-from tqdm.auto import tqdm
 
 from src.core.commons import (
     load_marine_regions,
@@ -21,7 +18,6 @@ from src.core.params import (
     EEZ_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
-    GADM_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     GLOBAL_MARINE_AREA_KM2,
     GLOBAL_TERRESTRIAL_AREA_KM2,
@@ -45,431 +41,27 @@ from src.core.params import (
 )
 from src.core.processors import (
     add_constants,
-    add_environment,
-    add_oecm_status,
     add_pas_oecm,
-    add_percent_coverage,
     add_protected_from_fishing_area,
     add_protected_from_fishing_percent,
     add_total_area_mp,
-    add_year,
-    calculate_area,
-    convert_type,
     extract_column_dict_str,
     fp_location,
     remove_columns,
-    remove_non_designated_m,
-    remove_non_designated_p,
     rename_habitats,
-    update_mpaa_establishment_stage,
     update_mpatlas_asterisk,
 )
-from src.core.strapi import Strapi
 from src.methods.marine_habitats import process_marine_habitats
+from src.methods.protected_areas import generate_protected_areas_table, make_pa_updates
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
 from src.utils.gcp import (
     read_dataframe,
-    read_json_df,
     upload_dataframe,
 )
 
-os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
 
-
-def generate_protected_areas_table(
-    wdpa_file_name: str = WDPA_META_FILE_NAME,
-    mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
-    eez_file_name: str = EEZ_FILE_NAME,
-    gadm_file_name: str = GADM_FILE_NAME,
-    bucket: str = BUCKET,
-    verbose: bool = True,
-):
-    def add_parent_children(subset: pd.DataFrame, fields=None) -> pd.DataFrame:
-        """
-        Reorder rows by priority, then set the first row as parent and the rest as children.
-        Priority (lower is earlier):
-            0: data_source=='Protected Planet' & wdpa_id==wdpa_pid
-            1: data_source=='Protected Planet'
-            2: data_source=='MPATLAS' & wdpa_id==wdpa_pid
-            3: all others
-        """
-        if subset.empty:
-            return subset
-
-        if fields is None:
-            fields = ["wdpa_id", "wdpa_pid", "zone_id", "location"]
-
-        # Priority lists
-        same_id = subset["wdpaid"].values == subset["wdpa_p_id"].values
-        data_source_pp = subset["data_source"].values == "Protected Planet"
-        data_source_mp = subset["data_source"].values == "MPATLAS"
-
-        # select priority ranking
-        priority = np.select(
-            [
-                data_source_pp & same_id,
-                data_source_pp,
-                data_source_mp & same_id,
-            ],
-            [0, 1, 2],
-            default=3,
-        )
-
-        # Sort by priority
-        ordered = subset.iloc[np.argsort(priority, kind="stable")].copy()
-
-        ordered["parent"] = None
-        ordered["children"] = None
-
-        if len(ordered) > 1:
-            # create parent and list of children
-            parent_dict = ordered.iloc[0][fields].to_dict()
-            children_list = ordered.iloc[1:][fields].to_dict("records")
-
-            # Assign parent and children to each PA
-            ordered.iat[0, ordered.columns.get_loc("children")] = children_list
-            ordered.loc[ordered.index[1:], "parent"] = [parent_dict] * (len(ordered) - 1)
-
-        return ordered
-
-    def process_wdpa(wdpa):
-        wdpa = wdpa.copy()
-
-        # Create one row per country
-        wdpa["ISO3"] = wdpa["ISO3"].str.split(";")
-        wdpa = wdpa.explode("ISO3")
-        wdpa["ISO3"] = wdpa["ISO3"].str.strip()
-
-        wdpa_dict = {
-            "NAME": "name",
-            "calculated_area_km2": "area",
-            "STATUS": "STATUS",
-            "PA_DEF": "PA_DEF",
-            "STATUS_YR": "year",
-            "WDPAID": "wdpaid",
-            "WDPA_PID": "wdpa_p_id",
-            "DESIG_TYPE": "designation",
-            "ISO3": "location",
-            "IUCN_CAT": "iucn_category",
-            "MARINE": "MARINE",
-            "bbox": "bbox",
-        }
-        cols = [i for i in wdpa_dict]
-
-        wdpa_pa = (
-            wdpa[cols]
-            .rename(columns=wdpa_dict)
-            .pipe(remove_non_designated_p)
-            .pipe(add_environment)
-            .pipe(add_oecm_status)
-            .pipe(
-                add_constants,
-                {
-                    "zone_id": None,
-                    "data_source": "protected-planet",
-                    "mpaa_establishment_stage": None,
-                    "mpaa_protection_level": None,
-                },
-            )
-            .pipe(remove_columns, ["STATUS", "MARINE", "PA_DEF"])
-            .pipe(
-                convert_type,
-                {
-                    "wdpaid": [pd.Int64Dtype(), str],
-                    "wdpa_p_id": [str],
-                    "zone_id": [pd.Int64Dtype(), str],
-                },
-            )
-        )
-
-        return wdpa_pa
-
-    def process_mpa(mpatlas):
-        mpatlas = mpatlas.copy()
-
-        # Create one row per country
-        mpatlas["country"] = mpatlas["country"].str.split(";")
-        mpatlas = mpatlas.explode("country")
-        mpatlas["country"] = mpatlas["country"].str.strip()
-
-        mpa_dict = {
-            "name": "name",
-            "calculated_area_km2": "area",
-            "designated_date": "designated_date",
-            "wdpa_id": "wdpaid",
-            "wdpa_pid": "wdpa_p_id",
-            "zone_id": "zone_id",
-            "designation": "designation",
-            "establishment_stage": "mpaa_establishment_stage",
-            "country": "location",
-            "protection_mpaguide_level": "mpaa_protection_level",
-            "bbox": "bbox",
-        }
-        cols = [i for i in mpa_dict]
-        mpa_pa = (
-            mpatlas[cols]
-            .rename(columns=mpa_dict)
-            .pipe(remove_non_designated_m)
-            .pipe(update_mpaa_establishment_stage)
-            .pipe(add_year)
-            # TODO: Are all MPAtlas MPAs PAs (not OECMs)?
-            .pipe(
-                add_constants,
-                {
-                    "protection_status": "pa",
-                    "environment": "marine",
-                    "data_source": "mpatlas",
-                    "iucn_category": None,
-                },
-            )
-            .pipe(remove_columns, "designated_date")
-            .pipe(
-                convert_type,
-                {
-                    "wdpaid": [pd.Int64Dtype(), str],
-                    "wdpa_p_id": [str],
-                    "zone_id": [pd.Int64Dtype(), str],
-                },
-            )
-        )
-
-        return mpa_pa
-
-    if verbose:
-        print("loading PA metadata")
-    mpatlas = read_dataframe(bucket, mpatlas_file_name)
-    wdpa = read_dataframe(bucket, wdpa_file_name)
-
-    eez_file_name = eez_file_name.replace(".geojson", "_0.001.geojson")
-    gadm_file_name = gadm_file_name.replace(".geojson", "_0.001.geojson")
-    if verbose:
-        print(f"loading eez from {eez_file_name}")
-    eez = read_json_df(BUCKET, eez_file_name)
-
-    if verbose:
-        print(f"loading gadm from {gadm_file_name}")
-    gadm = read_json_df(BUCKET, gadm_file_name)
-    gadm = calculate_area(gadm, output_area_column="AREA_KM2")
-
-    if verbose:
-        print("processing WDPAs")
-    wdpa_pa = process_wdpa(wdpa)
-
-    if verbose:
-        print("processing MPAs")
-    mpa_pa = process_mpa(mpatlas)
-
-    pas = pd.concat((wdpa_pa[mpa_pa.columns], mpa_pa), axis=0)
-    pas["area"] = pd.to_numeric(pas["area"], errors="coerce")
-    pas["wdpa_p_id"] = pas["wdpa_p_id"].replace("", None)
-    pas = add_percent_coverage(pas, eez, gadm)
-    pas = pas.sort_values(["wdpaid", "wdpa_p_id", "zone_id"])
-
-    # TODO: Currently this will not add ATA (terrestrial), ALA (marine), and
-    # BVT (marine) because there is not GADM/EEZ lookup so the coverage
-    # is None. Do we want to roll them up, add polygons, or ignore?
-    pas = pas[~pas["coverage"].isnull()]
-
-    print("adding parent/child relationships")
-    results = []
-    # Split by country to ensure parent/children are of the same country
-    for _, pa_cnt in tqdm(
-        pas.groupby("location", sort=False),
-        total=pas["location"].nunique(),
-        desc="processing countries",
-    ):
-        # Split by environment to ensure parent/children are of the same environment
-        for _, pa_env in pa_cnt.groupby("environment", sort=False):
-            for _, subset in pa_env.groupby("wdpaid", sort=False):
-                results.append(
-                    add_parent_children(
-                        subset, fields=["wdpaid", "wdpa_p_id", "zone_id", "environment", "location"]
-                    )
-                )
-
-    protected_areas = pd.concat(results, ignore_index=True)
-
-    return protected_areas
-
-
-def database_updates(current_db, updated_pas, verbose=True):
-    def normalize_value(v):
-        if isinstance(v, float):
-            func = "<NA>" if (pd.isna(v) or v is None) else int(v)
-        elif v is None:
-            func = "<NA>"
-        else:
-            func = v
-        return str(func)
-
-    def get_unique_identifier(row, cols):
-        return "_".join(normalize_value(row[c]) for c in cols)
-
-    def get_identifier(pa, cols, current_db):
-        """
-        get database ID associated with a unique identifier (combination
-        of environment, wdpaid, wdpa_pid, zone_id, location) if one exists. Used to
-        add id to parent/children columns
-        """
-        if not isinstance(pa, dict):
-            return None
-
-        # build identifier in the same way as updated_pas["identifier"]
-        identifier = get_unique_identifier(pa, cols)
-
-        if len(current_db) > 0:
-            match = current_db.loc[current_db["identifier"] == identifier, "id"]
-            _id = int(match.iloc[0]) if not match.empty else None
-        else:
-            _id = None
-
-        return {**pa, "id": _id}
-
-    def get_identifier_children(children, cols, current_db):
-        if not isinstance(children, list):
-            return None
-        return [get_identifier(child, cols, current_db) for child in children]
-
-    def str_dif_idx(df1, df2, col):
-        return (~df2[col].isnull()) & (df2[col] != df1[col])
-
-    def num_dif_idx(df1, df2, col):
-        return (~df2[col].isna()) & (
-            (df1[col].isna()) | (abs(df2[col] - df1[col]) / df1[col] > 0.01)
-        )
-
-    def realation_diff_index(df1: pd.DataFrame, df2: pd.DataFrame, col: str) -> pd.Series:
-        df1_relation = df1[col]
-        df2_relation = df2[col]
-
-        return (
-            (df1_relation.isnull() & ~df2_relation.isnull())
-            | (~df1_relation.isnull() & df2_relation.isnull())
-            | (df1_relation.get("id", None) != df2_relation.get("id", None))
-        )
-
-    def list_dif_idx(df1, df2, col):
-        """Return True where list elements differ, ignoring order and NaNs."""
-
-        def to_sorted_tuple(x):
-            if not isinstance(x, (list, tuple)):
-                return tuple() if pd.isna(x) else (x,)
-            return tuple(sorted([v for v in x if pd.notna(v)]))
-
-        return df1[col].apply(to_sorted_tuple) != df2[col].apply(to_sorted_tuple)
-
-    current_db = current_db.copy()
-    updated_pas = updated_pas.copy()
-
-    # Create unique identifier and attach to the current and updated PAs for comparison
-    if verbose:
-        print("adding unique identifier")
-    cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id", "location"]
-    updated_pas["identifier"] = updated_pas.apply(
-        lambda x: get_unique_identifier(x, cols_for_id), axis=1
-    )
-    if len(current_db) > 0:
-        current_db["identifier"] = current_db.apply(
-            lambda x: get_unique_identifier(x, cols_for_id), axis=1
-        )
-
-    # Add identifier to parent/children
-    if verbose:
-        print("adding database identifier to parent column")
-    updated_pas["parent"] = updated_pas["parent"].apply(
-        get_identifier, args=(cols_for_id, current_db)
-    )
-    if verbose:
-        print("adding database identifier to children column")
-    updated_pas["children"] = updated_pas["children"].apply(
-        get_identifier_children, args=(cols_for_id, current_db)
-    )
-
-    if verbose:
-        print("finding new, deleted, and static PAs")
-
-    if len(current_db) > 0:
-        new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
-        deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
-        static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
-
-        if verbose:
-            print("getting static PA tables")
-        # Current DB entries for PAs that are in updated table
-        static_current = (
-            current_db[current_db["identifier"].isin(static)]
-            .sort_values(by="identifier")
-            .reset_index(drop=True)
-        )
-        # Updated table entries for PAs that are in the current DB
-        static_updated = (
-            updated_pas[updated_pas["identifier"].isin(static)]
-            .sort_values(by="identifier")
-            .reset_index(drop=True)
-        )
-        # Add DB id to static updated table
-        static_updated = pd.merge(
-            static_updated, current_db[["identifier", "id"]], on="identifier", how="left"
-        )
-
-        # specify which columns get which comparison
-        string_cols = list(
-            set(updated_pas.columns) - set(["children", "parent", "area", "coverage", "bbox"])
-        )
-        num_cols = ["area", "coverage"]
-        list_cols = ["children"]
-
-        # build up combined mask
-        change_indx = pd.Series(False, index=static_current.index)
-        changed_cols = pd.DataFrame()
-        for col in string_cols:
-            changed_cols[col] = str_dif_idx(static_current, static_updated, col)
-            change_indx |= str_dif_idx(static_current, static_updated, col)
-
-        changed_cols["parent"] = realation_diff_index(static_current, static_updated, "parent")
-        change_indx |= realation_diff_index(static_current, static_updated, "parent")
-
-        for col in num_cols:
-            changed_cols[col] = num_dif_idx(static_current, static_updated, col)
-            change_indx |= num_dif_idx(static_current, static_updated, col)
-
-            # Round so that 0.005 rounds up. Be sure to round after change_indx is calculated to
-            # ensure we only catpure differences of greater than 1%
-            static_updated[col] = (static_updated[col] + 1e-6).round(2)
-
-        for col in list_cols:
-            changed_cols[col] = list_dif_idx(static_current, static_updated, col)
-            change_indx |= list_dif_idx(static_current, static_updated, col)
-
-        # Updated version of changed entries
-        changed = static_updated[change_indx]
-
-        if verbose:
-            print(f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}")
-
-        return {
-            "new": updated_pas[updated_pas["identifier"].isin(new)]
-            .drop(columns="identifier")
-            .to_dict(orient="records"),
-            "changed": changed.drop(columns="identifier").to_dict(orient="records"),
-            "deleted": list(current_db[current_db["identifier"].isin(deleted)]["id"]),
-        }, changed_cols
-    else:
-        new = list(set(updated_pas["identifier"]))
-        if verbose:
-            print(f"new: {len(new)}")
-
-        return {
-            "new": updated_pas[updated_pas["identifier"].isin(new)]
-            .drop(columns="identifier")
-            .to_dict(orient="records"),
-            "changed": [],
-            "deleted": [],
-        }, None
-
-
-def update_protected_areas_table(
+def generate_protected_areas_diff_table(
     wdpa_file_name: str = WDPA_META_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
     archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
@@ -519,7 +111,7 @@ def update_protected_areas_table(
 
     if verbose:
         print("finding database changes")
-    db_changes, change_cols = database_updates(current_db_df, updated_pas, verbose=verbose)
+    db_changes, change_cols = make_pa_updates(current_db_df, updated_pas, verbose=verbose)
 
     # Print which values have changed
     if verbose:
@@ -541,34 +133,6 @@ def update_protected_areas_table(
     blob = bucket.blob(archive_pa_file_name)
     blob.upload_from_filename(source_file)
     print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
-
-    # Update DB
-    strapi = Strapi()
-
-    deleted = db_changes["deleted"]
-    print(f"deleting {len(deleted)} entries")
-    delete_response = strapi.delete_pas(deleted)
-    print("delete response:", delete_response)
-
-    upserted = db_changes["new"] + db_changes["changed"]
-    if verbose:
-        print(f"upserting {len(upserted)} entries")
-
-    wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
-    chunk_size = 20000
-    for i in tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"):
-        ids = wdpaids[i : i + chunk_size]
-        chunk = [u for u in upserted if u["wdpaid"] in ids]
-        try:
-            upsert_response = strapi.upsert_pas(chunk)
-            print("upsert response:", upsert_response)
-        except Exception as e:
-            print(f"Error on chunk {i // chunk_size}: {e}")
-            continue
-
-    print("Upsert complete!")
-
-    return db_changes
 
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:

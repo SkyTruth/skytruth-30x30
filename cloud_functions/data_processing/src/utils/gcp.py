@@ -2,6 +2,7 @@ import contextlib
 import gc
 import json
 import os
+import pickle
 import shutil
 import tempfile
 import zipfile
@@ -741,3 +742,24 @@ def download_file_from_gcs(
     blob.download_to_filename(destination_file_name)
     if verbose:
         print(f"Downloaded '{blob_name}' from bucket '{bucket_name}' to '{destination_file_name}'.")
+
+
+def load_pickle_from_gcs(
+    bucket_name: str, blob_name: str, project_id: str = PROJECT, verbose: bool = True
+) -> dict:
+    """
+    Downloads a pickle file from a GCP bucket and returns it as a dictionary.
+
+    Returns:
+        dict: The unpickled dictionary object.
+    """
+    client = storage.Client(project=project_id)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    if verbose:
+        print("downloading pickle file of PA changes")
+
+    data = blob.download_as_bytes()
+
+    return pickle.loads(data)

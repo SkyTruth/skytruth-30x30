@@ -8,6 +8,10 @@ import pandas as pd
 from shapely.geometry import MultiPolygon, Polygon
 from tqdm.auto import tqdm
 
+from utils.logger import Logger
+
+logger = Logger()
+
 
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
     """
@@ -98,7 +102,9 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
     eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"], strict=False))
     eez_lookup["ATA"] = eez_lookup["ABNJ"]
     eez_lookup["HKG"] = eez_lookup["CHN"]
+
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
+    gadm_lookup["ATA"] = gadm_lookup["ABNJ"]
 
     def _get_total_area(x):
         if x["environment"] == "marine":
@@ -117,6 +123,19 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
     df = df.copy()
     tqdm.pandas()
     df["coverage"] = df.progress_apply(_get_total_area, axis=1)
+
+    removed = df[df["coverage"].isna()]
+    df = df[~df["coverage"].isna()]
+
+    total = removed.size
+    if total > 0:
+        logger.warning(
+            {
+                "message": f"Failed to process {total} PAs because coverage could not be computed",
+                "PAs": removed,
+            }
+        )
+
     return df
 
 
@@ -367,7 +386,8 @@ def convert_type(
                 else:
                     df[col] = df[col].astype(con)
                 break
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as excep:
+                logger.warning({"message": "Failed to convert data types", "error": excep})
                 continue
 
     return df
