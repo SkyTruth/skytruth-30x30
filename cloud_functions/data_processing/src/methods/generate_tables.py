@@ -52,7 +52,10 @@ from src.core.processors import (
     update_mpatlas_asterisk,
 )
 from src.methods.marine_habitats import process_marine_habitats
-from src.methods.protected_areas import generate_protected_areas_table, make_pa_updates
+from src.methods.protected_areas.protected_areas import (
+    generate_protected_areas_table,
+    make_pa_updates,
+)
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
 from src.utils.gcp import (
@@ -116,9 +119,9 @@ def generate_protected_areas_diff_table(
     # Print which values have changed
     if verbose:
         for col in change_cols.columns:
-            tmp = len(change_cols[change_cols[col]])
-            if tmp > 0:
-                print(f"{col}: {tmp} rows changed")
+            size = len(change_cols[change_cols[col]])
+            if size > 0:
+                print(f"{col}: {size} rows changed")
 
     db_changes["new"] = clean_for_json(db_changes["new"])
     db_changes["changed"] = clean_for_json(db_changes["changed"])
@@ -132,7 +135,9 @@ def generate_protected_areas_diff_table(
     bucket = client.bucket(bucket)
     blob = bucket.blob(archive_pa_file_name)
     blob.upload_from_filename(source_file)
-    print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
+
+    if verbose:
+        print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
 
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:

@@ -270,7 +270,9 @@ def unpack_pas(pa_dir):
             os.remove(zip_path)
             print(f"Deleted {zip_path}")
         except Exception as excep:
-            logger.warning({"message": f"Warning: failed to delete {zip_path}", "error": excep})
+            logger.warning(
+                {"message": f"Warning: failed to delete {zip_path}", "error": str(excep)}
+            )
 
     if not to_append:
         raise ValueError(f"No shapefiles found in {pa_dir}")

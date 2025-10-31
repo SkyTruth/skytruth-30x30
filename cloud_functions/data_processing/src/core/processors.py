@@ -8,7 +8,7 @@ import pandas as pd
 from shapely.geometry import MultiPolygon, Polygon
 from tqdm.auto import tqdm
 
-from utils.logger import Logger
+from src.utils.logger import Logger
 
 logger = Logger()
 
@@ -99,14 +99,16 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
           the reference dataset, rounded to 2 decimals and capped at 100.
     """
     # build fast lookup dicts for area by location
+    print("Make eez lok up", type(eez["location"]), type(eez["location"]))
     eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"], strict=False))
     eez_lookup["ATA"] = eez_lookup["ABNJ"]
     eez_lookup["HKG"] = eez_lookup["CHN"]
 
+    print("Make gadem lok up", type(gadm["location"]), type(gadm["location"]))
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
     gadm_lookup["ATA"] = gadm_lookup["ABNJ"]
 
-    def _get_total_area(x):
+    def _calc_coverage(x):
         if x["environment"] == "marine":
             denom = eez_lookup.get(x["location"])
         elif x["environment"] == "terrestrial":
@@ -122,17 +124,20 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
 
     df = df.copy()
     tqdm.pandas()
-    df["coverage"] = df.progress_apply(_get_total_area, axis=1)
+
+    print("calculatig coverage")
+    df["coverage"] = df.progress_apply(_calc_coverage, axis=1)
+    print("finished coverage calc")
 
     removed = df[df["coverage"].isna()]
     df = df[~df["coverage"].isna()]
 
-    total = removed.size
+    total = removed["name"].size
     if total > 0:
         logger.warning(
             {
                 "message": f"Failed to process {total} PAs because coverage could not be computed",
-                "PAs": removed,
+                "PAs": removed.to_json(orient="records", force_ascii=False),
             }
         )
 
@@ -378,16 +383,32 @@ def convert_type(
         For each column, try casting in order (e.g., ['float', 'Int64'])
     """
     df = df.copy()
+
+    def str_to_float_list(val):
+        """
+        Converts stringified list/tuple to list of floats. Used for parsing PA bbox
+        e.g. "(-179.0, -51.0, -175.0, -48.5)"
+        """
+        if pd.isna(val):
+            return np.nan
+        try:
+            parsed = ast.literal_eval(str(val))
+            return list(map(float, parsed))
+        except (ValueError, SyntaxError, TypeError):
+            return np.nan
+
     for col, dtypes in conversion.items():
         for con in dtypes:
             try:
                 if con in ("int", "Int64", int) or con in ("float", "Float64", float):
                     df[col] = pd.to_numeric(df[col], errors="coerce").astype(con)
+                elif con == "list_of_floats":
+                    df[col] = df[col].apply(str_to_float_list)
                 else:
                     df[col] = df[col].astype(con)
                 break
             except (ValueError, TypeError) as excep:
-                logger.warning({"message": "Failed to convert data types", "error": excep})
+                logger.warning({"message": "Failed to convert data types", "error": str(excep)})
                 continue
 
     return df

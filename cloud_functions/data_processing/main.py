@@ -57,6 +57,9 @@ from src.methods.tileset_processes import (
     create_and_update_terrestrial_regions_tileset,
 )
 from src.utils.gcp import download_zip_to_gcs
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 @functions_framework.http
@@ -294,6 +297,6 @@ def main(request: Request) -> tuple[str, int]:
 
         return "OK", 200
     except Exception as e:
-        print(f"METHOD {method} failed: {e}")
+        logger.error({"message": f"METHOD {method} failed", "error": str(e)})
 
         return f"Internal Server Error: {e}", 500

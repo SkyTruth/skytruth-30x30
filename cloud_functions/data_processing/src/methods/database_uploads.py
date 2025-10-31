@@ -1,7 +1,7 @@
 from ast import literal_eval
 
 import pandas as pd
-import tqdm
+from tqdm import tqdm
 
 from src.core.params import ARCHIVE_WDPA_PA_FILE_NAME, BUCKET, LOCATIONS_FILE_NAME, PROJECT
 from src.core.strapi import Strapi
@@ -106,6 +106,19 @@ def upload_protected_areas(
         bucket_name=bucket, blob_name=archive_pa_file_name, project_id=PROJECT, verbose=verbose
     )
 
+    # print("Changes", db_changes["changed"], "\nNew:", db_changes["new"][:25])
+    print(
+        "total",
+        len(db_changes),
+        "changes",
+        len(db_changes["changed"]),
+        "new",
+        len(db_changes["new"]),
+        "deleted",
+        len(db_changes["deleted"]),
+    )
+
+    print("New", db_changes["new"][:2], "\n\n changes", db_changes["changed"][:2])
     deleted = db_changes["deleted"]
     if verbose:
         print(f"deleting {len(deleted)} entries")
@@ -128,7 +141,7 @@ def upload_protected_areas(
             if verbose:
                 print("upsert response:", upsert_response)
         except Exception as excep:
-            logger.error({"message": f"Error on chunk {i // chunk_size}", "error": excep})
+            logger.error({"message": f"Error on chunk {i // chunk_size}", "error": str(excep)})
             continue
 
     if verbose:
