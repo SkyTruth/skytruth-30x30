@@ -103,7 +103,7 @@ class Strapi:
             response = requests.post(
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
-                timeout=1800,  # Wait thirty minutes
+                timeout=2600,  # Wait 60 minutes
                 json={"data": pas},
             )
             return response.json()
@@ -130,7 +130,7 @@ class Strapi:
             response = requests.patch(
                 f"{self.BASE_URL}pas",
                 headers={**self.auth_headers, **self.default_headers},
-                timeout=600,  # Wait ten minutes
+                timeout=3600,  # Wait 60 minutes
                 json={"data": {"method": "DELETE", "ids": pas}},
             )
             return response.json()
