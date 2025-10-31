@@ -72,6 +72,12 @@ variable "max_scale" {
   default     = 5
 }
 
+variable "timeout_seconds" {
+  type        = number
+  description = "Gateway timeout in seconds"
+  default     = 300
+}
+
 variable "tag" {
   type        = string
   description = "Tag name to use for docker image tagging and deployment"

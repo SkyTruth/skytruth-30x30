@@ -113,15 +113,14 @@ ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted
 #                 Protected Planet (WDPA)
 # ------------------------------------------------------------
 WDPA_API_URL = "http://api.protectedplanet.net/v3/"
-WDPA_URL = (
-    f"https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_WDOECM_{today_formatted}_Public_all.zip"
-)
+WDPA_URL = f"https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_WDOECM_{today_formatted}_Public_all_shp.zip"
 WDPA_FILE_NAME = "raw/WDPA_Public.zip"
 ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
 WDPA_COUNTRY_LEVEL_FILE_NAME = "raw/WDPA_country_level.csv"
 ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_country_level.csv"
 WDPA_GLOBAL_LEVEL_FILE_NAME = "raw/WDPA_global_level.csv"
 ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_global_level.csv"
+ARCHIVE_WDPA_PA_FILE_NAME = f"archive/pa_updates/WDPA_{today_formatted}_PA_changes.pkl"
 WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_download"
 WDPA_MPA_FILE_NAME = "raw/WDPA_marine_protected_areas.geojson"
 WDPA_TERRESTRIAL_FILE_NAME = "intermediates/protected_area_geoms/terrestrial_wdpa.geojson"
@@ -182,10 +181,10 @@ GLOBAL_MANGROVE_AREA_FILE_NAME = "intermediates/total_area/global_mangrove_area.
 # ------------------------------------------------------------
 #                            Tables
 # ------------------------------------------------------------
+HABITAT_PROTECTION_FILE_NAME = f"tables/habitat_protection_{today_formatted}.csv"
+FISHING_PROTECTION_FILE_NAME = f"tables/fishing_protection_{today_formatted}.csv"
 PROTECTION_COVERAGE_FILE_NAME = f"tables/protection_coverage_{today_formatted}.csv"
 PROTECTION_LEVEL_FILE_NAME = f"tables/protection_level_{today_formatted}.csv"
-FISHING_PROTECTION_FILE_NAME = f"tables/fishing_protection_{today_formatted}.csv"
-HABITAT_PROTECTION_FILE_NAME = f"tables/habitat_protection_{today_formatted}.csv"
 
 # ------------------------------------------------------------
 #                            MISC

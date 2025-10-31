@@ -1,6 +1,5 @@
 """Unit tests for the database module."""
 
-import re
 from datetime import datetime
 from unittest.mock import patch
 
@@ -81,133 +80,34 @@ def test_login_failure_bad_auth(mock_logger_error):
 
 
 @responses.activate
-def test_get_pas_default_pagination(mock_authenticate):
-    # prepare a fake response with page=1
-    payload = {
-        "data": [{"id": 1, "attributes": {}}, {"id": 2, "attributes": {}}],
-        "meta": {"pagination": {"page": 1}},
-    }
-    # match any /pas?…pagination[…]=… URL
-    responses.add(
-        responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), json=payload, status=200
-    )
-
-    client = Strapi()
-    result = client.get_pas()
-
-    assert result == payload
-    assert client.pas_per_page == 1000
-    assert client.pas_page == 2
-    assert len(responses.calls) == 1
-    url = responses.calls[0].request.url
-    assert "pagination%5BpageSize%5D=1000" in url
-    assert "pagination%5Bpage%5D=1" in url
-
-
-@responses.activate
-def test_get_pas_with_custom_page_size(mock_authenticate):
-    payload = {"data": [], "meta": {"pagination": {"page": 1}}}
-    responses.add(
-        responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), json=payload, status=200
-    )
-
-    client = Strapi()
-    result = client.get_pas(page_size=50)
-
-    assert result == payload
-    assert client.pas_per_page == 50
-    assert client.pas_page == 2
-
-    url = responses.calls[0].request.url
-    assert "pagination%5BpageSize%5D=50" in url
-    assert "pagination%5Bpage%5D=1" in url
-
-
-@responses.activate
-def test_get_pas_with_custom_page_size_after_first_request(mock_authenticate):
-    payload = {"data": [], "meta": {"pagination": {"page": 1}}}
-    responses.add(
-        responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), json=payload, status=200
-    )
-
-    client = Strapi()
-    client.pas_page = 4
-    result = client.get_pas(page_size=50)
-
-    assert result == payload
-    assert client.pas_per_page == 50
-    assert client.pas_page == 2
-
-    url = responses.calls[0].request.url
-    assert "pagination%5BpageSize%5D=50" in url
-    assert "pagination%5Bpage%5D=1" in url
-
-
-@responses.activate
-def test_get_pas_explicit_page_over_next_page(mock_authenticate):
-    # fake response for page=5
-    payload = {"data": [], "meta": {"pagination": {"page": 5}}}
-    responses.add(
-        responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), json=payload, status=200
-    )
-
-    client = Strapi()
-    result = client.get_pas(next_page=False, page=5)
-
-    assert result == payload
-    assert client.pas_per_page == 1000
-    assert client.pas_page == 6
-
-    url = responses.calls[0].request.url
-    assert "pagination%5BpageSize%5D=1000" in url
-    assert "pagination%5Bpage%5D=5" in url
-
-
-@responses.activate
-@patch("src.core.strapi.Logger.error")
-def test_get_pas_raises_and_logs_on_http_error(mock_error, mock_authenticate):
-    # simulate a server error
-    responses.add(responses.GET, re.compile(rf"{re.escape(BASE_URL)}pas\?.*"), status=500)
-
-    client = Strapi()
-    with pytest.raises(HTTPError):
-        client.get_pas()
-
-    mock_error.assert_called_once()
-    logged = mock_error.call_args[0][0]
-    assert "Failed to get protected areas" in logged.get("message")
-    assert "500" in logged.get("exception")
-
-
-@responses.activate
-def test_update_pas_success(mock_authenticate):
+def test_upsert_pas_success(mock_authenticate):
     api = Strapi()
     payload = {"data": [{"id": 10}]}
     responses.add(
-        responses.PUT,
+        responses.POST,
         BASE_URL + "pas",
         json=payload,
         status=200,
     )
 
-    result = api.update_pas([{"id": 10}])
+    result = api.upsert_pas([{"id": 10}])
     assert result == payload
 
     assert len(responses.calls) == 1
     call = responses.calls[0].request
-    assert call.method == "PUT"
+    assert call.method == "POST"
     assert call.url == BASE_URL + "pas"
 
 
 @patch("src.core.strapi.Logger.error")
-@patch("src.core.strapi.requests.put", side_effect=HTTPError("update-fail"))
+@patch("src.core.strapi.requests.post", side_effect=HTTPError("update-fail"))
 def test_update_pas_failure(mock_req, mock_error, mock_authenticate):
     api = Strapi()
     with pytest.raises(HTTPError):
-        api.update_pas([{"id": 1}])
+        api.upsert_pas([{"id": 1}])
 
     mock_error.assert_called_once()
-    assert "Failed to create protected areas" in mock_error.call_args[0][0]["message"]
+    assert "Failed to upsert protected areas" in mock_error.call_args[0][0]["message"]
 
 
 @responses.activate
@@ -221,24 +121,13 @@ def test_create_pas_success(mock_authenticate):
         status=200,
     )
 
-    result = api.create_pas([{"foo": "bar"}])
+    result = api.upsert_pas([{"foo": "bar"}])
     assert result == payload
 
     assert len(responses.calls) == 1
     call = responses.calls[0].request
     assert call.method == "POST"
     assert call.url == BASE_URL + "pas"
-
-
-@patch("src.core.strapi.Logger.error")
-@patch("src.core.strapi.requests.post", side_effect=HTTPError("create-fail"))
-def test_create_pas_failure(mock_req, mock_error, mock_authenticate):
-    api = Strapi()
-    with pytest.raises(HTTPError):
-        api.create_pas([{"x": 1}])
-
-    mock_error.assert_called_once()
-    assert "Failed to update protected areas" in mock_error.call_args[0][0]["message"]
 
 
 @responses.activate

@@ -1,5 +1,6 @@
 import io
 import tempfile
+import tracemalloc
 import zipfile
 from io import BytesIO
 
@@ -13,7 +14,6 @@ import requests
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
-import tracemalloc
 from tqdm.auto import tqdm
 
 from src.core.params import (

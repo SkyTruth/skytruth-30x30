@@ -6,6 +6,11 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 from shapely.geometry import MultiPolygon, Polygon
+from tqdm.auto import tqdm
+
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
@@ -34,7 +39,108 @@ def add_environment(df: pd.DataFrame) -> pd.DataFrame:
         Must contain a 'MARINE' column with values '0', '1', or '2'.
     """
     df = df.copy()
-    df["environment"] = df["MARINE"].map({"0": "terrestrial", "1": "marine", "2": "marine"})
+    df["environment"] = df["MARINE"].map({0: "terrestrial", 1: "marine", 2: "marine"})
+    return df
+
+
+def add_oecm_status(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add an 'protection_status' column derived from 'PA_DEF'.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Must contain a 'PA_DEF' column with values 0 or 1.
+    """
+    status_dict = {0: "oecm", 1: "pa"}
+    df = df.copy()
+    df["protection_status"] = df["PA_DEF"].apply(lambda x: status_dict[x])
+    return df
+
+
+def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate percent coverage of protected areas relative to total area
+    from EEZ (marine) or GADM (terrestrial) reference datasets.
+
+    This function adds a new column ``coverage`` to the input DataFrame,
+    computed as:
+
+    - For rows where ``environment == "marine"``:
+      ``coverage = (area / eez_area) * 100``
+    - For rows where ``environment == "terrestrial"``:
+      ``coverage = (area / gadm_area) * 100``
+
+    The coverage is rounded to two decimal places and capped at 100.
+    If either the numerator or denominator is missing/invalid, the
+    result is set to ``None``.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input DataFrame. Must contain the columns:
+        - ``environment`` : str, either "marine" or "terrestrial".
+        - ``location`` : key to join with ``eez``/``gadm`` reference data.
+        - ``area`` : float, the protected area size (in km²).
+    eez : pandas.DataFrame
+        Marine reference DataFrame with columns:
+        - ``location`` : unique identifier for the marine region.
+        - ``AREA_KM2`` : total marine area (in km²).
+    gadm : pandas.DataFrame
+        Terrestrial reference DataFrame with columns:
+        - ``location`` : unique identifier for the terrestrial region.
+        - ``AREA_KM2`` : total terrestrial area (in km²).
+
+    Returns
+    -------
+    pandas.DataFrame
+        Copy of the input DataFrame with an additional column:
+        - ``coverage`` : float, percent coverage of area relative to
+          the reference dataset, rounded to 2 decimals and capped at 100.
+    """
+    # build fast lookup dicts for area by location
+    print("Make eez lok up", type(eez["location"]), type(eez["location"]))
+    eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"], strict=False))
+    eez_lookup["ATA"] = eez_lookup["ABNJ"]
+    eez_lookup["HKG"] = eez_lookup["CHN"]
+
+    print("Make gadem lok up", type(gadm["location"]), type(gadm["location"]))
+    gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
+    gadm_lookup["ATA"] = gadm_lookup["ABNJ"]
+
+    def _calc_coverage(x):
+        if x["environment"] == "marine":
+            denom = eez_lookup.get(x["location"])
+        elif x["environment"] == "terrestrial":
+            denom = gadm_lookup.get(x["location"])
+        else:
+            return None
+
+        # safe guard: skip if denom or numerator is missing/invalid
+        if denom is None or pd.isna(denom) or pd.isna(x["area"]):
+            return None
+
+        return min(100, 100 * x["area"] / denom)
+
+    df = df.copy()
+    tqdm.pandas()
+
+    print("calculatig coverage")
+    df["coverage"] = df.progress_apply(_calc_coverage, axis=1)
+    print("finished coverage calc")
+
+    removed = df[df["coverage"].isna()]
+    df = df[~df["coverage"].isna()]
+
+    total = removed["name"].size
+    if total > 0:
+        logger.warning(
+            {
+                "message": f"Failed to process {total} PAs because coverage could not be computed",
+                "PAs": removed.to_json(orient="records", force_ascii=False),
+            }
+        )
+
     return df
 
 
@@ -161,7 +267,72 @@ def add_year(df: pd.DataFrame) -> pd.DataFrame:
         Must include 'designated_date' string column.
     """
     df = df.copy()
-    df["year"] = df["designated_date"].apply(lambda x: int(x.split("-")[0]))
+    df["year"] = df["designated_date"].apply(lambda x: int(x.split("-")[0]) if x != "" else np.nan)
+    return df
+
+
+def update_mpaa_establishment_stage(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Updates mpaa_establishment_stage to the correct slugs
+    """
+    conversion_dict = {
+        "actively managed": "actively-managed",
+        "designated": "designated",
+        "implemented": "implemented",
+        "unknown": "unknown",
+        "proposed/committed": "proposed-committed",
+    }
+    df = df.copy()
+    df["mpaa_establishment_stage"] = df["mpaa_establishment_stage"].apply(
+        lambda x: conversion_dict[x] if x is not None else None
+    )
+    return df
+
+
+def calculate_area(
+    gdf: gpd.GeoDataFrame, output_area_column="area_km2", round: None | int = 2
+) -> gpd.GeoDataFrame:
+    """
+    Calculate polygon area in square kilometers and add it as a column.
+
+    Args:
+        gdf (gpd.GeoDataFrame): Input GeoDataFrame with a geometry column.
+        output_area_column (str, optional): Name of the new area column. Defaults to "area_km2".
+        round (int | None, optional): Decimal places to round the result. If None, no rounding.
+        Defaults to 2.
+
+    Returns:
+        gpd.GeoDataFrame: Copy of the input GeoDataFrame with the area column added.
+    """
+    col = gdf.geometry.to_crs("ESRI:53009").area / 1e6  # convert to km2
+    if round:
+        col = col.round(round)
+    return gdf.assign(**{output_area_column: col})
+
+
+def choose_pa_area(df):
+    df = df.copy()
+
+    # Choose columns based on MARINE flag
+    # TODO: should we just use marine area for marine PAs? This gets messy
+    # with coastal PAs that sometimes have _M_AREA=0
+    gis_area = df["GIS_AREA"]
+    rep_area = df["REP_AREA"]
+    # gis_area = np.where(df["MARINE"] == 0, df["GIS_AREA"], df["GIS_M_AREA"])
+    # rep_area = np.where(df["MARINE"] == 0, df["REP_AREA"], df["REP_M_AREA"])
+
+    # Force to numeric safely (non-numeric → NaN)
+    gis_area = pd.to_numeric(gis_area, errors="coerce")
+    rep_area = pd.to_numeric(rep_area, errors="coerce")
+
+    # Replace non-positive with NaN
+    gis_area = np.where(gis_area > 0, gis_area, np.nan)
+    rep_area = np.where(rep_area > 0, rep_area, np.nan)
+
+    # # Prefer GIS area if valid, otherwise REP area, otherwise 0
+    df["calculated_area_km2"] = np.where(
+        ~np.isnan(gis_area), gis_area, np.where(~np.isnan(rep_area), rep_area, 0)
+    )
     return df
 
 
@@ -212,9 +383,33 @@ def convert_type(
         For each column, try casting in order (e.g., ['float', 'Int64'])
     """
     df = df.copy()
-    for col in conversion:
-        for con in conversion[col]:
-            df[col] = df[col].astype(con)
+
+    def str_to_float_list(val):
+        """
+        Converts stringified list/tuple to list of floats. Used for parsing PA bbox
+        e.g. "(-179.0, -51.0, -175.0, -48.5)"
+        """
+        if pd.isna(val):
+            return np.nan
+        try:
+            parsed = ast.literal_eval(str(val))
+            return list(map(float, parsed))
+        except (ValueError, SyntaxError, TypeError):
+            return np.nan
+
+    for col, dtypes in conversion.items():
+        for con in dtypes:
+            try:
+                if con in ("int", "Int64", int) or con in ("float", "Float64", float):
+                    df[col] = pd.to_numeric(df[col], errors="coerce").astype(con)
+                elif con == "list_of_floats":
+                    df[col] = df[col].apply(str_to_float_list)
+                else:
+                    df[col] = df[col].astype(con)
+                break
+            except (ValueError, TypeError) as excep:
+                logger.warning({"message": "Failed to convert data types", "error": str(excep)})
+                continue
 
     return df
 

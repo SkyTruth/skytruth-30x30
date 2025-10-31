@@ -1,16 +1,18 @@
+import pickle
+
 import geopandas as gpd
 import pandas as pd
-from tqdm.auto import tqdm
+from google.cloud import storage
 
 from src.core.commons import (
     load_marine_regions,
     load_mpatlas_country,
     load_regions,
     load_wdpa_global,
-    read_mpatlas_from_gcs,
 )
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
+    ARCHIVE_WDPA_PA_FILE_NAME,
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
@@ -24,169 +26,118 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
-    MPATLAS_FILE_NAME,
+    MPATLAS_META_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROJECT,
     PROTECTED_SEAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
-    RELATED_COUNTRIES_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
-    WDPA_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
-    today_formatted,
+    WDPA_META_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
-    add_environment,
-    add_parent,
     add_pas_oecm,
     add_protected_from_fishing_area,
     add_protected_from_fishing_percent,
     add_total_area_mp,
-    add_year,
-    convert_type,
     extract_column_dict_str,
     fp_location,
     remove_columns,
-    remove_non_designated_m,
-    remove_non_designated_p,
     rename_habitats,
     update_mpatlas_asterisk,
 )
 from src.methods.marine_habitats import process_marine_habitats
+from src.methods.protected_areas.protected_areas import (
+    generate_protected_areas_table,
+    make_pa_updates,
+)
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
+from src.utils.database import get_pas
 from src.utils.gcp import (
-    load_gdb_layer_from_gcs,
     read_dataframe,
-    read_json_from_gcs,
     upload_dataframe,
 )
 
 
-def generate_protected_areas_table(
-    wdpa_file_name: str = WDPA_FILE_NAME,
-    mpatlas_file_name: str = MPATLAS_FILE_NAME,
-    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
+def generate_protected_areas_diff_table(
+    wdpa_file_name: str = WDPA_META_FILE_NAME,
+    mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
+    archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
+    project: str = PROJECT,
     verbose: bool = True,
 ):
-    def unique_pa(w, m, wdpa_id):
-        w = w[w["wdpa_id"] == wdpa_id].sort_values(by="wdpa_pid")
-        m = m[m["wdpa_id"] == wdpa_id].sort_values(by="wdpa_pid")
+    def clean_for_json(obj):
+        import math
 
-        if len(w) > 0:
-            parent = w[w["wdpa_id"] == w["wdpa_pid"]]
-            parent = parent.iloc[0:1] if len(parent) == 1 else w.iloc[0:1]
-            children = (
-                pd.concat([w.drop(index=parent.index), m], axis=0)
-                if len(m) > 0
-                else w.drop(index=parent.index)
-            )
+        """Recursively replace NaN/Infinity with None (-> JSON null)."""
+        if isinstance(obj, float):
+            if math.isnan(obj) or math.isinf(obj):
+                return None
+            return obj
+        elif isinstance(obj, str):
+            if obj == "":
+                return None
+            return obj
+        elif isinstance(obj, dict):
+            return {k: clean_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [clean_for_json(v) for v in obj]
         else:
-            parent = m[m["wdpa_id"] == m["wdpa_pid"]]
-            parent = parent.iloc[0:1] if len(parent) == 1 else m.iloc[0:1]
-            children = m.drop(index=parent.index)
+            return obj
 
-        parent = parent.copy()
-        children = children.copy()
-        parent["parent"] = True
-        children["parent"] = False
-
-        return pd.concat([parent, children], axis=0)
-
-    if verbose:
-        print(f"loading gs://{bucket}/{wdpa_file_name}")
-    wdpa = load_gdb_layer_from_gcs(
-        wdpa_file_name,
-        bucket,
-        layers=[f"WDPA_poly_{today_formatted}", f"WDPA_point_{today_formatted}"],
+    updated_pas = generate_protected_areas_table(
+        wdpa_file_name=wdpa_file_name,
+        mpatlas_file_name=mpatlas_file_name,
+        bucket=bucket,
+        verbose=verbose,
     )
 
+    # Get the current database
     if verbose:
-        print(f"loading gs://{bucket}/{mpatlas_file_name}")
-    mpatlas = read_mpatlas_from_gcs(bucket, mpatlas_file_name)
-
-    related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=True)
-    parent_dict = {}
-    for cnt in related_countries:
-        for c in related_countries[cnt]:
-            parent_dict[c] = cnt
-
-    if verbose:
-        print("processing WDPAs")
-    wdpa_dict = {
-        "NAME": "name",
-        "GIS_AREA": "area",
-        "STATUS": "STATUS",
-        "STATUS_YR": "year",
-        "WDPAID": "wdpa_id",
-        "DESIG_TYPE": "designation",
-        "ISO3": "iso_3",
-        "IUCN_CAT": "iucn_category",
-        "MARINE": "MARINE",
-        "PARENT_ISO3": "parent_id",
-        "geometry": "geometry",
-    }
-    cols = [i for i in wdpa_dict]
-
-    wdpa_pa = (
-        wdpa[cols]
-        .rename(columns=wdpa_dict)
-        .pipe(remove_non_designated_p)
-        .pipe(add_environment)
-        .pipe(add_constants, {"data_source": "Protected Planet"})
-        .pipe(remove_columns, ["STATUS", "MARINE"])
-        .pipe(convert_type, {"wdpa_id": [pd.Int64Dtype(), str], "wdpa_pid": [str]})
-    )
+        print("downloading current PA database")
+    current_db = get_pas()
+    current_db_df = pd.DataFrame(current_db)
+    if len(current_db_df) > 0:
+        current_db_df["area"] = current_db_df["area"].apply(lambda x: float(x))
+        current_db_df["coverage"] = current_db_df["coverage"].apply(
+            lambda x: float(x) if x is not None else None
+        )
 
     if verbose:
-        print("processing MPAs")
+        print(f"current database length: {len(current_db)}")
 
-    mpa_dict = {
-        "name": "name",
-        "designated_date": "designated_date",
-        "wdpa_id": "wdpa_id",
-        "designation": "designation",
-        "establishment_stage": "mpaa_establishment_stage",
-        "sovereign": "location",
-        "protection_mpaguide_level": "mpaa_protection_level",
-        "geometry": "geometry",
-    }
-    cols = [i for i in mpa_dict]
-    mpa_pa = (
-        mpatlas[cols]
-        .rename(columns=mpa_dict)
-        .pipe(remove_non_designated_m)
-        .pipe(add_year)
-        .pipe(add_constants, {"environment": "marine", "data_source": "MPATLAS"})
-        .pipe(remove_columns, "designated_date")
-        .pipe(add_parent, parent_dict, location_name="location")
-        .pipe(convert_type, {"wdpa_id": [pd.Int64Dtype(), str], "wdpa_pid": [str]})
-    )
+    if verbose:
+        print("finding database changes")
+    db_changes, change_cols = make_pa_updates(current_db_df, updated_pas, verbose=verbose)
 
-    results = []
-    for environment in ["marine", "terrestrial"]:
-        print(environment)
+    # Print which values have changed
+    if verbose:
+        for col in change_cols.columns:
+            size = len(change_cols[change_cols[col]])
+            if size > 0:
+                print(f"{col}: {size} rows changed")
 
-        # Filter once per environment
-        w = wdpa_pa[wdpa_pa["environment"] == environment]
-        m = mpa_pa[mpa_pa["environment"] == environment]
+    db_changes["new"] = clean_for_json(db_changes["new"])
+    db_changes["changed"] = clean_for_json(db_changes["changed"])
 
-        # Union of unique wdpa_ids
-        wdpa_ids = sorted(set(w["wdpa_id"]) | set(m["wdpa_id"]))
+    # Save archive DB changes
+    source_file = "db_changes.pkl"
+    with open(source_file, "wb") as f:
+        pickle.dump(db_changes, f)
 
-        for wdpa_id in tqdm(wdpa_ids):
-            entries = unique_pa(w, m, wdpa_id)
-            results.append(entries)
+    client = storage.Client(project=project)
+    bucket = client.bucket(bucket)
+    blob = bucket.blob(archive_pa_file_name)
+    blob.upload_from_filename(source_file)
 
-    # Combine all at once
-    protected_areas = pd.concat(results, axis=0, ignore_index=True)
-
-    return protected_areas.to_dict(orient="records")
+    if verbose:
+        print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
 
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:

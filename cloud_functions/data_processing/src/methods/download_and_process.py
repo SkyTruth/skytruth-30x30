@@ -1,16 +1,19 @@
-from io import BytesIO
-import os
-import geopandas as gpd
 import glob
+import os
+import shutil
+import zipfile
+from io import BytesIO
+from pathlib import Path
+
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
-from shapely.geometry import MultiPoint, Point
-import zipfile
+from shapely.geometry import MultiPoint, Point, shape
 
 from src.core.commons import (
-    download_mpatlas_zone,
     download_file_with_progress,
+    download_mpatlas_zone,
     print_peak_memory_allocation,
     unzip_file,
 )
@@ -40,12 +43,16 @@ from src.core.params import (
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_URL,
 )
+from src.core.processors import calculate_area, choose_pa_area
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
     upload_dataframe,
     upload_gdf,
 )
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def download_mpatlas_country(
@@ -76,27 +83,61 @@ def download_mpatlas(
     verbose: bool = True,
     project_id: str = PROJECT,
 ) -> None:
+    def safe_shape(geom):
+        try:
+            return shape(geom) if geom else None
+        except Exception:
+            return None
+
     download_mpatlas_country(
-        bucket,
-        project,
-        mpatlas_country_url,
-        mpatlas_country_file_name,
-        archive_mpatlas_country_file_name,
+        bucket=bucket,
+        project=project,
+        url=mpatlas_country_url,
+        current_filename=mpatlas_country_file_name,
+        archive_filename=archive_mpatlas_country_file_name,
     )
 
     download_mpatlas_zone(
-        url,
-        bucket,
-        mpatlas_filename,
-        archive_mpatlas_filename,
-        verbose,
+        url=url,
+        bucket=bucket,
+        filename=mpatlas_filename,
+        archive_filename=archive_mpatlas_filename,
+        verbose=verbose,
     )
 
     if verbose:
-        print(f"saving metadata to {meta_file_name}")
+        print(f"loading MPAtlas from {mpatlas_filename}")
     mpa = read_json_from_gcs(bucket, mpatlas_filename)
-    mpa_meta = pd.DataFrame([feat["properties"] for feat in mpa["features"]])
-    upload_dataframe(bucket, mpa_meta, meta_file_name, project_id=project_id, verbose=verbose)
+
+    mpa_all = gpd.GeoDataFrame(
+        [
+            {**feat["properties"], "geometry": safe_shape(feat.get("geometry"))}
+            for feat in mpa["features"]
+        ],
+        geometry="geometry",
+        crs="EPSG:4326",
+    )
+
+    # add area column
+    if verbose:
+        print("calculating MPA area (calculated_area_km2)")
+    mpa_all = calculate_area(mpa_all, output_area_column="calculated_area_km2")
+
+    # add bounding box column
+    if verbose:
+        print("calculating MPA bounding box (bbox)")
+    mpa_all["bbox"] = mpa_all.geometry.apply(lambda g: g.bounds if g is not None else None)
+
+    # Upload metadata (no geometry)
+    if verbose:
+        print(f"saving metadata to {meta_file_name}")
+    upload_dataframe(
+        bucket,
+        mpa_all.drop(columns="geometry"),
+        meta_file_name,
+        project_id=project_id,
+        verbose=verbose,
+    )
 
 
 def download_protected_seas(
@@ -134,6 +175,7 @@ def download_protected_seas(
     data["includes_multi_jurisdictional_areas"] = data["includes_multi_jurisdictional_areas"].map(
         {"t": True, "f": False}
     )
+    data = data.drop_duplicates()
 
     if verbose:
         print(f"saving Protected Seas to gs://{bucket}/{archive_filename}")
@@ -214,10 +256,9 @@ def process_protected_area_geoms(
         )
 
 
-def unpack_pas(pa_dir):
+def unpack_pas(pa_dir, verbose):
     to_append = []
     for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
-        print(zip_path)
         with zipfile.ZipFile(zip_path) as z:
             shp_paths = [n for n in z.namelist() if n.lower().endswith(".shp")]
 
@@ -226,8 +267,18 @@ def unpack_pas(pa_dir):
                 gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
                 gdf["layer_name"] = shp.replace(".shp", "")
                 to_append.append(gdf)
+        try:
+            os.remove(zip_path)
+            if verbose:
+                print(f"Deleted {zip_path}")
+        except Exception as excep:
+            logger.warning(
+                {"message": f"Warning: failed to delete {zip_path}", "error": str(excep)}
+            )
 
-    return pd.concat((to_append), axis=0)
+    if not to_append:
+        raise ValueError(f"No shapefiles found in {pa_dir}")
+    return pd.concat(to_append, axis=0)
 
 
 def download_and_process_protected_planet_pas(
@@ -240,24 +291,48 @@ def download_and_process_protected_planet_pas(
     bucket: str = BUCKET,
     project_id: str = PROJECT,
 ):
-    base_zip_path = "wdpa.zip"
-    pa_dir = "wdpa"
+    tmp_dir = Path("/tmp")
+    tmp_dir.mkdir(exist_ok=True)
 
-    print(f"downloading {wdpa_url}")
+    base_zip_path = tmp_dir / "wdpa.zip"
+    pa_dir = tmp_dir / "wdpa"
+
+    if verbose:
+        print(f"downloading {wdpa_url}")
     _ = print_peak_memory_allocation(download_file_with_progress, wdpa_url, base_zip_path)
 
-    print(f"unzipping {base_zip_path}")
+    if verbose:
+        print(f"unzipping {base_zip_path}")
     _ = print_peak_memory_allocation(unzip_file, base_zip_path, pa_dir)
 
-    print(f"unpacking PAs from {pa_dir}")
-    pas = print_peak_memory_allocation(unpack_pas, pa_dir)
+    if verbose:
+        print(f"unpacking PAs from {pa_dir}")
+    pas = print_peak_memory_allocation(unpack_pas, pa_dir, verbose)
 
-    print(f"saving wdpa metadata to {meta_file_name}")
+    try:
+        shutil.rmtree(pa_dir)
+        if verbose:
+            print(f"Deleted directory {pa_dir}")
+
+    except Exception as excep:
+        logger.warning(
+            {"message": f"Warning: failed to delete directory {pa_dir}", "error": str(excep)}
+        )
+
+    if verbose:
+        print("adding bbox and area columns")
+
+    pas["bbox"] = pas.geometry.apply(lambda g: g.bounds if g is not None else None)
+    pas = choose_pa_area(pas)
+
+    if verbose:
+        print(f"saving wdpa metadata to {meta_file_name}")
     upload_dataframe(
         bucket, pas.drop(columns="geometry"), meta_file_name, project_id=project_id, verbose=verbose
     )
 
-    print("processing protected areas")
+    if verbose:
+        print("processing protected areas")
     process_protected_area_geoms(
         pas,
         terrestrial_pa_file_name=terrestrial_pa_file_name,
