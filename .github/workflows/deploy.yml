@@ -21,6 +21,10 @@ on:
     branches:
       - main
       - develop
+  pull_request:
+    branches:
+      - main
+      - develop
 
     paths:
       - 'frontend/**'
@@ -41,6 +45,7 @@ jobs:
       id-token: 'write'
 
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -116,6 +121,7 @@ jobs:
       id-token: 'write'
 
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -185,6 +191,7 @@ jobs:
         
   deploy_analysis_cloud_functions:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -221,8 +228,35 @@ jobs:
           --region=${{ env.REGION }} \
           --source=./cloud_functions/analysis \
 
-  deploy_data_cloud_functions:
+  test_data_cloud_function:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: '2.1.3'
+
+      - name: Configure Poetry (no venvs; install into runner)
+        run: poetry config virtualenvs.create false
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Run tests
+        run: poetry run pytest -q
+  
+  deploy_data_cloud_functions:
+    needs: test_data_cloud_function
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -244,12 +278,15 @@ jobs:
         with:
           credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.extract_environment.outputs.environment)] }}"
           token_format: 'access_token'
+
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
           version: '>= 516.0.0'
+
       - name: 'Use gcloud CLI'
         run: 'gcloud info'
+
       - name: 'Deploy to gen2 cloud function'
         env:
           CLOUD_FUNCTION_NAME: ${{ secrets[format('{0}_DATA_CF_NAME', steps.extract_environment.outputs.environment)] }}
