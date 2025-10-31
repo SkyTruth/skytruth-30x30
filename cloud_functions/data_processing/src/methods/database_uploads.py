@@ -98,6 +98,7 @@ def upload_stats(
 def upload_protected_areas(
     archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
+    update_segment: str = "all",
     verbose: bool = True,
 ):
     strapi = Strapi()
@@ -106,30 +107,32 @@ def upload_protected_areas(
         bucket_name=bucket, blob_name=archive_pa_file_name, project_id=PROJECT, verbose=verbose
     )
 
-    deleted = db_changes["deleted"]
-    if verbose:
-        print(f"deleting {len(deleted)} entries")
-    delete_response = strapi.delete_pas(deleted)
-    if verbose:
-        print("delete response:", delete_response)
+    if update_segment in ["delete", "all"]:
+        deleted = db_changes["deleted"]
+        if verbose:
+            print(f"deleting {len(deleted)} entries")
+        delete_response = strapi.delete_pas(deleted)
+        if verbose:
+            print("delete response:", delete_response)
 
-    upserted = db_changes["new"] + db_changes["changed"]
+    if update_segment in ["upsert", "all"]:
+        upserted = db_changes["new"] + db_changes["changed"]
+        if verbose:
+            print(f"upserting {len(upserted)} entries")
+
+        wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
+        chunk_size = 20000
+        for i in tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"):
+            ids = wdpaids[i : i + chunk_size]
+            chunk = [u for u in upserted if u["wdpaid"] in ids]
+            try:
+                upsert_response = strapi.upsert_pas(chunk)
+
+                if verbose:
+                    print("upsert response:", upsert_response)
+            except Exception as excep:
+                logger.error({"message": f"Error on chunk {i // chunk_size}", "error": str(excep)})
+                continue
+
     if verbose:
-        print(f"upserting {len(upserted)} entries")
-
-    wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
-    chunk_size = 20000
-    for i in tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"):
-        ids = wdpaids[i : i + chunk_size]
-        chunk = [u for u in upserted if u["wdpaid"] in ids]
-        try:
-            upsert_response = strapi.upsert_pas(chunk)
-
-            if verbose:
-                print("upsert response:", upsert_response)
-        except Exception as excep:
-            logger.error({"message": f"Error on chunk {i // chunk_size}", "error": str(excep)})
-            continue
-
-    if verbose:
-        print("Upsert complete!")
+        print("Update complete!")

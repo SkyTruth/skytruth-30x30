@@ -250,7 +250,8 @@ def main(request: Request) -> tuple[str, int]:
                 )
 
             case "update_protected_areas":
-                upload_protected_areas(verbose=verbose)
+                update_segment = data.get("UPDATE_SEGMENT", "all")
+                upload_protected_areas(verbose=verbose, update_segment=update_segment)
 
             # ------------------
             #   Map Tilesets Updates
