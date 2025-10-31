@@ -314,10 +314,9 @@ def download_and_process_protected_planet_pas(
             print(f"Deleted directory {pa_dir}")
 
     except Exception as excep:
-        logger.warning({
-            "message": f"Warning: failed to delete directory {pa_dir}",
-            "error": str(excep)
-        })
+        logger.warning(
+            {"message": f"Warning: failed to delete directory {pa_dir}", "error": str(excep)}
+        )
 
     if verbose:
         print("adding bbox and area columns")

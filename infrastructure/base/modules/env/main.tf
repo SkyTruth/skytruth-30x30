@@ -57,6 +57,7 @@ module "backend_cloudrun" {
   min_scale             = var.backend_min_scale
   max_scale             = var.backend_max_scale
   tag                   = var.environment
+  timeout_seconds       = 1800
   use_hello_world_image = var.use_hello_world_image
 }
 
