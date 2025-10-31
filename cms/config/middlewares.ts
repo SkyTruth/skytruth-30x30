@@ -8,7 +8,7 @@ export default [
   {
     name: 'strapi::body',
     config: {
-      jsonLimit: '10mb',
+      jsonLimit: '250mb',
     },
   },
   'strapi::session',

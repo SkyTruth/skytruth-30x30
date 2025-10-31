@@ -23,6 +23,7 @@ from src.core.params import (
 from src.core.strapi import Strapi
 from src.methods.database_uploads import (
     upload_locations,
+    upload_protected_areas,
     upload_stats,
 )
 from src.methods.download_and_process import (
@@ -35,7 +36,7 @@ from src.methods.generate_tables import (
     generate_fishing_protection_table,
     generate_habitat_protection_table,
     generate_marine_protection_level_stats_table,
-    generate_protected_areas_table,
+    generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
 from src.methods.static_processes import (
@@ -56,6 +57,9 @@ from src.methods.tileset_processes import (
     create_and_update_terrestrial_regions_tileset,
 )
 from src.utils.gcp import download_zip_to_gcs
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 @functions_framework.http
@@ -86,7 +90,7 @@ def main(request: Request) -> tuple[str, int]:
     - "download_protected_seas": Downloads Protected Seas JSON data and uploads it
     - "download_protected_planet_wdpa": Downloads full Protected Planet suite
             (WDPA ZIP + stats) and processes/simplifies polygons
-    - "generate_protected_areas_table": Updates protected areas table
+    - "generate_protected_areas_diff_table": Updates protected areas table
 
     Parameters:
     ----------
@@ -186,9 +190,6 @@ def main(request: Request) -> tuple[str, int]:
             # ------------------
             #   Table updates
             # ------------------
-            case "generate_protected_areas_table":
-                # TODO: incomplete!
-                _ = generate_protected_areas_table(verbose=verbose)
 
             case "generate_habitat_protection_table":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
@@ -205,6 +206,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
+
+            case "generate_protected_areas_table":
+                generate_protected_areas_diff_table(verbose=verbose)
 
             # ------------------
             #   Database updates
@@ -244,6 +248,9 @@ def main(request: Request) -> tuple[str, int]:
                     upload_function=client.upsert_habitat_stats,
                     verbose=verbose,
                 )
+
+            case "update_protected_areas":
+                upload_protected_areas(verbose=verbose)
 
             # ------------------
             #   Map Tilesets Updates
@@ -290,6 +297,6 @@ def main(request: Request) -> tuple[str, int]:
 
         return "OK", 200
     except Exception as e:
-        print(f"METHOD {method} failed: {e}")
+        logger.error({"message": f"METHOD {method} failed", "error": str(e)})
 
         return f"Internal Server Error: {e}", 500

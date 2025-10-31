@@ -89,7 +89,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "display_name": "Protected Areas",
                 "tolerance": 3.2,
             },
-            "pas.geojson",
+            "pas.id.geojson",
             "_3.2.geojson",
             tp.protected_area_process,
         ),
@@ -109,6 +109,7 @@ def test_wrappers_call_pipeline_with_expected_config(
         # capture cfg & process for assertions
         calls["cfg"] = cfg
         calls["process"] = process
+        print(cfg)
         # return a simple shape the wrappers would propagate
         return {"tileset_id": cfg.tileset_id, "gcs_blob": cfg.tileset_blob_name}
 

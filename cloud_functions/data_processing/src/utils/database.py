@@ -50,7 +50,9 @@ def get_pas(verbose: bool = False) -> list[dict]:
       WITH child_ids AS (
         SELECT 
           pas.id AS pas_id
-          ,array_agg(c.id) FILTER (WHERE c.id IS NOT NULL) AS children
+          ,jsonb_agg(
+            jsonb_build_object('id', c.id)
+          ) FILTER (WHERE c.id IS NOT NULL) AS children
         FROM pas pas
           LEFT JOIN pas_children_links pcl 
           ON pas.id = pcl.pa_id
@@ -61,7 +63,12 @@ def get_pas(verbose: bool = False) -> list[dict]:
       ,parent_ids AS (
         SELECT 
           pas.id AS pas_id
-          ,p.id AS parent
+          ,CASE 
+            WHEN p.id IS NULL THEN NULL
+            ELSE jsonb_build_object(
+              'id', p.id
+            )
+        END AS parent
         FROM pas pas
           LEFT JOIN pas_parent_links ppl 
             ON pas.id = ppl.pa_id

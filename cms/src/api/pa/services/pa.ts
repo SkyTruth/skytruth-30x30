@@ -36,12 +36,12 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
     const mpaaEstablishmentStageMap = await strapi
       .service('api::mpaa-establishment-stage.mpaa-establishment-stage')
       .getMpaaEstablishmentStageMap();
-    
+
       return {
         dataSourceMap,
         environmentMap,
         locationMap,
-        mpaaEstablishmentStageMap, 
+        mpaaEstablishmentStageMap,
         mpaaIucnCategoryMap,
         mpaaProtectionLevelMap,
         protectionStatusMap,
@@ -86,7 +86,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         dataSourceMap,
         environmentMap,
         locationMap,
-        mpaaEstablishmentStageMap, 
+        mpaaEstablishmentStageMap,
         mpaaIucnCategoryMap,
         mpaaProtectionLevelMap,
         protectionStatusMap,
@@ -110,7 +110,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
     if (!locationMap[location]) {
       errors.push({
           msg: `Failed to find location for PA, name: ${pa?.name}, id: ${id}`,
-          err: `Locaiton ${location} not found`
+          err: `Location ${location} not found`
       });
       return false;
     }
@@ -153,7 +153,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         })
         return false
       }
-      if (!area) {
+      if (area !== 0 && !area) {
         errors.push({
           msg: `Failed to create PA, name: ${pa?.name}`,
           err: "Missing required field, 'area'"
@@ -167,7 +167,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
         })
         return false
       }
-      if (!coverage) {
+      if (coverage !== 0 && !coverage) {
         errors.push({
           msg: `Failed to create PA, name: ${pa?.name}`,
           err: "Missing required field, 'coverage'"
@@ -200,14 +200,14 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
 
         children.forEach(child => {
           toUpdateRelations[paIdentifier].children.push({
-            id: child?.id, 
+            id: child?.id,
             key: this.makePAKey(child)
           })
         })
-        /** 
+        /**
          * If we're in this block it means the Pa has childnred
          * and at least one child is missing an ID (i.e. isn't created yet)
-         * So we will skip updating children for this PA and make that update 
+         * So we will skip updating children for this PA and make that update
          * after all new PAs are created
          * */
         delete pa.children
@@ -228,7 +228,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
           key: this.makePAKey(parent)
         }
         /**
-         * Parent doesn't yet exist, so save updating that relationship 
+         * Parent doesn't yet exist, so save updating that relationship
          * until all new PAs are created
          */
         delete pa.parent

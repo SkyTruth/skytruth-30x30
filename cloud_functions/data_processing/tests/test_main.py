@@ -42,8 +42,7 @@ def patched_all(monkeypatch, call_log):
         "download_mpatlas",
         "download_protected_seas",
         "download_protected_planet",
-        "process_protected_area_geoms",
-        "generate_protected_areas_table",
+        "generate_protected_areas_diff_table",
         "generate_terrestrial_biome_stats_pa",
         "generate_habitat_protection_table",
         "generate_protection_coverage_stats_table",
@@ -83,7 +82,7 @@ def patched_all(monkeypatch, call_log):
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
-        ("generate_protected_areas_table", "generate_protected_areas_table"),
+        ("generate_protected_areas_table", "generate_protected_areas_diff_table"),
         ("generate_protection_coverage_stats_table", "generate_protection_coverage_stats_table"),
         (
             "generate_marine_protection_level_stats_table",
@@ -123,7 +122,6 @@ def test_download_protected_planet_wdpa_calls_two(patched_all):
     # Two calls in order
     assert [c[0] for c in patched_all] == [
         "download_protected_planet",
-        "process_protected_area_geoms",
     ]
     # Both called with verbose kwarg
     for _, args, kwargs in patched_all:

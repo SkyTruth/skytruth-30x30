@@ -10,7 +10,7 @@ ENV POETRY_NO_INTERACTION=1 \
   POETRY_CACHE_DIR='/var/cache/pypoetry' \
   POETRY_HOME='/usr/local'
 
-  
+
 # Install OS dependencies
 RUN apt-get update && apt-get install -y \
   g++ \
@@ -42,6 +42,6 @@ RUN pip install --upgrade pip && \
     pip install -r ./requirements.txt
 
 # Copy the rest of your function code
-COPY . .
+COPY main.py src/ .
 
 ENTRYPOINT ["functions-framework", "--target=main", "--debug", "--port=8080"]
