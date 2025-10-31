@@ -187,13 +187,14 @@ def relation_diff_index(
             continue
 
         # Any dict has id == None on either side
-        # Adding a net-new PA to the eraltionship list
+        # Adding a net-new PA to the relationship list
         if left_has_none_id or right_has_none_id:
             difference_flags.append(True)
             continue
 
-        # Compare membership of ids (order-insensitive, ignoring None since none exist now)
-        # Some relationship to a pre-exisitn PA has changed
+        # Compare membership of ids (order-insensitive, ignoring None since that case
+        # has already been checked)
+        # Some relationship to a pre-exisiting PA has changed
         if set(left_ids) != set(right_ids):
             difference_flags.append(True)
             continue

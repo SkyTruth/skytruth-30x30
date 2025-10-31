@@ -157,7 +157,9 @@ def generate_protected_areas_table(
         mpatlas = mpatlas.copy()
 
         # Create one row per country
-        # Some inconsitencies in how the api splits countries
+        # Some inconsitencies in how the api splits countries. This delieation
+        # is not enforced in MPAtlas, so we may need to audit this and add new 
+        # delineators
         mpatlas["country"] = mpatlas["country"].astype(str).str.split(r"[;:,]")
         mpatlas = mpatlas.explode("country")
         mpatlas["country"] = mpatlas["country"].str.strip()

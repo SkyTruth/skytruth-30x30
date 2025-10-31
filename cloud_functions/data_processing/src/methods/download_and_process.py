@@ -255,7 +255,7 @@ def process_protected_area_geoms(
         )
 
 
-def unpack_pas(pa_dir):
+def unpack_pas(pa_dir, verbose):
     to_append = []
     for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
         with zipfile.ZipFile(zip_path) as z:
@@ -268,7 +268,8 @@ def unpack_pas(pa_dir):
                 to_append.append(gdf)
         try:
             os.remove(zip_path)
-            print(f"Deleted {zip_path}")
+            if verbose:
+                print(f"Deleted {zip_path}")
         except Exception as excep:
             logger.warning(
                 {"message": f"Warning: failed to delete {zip_path}", "error": str(excep)}
@@ -305,13 +306,18 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print(f"unpacking PAs from {pa_dir}")
-    pas = print_peak_memory_allocation(unpack_pas, pa_dir)
+    pas = print_peak_memory_allocation(unpack_pas, pa_dir, verbose)
 
     try:
         shutil.rmtree(pa_dir)
-        print(f"Deleted directory {pa_dir}")
-    except Exception as e:
-        print(f"Warning: failed to delete directory {pa_dir}: {e}")
+        if verbose:
+            print(f"Deleted directory {pa_dir}")
+
+    except Exception as excep:
+        logger.warning({
+            "message": f"Warning: failed to delete directory {pa_dir}",
+            "error": str(excep)
+        })
 
     if verbose:
         print("adding bbox and area columns")

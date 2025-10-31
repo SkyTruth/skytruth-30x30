@@ -106,19 +106,6 @@ def upload_protected_areas(
         bucket_name=bucket, blob_name=archive_pa_file_name, project_id=PROJECT, verbose=verbose
     )
 
-    # print("Changes", db_changes["changed"], "\nNew:", db_changes["new"][:25])
-    print(
-        "total",
-        len(db_changes),
-        "changes",
-        len(db_changes["changed"]),
-        "new",
-        len(db_changes["new"]),
-        "deleted",
-        len(db_changes["deleted"]),
-    )
-
-    print("New", db_changes["new"][:2], "\n\n changes", db_changes["changed"][:2])
     deleted = db_changes["deleted"]
     if verbose:
         print(f"deleting {len(deleted)} entries")
