@@ -239,6 +239,10 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name:  CD to function directory
+        run:  |
+          cd ./cloud_functions/data_processing
+          
       - name: Install Poetry
         uses: abatilo/actions-poetry@v3
         with:
