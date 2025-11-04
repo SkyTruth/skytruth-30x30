@@ -3,7 +3,6 @@ import os
 import shutil
 import zipfile
 from io import BytesIO
-from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
@@ -291,11 +290,11 @@ def download_and_process_protected_planet_pas(
     bucket: str = BUCKET,
     project_id: str = PROJECT,
 ):
-    tmp_dir = Path("/tmp")
-    tmp_dir.mkdir(exist_ok=True)
+    tmp_dir = "/tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
 
-    base_zip_path = tmp_dir / "wdpa.zip"
-    pa_dir = tmp_dir / "wdpa"
+    base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
+    pa_dir = os.path.join(tmp_dir, "wdpa")
 
     if verbose:
         print(f"downloading {wdpa_url}")
