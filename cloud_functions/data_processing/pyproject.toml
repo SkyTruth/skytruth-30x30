@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.11.9"
+ruff = "^0.14.3"
 pytest = "^8.3.5"
 responses = "^0.25.7"
 python-dotenv = "^1.1.0"
@@ -42,6 +42,8 @@ package-mode = false
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
 select=["E", "F", "UP", "B", "SIM", "I"]
 ignore=["UP038"]
 
