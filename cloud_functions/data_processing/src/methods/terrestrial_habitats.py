@@ -157,6 +157,7 @@ def generate_terrestrial_biome_stats_pa(
         print("loading protected areas (this may take a few minutes)")
 
     terrestrial_pas = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
+    terrestrial_pas["geometry"] = terrestrial_pas.make_valid()
 
     if verbose:
         print(f"downloading raster from {raster_path}")
