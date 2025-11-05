@@ -3,6 +3,7 @@
 *.pyc
 .DS_Store
 .pytest_cache
+*.ipynb
 
 # environment variables
 .env
