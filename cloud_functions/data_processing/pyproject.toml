@@ -25,6 +25,7 @@ dependencies = [
     "tippecanoe (>=2.72.0,<3.0.0)",
     "boto3 (>=1.40.18,<2.0.0)",
     "psycopg (>=3.2.10,<4.0.0)",
+    "joblib (>=1.5.2,<2.0.0)",
 ]
 
 [tool.poetry.group.dev.dependencies]
@@ -42,8 +43,6 @@ package-mode = false
 
 [tool.ruff]
 line-length = 100
-
-[tool.ruff.lint]
 select=["E", "F", "UP", "B", "SIM", "I"]
 ignore=["UP038"]
 
