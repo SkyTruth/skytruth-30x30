@@ -1,10 +1,10 @@
 import math
 
 import geopandas as gpd
-from joblib import Parallel, delayed
 import pandas as pd
 import rasterio
 import requests
+from joblib import Parallel, delayed
 from rasterio.transform import rowcol
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, box, mapping
 from shapely.ops import unary_union
@@ -232,7 +232,6 @@ def generate_terrestrial_biome_stats_pa(
             country_col,
             tile_size_pixels,
             land_cover_classes,
-            verbose,
         )
         for country in tqdm(countries)
     )
