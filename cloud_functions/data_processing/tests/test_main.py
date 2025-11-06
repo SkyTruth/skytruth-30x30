@@ -110,7 +110,6 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     assert "verbose" in kwargs
 
 
-
 # Tests for functions that directly call download_zip_to_gcs
 def _assert_download_zip_call_kwargs(
     call, *, url, bucket_name, blob_name, chunk_size, extra_kwargs=None
