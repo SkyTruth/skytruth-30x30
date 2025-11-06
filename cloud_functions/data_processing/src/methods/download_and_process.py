@@ -8,6 +8,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
+from joblib import Parallel, delayed
 from shapely.geometry import MultiPoint, Point, shape
 
 from src.core.commons import (
@@ -187,7 +188,7 @@ def process_protected_area_geoms(
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     bucket: str = BUCKET,
-    tolerances: list | tuple = TOLERANCES,
+    tolerance: list | tuple = TOLERANCES[0],
     verbose: bool = True,
 ):
     def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -215,15 +216,35 @@ def process_protected_area_geoms(
         return g
 
     def save_simplified_marine_terrestrial_pas(
-        df, tolerance, terrestrial_pa_file_name, marine_pa_file_name
+        df, tolerance, terrestrial_pa_file_name, marine_pa_file_name, n_jobs=-1
     ):
+        def simplify_chunk(chunk):
+            # Each process simplifies its chunk
+            return chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
+
         df = df.copy()
 
         if verbose:
             print(f"simplifying PAs with tolerance = {tolerance}")
 
         if tolerance is not None:
-            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
+            if n_jobs == -1:
+                n_jobs = os.cpu_count() or 1
+
+            step = int(np.ceil(len(df) / n_jobs))
+            chunks = [df.iloc[i : i + step] for i in range(0, len(df), step)]
+
+            if verbose:
+                print(
+                    f"Simplifying {len(df)} geometries in {len(chunks)} chunks "
+                    f"using {n_jobs} processes..."
+                )
+
+            simplified_chunks = Parallel(n_jobs=n_jobs, backend="loky")(
+                delayed(simplify_chunk)(chunk) for chunk in chunks
+            )
+
+            df["geometry"] = pd.concat(simplified_chunks, ignore_index=True)
 
         df = df.dropna(axis=1, how="all")
 
@@ -245,14 +266,13 @@ def process_protected_area_geoms(
     wdpa["geometry"] = wdpa.apply(lambda r: buffer_if_point(r, wdpa.crs), axis=1)
     wdpa = wdpa.loc[wdpa.geometry.is_valid]
 
-    for tolerance in tolerances:
-        _ = print_peak_memory_allocation(
-            save_simplified_marine_terrestrial_pas,
-            wdpa,
-            tolerance,
-            terrestrial_pa_file_name,
-            marine_pa_file_name,
-        )
+    _ = print_peak_memory_allocation(
+        save_simplified_marine_terrestrial_pas,
+        wdpa,
+        tolerance,
+        terrestrial_pa_file_name,
+        marine_pa_file_name,
+    )
 
 
 def unpack_pas(pa_dir, verbose):
@@ -263,7 +283,7 @@ def unpack_pas(pa_dir, verbose):
 
             for shp in shp_paths:
                 print(f"Loading layer: {shp}")
-                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+                gdf = gpd.read_file(zip_path)
                 gdf["layer_name"] = shp.replace(".shp", "")
                 to_append.append(gdf)
         try:
@@ -285,7 +305,7 @@ def download_and_process_protected_planet_pas(
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     meta_file_name: str = WDPA_META_FILE_NAME,
-    tolerances: list | tuple = TOLERANCES,
+    tolerance: list | tuple = TOLERANCES[0],
     verbose: bool = True,
     bucket: str = BUCKET,
     project_id: str = PROJECT,
@@ -337,7 +357,7 @@ def download_and_process_protected_planet_pas(
         terrestrial_pa_file_name=terrestrial_pa_file_name,
         marine_pa_file_name=marine_pa_file_name,
         bucket=bucket,
-        tolerances=tolerances,
+        tolerance=tolerance,
         verbose=verbose,
     )
 
@@ -452,11 +472,7 @@ def download_protected_planet(
     pp_api_key: str = PP_API_KEY,
     project_id: str = PROJECT,
     wdpa_global_url: str = WDPA_GLOBAL_LEVEL_URL,
-    wdpa_url: str = WDPA_URL,
     api_url: str = WDPA_API_URL,
-    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
-    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    tolerances: list | tuple = TOLERANCES,
     bucket: str = BUCKET,
     verbose: bool = True,
 ) -> None:
@@ -500,15 +516,6 @@ def download_protected_planet(
         If True, prints progress messages. Default is True.
 
     """
-    # download wdpa
-    download_and_process_protected_planet_pas(
-        wdpa_url=wdpa_url,
-        terrestrial_pa_file_name=terrestrial_pa_file_name,
-        marine_pa_file_name=marine_pa_file_name,
-        tolerances=tolerances,
-        verbose=verbose,
-        bucket=bucket,
-    )
 
     # download wdpa global stats
     download_protected_planet_global(
