@@ -24,6 +24,9 @@ from src.core.params import (
 )
 from src.utils.gcp import download_file_from_gcs, read_dataframe, read_json_df, upload_dataframe
 from src.utils.geo import tile_geometry
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def download_file(url, destination):
@@ -195,7 +198,9 @@ def generate_terrestrial_biome_stats_pa(
 
                 return ps
         except Exception as e:
-            print(f"Error processing {country}: {e}")
+            logger.warning(
+                {"message": f"Error processing {country}: {e}"}
+            )
             return None
 
     terrestrial_pa_file_name = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
