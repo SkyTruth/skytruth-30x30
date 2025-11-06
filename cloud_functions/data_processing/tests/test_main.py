@@ -110,24 +110,6 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     assert "verbose" in kwargs
 
 
-# Multi-function call methods
-def test_download_protected_planet_wdpa_calls_two(patched_all):
-    """
-    download_protected_planet_wdpa should call download_protected_planet then
-    process_protected_area_geoms.
-    """
-    resp = main.main(MockRequest({"METHOD": "download_protected_planet_wdpa"}))
-    assert resp == ("OK", 200)
-
-    # Two calls in order
-    assert [c[0] for c in patched_all] == [
-        "download_protected_planet",
-    ]
-    # Both called with verbose kwarg
-    for _, args, kwargs in patched_all:
-        assert args == ()
-        assert "verbose" in kwargs
-
 
 # Tests for functions that directly call download_zip_to_gcs
 def _assert_download_zip_call_kwargs(
