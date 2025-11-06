@@ -1,10 +1,10 @@
-import datetime
 import math
 
 import geopandas as gpd
 import pandas as pd
 import rasterio
 import requests
+from joblib import Parallel, delayed
 from rasterio.transform import rowcol
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, box, mapping
 from shapely.ops import unary_union
@@ -24,6 +24,9 @@ from src.core.params import (
 )
 from src.utils.gcp import download_file_from_gcs, read_dataframe, read_json_df, upload_dataframe
 from src.utils.geo import tile_geometry
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def download_file(url, destination):
@@ -145,6 +148,59 @@ def generate_terrestrial_biome_stats_pa(
             ]
         return []  # Point, LineString, etc.
 
+    def process_country(
+        country,
+        gadm,
+        terrestrial_pas,
+        local_raster_path,
+        country_col,
+        tile_size_pixels,
+        land_cover_classes,
+    ):
+        """Compute PA stats for one country."""
+        try:
+            with rasterio.open(local_raster_path) as src:
+                # get country boundary and PAs in country
+                country_poly = gadm.loc[gadm["location"] == country, "geometry"].iloc[0]
+                polygons_gdf = terrestrial_pas[terrestrial_pas[country_col] == country]
+
+                # tile country
+                tile_geoms = [
+                    make_valid(tile)
+                    for tile in tile_geometry(
+                        country_poly, src.transform, tile_size_pixels=tile_size_pixels
+                    )
+                ]
+
+                # clip PAs to tiles, dissolve, and extract valid polygons of unique PA area
+                clipped_geoms = clip_geoms(tile_geoms, polygons_gdf)
+                clean_geoms = []
+                for geom in clipped_geoms:
+                    clean_parts = extract_valid_polygons(geom)
+                    clean_geoms.extend(clean_parts)
+
+                # get area of each land cover type inside of PAs per tile
+                results = []
+                for tile in clean_geoms:
+                    entry = get_cover_areas(
+                        src, [mapping(tile)], country, "country", land_cover_classes
+                    )
+                    if entry is not None:
+                        results.append(entry)
+
+                if not results:
+                    return None
+
+                # get country total land cover within PAs
+                results = pd.DataFrame(results)
+                ps = results[[c for c in results.columns if c != "country"]].agg("sum").to_dict()
+                ps["country"] = country
+
+                return ps
+        except Exception as e:
+            logger.warning({"message": f"Error processing {country}: {e}"})
+            return None
+
     terrestrial_pa_file_name = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
     gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
 
@@ -166,54 +222,28 @@ def generate_terrestrial_biome_stats_pa(
 
     if verbose:
         print("calculating terrestrial habitat area within PAs")
-    pa_stats = []
-    with rasterio.open(local_raster_path) as src:
-        for country in tqdm(gadm["location"].unique()):
-            st = datetime.datetime.now()
 
-            # get country boundary and PAs in country
-            country_poly = gadm[gadm["location"] == country].iloc[0]["geometry"]
-            polygons_gdf = terrestrial_pas[terrestrial_pas[country_col] == country]
+    # --- Parallel execution ---
+    countries = gadm["location"].unique().tolist()
 
-            # tile country
-            tile_geoms = [
-                make_valid(tile)
-                for tile in tile_geometry(
-                    country_poly, src.transform, tile_size_pixels=tile_size_pixels
-                )
-            ]
+    results = Parallel(n_jobs=-1, backend="loky")(
+        delayed(process_country)(
+            country,
+            gadm,
+            terrestrial_pas,
+            local_raster_path,
+            country_col,
+            tile_size_pixels,
+            land_cover_classes,
+        )
+        for country in tqdm(countries)
+    )
 
-            # clip PAs to tiles, dissolve, and extract valid polygons of unique PA area
-            clipped_geoms = clip_geoms(tile_geoms, polygons_gdf)
-            clean_geoms = []
-            for geom in clipped_geoms:
-                clean_parts = extract_valid_polygons(geom)
-                clean_geoms.extend(clean_parts)
-
-            # get area of each land cover type inside of PAs per tile
-            results = []
-            for tile in clean_geoms:
-                entry = get_cover_areas(
-                    src, [mapping(tile)], country, "country", land_cover_classes
-                )
-                if entry is not None:
-                    results.append(entry)
-
-            # get country total land cover within PAs
-            results = pd.DataFrame(results)
-            ps = results[[c for c in results.columns if c != "country"]].agg("sum").to_dict()
-            ps["country"] = country
-
-            pa_stats.append(ps)
-            fn = datetime.datetime.now()
-            if verbose:
-                elapsed_seconds = round((fn - st).total_seconds())
-                print(
-                    f"processed {len(clipped_geoms)} tiles within {country}'s PAs "
-                    f"in {elapsed_seconds} seconds"
-                )
-
-    pa_stats = pd.DataFrame(pa_stats)
+    # Combine results
+    pa_stats = pd.DataFrame([r for r in results if r is not None])
+    pa_stats = pa_stats[
+        ["country"] + [c for c in pa_stats.columns if c not in ["country", "total"]] + ["total"]
+    ]
 
     # upload PA land cover type areas (km2) per country
     upload_dataframe(

@@ -191,8 +191,11 @@ def main(request: Request) -> tuple[str, int]:
             #   Table updates
             # ------------------
 
-            case "generate_habitat_protection_table":
+            case "generate_terrestrial_biome_stats":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
+
+            case "generate_habitat_protection_table":
+                # NOTE: must be run after generate_terrestrial_biome_stats
                 _ = generate_habitat_protection_table(verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
