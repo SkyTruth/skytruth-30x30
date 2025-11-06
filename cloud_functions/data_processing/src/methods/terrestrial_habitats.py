@@ -198,9 +198,7 @@ def generate_terrestrial_biome_stats_pa(
 
                 return ps
         except Exception as e:
-            logger.warning(
-                {"message": f"Error processing {country}: {e}"}
-            )
+            logger.warning({"message": f"Error processing {country}: {e}"})
             return None
 
     terrestrial_pa_file_name = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
