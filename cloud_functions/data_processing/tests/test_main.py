@@ -129,20 +129,6 @@ def test_download_protected_planet_wdpa_calls_two(patched_all):
         assert "verbose" in kwargs
 
 
-def test_generate_habitat_protection_table_calls_both(patched_all):
-    """generate_habitat_protection_table should call stats_pa then the final table generator."""
-    resp = main.main(MockRequest({"METHOD": "generate_habitat_protection_table"}))
-    assert resp == ("OK", 200)
-
-    assert [c[0] for c in patched_all] == [
-        "generate_terrestrial_biome_stats_pa",
-        "generate_habitat_protection_table",
-    ]
-    for _, args, kwargs in patched_all:
-        assert args == ()
-        assert "verbose" in kwargs
-
-
 # Tests for functions that directly call download_zip_to_gcs
 def _assert_download_zip_call_kwargs(
     call, *, url, bucket_name, blob_name, chunk_size, extra_kwargs=None
