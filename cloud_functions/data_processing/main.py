@@ -27,6 +27,7 @@ from src.methods.database_uploads import (
     upload_stats,
 )
 from src.methods.download_and_process import (
+    download_and_process_protected_planet_pas,
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
@@ -106,6 +107,7 @@ def main(request: Request) -> tuple[str, int]:
     try:
         data = request.get_json(silent=True) or {}
         method = data.get("METHOD", "default")
+        tolerance = data.get("TOLERANCE", "default")
 
         match method:
             case "dry_run":
@@ -183,6 +185,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case "download_protected_seas":
                 download_protected_seas(verbose=verbose)
+
+            case "download_protected_planet_pas":
+                download_and_process_protected_planet_pas(verbose=verbose, tolerance=tolerance)
 
             case "download_protected_planet_wdpa":
                 download_protected_planet(verbose=verbose)
