@@ -189,7 +189,7 @@ def main(request: Request) -> tuple[str, int]:
             case "download_protected_planet_pas":
                 download_and_process_protected_planet_pas(verbose=verbose, tolerance=tolerance)
 
-            case "download_protected_planet_wdpa":
+            case "download_protected_planet_country":
                 download_protected_planet(verbose=verbose)
 
             # ------------------

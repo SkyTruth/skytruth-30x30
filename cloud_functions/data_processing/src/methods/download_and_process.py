@@ -216,7 +216,7 @@ def process_protected_area_geoms(
         return g
 
     def save_simplified_marine_terrestrial_pas(
-        df, tolerance, terrestrial_pa_file_name, marine_pa_file_name, n_jobs=-1
+        df, tolerance, terrestrial_pa_file_name, marine_pa_file_name, n_jobs=4
     ):
         def simplify_chunk(chunk):
             # Each process simplifies its chunk
@@ -259,6 +259,9 @@ def process_protected_area_geoms(
             print(f"saving and duplicating marine PAs to {mar_out_fn}")
         upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
+
+    # TODO: logging - remove
+    print("Visible CPUs:", os.cpu_count())
 
     if verbose:
         print("buffering and simplifying geometries")
