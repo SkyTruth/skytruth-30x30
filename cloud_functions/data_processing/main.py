@@ -191,8 +191,11 @@ def main(request: Request) -> tuple[str, int]:
             #   Table updates
             # ------------------
 
-            case "generate_habitat_protection_table":
+            case "generate_terrestrial_biome_stats":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
+
+            case "generate_habitat_protection_table":
+                # NOTE: must be run after generate_terrestrial_biome_stats
                 _ = generate_habitat_protection_table(verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
@@ -301,3 +304,15 @@ def main(request: Request) -> tuple[str, int]:
         logger.error({"message": f"METHOD {method} failed", "error": str(e)})
 
         return f"Internal Server Error: {e}", 500
+
+
+if __name__ == "__main__":
+    import datetime
+
+    start = datetime.datetime.now()
+
+    _ = generate_terrestrial_biome_stats_pa()
+
+    end = datetime.datetime.now()
+
+    print(f"time elapsed: {(end - start).total_seconds() / 60} minutes")
