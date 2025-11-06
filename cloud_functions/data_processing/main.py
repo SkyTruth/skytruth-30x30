@@ -305,14 +305,3 @@ def main(request: Request) -> tuple[str, int]:
 
         return f"Internal Server Error: {e}", 500
 
-
-if __name__ == "__main__":
-    import datetime
-
-    start = datetime.datetime.now()
-
-    _ = generate_terrestrial_biome_stats_pa()
-
-    end = datetime.datetime.now()
-
-    print(f"time elapsed: {(end - start).total_seconds() / 60} minutes")
