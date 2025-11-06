@@ -304,4 +304,3 @@ def main(request: Request) -> tuple[str, int]:
         logger.error({"message": f"METHOD {method} failed", "error": str(e)})
 
         return f"Internal Server Error: {e}", 500
-
