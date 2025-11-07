@@ -248,7 +248,7 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
     results = []
     for i, p in enumerate(parquet_files):
         print(f"{p}: {i + 1} of {len(parquet_files)}")
-        results = print_peak_memory_allocation(process_one_file, p, results, tolerance=tolerance, n_jobs)
+        results = print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
 
     # Combine results
     return pd.concat([r for r in results if r is not None], ignore_index=True)
