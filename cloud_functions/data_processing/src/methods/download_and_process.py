@@ -1,15 +1,17 @@
 import glob
 import os
-import shutil
 import zipfile
 from io import BytesIO
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 import requests
 from joblib import Parallel, delayed
+from shapely import wkb
 from shapely.geometry import MultiPoint, Point, shape
+from tqdm.auto import tqdm
 
 from src.core.commons import (
     download_file_with_progress,
@@ -183,121 +185,73 @@ def download_protected_seas(
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
-def process_protected_area_geoms(
-    wdpa: gpd.GeoDataFrame,
-    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
-    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    bucket: str = BUCKET,
-    tolerance: list | tuple = TOLERANCES[0],
-    verbose: bool = True,
-):
-    def save_simplified_marine_terrestrial_pas(
-        df, tolerance, terrestrial_pa_file_name, marine_pa_file_name, n_jobs=4
-    ):
-        def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-            def calculate_radius(rep_area: float) -> float:
-                return ((rep_area * 1e6) / np.pi) ** 0.5
+def process_protected_area_geoms(pa_dir, batch_size=1000, n_jobs=-1):
+    def stream_parquet_chunks(path, batch_size=1000):
+        parquet_file = pq.ParquetFile(path)
+        for batch in parquet_file.iter_batches(batch_size=batch_size):
+            df = batch.to_pandas()
+            df["geometry"] = df["geometry"].apply(wkb.loads)
+            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+            yield gdf
 
-            df = df.to_crs("ESRI:54009")
-            df["geometry"] = df.apply(
-                lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
-                axis=1,
+    def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        def calculate_radius(rep_area: float) -> float:
+            return ((rep_area * 1e6) / np.pi) ** 0.5
+
+        df = df.to_crs("ESRI:54009")
+        df["geometry"] = df.apply(
+            lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+            axis=1,
+        )
+        return df.to_crs("EPSG:4326").copy()
+
+    def buffer_if_point(row, crs):
+        g = row.geometry
+        if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
+            # build a 1-row GeoDataFrame with the same CRS
+            row_gdf = gpd.GeoDataFrame(
+                row.to_frame().T,
+                geometry="geometry",
+                crs=crs,  # 1-row DataFrame
             )
-            return df.to_crs("EPSG:4326").copy()
+            buffed = create_buffer(row_gdf)  # your existing function
+            return buffed.geometry.iloc[0]
+        return g
 
-        def buffer_if_point(row, crs):
-            g = row.geometry
-            if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
-                # build a 1-row GeoDataFrame with the same CRS
-                row_gdf = gpd.GeoDataFrame(
-                    row.to_frame().T,
-                    geometry="geometry",
-                    crs=crs,  # 1-row DataFrame
-                )
-                buffed = create_buffer(row_gdf)  # your existing function
-                return buffed.geometry.iloc[0]
-            return g
+    def simplify_chunk(chunk, tolerance=0.001):
+        chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
+        chunk = choose_pa_area(chunk)
+        chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, chunk.crs), axis=1)
+        chunk = chunk.loc[chunk.geometry.is_valid]
+        chunk.geometry = chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
+        return chunk
 
-        def simplify_chunk(chunk):
-            # Each process simplifies its chunk
+    def process_one_file(p, results, n_jobs=-1):
+        parquet_file = pq.ParquetFile(p)
+        total_rows = parquet_file.metadata.num_rows
+        est_batches = int(np.ceil(total_rows / batch_size))
 
-            chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, chunk.crs), axis=1)
-            chunk = chunk.loc[chunk.geometry.is_valid]
-            return chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
-
-        if verbose:
-            print(f"bufferning and simplifying PAs with tolerance = {tolerance}")
-
-        if tolerance is not None:
-            if n_jobs == -1:
-                n_jobs = os.cpu_count() or 1
-
-            step = int(np.ceil(len(df) / n_jobs))
-            index_ranges = [(i, min(i + step, len(df))) for i in range(0, len(df), step)]
-
-            if verbose:
-                print(
-                    f"Simplifying {len(df)} geometries in {len(index_ranges)} chunks "
-                    f"using {n_jobs} processes..."
-                )
-
-            results_gen = (
-                delayed(simplify_chunk)(df.iloc[start:end]) for start, end in index_ranges
+        results = Parallel(n_jobs=n_jobs, backend="loky")(
+            delayed(simplify_chunk)(
+                chunk,
+                0.01,
             )
+            for chunk in tqdm(stream_parquet_chunks(p, batch_size=batch_size), total=est_batches)
+        )
 
-            simplified_chunks = Parallel(n_jobs=n_jobs, backend="loky")(results_gen)
+        return results
 
-            del index_ranges
+    parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
+    if not parquet_files:
+        raise FileNotFoundError(f"No parquet files found in {pa_dir}")
 
-            df["geometry"] = pd.concat(simplified_chunks, ignore_index=True)
-            del simplified_chunks
+    results = []
+    for i, p in enumerate(parquet_files):
+        print(f"{p}: {i + 1} of {len(parquet_files)}")
+        results = print_peak_memory_allocation(process_one_file, p, results, n_jobs)
 
-        df = df.dropna(axis=1, how="all")
-
-        ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-        if verbose:
-            print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
-        upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
-        duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
-
-        mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-        if verbose:
-            print(f"saving and duplicating marine PAs to {mar_out_fn}")
-        upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
-        duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
-
-    _ = print_peak_memory_allocation(
-        save_simplified_marine_terrestrial_pas,
-        wdpa,
-        tolerance,
-        terrestrial_pa_file_name,
-        marine_pa_file_name,
-    )
-
-
-def unpack_pas(pa_dir, verbose):
-    to_append = []
-    for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
-        with zipfile.ZipFile(zip_path) as z:
-            shp_paths = [n for n in z.namelist() if n.lower().endswith(".shp")]
-
-            for shp in shp_paths:
-                print(f"Loading layer: {shp}")
-                gdf = gpd.read_file(zip_path)
-                gdf["layer_name"] = shp.replace(".shp", "")
-                to_append.append(gdf)
-        try:
-            os.remove(zip_path)
-            if verbose:
-                print(f"Deleted {zip_path}")
-        except Exception as excep:
-            logger.warning(
-                {"message": f"Warning: failed to delete {zip_path}", "error": str(excep)}
-            )
-
-    if not to_append:
-        raise ValueError(f"No shapefiles found in {pa_dir}")
-    return pd.concat(to_append, axis=0)
+    # Combine results
+    return pd.concat([r for r in results if r is not None], ignore_index=True)
 
 
 def download_and_process_protected_planet_pas(
@@ -309,9 +263,45 @@ def download_and_process_protected_planet_pas(
     verbose: bool = True,
     bucket: str = BUCKET,
     project_id: str = PROJECT,
+    batch_size=1000,
+    n_jobs=-1,
 ):
+    def unpack_pas_to_parquet(pa_dir, n_jobs=-1, verbose=True):
+        def unpack_parquet(params, verbose=True):
+            """unpacks a single shapefile into a parquet"""
+            zip_stem = params["zip_stem"]
+            zip_path = params["zip_path"]
+            dir = params["dir"]
+            shp = params["shp"]
+            layer_name = params["layer_name"]
+            gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+            out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
+            gdf.to_parquet(out_path)
+            if verbose:
+                print(f"Converted {zip_stem}: {layer_name} to {out_path}")
+
+        # Define params for unpacking
+        parquet_params = []
+        for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
+            zip_stem = os.path.splitext(os.path.basename(zip_path))[0]
+            with zipfile.ZipFile(zip_path) as z:
+                for shp in [n for n in z.namelist() if n.lower().endswith(".shp")]:
+                    parquet_params.append(
+                        {
+                            "dir": pa_dir,
+                            "shp": shp,
+                            "layer_name": shp.replace(".shp", ""),
+                            "zip_stem": zip_stem,
+                            "zip_path": zip_path,
+                        }
+                    )
+
+        _ = Parallel(n_jobs=n_jobs, backend="loky")(
+            delayed(unpack_parquet)(params, verbose) for params in parquet_params
+        )
+
     # TODO: logging - remove
-    print("Visible CPUs:", os.cpu_count())
+    print(f"Visible CPUs: {os.cpu_count()}")
 
     tmp_dir = "/tmp"
     os.makedirs(tmp_dir, exist_ok=True)
@@ -328,41 +318,30 @@ def download_and_process_protected_planet_pas(
     _ = print_peak_memory_allocation(unzip_file, base_zip_path, pa_dir)
 
     if verbose:
-        print(f"unpacking PAs from {pa_dir}")
-    pas = print_peak_memory_allocation(unpack_pas, pa_dir, verbose)
-
-    try:
-        shutil.rmtree(pa_dir)
-        if verbose:
-            print(f"Deleted directory {pa_dir}")
-
-    except Exception as excep:
-        logger.warning(
-            {"message": f"Warning: failed to delete directory {pa_dir}", "error": str(excep)}
-        )
+        print("unpacking PA shapefiles into parquet files")
+    unpack_pas_to_parquet(pa_dir, n_jobs=n_jobs)
 
     if verbose:
-        print("adding bbox and area columns")
-
-    pas["bbox"] = pas.geometry.apply(lambda g: g.bounds if g is not None else None)
-    pas = choose_pa_area(pas)
+        print("processing and simplifying protected area geometries")
+    df = process_protected_area_geoms(pa_dir, batch_size=batch_size, n_jobs=n_jobs)
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")
     upload_dataframe(
-        bucket, pas.drop(columns="geometry"), meta_file_name, project_id=project_id, verbose=verbose
+        bucket, df.drop(columns="geometry"), meta_file_name, project_id=project_id, verbose=verbose
     )
 
+    ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
     if verbose:
-        print("processing protected areas")
-    process_protected_area_geoms(
-        pas,
-        terrestrial_pa_file_name=terrestrial_pa_file_name,
-        marine_pa_file_name=marine_pa_file_name,
-        bucket=bucket,
-        tolerance=tolerance,
-        verbose=verbose,
-    )
+        print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
+    upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
+    duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
+
+    mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    if verbose:
+        print(f"saving and duplicating marine PAs to {mar_out_fn}")
+    upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
+    duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
 
 
 def download_protected_planet_global(
