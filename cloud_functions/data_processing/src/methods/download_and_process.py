@@ -221,12 +221,18 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
         return g
 
     def simplify_chunk(chunk, tolerance=0.001):
-        chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
-        chunk = choose_pa_area(chunk)
-        chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, chunk.crs), axis=1)
-        chunk = chunk.loc[chunk.geometry.is_valid]
-        chunk.geometry = chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
-        return chunk
+        try:
+            chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
+            chunk = choose_pa_area(chunk)
+            chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, chunk.crs), axis=1)
+            chunk = chunk.loc[chunk.geometry.is_valid]
+            chunk.geometry = chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
+            return chunk
+        except Exception as e:
+            logger.warning({"message": f"Error simplifying chunk: {e}"})
+            return None
+        finally:
+            gc.collect()
 
     def process_one_file(p, results, tolerance=0.001, n_jobs=-1):
         parquet_file = pq.ParquetFile(p)
