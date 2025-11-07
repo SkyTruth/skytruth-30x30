@@ -191,60 +191,68 @@ def process_protected_area_geoms(
     tolerance: list | tuple = TOLERANCES[0],
     verbose: bool = True,
 ):
-    def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        def calculate_radius(rep_area: float) -> float:
-            return ((rep_area * 1e6) / np.pi) ** 0.5
-
-        df = df.to_crs("ESRI:54009")
-        df["geometry"] = df.apply(
-            lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
-            axis=1,
-        )
-        return df.to_crs("EPSG:4326").copy()
-
-    def buffer_if_point(row, crs):
-        g = row.geometry
-        if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
-            # build a 1-row GeoDataFrame with the same CRS
-            row_gdf = gpd.GeoDataFrame(
-                row.to_frame().T,
-                geometry="geometry",
-                crs=crs,  # 1-row DataFrame
-            )
-            buffed = create_buffer(row_gdf)  # your existing function
-            return buffed.geometry.iloc[0]
-        return g
 
     def save_simplified_marine_terrestrial_pas(
         df, tolerance, terrestrial_pa_file_name, marine_pa_file_name, n_jobs=4
     ):
+        
+        def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+            def calculate_radius(rep_area: float) -> float:
+                return ((rep_area * 1e6) / np.pi) ** 0.5
+
+            df = df.to_crs("ESRI:54009")
+            df["geometry"] = df.apply(
+                lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+                axis=1,
+            )
+            return df.to_crs("EPSG:4326").copy()
+
+        def buffer_if_point(row, crs):
+            g = row.geometry
+            if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
+                # build a 1-row GeoDataFrame with the same CRS
+                row_gdf = gpd.GeoDataFrame(
+                    row.to_frame().T,
+                    geometry="geometry",
+                    crs=crs,  # 1-row DataFrame
+                )
+                buffed = create_buffer(row_gdf)  # your existing function
+                return buffed.geometry.iloc[0]
+            return g
+        
         def simplify_chunk(chunk):
             # Each process simplifies its chunk
+
+            chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, chunk.crs), axis=1)
+            chunk = chunk.loc[chunk.geometry.is_valid]
             return chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
 
-        df = df.copy()
-
         if verbose:
-            print(f"simplifying PAs with tolerance = {tolerance}")
+            print(f"bufferning and simplifying PAs with tolerance = {tolerance}")
 
         if tolerance is not None:
             if n_jobs == -1:
                 n_jobs = os.cpu_count() or 1
 
             step = int(np.ceil(len(df) / n_jobs))
-            chunks = [df.iloc[i : i + step] for i in range(0, len(df), step)]
-
+            index_ranges = [(i, min(i + step, len(df))) for i in range(0, len(df), step)]
+            
             if verbose:
                 print(
-                    f"Simplifying {len(df)} geometries in {len(chunks)} chunks "
+                    f"Simplifying {len(df)} geometries in {len(index_ranges)} chunks "
                     f"using {n_jobs} processes..."
                 )
-
-            simplified_chunks = Parallel(n_jobs=n_jobs, backend="loky")(
-                delayed(simplify_chunk)(chunk) for chunk in chunks
+            
+            results_gen = (
+                delayed(simplify_chunk)(df.iloc[start:end]) for start, end in index_ranges
             )
-
+            
+            simplified_chunks = Parallel(n_jobs=n_jobs, backend="loky")(results_gen)
+            
+            del index_ranges
+            
             df["geometry"] = pd.concat(simplified_chunks, ignore_index=True)
+            del simplified_chunks
 
         df = df.dropna(axis=1, how="all")
 
@@ -259,15 +267,6 @@ def process_protected_area_geoms(
             print(f"saving and duplicating marine PAs to {mar_out_fn}")
         upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
-
-    # TODO: logging - remove
-    print("Visible CPUs:", os.cpu_count())
-
-    if verbose:
-        print("buffering and simplifying geometries")
-
-    wdpa["geometry"] = wdpa.apply(lambda r: buffer_if_point(r, wdpa.crs), axis=1)
-    wdpa = wdpa.loc[wdpa.geometry.is_valid]
 
     _ = print_peak_memory_allocation(
         save_simplified_marine_terrestrial_pas,
@@ -313,6 +312,10 @@ def download_and_process_protected_planet_pas(
     bucket: str = BUCKET,
     project_id: str = PROJECT,
 ):
+    
+    # TODO: logging - remove
+    print("Visible CPUs:", os.cpu_count())
+
     tmp_dir = "/tmp"
     os.makedirs(tmp_dir, exist_ok=True)
 
