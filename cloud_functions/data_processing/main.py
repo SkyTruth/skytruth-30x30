@@ -1,3 +1,4 @@
+import datetime
 import functions_framework
 from flask import Request
 
@@ -108,6 +109,8 @@ def main(request: Request) -> tuple[str, int]:
         data = request.get_json(silent=True) or {}
         method = data.get("METHOD", "default")
         tolerance = data.get("TOLERANCE", "default")
+
+        st = datetime.datetime.now()
 
         match method:
             case "dry_run":
@@ -302,7 +305,10 @@ def main(request: Request) -> tuple[str, int]:
             case _:
                 print(f"METHOD: {method} not a valid option")
 
+        fn = datetime.datetime.now()
+
         print("Process complete!")
+        print(f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes")
 
         return "OK", 200
     except Exception as e:

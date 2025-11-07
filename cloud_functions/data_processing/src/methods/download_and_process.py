@@ -1,8 +1,10 @@
+import gc
 import glob
 import os
 import zipfile
 from io import BytesIO
 
+import fiona
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -269,13 +271,16 @@ def download_and_process_protected_planet_pas(
     def unpack_pas_to_parquet(pa_dir, verbose=True):
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
+
+            out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
+            if verbose:
+                logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
-                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
-                out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
+                with fiona.open(f"zip://{zip_path}!{shp}") as src:
+                    gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
                 gdf.to_parquet(out_path)
                 del gdf
-                if verbose:
-                    logger.info({"message": f"Converted {zip_stem}: {layer_name} to {out_path}"})
+                gc.collect()
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
