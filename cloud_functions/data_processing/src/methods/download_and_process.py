@@ -269,11 +269,15 @@ def download_and_process_protected_planet_pas(
     def unpack_pas_to_parquet(pa_dir, verbose=True):
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
-            gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
-            out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
-            gdf.to_parquet(out_path)
-            if verbose:
-                print(f"Converted {zip_stem}: {layer_name} to {out_path}")
+            try:
+                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+                out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
+                gdf.to_parquet(out_path)
+                if verbose:
+                    print(f"Converted {zip_stem}: {layer_name} to {out_path}")
+            except Exception as e:
+                logger.warning({"message": f"Error processing {layer_name}: {e}"})
+                return None
 
         # Define params for unpacking
         for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
@@ -310,7 +314,7 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print("unpacking PA shapefiles into parquet files")
-    unpack_pas_to_parquet(pa_dir, n_jobs=n_jobs)
+    unpack_pas_to_parquet(pa_dir, verbose=verbose)
 
     if verbose:
         print("processing and simplifying protected area geometries")
