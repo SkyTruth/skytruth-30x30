@@ -266,14 +266,9 @@ def download_and_process_protected_planet_pas(
     batch_size=1000,
     n_jobs=-1,
 ):
-    def unpack_pas_to_parquet(pa_dir, n_jobs=-1, verbose=True):
-        def unpack_parquet(params, verbose=True):
+    def unpack_pas_to_parquet(pa_dir, verbose=True):
+        def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
-            zip_stem = params["zip_stem"]
-            zip_path = params["zip_path"]
-            dir = params["dir"]
-            shp = params["shp"]
-            layer_name = params["layer_name"]
             gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
             out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
             gdf.to_parquet(out_path)
@@ -281,24 +276,14 @@ def download_and_process_protected_planet_pas(
                 print(f"Converted {zip_stem}: {layer_name} to {out_path}")
 
         # Define params for unpacking
-        parquet_params = []
         for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
             zip_stem = os.path.splitext(os.path.basename(zip_path))[0]
             with zipfile.ZipFile(zip_path) as z:
-                for shp in [n for n in z.namelist() if n.lower().endswith(".shp")]:
-                    parquet_params.append(
-                        {
-                            "dir": pa_dir,
-                            "shp": shp,
-                            "layer_name": shp.replace(".shp", ""),
-                            "zip_stem": zip_stem,
-                            "zip_path": zip_path,
-                        }
+                for shp in tqdm([n for n in z.namelist() if n.lower().endswith(".shp")]):
+                    unpack_parquet(
+                        zip_stem, zip_path, dir, shp, 
+                        shp.replace(".shp", ""), verbose
                     )
-
-        _ = Parallel(n_jobs=n_jobs, backend="loky")(
-            delayed(unpack_parquet)(params, verbose) for params in parquet_params
-        )
 
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
@@ -323,7 +308,9 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print("processing and simplifying protected area geometries")
-    df = process_protected_area_geoms(pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs)
+    df = process_protected_area_geoms(
+        pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs
+    )
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")
