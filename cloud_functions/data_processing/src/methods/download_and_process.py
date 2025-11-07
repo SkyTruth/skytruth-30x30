@@ -280,10 +280,7 @@ def download_and_process_protected_planet_pas(
             zip_stem = os.path.splitext(os.path.basename(zip_path))[0]
             with zipfile.ZipFile(zip_path) as z:
                 for shp in tqdm([n for n in z.namelist() if n.lower().endswith(".shp")]):
-                    unpack_parquet(
-                        zip_stem, zip_path, dir, shp, 
-                        shp.replace(".shp", ""), verbose
-                    )
+                    unpack_parquet(zip_stem, zip_path, dir, shp, shp.replace(".shp", ""), verbose)
 
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
