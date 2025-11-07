@@ -286,10 +286,9 @@ def download_and_process_protected_planet_pas(
                 for shp in tqdm([n for n in z.namelist() if n.lower().endswith(".shp")]):
                     _ = print_peak_memory_allocation(
                         unpack_parquet,
-                        base_zip_path,
                         zip_stem,
                         zip_path,
-                        dir,
+                        pa_dir,
                         shp,
                         shp.replace(".shp", ""),
                         verbose,
