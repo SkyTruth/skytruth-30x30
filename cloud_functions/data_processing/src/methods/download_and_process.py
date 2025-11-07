@@ -191,11 +191,9 @@ def process_protected_area_geoms(
     tolerance: list | tuple = TOLERANCES[0],
     verbose: bool = True,
 ):
-
     def save_simplified_marine_terrestrial_pas(
         df, tolerance, terrestrial_pa_file_name, marine_pa_file_name, n_jobs=4
     ):
-        
         def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             def calculate_radius(rep_area: float) -> float:
                 return ((rep_area * 1e6) / np.pi) ** 0.5
@@ -219,7 +217,7 @@ def process_protected_area_geoms(
                 buffed = create_buffer(row_gdf)  # your existing function
                 return buffed.geometry.iloc[0]
             return g
-        
+
         def simplify_chunk(chunk):
             # Each process simplifies its chunk
 
@@ -236,21 +234,21 @@ def process_protected_area_geoms(
 
             step = int(np.ceil(len(df) / n_jobs))
             index_ranges = [(i, min(i + step, len(df))) for i in range(0, len(df), step)]
-            
+
             if verbose:
                 print(
                     f"Simplifying {len(df)} geometries in {len(index_ranges)} chunks "
                     f"using {n_jobs} processes..."
                 )
-            
+
             results_gen = (
                 delayed(simplify_chunk)(df.iloc[start:end]) for start, end in index_ranges
             )
-            
+
             simplified_chunks = Parallel(n_jobs=n_jobs, backend="loky")(results_gen)
-            
+
             del index_ranges
-            
+
             df["geometry"] = pd.concat(simplified_chunks, ignore_index=True)
             del simplified_chunks
 
@@ -312,7 +310,6 @@ def download_and_process_protected_planet_pas(
     bucket: str = BUCKET,
     project_id: str = PROJECT,
 ):
-    
     # TODO: logging - remove
     print("Visible CPUs:", os.cpu_count())
 
