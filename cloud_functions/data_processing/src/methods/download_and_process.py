@@ -264,7 +264,7 @@ def download_and_process_protected_planet_pas(
     bucket: str = BUCKET,
     project_id: str = PROJECT,
     batch_size=1000,
-    n_jobs=-1,
+    n_jobs=4,
 ):
     def unpack_pas_to_parquet(pa_dir, verbose=True):
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
@@ -273,8 +273,9 @@ def download_and_process_protected_planet_pas(
                 gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
                 out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
                 gdf.to_parquet(out_path)
+                del gdf
                 if verbose:
-                    print(f"Converted {zip_stem}: {layer_name} to {out_path}")
+                    logger.info({"message": f"Converted {zip_stem}: {layer_name} to {out_path}"})
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
@@ -283,7 +284,7 @@ def download_and_process_protected_planet_pas(
         for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
             zip_stem = os.path.splitext(os.path.basename(zip_path))[0]
             with zipfile.ZipFile(zip_path) as z:
-                for shp in tqdm([n for n in z.namelist() if n.lower().endswith(".shp")]):
+                for shp in [n for n in z.namelist() if n.lower().endswith(".shp")]:
                     _ = print_peak_memory_allocation(
                         unpack_parquet,
                         zip_stem,
