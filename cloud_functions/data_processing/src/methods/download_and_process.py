@@ -286,10 +286,11 @@ def download_and_process_protected_planet_pas(
                 #     gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
                 gdf.to_parquet(out_path)
                 del gdf
-                gc.collect()
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
+            finally:
+                gc.collect()
 
         # Define params for unpacking
         for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
