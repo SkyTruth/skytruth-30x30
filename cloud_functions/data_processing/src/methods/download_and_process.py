@@ -282,8 +282,9 @@ def download_and_process_protected_planet_pas(
             if verbose:
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
-                with fiona.open(f"zip://{zip_path}!{shp}") as src:
-                    gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
+                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+                # with fiona.open(f"zip://{zip_path}!{shp}") as src:
+                #     gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
                 gdf.to_parquet(out_path)
                 del gdf
                 gc.collect()
