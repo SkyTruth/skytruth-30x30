@@ -293,7 +293,7 @@ def download_and_process_protected_planet_pas(
     bucket: str = BUCKET,
     project_id: str = PROJECT,
     batch_size=1000,
-    n_jobs=4,
+    n_jobs=-1,
 ):
     def unpack_pas_to_parquet(pa_dir, verbose=True):
         def unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
