@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 import psutil
 import pyarrow.parquet as pq
-from pyogrio import read_dataframe
 import requests
 from joblib import Parallel, delayed
+from pyogrio import read_dataframe
 from shapely import wkb
 from shapely.geometry import MultiPoint, Point, shape
 from tqdm.auto import tqdm
@@ -282,6 +282,7 @@ def download_and_process_protected_planet_pas(
     def unpack_pas_to_parquet(pa_dir, verbose=True):
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
+
             def show_mem(label=""):
                 process = psutil.Process(os.getpid())
                 rss = process.memory_info().rss / 1e6  # in MB
