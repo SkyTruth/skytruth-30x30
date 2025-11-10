@@ -11,9 +11,12 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
 from joblib import Parallel, delayed
-from pyogrio import read_dataframe
+# from pyogrio import read_dataframe
 from shapely import wkb
 from shapely.geometry import MultiPoint, Point, shape
+import subprocess
+import sys
+import textwrap
 from tqdm.auto import tqdm
 
 from src.core.commons import (
@@ -292,6 +295,19 @@ def download_and_process_protected_planet_pas(
     n_jobs=4,
 ):
     def unpack_pas_to_parquet(pa_dir, verbose=True):
+        def unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
+            if verbose:
+                print("running subprocess to unpack shapefile into a parquet file")
+            out_path = f"{dir}/{zip_stem}_{layer_name}.parquet"
+            script = textwrap.dedent(f"""
+                import geopandas as gpd
+                gdf = gpd.read_file("zip://{zip_path}!{shp}")
+                gdf.to_parquet("{out_path}")
+            """)
+            subprocess.run([sys.executable, "-c", script], check=True)
+            if verbose:
+                print("subprocess completed")
+
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
 
@@ -299,11 +315,12 @@ def download_and_process_protected_planet_pas(
             if verbose:
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
-                gdf = read_dataframe(f"zip://{zip_path}!{shp}")
-                gdf.to_parquet(out_path)
-                show_mem("during")
-                del gdf
-                show_mem("after deleting")
+                unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
+                # gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+                # gdf.to_parquet(out_path)
+                # show_mem("during")
+                # del gdf
+                # show_mem("after deleting")
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
