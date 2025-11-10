@@ -1,6 +1,9 @@
 import gc
 import glob
 import os
+import subprocess
+import sys
+import textwrap
 import zipfile
 from io import BytesIO
 
@@ -11,12 +14,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
 from joblib import Parallel, delayed
+
 # from pyogrio import read_dataframe
 from shapely import wkb
 from shapely.geometry import MultiPoint, Point, shape
-import subprocess
-import sys
-import textwrap
 from tqdm.auto import tqdm
 
 from src.core.commons import (
