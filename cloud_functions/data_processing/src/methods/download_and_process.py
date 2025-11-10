@@ -7,8 +7,9 @@ from io import BytesIO
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import psutil
+import pyarrow as pa
 import pyarrow.parquet as pq
+
 import requests
 from joblib import Parallel, delayed
 from pyogrio import read_dataframe
@@ -20,6 +21,7 @@ from src.core.commons import (
     download_file_with_progress,
     download_mpatlas_zone,
     print_peak_memory_allocation,
+    show_mem,
     unzip_file,
 )
 from src.core.params import (
@@ -59,6 +61,8 @@ from src.utils.logger import Logger
 
 logger = Logger()
 
+pa.set_memory_pool(pa.default_memory_pool())
+pa.default_memory_pool().release_unused()
 
 def download_mpatlas_country(
     bucket: str = BUCKET,
@@ -236,6 +240,7 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
         finally:
             del chunk
             gc.collect()
+            
 
     def process_one_file(p, results, tolerance=0.001, n_jobs=-1):
         parquet_file = pq.ParquetFile(p)
@@ -252,19 +257,27 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
 
         return pd.concat([r for r in results if r is not None], ignore_index=True)
 
-    parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
-    if not parquet_files:
-        raise FileNotFoundError(f"No parquet files found in {pa_dir}")
-
     results = []
-    for i, p in enumerate(parquet_files):
-        print(f"{p}: {i + 1} of {len(parquet_files)}")
-        results.append(
-            print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
-        )
+    try:
+        parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
+        if not parquet_files:
+            raise FileNotFoundError(f"No parquet files found in {pa_dir}")
 
-    # Combine results
-    return pd.concat([r for r in results if r is not None], ignore_index=True)
+        for i, p in enumerate(parquet_files):
+            print(f"{p}: {i + 1} of {len(parquet_files)}")
+            results.append(
+                print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
+            )
+            show_mem("After processing")
+
+        # Combine results
+        return pd.concat([r for r in results if r is not None], ignore_index=True)
+    except Exception as e:
+        logger.warning({"message": f"Error processing parquet files: {e}"})
+        return None
+    finally:
+        del results
+        gc.collect()
 
 
 def download_and_process_protected_planet_pas(
@@ -283,11 +296,6 @@ def download_and_process_protected_planet_pas(
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
 
-            def show_mem(label=""):
-                process = psutil.Process(os.getpid())
-                rss = process.memory_info().rss / 1e6  # in MB
-                print(f"[{label}] Memory: {rss:.1f} MB")
-
             out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
             if verbose:
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
@@ -302,6 +310,7 @@ def download_and_process_protected_planet_pas(
                 return None
             finally:
                 gc.collect()
+                pa.default_memory_pool().release_unused()
                 show_mem("after garbage collection")
 
         # Define params for unpacking
@@ -321,6 +330,7 @@ def download_and_process_protected_planet_pas(
 
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
+    show_mem("Start")
 
     tmp_dir = "/tmp"
     os.makedirs(tmp_dir, exist_ok=True)
@@ -331,10 +341,12 @@ def download_and_process_protected_planet_pas(
     if verbose:
         print(f"downloading {wdpa_url}")
     _ = print_peak_memory_allocation(download_file_with_progress, wdpa_url, base_zip_path)
+    show_mem()
 
     if verbose:
         print(f"unzipping {base_zip_path}")
     _ = print_peak_memory_allocation(unzip_file, base_zip_path, pa_dir)
+    show_mem()
 
     if verbose:
         print("unpacking PA shapefiles into parquet files")

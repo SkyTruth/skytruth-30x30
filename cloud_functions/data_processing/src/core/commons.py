@@ -9,7 +9,9 @@ import fsspec
 import gcsfs
 import geopandas as gpd
 import numpy as np
+import os
 import pandas as pd
+import psutil
 import requests
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
@@ -312,6 +314,11 @@ def unzip_file(base_zip_path, destination_folder):
     with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_folder)
 
+
+def show_mem(label=""):
+    process = psutil.Process(os.getpid())
+    rss = process.memory_info().rss / 1e6  # in MB
+    print(f"[{label}] Memory: {rss:.1f} MB")
 
 def print_peak_memory_allocation(func, *args, **kwargs):
     tracemalloc.start()
