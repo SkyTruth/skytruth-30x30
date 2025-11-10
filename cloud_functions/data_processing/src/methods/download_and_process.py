@@ -223,7 +223,8 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
         try:
             chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
             chunk = choose_pa_area(chunk)
-            chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, chunk.crs), axis=1)
+            crs = chunk.crs
+            chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
             chunk = chunk.loc[chunk.geometry.is_valid]
             chunk.geometry = chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
             return chunk
@@ -231,6 +232,7 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
             logger.warning({"message": f"Error simplifying chunk: {e}"})
             return None
         finally:
+            del chunk
             gc.collect()
 
     def process_one_file(p, results, tolerance=0.001, n_jobs=-1):
@@ -246,7 +248,7 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
             for chunk in tqdm(stream_parquet_chunks(p, batch_size=batch_size), total=est_batches)
         )
 
-        return results
+        return pd.concat([r for r in results if r is not None], ignore_index=True)
 
     parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
     if not parquet_files:
@@ -255,7 +257,9 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
     results = []
     for i, p in enumerate(parquet_files):
         print(f"{p}: {i + 1} of {len(parquet_files)}")
-        results = print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
+        results.append(
+            print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
+        )
 
     # Combine results
     return pd.concat([r for r in results if r is not None], ignore_index=True)
@@ -292,6 +296,29 @@ def download_and_process_protected_planet_pas(
             finally:
                 gc.collect()
 
+        # def stream_to_parquet(zip_path, shp, out_path, batch_size=5000):
+        #     import fiona
+        #     import pyarrow as pa
+        #     import pyarrow.parquet as pq
+        #     with fiona.open(f"zip://{zip_path}!{shp}") as src:
+        #         writer = None
+        #         batch = []
+        #         for i, feat in enumerate(src):
+        #             batch.append(feat)
+        #             if len(batch) >= batch_size:
+        #                 gdf = gpd.GeoDataFrame.from_features(batch, crs=src.crs)
+        #                 table = pa.Table.from_pandas(gdf)
+        #                 if writer is None:
+        #                     writer = pq.ParquetWriter(out_path, table.schema)
+        #                 writer.write_table(table)
+        #                 del gdf, batch[:]
+        #                 gc.collect()
+        #         if batch:
+        #             gdf = gpd.GeoDataFrame.from_features(batch, crs=src.crs)
+        #             writer.write_table(pa.Table.from_pandas(gdf))
+        #         if writer:
+        #             writer.close()
+
         # Define params for unpacking
         for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
             zip_stem = os.path.splitext(os.path.basename(zip_path))[0]
@@ -306,6 +333,9 @@ def download_and_process_protected_planet_pas(
                         shp.replace(".shp", ""),
                         verbose,
                     )
+                    # _ = print_peak_memory_allocation(
+                    #     stream_to_parquet, zip_path, shp, pa_dir, batch_size=10000
+                    # )
 
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
@@ -351,6 +381,10 @@ def download_and_process_protected_planet_pas(
         print(f"saving and duplicating marine PAs to {mar_out_fn}")
     upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
     duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
+
+    if verbose:
+        print("Cleaning up")
+        gc.collect()
 
 
 def download_protected_planet_global(
