@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-
 import requests
 from joblib import Parallel, delayed
 from pyogrio import read_dataframe
@@ -63,6 +62,7 @@ logger = Logger()
 
 pa.set_memory_pool(pa.default_memory_pool())
 pa.default_memory_pool().release_unused()
+
 
 def download_mpatlas_country(
     bucket: str = BUCKET,
@@ -240,7 +240,6 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
         finally:
             del chunk
             gc.collect()
-            
 
     def process_one_file(p, results, tolerance=0.001, n_jobs=-1):
         parquet_file = pq.ParquetFile(p)

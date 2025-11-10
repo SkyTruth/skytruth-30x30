@@ -1,4 +1,5 @@
 import io
+import os
 import tempfile
 import tracemalloc
 import zipfile
@@ -9,7 +10,6 @@ import fsspec
 import gcsfs
 import geopandas as gpd
 import numpy as np
-import os
 import pandas as pd
 import psutil
 import requests
@@ -319,6 +319,7 @@ def show_mem(label=""):
     process = psutil.Process(os.getpid())
     rss = process.memory_info().rss / 1e6  # in MB
     print(f"[{label}] Memory: {rss:.1f} MB")
+
 
 def print_peak_memory_allocation(func, *args, **kwargs):
     tracemalloc.start()
