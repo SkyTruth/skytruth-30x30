@@ -7,7 +7,9 @@ from io import BytesIO
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import psutil
 import pyarrow.parquet as pq
+from pyogrio import read_dataframe
 import requests
 from joblib import Parallel, delayed
 from shapely import wkb
@@ -280,44 +282,26 @@ def download_and_process_protected_planet_pas(
     def unpack_pas_to_parquet(pa_dir, verbose=True):
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
+            def show_mem(label=""):
+                process = psutil.Process(os.getpid())
+                rss = process.memory_info().rss / 1e6  # in MB
+                print(f"[{label}] Memory: {rss:.1f} MB")
 
             out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
             if verbose:
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
-                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
-                # with fiona.open(f"zip://{zip_path}!{shp}") as src:
-                #     gdf = gpd.GeoDataFrame.from_features(src, crs=src.crs)
+                gdf = read_dataframe(f"zip://{zip_path}!{shp}")
                 gdf.to_parquet(out_path)
+                show_mem("during")
                 del gdf
+                show_mem("after deleting")
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
             finally:
                 gc.collect()
-
-        # def stream_to_parquet(zip_path, shp, out_path, batch_size=5000):
-        #     import fiona
-        #     import pyarrow as pa
-        #     import pyarrow.parquet as pq
-        #     with fiona.open(f"zip://{zip_path}!{shp}") as src:
-        #         writer = None
-        #         batch = []
-        #         for i, feat in enumerate(src):
-        #             batch.append(feat)
-        #             if len(batch) >= batch_size:
-        #                 gdf = gpd.GeoDataFrame.from_features(batch, crs=src.crs)
-        #                 table = pa.Table.from_pandas(gdf)
-        #                 if writer is None:
-        #                     writer = pq.ParquetWriter(out_path, table.schema)
-        #                 writer.write_table(table)
-        #                 del gdf, batch[:]
-        #                 gc.collect()
-        #         if batch:
-        #             gdf = gpd.GeoDataFrame.from_features(batch, crs=src.crs)
-        #             writer.write_table(pa.Table.from_pandas(gdf))
-        #         if writer:
-        #             writer.close()
+                show_mem("after garbage collection")
 
         # Define params for unpacking
         for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
@@ -333,9 +317,6 @@ def download_and_process_protected_planet_pas(
                         shp.replace(".shp", ""),
                         verbose,
                     )
-                    # _ = print_peak_memory_allocation(
-                    #     stream_to_parquet, zip_path, shp, pa_dir, batch_size=10000
-                    # )
 
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
