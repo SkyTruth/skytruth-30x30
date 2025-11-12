@@ -318,14 +318,14 @@ def download_and_process_protected_planet_pas(
             if verbose:
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
-                # unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
-                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
-                gdf.to_parquet(out_path)
-                show_mem("during")
-                show_container_mem("Container memory")
-                del gdf
-                show_mem("after deleting")
-                show_container_mem("Container memory")
+                unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
+                # gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+                # gdf.to_parquet(out_path)
+                # show_mem("during")
+                # show_container_mem("Container memory")
+                # del gdf
+                # show_mem("after deleting")
+                # show_container_mem("Container memory")
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
