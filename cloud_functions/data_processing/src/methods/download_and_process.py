@@ -394,8 +394,10 @@ def download_and_process_protected_planet_pas(
     if verbose:
         print("unpacking PA shapefiles into parquet files")
     unpack_pas_to_parquet(pa_dir, verbose=verbose)
+    show_mem("After unpacking")
+    show_container_mem("After unpacking")
 
-    if  verbose:
+    if verbose:
         print(f"deleting {base_zip_path}")
     try:
         os.remove(base_zip_path)
