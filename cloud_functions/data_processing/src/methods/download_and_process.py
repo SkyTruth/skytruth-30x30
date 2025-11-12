@@ -303,9 +303,19 @@ def download_and_process_protected_planet_pas(
                 print("running subprocess to unpack shapefile into a parquet file")
             out_path = f"{dir}/{zip_stem}_{layer_name}.parquet"
             script = textwrap.dedent(f"""
-                import geopandas as gpd
-                gdf = gpd.read_file("zip://{zip_path}!{shp}")
-                gdf.to_parquet("{out_path}")
+                import os, glob, geopandas as gpd, gc
+
+                # Read directly from the zip and write to parquet
+                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+                gdf.to_parquet({out_path})
+
+                # Clean up GeoDataFrame memory
+                gdf = gpd.GeoDataFrame()
+                del gdf
+                gc.collect()
+
+                # Delete zipped files
+                os.remove({zip_path})
             """)
             subprocess.run([sys.executable, "-c", script], check=True)
             if verbose:
@@ -316,8 +326,12 @@ def download_and_process_protected_planet_pas(
             gdf.to_parquet(out_path)
             show_mem("during")
             show_container_mem("during")
+
             gdf = gpd.GeoDataFrame()
             del gdf
+
+            # Delete zipped files
+            os.remove(zip_path)
             show_mem("after deleting")
             show_container_mem("after deleting")
 
@@ -380,6 +394,16 @@ def download_and_process_protected_planet_pas(
     if verbose:
         print("unpacking PA shapefiles into parquet files")
     unpack_pas_to_parquet(pa_dir, verbose=verbose)
+
+    if  verbose:
+        print(f"deleting {base_zip_path}")
+    try:
+        os.remove(base_zip_path)
+        print(f"Deleted zipfile: {base_zip_path}")
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(f"Warning: could not delete {base_zip_path}: {e}")
 
     # TODO: logging - remove
     return
