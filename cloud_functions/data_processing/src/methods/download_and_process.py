@@ -346,7 +346,6 @@ def download_and_process_protected_planet_pas(
                     )
 
     # TODO: logging - remove
-    sys.exit(0)
     print(f"Visible CPUs: {os.cpu_count()}")
     show_mem("Start")
 
@@ -369,6 +368,9 @@ def download_and_process_protected_planet_pas(
     if verbose:
         print("unpacking PA shapefiles into parquet files")
     unpack_pas_to_parquet(pa_dir, verbose=verbose)
+
+    # TODO: logging - remove
+    sys.exit(0)
 
     if verbose:
         print("processing and simplifying protected area geometries")
