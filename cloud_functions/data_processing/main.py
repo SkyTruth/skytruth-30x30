@@ -109,7 +109,7 @@ def flush_logs():
         for handler in logger.handlers:
             handler.flush()
     except Exception as e:
-        logger.error({"message": f"Failed to flush logs", "error": str(e)})
+        logger.error({"message": "Failed to flush logs", "error": str(e)})
 
 
 def release_memory(verbose=True):
