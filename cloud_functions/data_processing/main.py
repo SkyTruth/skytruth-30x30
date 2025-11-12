@@ -1,9 +1,10 @@
 import datetime
-import functions_framework
-from flask import Request
 import gc
-import pyarrow as pa
 import signal
+
+import functions_framework
+import pyarrow as pa
+from flask import Request
 
 from src.core import map_params
 from src.core.params import (
@@ -67,13 +68,13 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
-
 def flush_logs():
     """
     Flush all logger handlers.
     """
     for handler in logger.handlers:
         handler.flush()
+
 
 def release_memory():
     """
@@ -86,6 +87,7 @@ def release_memory():
     # Release any unused memory back to the OS, ensuring that
     # large Arrow buffers (e.g., from Parquet I/O) are freed.
     pa.default_memory_pool().release_unused()
+
 
 def handle_sigterm(signum, frame):
     """
@@ -105,7 +107,6 @@ def handle_sigterm(signum, frame):
 
     # Free up memory
     release_memory()
-
 
 
 # Register SIGTERM handler
