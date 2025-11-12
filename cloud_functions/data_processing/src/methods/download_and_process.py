@@ -316,6 +316,7 @@ def download_and_process_protected_planet_pas(
 
                 # Delete zipped files
                 os.remove({zip_path})
+                os.listdir({dir})
             """)
             subprocess.run([sys.executable, "-c", script], check=True)
             if verbose:
@@ -342,8 +343,8 @@ def download_and_process_protected_planet_pas(
             if verbose:
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
-                # unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
-                unpack_geopandas(out_path, zip_path, shp)
+                unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
+                # unpack_geopandas(out_path, zip_path, shp)
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
