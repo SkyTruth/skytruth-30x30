@@ -313,10 +313,6 @@ def download_and_process_protected_planet_pas(
                 gdf = gpd.GeoDataFrame()
                 del gdf
                 gc.collect()
-
-                # Delete zipped files
-                os.remove("{zip_path}")
-                os.listdir("{dir}")
             """)
             subprocess.run([sys.executable, "-c", script], check=True)
             if verbose:
@@ -369,6 +365,9 @@ def download_and_process_protected_planet_pas(
                         shp.replace(".shp", ""),
                         verbose,
                     )
+
+                # Delete zipped files
+                os.remove(zip_path)
 
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
