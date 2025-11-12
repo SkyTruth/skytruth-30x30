@@ -108,7 +108,7 @@ def flush_logs():
     try:
         for handler in logger.handlers:
             handler.flush()
-    except Exception e:
+    except Exception as e:
         logger.error({"message": f"Failed to flush logs", "error": str(e)})
 
 
