@@ -68,6 +68,7 @@ from src.utils.logger import Logger
 
 logger = Logger()
 
+
 def show_container_mem(label: str = ""):
     """
     Print the current container memory usage (in MB) from cgroup metrics.
@@ -410,4 +411,3 @@ def main(request: Request) -> tuple[str, int]:
         print("Releasing memory")
         release_memory(verbose=verbose)
         flush_logs()
-
