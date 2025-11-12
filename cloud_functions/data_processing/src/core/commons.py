@@ -352,6 +352,7 @@ def show_container_mem(label: str = ""):
     usage_gb = usage_bytes / 1e9
     print(f"[{label}] Container memory: {usage_gb:.1f} GB")
 
+
 def print_peak_memory_allocation(func, *args, **kwargs):
     tracemalloc.start()
     try:

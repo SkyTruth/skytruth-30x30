@@ -24,8 +24,8 @@ from src.core.commons import (
     download_file_with_progress,
     download_mpatlas_zone,
     print_peak_memory_allocation,
-    show_mem,
     show_container_mem,
+    show_mem,
     unzip_file,
 )
 from src.core.params import (

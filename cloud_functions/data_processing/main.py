@@ -7,7 +7,7 @@ import pyarrow as pa
 from flask import Request
 
 from src.core import map_params
-from src.core.commons import show_mem, show_container_mem
+from src.core.commons import show_container_mem, show_mem
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
