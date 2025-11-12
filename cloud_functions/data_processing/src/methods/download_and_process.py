@@ -370,7 +370,7 @@ def download_and_process_protected_planet_pas(
     unpack_pas_to_parquet(pa_dir, verbose=verbose)
 
     # TODO: logging - remove
-    sys.exit(0)
+    return
 
     if verbose:
         print("processing and simplifying protected area geometries")

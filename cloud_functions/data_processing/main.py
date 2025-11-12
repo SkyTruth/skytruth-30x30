@@ -7,6 +7,7 @@ import pyarrow as pa
 from flask import Request
 
 from src.core import map_params
+from src.core.commons import show_mem
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -67,6 +68,37 @@ from src.utils.logger import Logger
 
 logger = Logger()
 
+def show_container_mem(label: str = ""):
+    """
+    Print the current container memory usage (in MB) from cgroup metrics.
+
+    Works for both cgroup v1 and v2:
+    - /sys/fs/cgroup/memory/memory.usage_in_bytes  (v1)
+    - /sys/fs/cgroup/memory.current                (v2)
+
+    This reports the *total container memory use*, including native allocations,
+    Arrow/GDAL buffers, page cache, and all processes inside the container.
+    """
+    usage_bytes = None
+
+    # Try cgroup v1 path first
+    v1_path = "/sys/fs/cgroup/memory/memory.usage_in_bytes"
+    v2_path = "/sys/fs/cgroup/memory.current"
+
+    try:
+        with open(v1_path) as f:
+            usage_bytes = int(f.read().strip())
+    except FileNotFoundError:
+        try:
+            with open(v2_path) as f:
+                usage_bytes = int(f.read().strip())
+        except FileNotFoundError:
+            print(f"[{label}] Could not read container memory usage.")
+            return
+
+    usage_mb = usage_bytes / 1e6
+    print(f"[{label}] Container memory: {usage_mb:.1f} MB")
+
 
 def flush_logs():
     """
@@ -76,10 +108,15 @@ def flush_logs():
         handler.flush()
 
 
-def release_memory():
+def release_memory(verbose=True):
     """
     Free up memory
     """
+
+    # log memory allocation before releasing memory
+    if verbose:
+        show_mem("Before releasing memory")
+        show_container_mem("Container memory before releasing memory")
 
     # Run garbage collector
     gc.collect()
@@ -87,6 +124,11 @@ def release_memory():
     # Release any unused memory back to the OS, ensuring that
     # large Arrow buffers (e.g., from Parquet I/O) are freed.
     pa.default_memory_pool().release_unused()
+
+    # log memory allocation after releasing memory
+    if verbose:
+        show_mem("After releasing memory")
+        show_container_mem("Container memory after releasing memory")
 
 
 def handle_sigterm(signum, frame):
@@ -102,11 +144,11 @@ def handle_sigterm(signum, frame):
         }
     )
 
-    # Flush any pending log messages.
-    flush_logs()
-
     # Free up memory
     release_memory()
+
+    # Flush any pending log messages.
+    flush_logs()
 
 
 # Register SIGTERM handler
@@ -366,4 +408,6 @@ def main(request: Request) -> tuple[str, int]:
         return f"Internal Server Error: {e}", 500
     finally:
         print("Releasing memory")
-        release_memory()
+        release_memory(verbose=verbose)
+        flush_logs()
+
