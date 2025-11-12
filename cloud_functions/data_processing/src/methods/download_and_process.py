@@ -307,7 +307,7 @@ def download_and_process_protected_planet_pas(
 
                 # Read directly from the zip and write to parquet
                 gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
-                gdf.to_parquet({out_path})
+                gdf.to_parquet("{out_path}")
 
                 # Clean up GeoDataFrame memory
                 gdf = gpd.GeoDataFrame()
@@ -315,14 +315,14 @@ def download_and_process_protected_planet_pas(
                 gc.collect()
 
                 # Delete zipped files
-                os.remove({zip_path})
-                os.listdir({dir})
+                os.remove("{zip_path}")
+                os.listdir("{dir}")
             """)
             subprocess.run([sys.executable, "-c", script], check=True)
             if verbose:
                 print("subprocess completed")
 
-        def unpack_geopandas(out_path, zip_path, shp):
+        def unpack_geopandas(dir, out_path, zip_path, shp):
             gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
             gdf.to_parquet(out_path)
             show_mem("during")
@@ -335,6 +335,7 @@ def download_and_process_protected_planet_pas(
             os.remove(zip_path)
             show_mem("after deleting")
             show_container_mem("after deleting")
+            os.listdir(dir)
 
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
@@ -344,7 +345,7 @@ def download_and_process_protected_planet_pas(
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
                 unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
-                # unpack_geopandas(out_path, zip_path, shp)
+                # unpack_geopandas(dir, out_path, zip_path, shp)
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
