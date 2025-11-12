@@ -1,7 +1,9 @@
 import datetime
-
 import functions_framework
 from flask import Request
+import gc
+import pyarrow as pa
+import signal
 
 from src.core import map_params
 from src.core.params import (
@@ -63,6 +65,51 @@ from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
+
+
+
+def flush_logs():
+    """
+    Flush all logger handlers.
+    """
+    for handler in logger.handlers:
+        handler.flush()
+
+def release_memory():
+    """
+    Free up memory
+    """
+
+    # Run garbage collector
+    gc.collect()
+
+    # Release any unused memory back to the OS, ensuring that
+    # large Arrow buffers (e.g., from Parquet I/O) are freed.
+    pa.default_memory_pool().release_unused()
+
+def handle_sigterm(signum, frame):
+    """
+    Handle the SIGTERM signal.
+    """
+    # Log an error-level message noting that a SIGTERM was received.
+    logger.error(
+        {
+            "message": "SIGTERM signal received",
+            "file_name": frame.f_code.co_filename,
+            "line_number": frame.f_lineno,
+        }
+    )
+
+    # Flush any pending log messages.
+    flush_logs()
+
+    # Free up memory
+    release_memory()
+
+
+
+# Register SIGTERM handler
+signal.signal(signal.SIGTERM, handle_sigterm)
 
 
 @functions_framework.http
@@ -316,3 +363,6 @@ def main(request: Request) -> tuple[str, int]:
         logger.error({"message": f"METHOD {method} failed", "error": str(e)})
 
         return f"Internal Server Error: {e}", 500
+    finally:
+        print("Releasing memory")
+        release_memory()

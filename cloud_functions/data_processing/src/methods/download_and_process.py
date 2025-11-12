@@ -346,6 +346,7 @@ def download_and_process_protected_planet_pas(
                     )
 
     # TODO: logging - remove
+    sys.exit(0)
     print(f"Visible CPUs: {os.cpu_count()}")
     show_mem("Start")
 
