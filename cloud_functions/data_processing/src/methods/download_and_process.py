@@ -273,7 +273,7 @@ def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_job
                 print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
             )
             show_mem("After processing")
-            show_container_mem("Container memory")
+            show_container_mem("After processing")
 
         # Combine results
         return pd.concat([r for r in results if r is not None], ignore_index=True)
@@ -311,6 +311,16 @@ def download_and_process_protected_planet_pas(
             if verbose:
                 print("subprocess completed")
 
+        def unpack_geopandas(out_path, zip_path, shp):
+            gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+            gdf.to_parquet(out_path)
+            show_mem("during")
+            show_container_mem("during")
+            gdf = gpd.GeoDataFrame()
+            del gdf
+            show_mem("after deleting")
+            show_container_mem("after deleting")
+
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
 
@@ -318,14 +328,8 @@ def download_and_process_protected_planet_pas(
             if verbose:
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
-                unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
-                # gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
-                # gdf.to_parquet(out_path)
-                # show_mem("during")
-                # show_container_mem("Container memory")
-                # del gdf
-                # show_mem("after deleting")
-                # show_container_mem("Container memory")
+                # unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
+                unpack_geopandas(out_path, zip_path, shp)
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
                 return None
@@ -333,7 +337,7 @@ def download_and_process_protected_planet_pas(
                 gc.collect()
                 pa.default_memory_pool().release_unused()
                 show_mem("after garbage collection")
-                show_container_mem("Container memory")
+                show_container_mem("after garbage collection")
 
         # Define params for unpacking
         for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
@@ -353,7 +357,7 @@ def download_and_process_protected_planet_pas(
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
     show_mem("Start")
-    show_container_mem("Container memory")
+    show_container_mem("Start")
 
     tmp_dir = "/tmp"
     os.makedirs(tmp_dir, exist_ok=True)
@@ -364,14 +368,14 @@ def download_and_process_protected_planet_pas(
     if verbose:
         print(f"downloading {wdpa_url}")
     _ = print_peak_memory_allocation(download_file_with_progress, wdpa_url, base_zip_path)
-    show_mem()
-    show_container_mem("Container memory")
+    show_mem("After download")
+    show_container_mem("After download")
 
     if verbose:
         print(f"unzipping {base_zip_path}")
     _ = print_peak_memory_allocation(unzip_file, base_zip_path, pa_dir)
-    show_mem()
-    show_container_mem("Container memory")
+    show_mem("After unzipping")
+    show_container_mem("After unzipping")
 
     if verbose:
         print("unpacking PA shapefiles into parquet files")
