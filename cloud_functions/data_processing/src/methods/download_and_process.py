@@ -15,6 +15,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
+import traceback
 from joblib import Parallel, delayed
 
 # from pyogrio import read_dataframe
@@ -335,49 +336,62 @@ def download_and_process_protected_planet_pas(
                 gc.collect()
 
         def process_one_file(p, results, tolerance=0.001, batch_size=1000, n_jobs=-1):
-            parquet_file = pq.ParquetFile(p)
-            total_rows = parquet_file.metadata.num_rows
-            est_batches = int(np.ceil(total_rows / batch_size))
+            try:
+                parquet_file = pq.ParquetFile(p)
+                total_rows = parquet_file.metadata.num_rows
+                est_batches = int(np.ceil(total_rows / batch_size))
+                logger.info(f"Processing {p}: {total_rows:,} rows, ~{est_batches} batches")
 
-            results = Parallel(n_jobs=n_jobs, backend="loky", timeout=600)(
-                delayed(simplify_chunk)(
-                    chunk,
-                    tolerance,
+                results = Parallel(n_jobs=n_jobs, backend="loky", timeout=600)(
+                    delayed(simplify_chunk)(
+                        chunk,
+                        tolerance,
+                    )
+                    for chunk in tqdm(
+                        stream_parquet_chunks(p, batch_size=batch_size), total=est_batches
+                    )
                 )
-                for chunk in tqdm(
-                    stream_parquet_chunks(p, batch_size=batch_size), total=est_batches
-                )
-            )
 
-            return pd.concat([r for r in results if r is not None], ignore_index=True)
+                logger.info(f"Completed parallel processing for {p}")
+                return pd.concat([r for r in results if r is not None], ignore_index=True)
+            
+            except Exception as e:
+                tb = traceback.format_exc()
+                logger.error({"message": f"process_one_file failed for {p}: {type(e).__name__}: {e}", "traceback": tb})
+                print(tb)
+                raise
 
         results = []
-        try:
-            parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
-            if not parquet_files:
-                raise FileNotFoundError(f"No parquet files found in {pa_dir}")
+        parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
+        if not parquet_files:
+            raise FileNotFoundError(f"No parquet files found in {pa_dir}")
 
-            for i, p in enumerate(parquet_files):
+        for i, p in enumerate(parquet_files):
+            try:
                 if verbose:
                     print(f"{p}: {i + 1} of {len(parquet_files)}")
 
                 st = datetime.datetime.now()
-                results.append(process_one_file(p, results, tolerance, batch_size, n_jobs))
+                result = process_one_file(p, results, tolerance, batch_size, n_jobs)
+                results.append(result)
+                result = pd.DataFrame()
                 fn = datetime.datetime.now()
 
                 if verbose:
                     print(f"Processed {p} in {(fn - st).total_seconds() / 60:.2f} minutes")
                 show_mem("After processing")
                 show_container_mem("After processing")
+            except Exception as e:
+                logger.error({
+                    "message": f"Error processing parquet files: {type(e).__name__}: {e}",
+                    "traceback": traceback.format_exc()
+                })
+                raise
+            finally:
+                gc.collect()
 
-            # Combine results
-            return pd.concat([r for r in results if r is not None], ignore_index=True)
-        except Exception as e:
-            logger.warning({"message": f"Error processing parquet files: {e}"})
-            return None
-        finally:
-            del results
-            gc.collect()
+        # Combine results
+        return pd.concat([r for r in results if r is not None], ignore_index=True)
 
     print(f"Visible CPUs: {os.cpu_count()}")
     show_mem("Start")
@@ -423,6 +437,10 @@ def download_and_process_protected_planet_pas(
         print(f"deleting {pa_dir}")
     remove_file_or_folder(pa_dir)
 
+    if df is None:
+        logger.error({"message": "process_protected_area_geoms returned None"})
+        raise ValueError("Error: process_protected_area_geoms returned None")
+
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")
     try:
@@ -455,7 +473,6 @@ def download_and_process_protected_planet_pas(
         print("Cleaning up")
     df = pd.DataFrame()
     del df
-    gc.collect()
 
 
 def download_protected_planet_global(
