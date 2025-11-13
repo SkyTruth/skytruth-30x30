@@ -353,7 +353,9 @@ def download_and_process_protected_planet_pas(
             for i, p in enumerate(parquet_files):
                 print(f"{p}: {i + 1} of {len(parquet_files)}")
                 results.append(
-                    print_peak_memory_allocation(process_one_file, p, results, tolerance, batch_size, n_jobs)
+                    print_peak_memory_allocation(
+                        process_one_file, p, results, tolerance, batch_size, n_jobs
+                    )
                 )
                 show_mem("After processing")
                 show_container_mem("After processing")
