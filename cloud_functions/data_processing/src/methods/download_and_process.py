@@ -408,9 +408,6 @@ def download_and_process_protected_planet_pas(
     except Exception as e:
         print(f"Warning: could not delete {base_zip_path}: {e}")
 
-    # TODO: logging - remove
-    return
-
     if verbose:
         print("processing and simplifying protected area geometries")
     df = process_protected_area_geoms(
