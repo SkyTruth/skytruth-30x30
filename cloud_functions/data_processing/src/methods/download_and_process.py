@@ -340,9 +340,9 @@ def download_and_process_protected_planet_pas(
                 parquet_file = pq.ParquetFile(p)
                 total_rows = parquet_file.metadata.num_rows
                 est_batches = int(np.ceil(total_rows / batch_size))
-                logger.info( {
-                    "message": f"Processing {p}: {total_rows} rows, ~{est_batches} batches"
-                })
+                logger.info(
+                    {"message": f"Processing {p}: {total_rows} rows, ~{est_batches} batches"}
+                )
 
                 results = Parallel(n_jobs=n_jobs, backend="loky", timeout=600)(
                     delayed(simplify_chunk)(
