@@ -362,11 +362,7 @@ def download_and_process_protected_planet_pas(
                     print(f"{p}: {i + 1} of {len(parquet_files)}")
 
                 st = datetime.datetime.now()
-                results.append(
-                    process_one_file(
-                        p, results, tolerance, batch_size, n_jobs
-                    )
-                )
+                results.append(process_one_file(p, results, tolerance, batch_size, n_jobs))
                 fn = datetime.datetime.now()
 
                 if verbose:
