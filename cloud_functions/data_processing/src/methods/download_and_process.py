@@ -13,6 +13,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
+import shutil
 from joblib import Parallel, delayed
 
 # from pyogrio import read_dataframe
@@ -265,9 +266,16 @@ def download_and_process_protected_planet_pas(
                 os.remove(zip_path)
 
     def remove_file_or_folder(path):
+        """Delete a file or folder (recursively) if it exists."""
         try:
-            os.remove(path)
-            print(f"Deleted zipfile: {path}")
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+                print(f"Deleted folder and its contents: {path}")
+            elif os.path.exists(path):
+                os.remove(path)
+                print(f"Deleted file: {path}")
+            else:
+                return
         except FileNotFoundError:
             pass
         except Exception as e:
@@ -414,25 +422,31 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")
-    upload_dataframe(
-        bucket, df.drop(columns="geometry"), meta_file_name, project_id=project_id, verbose=verbose
-    )
+    try:
+        upload_dataframe(
+            bucket, df.drop(columns="geometry"), meta_file_name, project_id=project_id, verbose=verbose
+        )
+    except Exception as e:
+        logger.error({"message": "Error saving metadata", "error": str(e)})
 
-    ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    if verbose:
-        print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
-    upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
-    duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
+    try:
+        ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
+        upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
+        duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
 
-    mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    if verbose:
-        print(f"saving and duplicating marine PAs to {mar_out_fn}")
-    upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
-    duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
+        mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            print(f"saving and duplicating marine PAs to {mar_out_fn}")
+        upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
+        duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
+    except Exception as e:
+        logger.error({"message": "Error saving simplified PAs", "error": str(e)})
 
     if verbose:
         print("Cleaning up")
-        gc.collect()
+    gc.collect()
 
 
 def download_protected_planet_global(
