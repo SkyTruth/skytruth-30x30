@@ -290,7 +290,6 @@ def download_and_process_protected_planet_pas(
         except Exception as e:
             print(f"Warning: could not delete {path}: {e}")
 
-    
     def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_jobs=-1):
         def stream_parquet_chunks(path, batch_size=1000):
             parquet_file = pq.ParquetFile(path)
@@ -331,7 +330,9 @@ def download_and_process_protected_planet_pas(
                 crs = chunk.crs
                 chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
                 chunk = chunk.loc[chunk.geometry.is_valid]
-                chunk.geometry = chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
+                chunk.geometry = chunk.geometry.simplify(
+                    tolerance=tolerance, preserve_topology=True
+                )
                 return chunk
             except Exception as e:
                 logger.warning({"message": f"Error simplifying chunk: {e}"})
@@ -350,7 +351,9 @@ def download_and_process_protected_planet_pas(
                     chunk,
                     tolerance,
                 )
-                for chunk in tqdm(stream_parquet_chunks(p, batch_size=batch_size), total=est_batches)
+                for chunk in tqdm(
+                    stream_parquet_chunks(p, batch_size=batch_size), total=est_batches
+                )
             )
 
             return pd.concat([r for r in results if r is not None], ignore_index=True)
@@ -377,7 +380,7 @@ def download_and_process_protected_planet_pas(
         finally:
             del results
             gc.collect()
-    
+
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
     show_mem("Start")
