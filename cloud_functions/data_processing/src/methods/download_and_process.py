@@ -1,3 +1,4 @@
+import datetime
 import gc
 import glob
 import os
@@ -24,7 +25,6 @@ from tqdm.auto import tqdm
 from src.core.commons import (
     download_file_with_progress,
     download_mpatlas_zone,
-    print_peak_memory_allocation,
     show_container_mem,
     show_mem,
     unzip_file,
@@ -252,8 +252,7 @@ def download_and_process_protected_planet_pas(
             zip_stem = os.path.splitext(os.path.basename(zip_path))[0]
             with zipfile.ZipFile(zip_path) as z:
                 for shp in [n for n in z.namelist() if n.lower().endswith(".shp")]:
-                    _ = print_peak_memory_allocation(
-                        unpack_parquet,
+                    _ = unpack_parquet(
                         zip_stem,
                         zip_path,
                         pa_dir,
@@ -359,12 +358,19 @@ def download_and_process_protected_planet_pas(
                 raise FileNotFoundError(f"No parquet files found in {pa_dir}")
 
             for i, p in enumerate(parquet_files):
-                print(f"{p}: {i + 1} of {len(parquet_files)}")
+                if verbose:
+                    print(f"{p}: {i + 1} of {len(parquet_files)}")
+
+                st = datetime.datetime.now()
                 results.append(
-                    print_peak_memory_allocation(
-                        process_one_file, p, results, tolerance, batch_size, n_jobs
+                    process_one_file(
+                        p, results, tolerance, batch_size, n_jobs
                     )
                 )
+                fn = datetime.datetime.now()
+
+                if verbose:
+                    print(f"Processed {p} in {(fn - st).total_seconds() / 60:.2f} minutes")
                 show_mem("After processing")
                 show_container_mem("After processing")
 
@@ -377,7 +383,6 @@ def download_and_process_protected_planet_pas(
             del results
             gc.collect()
 
-    # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
     show_mem("Start")
     show_container_mem("Start")
@@ -390,13 +395,13 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print(f"downloading {wdpa_url}")
-    _ = print_peak_memory_allocation(download_file_with_progress, wdpa_url, base_zip_path)
+    _ = download_file_with_progress(wdpa_url, base_zip_path)
     show_mem("After download")
     show_container_mem("After download")
 
     if verbose:
         print(f"unzipping {base_zip_path}")
-    _ = print_peak_memory_allocation(unzip_file, base_zip_path, pa_dir)
+    _ = unzip_file(base_zip_path, pa_dir)
     show_mem("After unzipping")
     show_container_mem("After unzipping")
 
@@ -409,6 +414,8 @@ def download_and_process_protected_planet_pas(
     if verbose:
         print(f"deleting {base_zip_path}")
     remove_file_or_folder(base_zip_path)
+    show_mem(f"After deleting {base_zip_path}")
+    show_container_mem(f"After deleting {base_zip_path}")
 
     if verbose:
         print("processing and simplifying protected area geometries")
@@ -450,6 +457,8 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print("Cleaning up")
+    df = pd.DataFrame()
+    del df
     gc.collect()
 
 
