@@ -1,6 +1,7 @@
 import gc
 import glob
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -13,7 +14,6 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
-import shutil
 from joblib import Parallel, delayed
 
 # from pyogrio import read_dataframe
@@ -424,7 +424,11 @@ def download_and_process_protected_planet_pas(
         print(f"saving wdpa metadata to {meta_file_name}")
     try:
         upload_dataframe(
-            bucket, df.drop(columns="geometry"), meta_file_name, project_id=project_id, verbose=verbose
+            bucket,
+            df.drop(columns="geometry"),
+            meta_file_name,
+            project_id=project_id,
+            verbose=verbose,
         )
     except Exception as e:
         logger.error({"message": "Error saving metadata", "error": str(e)})
