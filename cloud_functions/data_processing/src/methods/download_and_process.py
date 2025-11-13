@@ -197,94 +197,6 @@ def download_protected_seas(
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
-def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_jobs=-1):
-    def stream_parquet_chunks(path, batch_size=1000):
-        parquet_file = pq.ParquetFile(path)
-        for batch in parquet_file.iter_batches(batch_size=batch_size):
-            df = batch.to_pandas()
-            df["geometry"] = df["geometry"].apply(wkb.loads)
-            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-            yield gdf
-
-    def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        def calculate_radius(rep_area: float) -> float:
-            return ((rep_area * 1e6) / np.pi) ** 0.5
-
-        df = df.to_crs("ESRI:54009")
-        df["geometry"] = df.apply(
-            lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
-            axis=1,
-        )
-        return df.to_crs("EPSG:4326").copy()
-
-    def buffer_if_point(row, crs):
-        g = row.geometry
-        if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
-            # build a 1-row GeoDataFrame with the same CRS
-            row_gdf = gpd.GeoDataFrame(
-                row.to_frame().T,
-                geometry="geometry",
-                crs=crs,  # 1-row DataFrame
-            )
-            buffed = create_buffer(row_gdf)  # your existing function
-            return buffed.geometry.iloc[0]
-        return g
-
-    def simplify_chunk(chunk, tolerance=0.001):
-        try:
-            chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
-            chunk = choose_pa_area(chunk)
-            crs = chunk.crs
-            chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
-            chunk = chunk.loc[chunk.geometry.is_valid]
-            chunk.geometry = chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
-            return chunk
-        except Exception as e:
-            logger.warning({"message": f"Error simplifying chunk: {e}"})
-            return None
-        finally:
-            del chunk
-            gc.collect()
-
-    def process_one_file(p, results, tolerance=0.001, n_jobs=-1):
-        parquet_file = pq.ParquetFile(p)
-        total_rows = parquet_file.metadata.num_rows
-        est_batches = int(np.ceil(total_rows / batch_size))
-
-        results = Parallel(n_jobs=n_jobs, backend="loky")(
-            delayed(simplify_chunk)(
-                chunk,
-                tolerance,
-            )
-            for chunk in tqdm(stream_parquet_chunks(p, batch_size=batch_size), total=est_batches)
-        )
-
-        return pd.concat([r for r in results if r is not None], ignore_index=True)
-
-    results = []
-    try:
-        parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
-        if not parquet_files:
-            raise FileNotFoundError(f"No parquet files found in {pa_dir}")
-
-        for i, p in enumerate(parquet_files):
-            print(f"{p}: {i + 1} of {len(parquet_files)}")
-            results.append(
-                print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
-            )
-            show_mem("After processing")
-            show_container_mem("After processing")
-
-        # Combine results
-        return pd.concat([r for r in results if r is not None], ignore_index=True)
-    except Exception as e:
-        logger.warning({"message": f"Error processing parquet files: {e}"})
-        return None
-    finally:
-        del results
-        gc.collect()
-
-
 def download_and_process_protected_planet_pas(
     wdpa_url: str = WDPA_URL,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
@@ -369,6 +281,103 @@ def download_and_process_protected_planet_pas(
                 # Delete zipped files
                 os.remove(zip_path)
 
+    def remove_file_or_folder(path):
+        try:
+            os.remove(path)
+            print(f"Deleted zipfile: {path}")
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            print(f"Warning: could not delete {path}: {e}")
+
+    
+    def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_jobs=-1):
+        def stream_parquet_chunks(path, batch_size=1000):
+            parquet_file = pq.ParquetFile(path)
+            for batch in parquet_file.iter_batches(batch_size=batch_size):
+                df = batch.to_pandas()
+                df["geometry"] = df["geometry"].apply(wkb.loads)
+                gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+                yield gdf
+
+        def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+            def calculate_radius(rep_area: float) -> float:
+                return ((rep_area * 1e6) / np.pi) ** 0.5
+
+            df = df.to_crs("ESRI:54009")
+            df["geometry"] = df.apply(
+                lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+                axis=1,
+            )
+            return df.to_crs("EPSG:4326").copy()
+
+        def buffer_if_point(row, crs):
+            g = row.geometry
+            if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
+                # build a 1-row GeoDataFrame with the same CRS
+                row_gdf = gpd.GeoDataFrame(
+                    row.to_frame().T,
+                    geometry="geometry",
+                    crs=crs,  # 1-row DataFrame
+                )
+                buffed = create_buffer(row_gdf)  # your existing function
+                return buffed.geometry.iloc[0]
+            return g
+
+        def simplify_chunk(chunk, tolerance=0.001):
+            try:
+                chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
+                chunk = choose_pa_area(chunk)
+                crs = chunk.crs
+                chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
+                chunk = chunk.loc[chunk.geometry.is_valid]
+                chunk.geometry = chunk.geometry.simplify(tolerance=tolerance, preserve_topology=True)
+                return chunk
+            except Exception as e:
+                logger.warning({"message": f"Error simplifying chunk: {e}"})
+                return None
+            finally:
+                del chunk
+                gc.collect()
+
+        def process_one_file(p, results, tolerance=0.001, n_jobs=-1):
+            parquet_file = pq.ParquetFile(p)
+            total_rows = parquet_file.metadata.num_rows
+            est_batches = int(np.ceil(total_rows / batch_size))
+
+            results = Parallel(n_jobs=n_jobs, backend="loky")(
+                delayed(simplify_chunk)(
+                    chunk,
+                    tolerance,
+                )
+                for chunk in tqdm(stream_parquet_chunks(p, batch_size=batch_size), total=est_batches)
+            )
+
+            return pd.concat([r for r in results if r is not None], ignore_index=True)
+
+        results = []
+        try:
+            parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
+            if not parquet_files:
+                raise FileNotFoundError(f"No parquet files found in {pa_dir}")
+
+            for i, p in enumerate(parquet_files):
+                print(f"{p}: {i + 1} of {len(parquet_files)}")
+                results.append(
+                    print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
+                )
+                show_mem("After processing")
+                show_container_mem("After processing")
+
+            # Combine results
+            return pd.concat([r for r in results if r is not None], ignore_index=True)
+        except Exception as e:
+            logger.warning({"message": f"Error processing parquet files: {e}"})
+            return None
+        finally:
+            del results
+            gc.collect()
+    
     # TODO: logging - remove
     print(f"Visible CPUs: {os.cpu_count()}")
     show_mem("Start")
@@ -400,19 +409,17 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print(f"deleting {base_zip_path}")
-    try:
-        os.remove(base_zip_path)
-        print(f"Deleted zipfile: {base_zip_path}")
-    except FileNotFoundError:
-        pass
-    except Exception as e:
-        print(f"Warning: could not delete {base_zip_path}: {e}")
+    remove_file_or_folder(base_zip_path)
 
     if verbose:
         print("processing and simplifying protected area geometries")
     df = process_protected_area_geoms(
         pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs
     )
+
+    if verbose:
+        print(f"deleting {pa_dir}")
+    remove_file_or_folder(pa_dir)
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")
