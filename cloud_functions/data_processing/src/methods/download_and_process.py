@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+import traceback
 import zipfile
 from io import BytesIO
 
@@ -15,7 +16,6 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
-import traceback
 from joblib import Parallel, delayed
 
 # from pyogrio import read_dataframe
@@ -354,10 +354,15 @@ def download_and_process_protected_planet_pas(
 
                 logger.info(f"Completed parallel processing for {p}")
                 return pd.concat([r for r in results if r is not None], ignore_index=True)
-            
+
             except Exception as e:
                 tb = traceback.format_exc()
-                logger.error({"message": f"process_one_file failed for {p}: {type(e).__name__}: {e}", "traceback": tb})
+                logger.error(
+                    {
+                        "message": f"process_one_file failed for {p}: {type(e).__name__}: {e}",
+                        "traceback": tb,
+                    }
+                )
                 print(tb)
                 raise
 
@@ -382,10 +387,12 @@ def download_and_process_protected_planet_pas(
                 show_mem("After processing")
                 show_container_mem("After processing")
             except Exception as e:
-                logger.error({
-                    "message": f"Error processing parquet files: {type(e).__name__}: {e}",
-                    "traceback": traceback.format_exc()
-                })
+                logger.error(
+                    {
+                        "message": f"Error processing parquet files: {type(e).__name__}: {e}",
+                        "traceback": traceback.format_exc(),
+                    }
+                )
                 raise
             finally:
                 gc.collect()
