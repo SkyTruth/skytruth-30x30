@@ -230,21 +230,6 @@ def download_and_process_protected_planet_pas(
             if verbose:
                 print("subprocess completed")
 
-        def unpack_geopandas(dir, out_path, zip_path, shp):
-            gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
-            gdf.to_parquet(out_path)
-            show_mem("during")
-            show_container_mem("during")
-
-            gdf = gpd.GeoDataFrame()
-            del gdf
-
-            # Delete zipped files
-            os.remove(zip_path)
-            show_mem("after deleting")
-            show_container_mem("after deleting")
-            os.listdir(dir)
-
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """unpacks a single shapefile into a parquet"""
 
@@ -253,10 +238,8 @@ def download_and_process_protected_planet_pas(
                 logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
             try:
                 unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
-                # unpack_geopandas(dir, out_path, zip_path, shp)
             except Exception as e:
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
-                return None
             finally:
                 gc.collect()
                 pa.default_memory_pool().release_unused()
@@ -334,6 +317,9 @@ def download_and_process_protected_planet_pas(
                     tolerance=tolerance, preserve_topology=True
                 )
                 return chunk
+            except MemoryError as e:
+                logger.error({"message": "MemoryError simplifying chunk", "error": str(e)})
+                return None
             except Exception as e:
                 logger.warning({"message": f"Error simplifying chunk: {e}"})
                 return None
@@ -341,12 +327,12 @@ def download_and_process_protected_planet_pas(
                 del chunk
                 gc.collect()
 
-        def process_one_file(p, results, tolerance=0.001, n_jobs=-1):
+        def process_one_file(p, results, tolerance=0.001, batch_size=1000, n_jobs=-1):
             parquet_file = pq.ParquetFile(p)
             total_rows = parquet_file.metadata.num_rows
             est_batches = int(np.ceil(total_rows / batch_size))
 
-            results = Parallel(n_jobs=n_jobs, backend="loky")(
+            results = Parallel(n_jobs=n_jobs, backend="loky", timeout=600)(
                 delayed(simplify_chunk)(
                     chunk,
                     tolerance,
@@ -367,7 +353,7 @@ def download_and_process_protected_planet_pas(
             for i, p in enumerate(parquet_files):
                 print(f"{p}: {i + 1} of {len(parquet_files)}")
                 results.append(
-                    print_peak_memory_allocation(process_one_file, p, results, tolerance, n_jobs)
+                    print_peak_memory_allocation(process_one_file, p, results, tolerance, batch_size, n_jobs)
                 )
                 show_mem("After processing")
                 show_container_mem("After processing")

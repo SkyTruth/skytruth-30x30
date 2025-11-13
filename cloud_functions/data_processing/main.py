@@ -239,7 +239,7 @@ def main(request: Request) -> tuple[str, int]:
                 download_protected_seas(verbose=verbose)
 
             case "download_protected_planet_pas":
-                download_and_process_protected_planet_pas(verbose=verbose, tolerance=tolerance)
+                download_and_process_protected_planet_pas(verbose=verbose, tolerance=tolerance, batch_size=5000)
 
             case "download_protected_planet_country":
                 download_protected_planet(verbose=verbose)
