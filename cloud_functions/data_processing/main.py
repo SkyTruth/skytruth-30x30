@@ -1,7 +1,13 @@
+import datetime
+import gc
+import signal
+
 import functions_framework
+import pyarrow as pa
 from flask import Request
 
 from src.core import map_params
+from src.core.commons import show_container_mem, show_mem
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -27,6 +33,7 @@ from src.methods.database_uploads import (
     upload_stats,
 )
 from src.methods.download_and_process import (
+    download_and_process_protected_planet_pas,
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
@@ -60,6 +67,50 @@ from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
+
+
+def release_memory(verbose=True):
+    """
+    Free up memory
+    """
+
+    # log memory allocation before releasing memory
+    if verbose:
+        show_mem("Before releasing memory")
+        show_container_mem("Container memory before releasing memory")
+
+    # Run garbage collector
+    gc.collect()
+
+    # Release any unused memory back to the OS, ensuring that
+    # large Arrow buffers (e.g., from Parquet I/O) are freed.
+    pa.default_memory_pool().release_unused()
+
+    # log memory allocation after releasing memory
+    if verbose:
+        show_mem("After releasing memory")
+        show_container_mem("Container memory after releasing memory")
+
+
+def handle_sigterm(signum, frame):
+    """
+    Handle the SIGTERM signal.
+    """
+    # Log an error-level message noting that a SIGTERM was received.
+    logger.error(
+        {
+            "message": "SIGTERM signal received",
+            "file_name": frame.f_code.co_filename,
+            "line_number": frame.f_lineno,
+        }
+    )
+
+    # Free up memory
+    release_memory()
+
+
+# Register SIGTERM handler
+signal.signal(signal.SIGTERM, handle_sigterm)
 
 
 @functions_framework.http
@@ -103,9 +154,12 @@ def main(request: Request) -> tuple[str, int]:
         A tuple of ("OK", 200) to signal successful completion to the client.
     """
 
+    st = datetime.datetime.now()
+
     try:
         data = request.get_json(silent=True) or {}
         method = data.get("METHOD", "default")
+        tolerance = data.get("TOLERANCE", "default")
 
         match method:
             case "dry_run":
@@ -184,7 +238,12 @@ def main(request: Request) -> tuple[str, int]:
             case "download_protected_seas":
                 download_protected_seas(verbose=verbose)
 
-            case "download_protected_planet_wdpa":
+            case "download_protected_planet_pas":
+                download_and_process_protected_planet_pas(
+                    verbose=verbose, tolerance=tolerance, batch_size=1000
+                )
+
+            case "download_protected_planet_country":
                 download_protected_planet(verbose=verbose)
 
             # ------------------
@@ -297,10 +356,16 @@ def main(request: Request) -> tuple[str, int]:
             case _:
                 print(f"METHOD: {method} not a valid option")
 
-        print("Process complete!")
-
         return "OK", 200
     except Exception as e:
         logger.error({"message": f"METHOD {method} failed", "error": str(e)})
 
         return f"Internal Server Error: {e}", 500
+    finally:
+        print("Releasing memory")
+        release_memory(verbose=verbose)
+
+        fn = datetime.datetime.now()
+
+        print("Process complete!")
+        print(f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes")
