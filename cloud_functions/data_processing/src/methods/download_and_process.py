@@ -312,6 +312,7 @@ def download_and_process_protected_planet_pas(
             Create circular buffer polygons around point geometries based on a
             representative area field.
             """
+
             def calculate_radius(rep_area: float) -> float:
                 return ((rep_area * 1e6) / np.pi) ** 0.5
 
@@ -340,7 +341,6 @@ def download_and_process_protected_planet_pas(
             return g
 
         def simplify_chunk(chunk, tolerance=0.001):
-
             """
             Simplify and buffer geometries in a GeoDataFrame chunk.
             """
