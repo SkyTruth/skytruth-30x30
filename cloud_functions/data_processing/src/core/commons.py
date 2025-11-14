@@ -314,8 +314,16 @@ def unzip_file(base_zip_path, destination_folder):
     with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_folder)
 
+def show_mem(label: str = ""):
+    """
+    This reports the memory used by the current process — including
+    Python objects, loaded shared libraries, and native memory allocations
+    (e.g., from NumPy, GEOS, GDAL). 
 
-def show_mem(label=""):
+    Args:
+        label (str, optional): A label to include in log
+
+    """
     process = psutil.Process(os.getpid())
     rss = process.memory_info().rss / 1e6  # in MB
     print(f"[{label}] Memory: {rss:.1f} MB")

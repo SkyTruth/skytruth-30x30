@@ -212,6 +212,10 @@ def download_and_process_protected_planet_pas(
 ):
     def unpack_pas_to_parquet(pa_dir, verbose=True):
         def unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
+            """
+            unpacks a single shapefile into a parquet using subprocess to effectively
+            clear memory loaded by geopandas
+            """
             if verbose:
                 print("running subprocess to unpack shapefile into a parquet file")
             out_path = f"{dir}/{zip_stem}_{layer_name}.parquet"
@@ -232,7 +236,10 @@ def download_and_process_protected_planet_pas(
                 print("subprocess completed")
 
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
-            """unpacks a single shapefile into a parquet"""
+            """
+            unpacks a single shapefile into a parquet using subprocess and releases
+            unused memory
+            """
 
             out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
             if verbose:
@@ -282,6 +289,9 @@ def download_and_process_protected_planet_pas(
 
     def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_jobs=-1):
         def stream_parquet_chunks(paths, batch_size=1000):
+            """
+            Lazily stream GeoDataFrame chunks from one or more Parquet files.
+            """
             for path in paths:
                 try:
                     parquet_file = pq.ParquetFile(path)
@@ -298,6 +308,10 @@ def download_and_process_protected_planet_pas(
             del parquet_file, df, gdf
 
         def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+            """
+            Create circular buffer polygons around point geometries based on a
+            representative area field.
+            """
             def calculate_radius(rep_area: float) -> float:
                 return ((rep_area * 1e6) / np.pi) ** 0.5
 
@@ -309,6 +323,10 @@ def download_and_process_protected_planet_pas(
             return df.to_crs("EPSG:4326").copy()
 
         def buffer_if_point(row, crs):
+            """
+            Conditionally buffer a single point or multipoint geometry based on a
+            representative area value.
+            """
             g = row.geometry
             if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
                 # build a 1-row GeoDataFrame with the same CRS
@@ -322,6 +340,11 @@ def download_and_process_protected_planet_pas(
             return g
 
         def simplify_chunk(chunk, tolerance=0.001):
+
+            """
+            Simplify and buffer geometries in a GeoDataFrame chunk.
+            """
+
             try:
                 chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
                 chunk = choose_pa_area(chunk)
@@ -342,12 +365,19 @@ def download_and_process_protected_planet_pas(
                 del chunk
                 gc.collect()
 
-        def process_all_files(paths, results, tolerance=0.001, batch_size=1000, n_jobs=-1):
+        def process_all_files(paths, tolerance=0.001, batch_size=1000, n_jobs=-1):
+            """
+            Process multiple Parquet files in parallel, simplifying geometries
+            in streamed chunks while managing memory and logging progress.
+            """
+
+            # Count total number of rows across all parquet files
             total_rows = 0
             for p in paths:
                 parquet_file = pq.ParquetFile(p)
                 total_rows += parquet_file.metadata.num_rows
 
+            # Estimate how many chunk batches will be processed
             est_batches = int(np.ceil(total_rows / batch_size))
 
             try:
@@ -359,6 +389,7 @@ def download_and_process_protected_planet_pas(
                     }
                 )
 
+                # Simplify geometries in parallel batches
                 results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 20)(
                     delayed(simplify_chunk)(
                         chunk,
@@ -370,6 +401,8 @@ def download_and_process_protected_planet_pas(
                 )
 
                 logger.info({"message": "Completed parallel processing of parquet files"})
+
+                # return concatenated results
                 return pd.concat([r for r in results if r is not None], ignore_index=True)
 
             except Exception as e:
@@ -382,16 +415,13 @@ def download_and_process_protected_planet_pas(
                 )
                 print(tb)
                 raise
-            finally:
-                gc.collect()
 
-        results = []
         parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
         if not parquet_files:
             raise FileNotFoundError(f"No parquet files found in {pa_dir}")
 
         results = process_all_files(
-            parquet_files, results, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs
+            parquet_files, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs
         )
         return results
 
