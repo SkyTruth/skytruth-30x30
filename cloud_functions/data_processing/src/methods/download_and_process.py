@@ -387,8 +387,7 @@ def download_and_process_protected_planet_pas(
                 logger.info(
                     {
                         "message": (
-                            f"Processing parquet files: {total_rows} rows, "
-                            f"~{est_batches} batches"
+                            f"Processing parquet files: {total_rows} rows, ~{est_batches} batches"
                         )
                     }
                 )
