@@ -392,7 +392,7 @@ def download_and_process_protected_planet_pas(
                     }
                 )
 
-                results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60*20)(
+                results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 20)(
                     delayed(simplify_chunk)(
                         chunk,
                         tolerance,
