@@ -1,4 +1,3 @@
-import datetime
 import gc
 import glob
 import os
@@ -282,13 +281,21 @@ def download_and_process_protected_planet_pas(
             print(f"Warning: could not delete {path}: {e}")
 
     def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_jobs=-1):
-        def stream_parquet_chunks(path, batch_size=1000):
-            parquet_file = pq.ParquetFile(path)
-            for batch in parquet_file.iter_batches(batch_size=batch_size):
-                df = batch.to_pandas()
-                df["geometry"] = df["geometry"].apply(wkb.loads)
-                gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
-                yield gdf
+        def stream_parquet_chunks(paths, batch_size=1000):
+            for path in paths:
+                try:
+                    parquet_file = pq.ParquetFile(path)
+                except Exception as e:
+                    logger.info({"message": f"Skipping {path}: {e}"})
+                    continue
+
+                for batch in parquet_file.iter_batches(batch_size=batch_size):
+                    df = batch.to_pandas()
+                    df["geometry"] = df["geometry"].apply(wkb.loads)
+                    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+                    yield gdf
+
+            del parquet_file, df, gdf
 
         def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             def calculate_radius(rep_area: float) -> float:
@@ -350,7 +357,7 @@ def download_and_process_protected_planet_pas(
                         tolerance,
                     )
                     for chunk in tqdm(
-                        stream_parquet_chunks(p, batch_size=batch_size), total=est_batches
+                        stream_parquet_chunks([p], batch_size=batch_size), total=est_batches
                     )
                 )
 
@@ -368,36 +375,83 @@ def download_and_process_protected_planet_pas(
                 print(tb)
                 raise
 
+        def process_all_files(paths, results, tolerance=0.001, batch_size=1000, n_jobs=-1):
+            total_rows = 0
+            for p in paths:
+                parquet_file = pq.ParquetFile(p)
+                total_rows += parquet_file.metadata.num_rows
+
+            est_batches = int(np.ceil(total_rows / batch_size))
+
+            try:
+                logger.info(
+                    {
+                        "message": (
+                            f"Processing parquet files: {total_rows} rows, "
+                            f"~{est_batches} batches"
+                        )
+                    }
+                )
+
+                results = Parallel(n_jobs=n_jobs, backend="loky", timeout=600)(
+                    delayed(simplify_chunk)(
+                        chunk,
+                        tolerance,
+                    )
+                    for chunk in tqdm(
+                        stream_parquet_chunks([paths], batch_size=batch_size), total=est_batches
+                    )
+                )
+
+                logger.info({"message": "Completed parallel processing of parquet files"})
+                return pd.concat([r for r in results if r is not None], ignore_index=True)
+
+            except Exception as e:
+                tb = traceback.format_exc()
+                logger.error(
+                    {
+                        "message": f"process_all_files failed: {type(e).__name__}: {e}",
+                        "traceback": tb,
+                    }
+                )
+                print(tb)
+                raise
+            finally:
+                gc.collect()
+
         results = []
         parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
         if not parquet_files:
             raise FileNotFoundError(f"No parquet files found in {pa_dir}")
 
-        for i, p in enumerate(parquet_files):
-            try:
-                if verbose:
-                    print(f"{p}: {i + 1} of {len(parquet_files)}")
+        process_all_files(
+            parquet_files, results, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs
+        )
+        # for i, p in enumerate(parquet_files):
+        #     try:
+        #         if verbose:
+        #             print(f"{p}: {i + 1} of {len(parquet_files)}")
 
-                st = datetime.datetime.now()
-                result = process_one_file(p, results, tolerance, batch_size, n_jobs)
-                results.append(result)
-                result = pd.DataFrame()
-                fn = datetime.datetime.now()
+        #         st = datetime.datetime.now()
+        #         result = process_one_file(p, results, tolerance, batch_size, n_jobs)
+        #         results.append(result)
+        #         result = pd.DataFrame()
+        #         fn = datetime.datetime.now()
 
-                if verbose:
-                    print(f"Processed {p} in {(fn - st).total_seconds() / 60:.2f} minutes")
-                show_mem("After processing")
-                show_container_mem("After processing")
-            except Exception as e:
-                logger.error(
-                    {
-                        "message": f"Error processing parquet files: {type(e).__name__}: {e}",
-                        "traceback": traceback.format_exc(),
-                    }
-                )
-                raise
-            finally:
-                gc.collect()
+        #         if verbose:
+        #             print(f"Processed {p} in {(fn - st).total_seconds() / 60:.2f} minutes")
+        #         show_mem("After processing")
+        #         show_container_mem("After processing")
+        #     except Exception as e:
+        #         logger.error(
+        #             {
+        #                 "message": f"Error processing parquet files: {type(e).__name__}: {e}",
+        #                 "traceback": traceback.format_exc(),
+        #             }
+        #         )
+        #         raise
+        #     finally:
+        #         gc.collect()
 
         # Combine results
         return pd.concat([r for r in results if r is not None], ignore_index=True)
