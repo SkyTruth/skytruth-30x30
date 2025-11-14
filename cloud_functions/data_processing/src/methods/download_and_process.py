@@ -288,26 +288,26 @@ def download_and_process_protected_planet_pas(
                 except Exception as e:
                     logger.info({"message": f"Skipping {path}: {e}"})
                     continue
-    
+
                 for batch in parquet_file.iter_batches(batch_size=batch_size):
                     df = batch.to_pandas()
                     df["geometry"] = df["geometry"].apply(wkb.loads)
                     gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
                     yield gdf
-    
+
             del parquet_file, df, gdf
-    
+
         def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             def calculate_radius(rep_area: float) -> float:
                 return ((rep_area * 1e6) / np.pi) ** 0.5
-    
+
             df = df.to_crs("ESRI:54009")
             df["geometry"] = df.apply(
                 lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
                 axis=1,
             )
             return df.to_crs("EPSG:4326").copy()
-    
+
         def buffer_if_point(row, crs):
             g = row.geometry
             if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
@@ -320,7 +320,7 @@ def download_and_process_protected_planet_pas(
                 buffed = create_buffer(row_gdf)  # your existing function
                 return buffed.geometry.iloc[0]
             return g
-    
+
         def simplify_chunk(chunk, tolerance=0.001):
             try:
                 chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
@@ -341,15 +341,15 @@ def download_and_process_protected_planet_pas(
             finally:
                 del chunk
                 gc.collect()
-    
+
         def process_all_files(paths, results, tolerance=0.001, batch_size=1000, n_jobs=-1):
             total_rows = 0
             for p in paths:
                 parquet_file = pq.ParquetFile(p)
                 total_rows += parquet_file.metadata.num_rows
-        
+
             est_batches = int(np.ceil(total_rows / batch_size))
-        
+
             try:
                 logger.info(
                     {
@@ -358,7 +358,7 @@ def download_and_process_protected_planet_pas(
                         )
                     }
                 )
-        
+
                 results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 20)(
                     delayed(simplify_chunk)(
                         chunk,
@@ -368,10 +368,10 @@ def download_and_process_protected_planet_pas(
                         stream_parquet_chunks(paths, batch_size=batch_size), total=est_batches
                     )
                 )
-        
+
                 logger.info({"message": "Completed parallel processing of parquet files"})
                 return pd.concat([r for r in results if r is not None], ignore_index=True)
-        
+
             except Exception as e:
                 tb = traceback.format_exc()
                 logger.error(
@@ -384,12 +384,12 @@ def download_and_process_protected_planet_pas(
                 raise
             finally:
                 gc.collect()
-        
+
         results = []
         parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
         if not parquet_files:
             raise FileNotFoundError(f"No parquet files found in {pa_dir}")
-        
+
         results = process_all_files(
             parquet_files, results, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs
         )
