@@ -9,7 +9,6 @@ import gcsfs
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import psutil
 import requests
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
@@ -311,4 +310,3 @@ def download_file_with_progress(url: str, filename: str, verbose: bool = True):
 def unzip_file(base_zip_path, destination_folder):
     with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_folder)
-
