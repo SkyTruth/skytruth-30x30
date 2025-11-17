@@ -39,6 +39,7 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
+from src.methods.publisher import monthly_job_publisher
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
@@ -110,6 +111,9 @@ def main(request: Request) -> tuple[str, int]:
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
+            case "publisher":
+                monthly_job_publisher()
+
             # ------------------------------------------------------
             #                    Nearly Static
             # ------------------------------------------------------
