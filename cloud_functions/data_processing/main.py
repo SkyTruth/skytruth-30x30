@@ -1,13 +1,10 @@
 import datetime
-import gc
 import signal
 
 import functions_framework
-import pyarrow as pa
 from flask import Request
 
 from src.core import map_params
-from src.core.commons import show_container_mem, show_mem
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -65,48 +62,9 @@ from src.methods.tileset_processes import (
 )
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
+from src.utils.resource_handling import handle_sigterm, release_memory
 
 logger = Logger()
-
-
-def release_memory(verbose=True):
-    """
-    Free up memory
-    """
-
-    # log memory allocation before releasing memory
-    if verbose:
-        show_mem("Before releasing memory")
-        show_container_mem("Container memory before releasing memory")
-
-    # Run garbage collector
-    gc.collect()
-
-    # Release any unused memory back to the OS, ensuring that
-    # large Arrow buffers (e.g., from Parquet I/O) are freed.
-    pa.default_memory_pool().release_unused()
-
-    # log memory allocation after releasing memory
-    if verbose:
-        show_mem("After releasing memory")
-        show_container_mem("Container memory after releasing memory")
-
-
-def handle_sigterm(signum, frame):
-    """
-    Handle the SIGTERM signal.
-    """
-    # Log an error-level message noting that a SIGTERM was received.
-    logger.error(
-        {
-            "message": "SIGTERM signal received",
-            "file_name": frame.f_code.co_filename,
-            "line_number": frame.f_lineno,
-        }
-    )
-
-    # Free up memory
-    release_memory()
 
 
 # Register SIGTERM handler

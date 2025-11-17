@@ -12,12 +12,10 @@ from io import BytesIO
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pyarrow as pa
+import pyarrow
 import pyarrow.parquet as pq
 import requests
 from joblib import Parallel, delayed
-
-# from pyogrio import read_dataframe
 from shapely import wkb
 from shapely.geometry import MultiPoint, Point, shape
 from tqdm.auto import tqdm
@@ -66,8 +64,8 @@ from src.utils.logger import Logger
 
 logger = Logger()
 
-pa.set_memory_pool(pa.default_memory_pool())
-pa.default_memory_pool().release_unused()
+pyarrow.set_memory_pool(pyarrow.default_memory_pool())
+pyarrow.default_memory_pool().release_unused()
 
 
 def download_mpatlas_country(
@@ -203,7 +201,7 @@ def download_and_process_protected_planet_pas(
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     meta_file_name: str = WDPA_META_FILE_NAME,
-    tolerance: list | tuple = TOLERANCES[0],
+    tolerance: float = TOLERANCES[0],
     verbose: bool = True,
     bucket: str = BUCKET,
     project_id: str = PROJECT,
@@ -250,7 +248,7 @@ def download_and_process_protected_planet_pas(
                 logger.warning({"message": f"Error processing {layer_name}: {e}"})
             finally:
                 gc.collect()
-                pa.default_memory_pool().release_unused()
+                pyarrow.default_memory_pool().release_unused()
                 show_mem("after garbage collection")
                 show_container_mem("after garbage collection")
 
@@ -271,15 +269,17 @@ def download_and_process_protected_planet_pas(
                 # Delete zipped files
                 os.remove(zip_path)
 
-    def remove_file_or_folder(path):
+    def remove_file_or_folder(path, verbose=True):
         """Delete a file or folder (recursively) if it exists."""
         try:
             if os.path.isdir(path):
                 shutil.rmtree(path)
-                print(f"Deleted folder and its contents: {path}")
+                if verbose:
+                    print(f"Deleted folder and its contents: {path}")
             elif os.path.exists(path):
                 os.remove(path)
-                print(f"Deleted file: {path}")
+                if verbose:
+                    print(f"Deleted file: {path}")
             else:
                 return
         except FileNotFoundError:
@@ -287,7 +287,9 @@ def download_and_process_protected_planet_pas(
         except Exception as e:
             print(f"Warning: could not delete {path}: {e}")
 
-    def process_protected_area_geoms(pa_dir, tolerance=0.001, batch_size=1000, n_jobs=-1):
+    def process_protected_area_geoms(
+        pa_dir, tolerance=0.001, batch_size=1000, n_jobs=-1, verbose=True
+    ):
         def stream_parquet_chunks(paths, batch_size=1000):
             """
             Lazily stream GeoDataFrame chunks from one or more Parquet files.
@@ -365,7 +367,7 @@ def download_and_process_protected_planet_pas(
                 del chunk
                 gc.collect()
 
-        def process_all_files(paths, tolerance=0.001, batch_size=1000, n_jobs=-1):
+        def process_all_files(paths, tolerance=0.001, batch_size=1000, n_jobs=-1, verbose=True):
             """
             Process multiple Parquet files in parallel, simplifying geometries
             in streamed chunks while managing memory and logging progress.
@@ -381,13 +383,15 @@ def download_and_process_protected_planet_pas(
             est_batches = int(np.ceil(total_rows / batch_size))
 
             try:
-                logger.info(
-                    {
-                        "message": (
-                            f"Processing parquet files: {total_rows} rows, ~{est_batches} batches"
-                        )
-                    }
-                )
+                if verbose:
+                    logger.info(
+                        {
+                            "message": (
+                                f"Processing parquet files: {total_rows} rows, 
+                                ~{est_batches} batches"
+                            )
+                        }
+                    )
 
                 # Simplify geometries in parallel batches
                 results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 20)(
@@ -399,8 +403,8 @@ def download_and_process_protected_planet_pas(
                         stream_parquet_chunks(paths, batch_size=batch_size), total=est_batches
                     )
                 )
-
-                logger.info({"message": "Completed parallel processing of parquet files"})
+                if verbose:
+                    logger.info({"message": "Completed parallel processing of parquet files"})
 
                 # return concatenated results
                 return pd.concat([r for r in results if r is not None], ignore_index=True)
@@ -421,11 +425,14 @@ def download_and_process_protected_planet_pas(
             raise FileNotFoundError(f"No parquet files found in {pa_dir}")
 
         results = process_all_files(
-            parquet_files, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs
+            parquet_files,
+            tolerance=tolerance,
+            batch_size=batch_size,
+            n_jobs=n_jobs,
+            verbose=verbose,
         )
         return results
 
-    print(f"Visible CPUs: {os.cpu_count()}")
     show_mem("Start")
     show_container_mem("Start")
 
@@ -455,19 +462,19 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print(f"deleting {base_zip_path}")
-    remove_file_or_folder(base_zip_path)
+    remove_file_or_folder(base_zip_path, verbose=verbose)
     show_mem(f"After deleting {base_zip_path}")
     show_container_mem(f"After deleting {base_zip_path}")
 
     if verbose:
         print("processing and simplifying protected area geometries")
     df = process_protected_area_geoms(
-        pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs
+        pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
     )
 
     if verbose:
         print(f"deleting {pa_dir}")
-    remove_file_or_folder(pa_dir)
+    remove_file_or_folder(pa_dir, verbose=verbose)
 
     if df is None:
         logger.error({"message": "process_protected_area_geoms returned None"})
