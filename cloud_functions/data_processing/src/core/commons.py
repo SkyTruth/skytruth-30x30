@@ -1,7 +1,5 @@
 import io
-import os
 import tempfile
-import tracemalloc
 import zipfile
 from io import BytesIO
 
@@ -314,60 +312,3 @@ def unzip_file(base_zip_path, destination_folder):
     with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_folder)
 
-
-def show_mem(label: str = ""):
-    """
-    This reports the memory used by the current process — including
-    Python objects, loaded shared libraries, and native memory allocations
-    (e.g., from NumPy, GEOS, GDAL).
-
-    Args:
-        label (str, optional): A label to include in log
-
-    """
-    process = psutil.Process(os.getpid())
-    rss = process.memory_info().rss / 1e6  # in MB
-    print(f"[{label}] Memory: {rss:.1f} MB")
-
-
-def show_container_mem(label: str = ""):
-    """
-    Print the current container memory usage (in MB) from cgroup metrics.
-
-    Works for both cgroup v1 and v2:
-    - /sys/fs/cgroup/memory/memory.usage_in_bytes  (v1)
-    - /sys/fs/cgroup/memory.current                (v2)
-
-    This reports the *total container memory use*, including native allocations,
-    Arrow/GDAL buffers, page cache, and all processes inside the container.
-    """
-    usage_bytes = None
-
-    # Try cgroup v1 path first
-    v1_path = "/sys/fs/cgroup/memory/memory.usage_in_bytes"
-    v2_path = "/sys/fs/cgroup/memory.current"
-
-    try:
-        with open(v1_path) as f:
-            usage_bytes = int(f.read().strip())
-    except FileNotFoundError:
-        try:
-            with open(v2_path) as f:
-                usage_bytes = int(f.read().strip())
-        except FileNotFoundError:
-            print(f"[{label}] Could not read container memory usage.")
-            return
-
-    usage_gb = usage_bytes / 1e9
-    print(f"[{label}] Container memory: {usage_gb:.1f} GB")
-
-
-def print_peak_memory_allocation(func, *args, **kwargs):
-    tracemalloc.start()
-    try:
-        out = func(*args, **kwargs)
-        _, peak = tracemalloc.get_traced_memory()
-    finally:
-        tracemalloc.stop()
-    print(f"max allocated memory: {peak / (1024**3):.3f} GB")
-    return out

@@ -23,8 +23,6 @@ from tqdm.auto import tqdm
 from src.core.commons import (
     download_file_with_progress,
     download_mpatlas_zone,
-    show_container_mem,
-    show_mem,
     unzip_file,
 )
 from src.core.params import (
@@ -61,6 +59,10 @@ from src.utils.gcp import (
     upload_gdf,
 )
 from src.utils.logger import Logger
+from src.utils.resource_handling import (
+    show_container_mem,
+    show_mem,
+)
 
 logger = Logger()
 
