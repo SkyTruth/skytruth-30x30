@@ -1,6 +1,8 @@
-from google.cloud import pubsub_v1
 import json
 import os
+
+from google.cloud import pubsub_v1
+
 
 def publish_jobs(jobs):
     """Publish job messages to a Pub/Sub topic."""
@@ -18,8 +20,6 @@ def publish_jobs(jobs):
 
 def monthly_job_publisher():
     # Define jobs to queue — each will trigger your Cloud Function or Cloud Run worker
-    jobs = [
-        {"METHOD": "download_mpatlas"}
-    ]
+    jobs = [{"METHOD": "download_mpatlas"}]
 
     publish_jobs(jobs)
