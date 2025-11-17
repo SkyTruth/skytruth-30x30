@@ -369,7 +369,9 @@ def download_and_process_protected_planet_pas(
                 del chunk
                 gc.collect()
 
-        def process_all_files(paths, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True):
+        def process_all_files(
+            paths, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
+        ):
             """
             Process multiple Parquet files in parallel, simplifying geometries
             in streamed chunks while managing memory and logging progress.
