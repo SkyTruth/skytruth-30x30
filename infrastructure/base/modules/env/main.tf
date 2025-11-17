@@ -385,6 +385,31 @@ resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
   member         = "serviceAccount:${google_service_account.scheduler_invoker.email}"
 }
 
+resource "google_service_account" "pubsub_invoker" {
+  account_id   = "${var.project_name}-pubsub_invoker-sa"
+  display_name = "${var.project_name} Job Queue"
+}
+
+resource "google_cloudfunctions_function_iam_member" "pubsub_invoker" {
+  project        = var.project_id
+  region         = var.region
+  cloud_function = module.data_pipes_cloud_function.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "serviceAccount:${google_service_account.pubsub_invoker.email}"
+}
+
+module "job_queue" {
+  source = "../pubsub_queue"
+  topic_name        = "monthly-job-topic"
+  subscription_name = "job-subscription"
+  push_endpoint              = module.data_pipes_cloud_function.function_uri
+  push_service_account_email = google_service_account.pubsub_invoker.email
+  labels = {
+    environment = "prod"
+    purpose     = "job-queue"
+  }
+}
+
 module "download_mpatlas_scheduler" {
   source                   = "../cloud_scheduler"
   name                     = "${var.project_name}-trigger-mpatlas-download-method"
