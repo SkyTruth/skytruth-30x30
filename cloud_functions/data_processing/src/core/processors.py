@@ -316,7 +316,7 @@ def choose_pa_area(df):
     # Choose columns based on MARINE flag
     # TODO: should we just use marine area for marine PAs? This gets messy
     # with coastal PAs that sometimes have _M_AREA=0
-    gis_area = df["GIS_AREA"]
+    gis_area = df["GIS_AREA"] if "GIS_AREA" in df.columns else [None] * len(df)
     rep_area = df["REP_AREA"]
     # gis_area = np.where(df["MARINE"] == 0, df["GIS_AREA"], df["GIS_M_AREA"])
     # rep_area = np.where(df["MARINE"] == 0, df["REP_AREA"], df["REP_M_AREA"])

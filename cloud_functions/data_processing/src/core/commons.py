@@ -1,6 +1,5 @@
 import io
 import tempfile
-import tracemalloc
 import zipfile
 from io import BytesIO
 
@@ -311,14 +310,3 @@ def download_file_with_progress(url: str, filename: str, verbose: bool = True):
 def unzip_file(base_zip_path, destination_folder):
     with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_folder)
-
-
-def print_peak_memory_allocation(func, *args, **kwargs):
-    tracemalloc.start()
-    try:
-        out = func(*args, **kwargs)
-        _, peak = tracemalloc.get_traced_memory()
-    finally:
-        tracemalloc.stop()
-    print(f"max allocated memory: {peak / (1024**3):.3f} GB")
-    return out
