@@ -1,19 +1,28 @@
+import gc
 import glob
 import os
 import shutil
+import subprocess
+import sys
+import textwrap
+import traceback
 import zipfile
 from io import BytesIO
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pyarrow
+import pyarrow.parquet as pq
 import requests
+from joblib import Parallel, delayed
+from shapely import wkb
 from shapely.geometry import MultiPoint, Point, shape
+from tqdm.auto import tqdm
 
 from src.core.commons import (
     download_file_with_progress,
     download_mpatlas_zone,
-    print_peak_memory_allocation,
     unzip_file,
 )
 from src.core.params import (
@@ -50,8 +59,15 @@ from src.utils.gcp import (
     upload_gdf,
 )
 from src.utils.logger import Logger
+from src.utils.resource_handling import (
+    show_container_mem,
+    show_mem,
+)
 
 logger = Logger()
+
+pyarrow.set_memory_pool(pyarrow.default_memory_pool())
+pyarrow.default_memory_pool().release_unused()
 
 
 def download_mpatlas_country(
@@ -182,51 +198,306 @@ def download_protected_seas(
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
-def process_protected_area_geoms(
-    wdpa: gpd.GeoDataFrame,
+def download_and_process_protected_planet_pas(
+    wdpa_url: str = WDPA_URL,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    bucket: str = BUCKET,
-    tolerances: list | tuple = TOLERANCES,
+    meta_file_name: str = WDPA_META_FILE_NAME,
+    tolerance: float = TOLERANCES[0],
     verbose: bool = True,
+    bucket: str = BUCKET,
+    project_id: str = PROJECT,
+    batch_size=1000,
+    n_jobs=-1,
 ):
-    def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        def calculate_radius(rep_area: float) -> float:
-            return ((rep_area * 1e6) / np.pi) ** 0.5
+    def unpack_pas_to_parquet(pa_dir, verbose=True):
+        def unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
+            """
+            unpacks a single shapefile into a parquet using subprocess to effectively
+            clear memory loaded by geopandas
+            """
+            if verbose:
+                print("running subprocess to unpack shapefile into a parquet file")
+            out_path = f"{dir}/{zip_stem}_{layer_name}.parquet"
+            script = textwrap.dedent(f"""
+                import os, glob, geopandas as gpd, gc
 
-        df = df.to_crs("ESRI:54009")
-        df["geometry"] = df.apply(
-            lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
-            axis=1,
-        )
-        return df.to_crs("EPSG:4326").copy()
+                # Read directly from the zip and write to parquet
+                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
+                gdf.to_parquet("{out_path}")
 
-    def buffer_if_point(row, crs):
-        g = row.geometry
-        if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
-            # build a 1-row GeoDataFrame with the same CRS
-            row_gdf = gpd.GeoDataFrame(
-                row.to_frame().T,
-                geometry="geometry",
-                crs=crs,  # 1-row DataFrame
-            )
-            buffed = create_buffer(row_gdf)  # your existing function
-            return buffed.geometry.iloc[0]
-        return g
+                # Clean up GeoDataFrame memory
+                gdf = gpd.GeoDataFrame()
+                del gdf
+                gc.collect()
+            """)
+            subprocess.run([sys.executable, "-c", script], check=True)
+            if verbose:
+                print("subprocess completed")
 
-    def save_simplified_marine_terrestrial_pas(
-        df, tolerance, terrestrial_pa_file_name, marine_pa_file_name
+        def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
+            """
+            unpacks a single shapefile into a parquet using subprocess and releases
+            unused memory
+            """
+
+            out_path = os.path.join(dir, f"{zip_stem}_{layer_name}.parquet")
+            if verbose:
+                logger.info({"message": f"Converting {zip_stem}: {layer_name} to {out_path}"})
+            try:
+                unpack_in_subprocess(zip_stem, zip_path, dir, shp, layer_name, verbose=True)
+            except Exception as e:
+                logger.warning({"message": f"Error processing {layer_name}: {e}"})
+            finally:
+                gc.collect()
+                pyarrow.default_memory_pool().release_unused()
+                show_mem("after garbage collection")
+                show_container_mem("after garbage collection")
+
+        # Define params for unpacking
+        for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
+            zip_stem = os.path.splitext(os.path.basename(zip_path))[0]
+            with zipfile.ZipFile(zip_path) as z:
+                for shp in [n for n in z.namelist() if n.lower().endswith(".shp")]:
+                    _ = unpack_parquet(
+                        zip_stem,
+                        zip_path,
+                        pa_dir,
+                        shp,
+                        shp.replace(".shp", ""),
+                        verbose,
+                    )
+
+                # Delete zipped files
+                os.remove(zip_path)
+
+    def remove_file_or_folder(path, verbose=True):
+        """Delete a file or folder (recursively) if it exists."""
+        try:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+                if verbose:
+                    print(f"Deleted folder and its contents: {path}")
+            elif os.path.exists(path):
+                os.remove(path)
+                if verbose:
+                    print(f"Deleted file: {path}")
+            else:
+                return
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            print(f"Warning: could not delete {path}: {e}")
+
+    def process_protected_area_geoms(
+        pa_dir, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
     ):
-        df = df.copy()
+        def stream_parquet_chunks(paths, batch_size=1000):
+            """
+            Lazily stream GeoDataFrame chunks from one or more Parquet files.
+            """
+            for path in paths:
+                try:
+                    parquet_file = pq.ParquetFile(path)
+                except Exception as e:
+                    logger.info({"message": f"Skipping {path}: {e}"})
+                    continue
 
-        if verbose:
-            print(f"simplifying PAs with tolerance = {tolerance}")
+                for batch in parquet_file.iter_batches(batch_size=batch_size):
+                    df = batch.to_pandas()
+                    df["geometry"] = df["geometry"].apply(wkb.loads)
+                    gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
+                    yield gdf
 
-        if tolerance is not None:
-            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
+            del parquet_file, df, gdf
 
-        df = df.dropna(axis=1, how="all")
+        def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+            """
+            Create circular buffer polygons around point geometries based on a
+            representative area field.
+            """
 
+            def calculate_radius(rep_area: float) -> float:
+                return ((rep_area * 1e6) / np.pi) ** 0.5
+
+            df = df.to_crs("ESRI:54009")
+            df["geometry"] = df.apply(
+                lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+                axis=1,
+            )
+            return df.to_crs("EPSG:4326").copy()
+
+        def buffer_if_point(row, crs):
+            """
+            Conditionally buffer a single point or multipoint geometry based on a
+            representative area value.
+            """
+            g = row.geometry
+            if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
+                # build a 1-row GeoDataFrame with the same CRS
+                row_gdf = gpd.GeoDataFrame(
+                    row.to_frame().T,
+                    geometry="geometry",
+                    crs=crs,  # 1-row DataFrame
+                )
+                buffed = create_buffer(row_gdf)  # your existing function
+                return buffed.geometry.iloc[0]
+            return g
+
+        def simplify_chunk(chunk, tolerance=TOLERANCES[0]):
+            """
+            Simplify and buffer geometries in a GeoDataFrame chunk.
+            """
+
+            try:
+                chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
+                chunk = choose_pa_area(chunk)
+                crs = chunk.crs
+                chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
+                chunk = chunk.loc[chunk.geometry.is_valid]
+                chunk.geometry = chunk.geometry.simplify(
+                    tolerance=tolerance, preserve_topology=True
+                )
+                return chunk
+            except MemoryError as e:
+                logger.error({"message": "MemoryError simplifying chunk", "error": str(e)})
+                return None
+            except Exception as e:
+                logger.warning({"message": f"Error simplifying chunk: {e}"})
+                return None
+            finally:
+                del chunk
+                gc.collect()
+
+        def process_all_files(
+            paths, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
+        ):
+            """
+            Process multiple Parquet files in parallel, simplifying geometries
+            in streamed chunks while managing memory and logging progress.
+            """
+
+            # Count total number of rows across all parquet files
+            total_rows = 0
+            for p in paths:
+                parquet_file = pq.ParquetFile(p)
+                total_rows += parquet_file.metadata.num_rows
+
+            # Estimate how many chunk batches will be processed
+            est_batches = int(np.ceil(total_rows / batch_size))
+
+            try:
+                if verbose:
+                    logger.info(
+                        {
+                            "message": (
+                                f"Processing parquet files: {total_rows} rows, "
+                                f"~{est_batches} batches"
+                            )
+                        }
+                    )
+
+                # Simplify geometries in parallel batches
+                results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 20)(
+                    delayed(simplify_chunk)(
+                        chunk,
+                        tolerance,
+                    )
+                    for chunk in tqdm(
+                        stream_parquet_chunks(paths, batch_size=batch_size), total=est_batches
+                    )
+                )
+                if verbose:
+                    logger.info({"message": "Completed parallel processing of parquet files"})
+
+                # return concatenated results
+                return pd.concat([r for r in results if r is not None], ignore_index=True)
+
+            except Exception as e:
+                tb = traceback.format_exc()
+                logger.error(
+                    {
+                        "message": f"process_all_files failed: {type(e).__name__}: {e}",
+                        "traceback": tb,
+                    }
+                )
+                print(tb)
+                raise
+
+        parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
+        if not parquet_files:
+            raise FileNotFoundError(f"No parquet files found in {pa_dir}")
+
+        results = process_all_files(
+            parquet_files,
+            tolerance=tolerance,
+            batch_size=batch_size,
+            n_jobs=n_jobs,
+            verbose=verbose,
+        )
+        return results
+
+    show_mem("Start")
+    show_container_mem("Start")
+
+    tmp_dir = "/tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
+
+    base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
+    pa_dir = os.path.join(tmp_dir, "wdpa")
+
+    if verbose:
+        print(f"downloading {wdpa_url}")
+    _ = download_file_with_progress(wdpa_url, base_zip_path)
+    show_mem("After download")
+    show_container_mem("After download")
+
+    if verbose:
+        print(f"unzipping {base_zip_path}")
+    _ = unzip_file(base_zip_path, pa_dir)
+    show_mem("After unzipping")
+    show_container_mem("After unzipping")
+
+    if verbose:
+        print("unpacking PA shapefiles into parquet files")
+    unpack_pas_to_parquet(pa_dir, verbose=verbose)
+    show_mem("After unpacking")
+    show_container_mem("After unpacking")
+
+    if verbose:
+        print(f"deleting {base_zip_path}")
+    remove_file_or_folder(base_zip_path, verbose=verbose)
+    show_mem(f"After deleting {base_zip_path}")
+    show_container_mem(f"After deleting {base_zip_path}")
+
+    if verbose:
+        print("processing and simplifying protected area geometries")
+    df = process_protected_area_geoms(
+        pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
+    )
+
+    if verbose:
+        print(f"deleting {pa_dir}")
+    remove_file_or_folder(pa_dir, verbose=verbose)
+
+    if df is None:
+        logger.error({"message": "process_protected_area_geoms returned None"})
+        raise ValueError("Error: process_protected_area_geoms returned None")
+
+    if verbose:
+        print(f"saving wdpa metadata to {meta_file_name}")
+    try:
+        upload_dataframe(
+            bucket,
+            df.drop(columns="geometry"),
+            meta_file_name,
+            project_id=project_id,
+            verbose=verbose,
+        )
+    except Exception as e:
+        logger.error({"message": "Error saving metadata", "error": str(e)})
+
+    try:
         ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
             print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
@@ -238,108 +509,13 @@ def process_protected_area_geoms(
             print(f"saving and duplicating marine PAs to {mar_out_fn}")
         upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
+    except Exception as e:
+        logger.error({"message": "Error saving simplified PAs", "error": str(e)})
 
     if verbose:
-        print("buffering and simplifying geometries")
-
-    wdpa["geometry"] = wdpa.apply(lambda r: buffer_if_point(r, wdpa.crs), axis=1)
-    wdpa = wdpa.loc[wdpa.geometry.is_valid]
-
-    for tolerance in tolerances:
-        _ = print_peak_memory_allocation(
-            save_simplified_marine_terrestrial_pas,
-            wdpa,
-            tolerance,
-            terrestrial_pa_file_name,
-            marine_pa_file_name,
-        )
-
-
-def unpack_pas(pa_dir, verbose):
-    to_append = []
-    for zip_path in glob.glob(os.path.join(pa_dir, "*.zip")):
-        with zipfile.ZipFile(zip_path) as z:
-            shp_paths = [n for n in z.namelist() if n.lower().endswith(".shp")]
-
-            for shp in shp_paths:
-                print(f"Loading layer: {shp}")
-                gdf = gpd.read_file(f"zip://{zip_path}!{shp}")
-                gdf["layer_name"] = shp.replace(".shp", "")
-                to_append.append(gdf)
-        try:
-            os.remove(zip_path)
-            if verbose:
-                print(f"Deleted {zip_path}")
-        except Exception as excep:
-            logger.warning(
-                {"message": f"Warning: failed to delete {zip_path}", "error": str(excep)}
-            )
-
-    if not to_append:
-        raise ValueError(f"No shapefiles found in {pa_dir}")
-    return pd.concat(to_append, axis=0)
-
-
-def download_and_process_protected_planet_pas(
-    wdpa_url: str = WDPA_URL,
-    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
-    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    meta_file_name: str = WDPA_META_FILE_NAME,
-    tolerances: list | tuple = TOLERANCES,
-    verbose: bool = True,
-    bucket: str = BUCKET,
-    project_id: str = PROJECT,
-):
-    tmp_dir = "/tmp"
-    os.makedirs(tmp_dir, exist_ok=True)
-
-    base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
-    pa_dir = os.path.join(tmp_dir, "wdpa")
-
-    if verbose:
-        print(f"downloading {wdpa_url}")
-    _ = print_peak_memory_allocation(download_file_with_progress, wdpa_url, base_zip_path)
-
-    if verbose:
-        print(f"unzipping {base_zip_path}")
-    _ = print_peak_memory_allocation(unzip_file, base_zip_path, pa_dir)
-
-    if verbose:
-        print(f"unpacking PAs from {pa_dir}")
-    pas = print_peak_memory_allocation(unpack_pas, pa_dir, verbose)
-
-    try:
-        shutil.rmtree(pa_dir)
-        if verbose:
-            print(f"Deleted directory {pa_dir}")
-
-    except Exception as excep:
-        logger.warning(
-            {"message": f"Warning: failed to delete directory {pa_dir}", "error": str(excep)}
-        )
-
-    if verbose:
-        print("adding bbox and area columns")
-
-    pas["bbox"] = pas.geometry.apply(lambda g: g.bounds if g is not None else None)
-    pas = choose_pa_area(pas)
-
-    if verbose:
-        print(f"saving wdpa metadata to {meta_file_name}")
-    upload_dataframe(
-        bucket, pas.drop(columns="geometry"), meta_file_name, project_id=project_id, verbose=verbose
-    )
-
-    if verbose:
-        print("processing protected areas")
-    process_protected_area_geoms(
-        pas,
-        terrestrial_pa_file_name=terrestrial_pa_file_name,
-        marine_pa_file_name=marine_pa_file_name,
-        bucket=bucket,
-        tolerances=tolerances,
-        verbose=verbose,
-    )
+        print("Cleaning up")
+    df = pd.DataFrame()
+    del df
 
 
 def download_protected_planet_global(
@@ -452,11 +628,7 @@ def download_protected_planet(
     pp_api_key: str = PP_API_KEY,
     project_id: str = PROJECT,
     wdpa_global_url: str = WDPA_GLOBAL_LEVEL_URL,
-    wdpa_url: str = WDPA_URL,
     api_url: str = WDPA_API_URL,
-    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
-    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    tolerances: list | tuple = TOLERANCES,
     bucket: str = BUCKET,
     verbose: bool = True,
 ) -> None:
@@ -500,15 +672,6 @@ def download_protected_planet(
         If True, prints progress messages. Default is True.
 
     """
-    # download wdpa
-    download_and_process_protected_planet_pas(
-        wdpa_url=wdpa_url,
-        terrestrial_pa_file_name=terrestrial_pa_file_name,
-        marine_pa_file_name=marine_pa_file_name,
-        tolerances=tolerances,
-        verbose=verbose,
-        bucket=bucket,
-    )
 
     # download wdpa global stats
     download_protected_planet_global(
