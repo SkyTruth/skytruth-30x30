@@ -390,15 +390,15 @@ resource "google_service_account" "pubsub_invoker" {
   display_name = "${var.project_name} Job Queue"
 }
 
-resource "google_cloudfunctions_function_iam_member" "pubsub_invoker" {
+resource "google_cloudfunctions2_function_iam_member" "pubsub_invoker" {
   project        = var.gcp_project_id
-  region         = var.gcp_region
+  location       = var.gcp_region
   cloud_function = module.data_pipes_cloud_function.function_name
   role           = "roles/cloudfunctions.invoker"
   member         = "serviceAccount:${google_service_account.pubsub_invoker.email}"
 }
 
-module "job_queue" {
+module "data_pipes_job_queue" {
   source = "../pubsub_queue"
   topic_name        = "job-topic"
   subscription_name = "job-subscription"
