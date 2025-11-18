@@ -1,4 +1,6 @@
+import base64
 import datetime
+import json
 import signal
 
 import functions_framework
@@ -117,6 +119,13 @@ def main(request: Request) -> tuple[str, int]:
 
     try:
         data = request.get_json(silent=True) or {}
+
+        # in case received as a Pub/Sub message
+        if "message" in data:
+            msg = data["message"]
+            data_bytes = base64.b64decode(msg["data"])
+            data = json.loads(data_bytes.decode("utf-8"))
+
         method = data.get("METHOD", "default")
         tolerance = data.get("TOLERANCE", "default")
         project = data.get("PROJECT", "default")

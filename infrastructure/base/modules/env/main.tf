@@ -372,6 +372,12 @@ resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
+resource "google_project_iam_member" "google_pubsub_iam_member" {
+  project = var.gcp_project_id
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
+}
+
 resource "google_service_account" "scheduler_invoker" {
   account_id   = "${var.project_name}-scheduler-sa"
   display_name = "${var.project_name} Cloud Scheduler Invoker"
