@@ -391,16 +391,16 @@ resource "google_service_account" "pubsub_invoker" {
 }
 
 resource "google_cloudfunctions_function_iam_member" "pubsub_invoker" {
-  project        = var.project_id
-  region         = var.region
-  cloud_function = module.data_pipes_cloud_function.name
+  project        = var.gcp_project_id
+  region         = var.gcp_region
+  cloud_function = module.data_pipes_cloud_function.function_name
   role           = "roles/cloudfunctions.invoker"
   member         = "serviceAccount:${google_service_account.pubsub_invoker.email}"
 }
 
 module "job_queue" {
   source = "../pubsub_queue"
-  topic_name        = "monthly-job-topic"
+  topic_name        = "job-topic"
   subscription_name = "job-subscription"
   push_endpoint              = module.data_pipes_cloud_function.function_uri
   push_service_account_email = google_service_account.pubsub_invoker.email
@@ -410,7 +410,7 @@ module "job_queue" {
   }
 }
 
-module "download_mpatlas_scheduler" {
+module "data_pipes_scheduler" {
   source                   = "../cloud_scheduler"
   name                     = "${var.project_name}-trigger-mpatlas-download-method"
   schedule                 = "0 8 1 * *"
@@ -420,34 +420,6 @@ module "download_mpatlas_scheduler" {
     "Content-Type" = "application/json"
   }
   body = jsonencode({
-    METHOD = "download_mpatlas"
-  })
-}
-
-module "download_protected_seas_scheduler" {
-  source                   = "../cloud_scheduler"
-  name                     = "${var.project_name}-trigger-protected-seas-download-method"
-  schedule                 = "0 9 1 * *"
-  target_url               = module.data_pipes_cloud_function.function_uri
-  invoker_service_account  = google_service_account.scheduler_invoker.email
-  headers = {
-    "Content-Type" = "application/json"
-  }
-  body = jsonencode({
-    METHOD = "download_protected_seas"
-  })
-}
-
-module "download_protected_planet_wdpa_scheduler" {
-  source                   = "../cloud_scheduler"
-  name                     = "${var.project_name}-trigger-wdpa-download-method"
-  schedule                 = "0 10 1 * *"
-  target_url               = module.data_pipes_cloud_function.function_uri
-  invoker_service_account  = google_service_account.scheduler_invoker.email
-  headers = {
-    "Content-Type" = "application/json"
-  }
-  body = jsonencode({
-    METHOD = "download_protected_planet_wdpa"
+    METHOD = "publisher"
   })
 }

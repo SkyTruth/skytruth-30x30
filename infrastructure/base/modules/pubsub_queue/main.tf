@@ -5,7 +5,6 @@ resource "google_pubsub_topic" "this" {
 
   # How long to retain unacknowledged messages
   message_retention_duration = var.message_retention_duration
-  message_ordering = true
 }
 
 # Pub/Sub Subscription

@@ -17,3 +17,9 @@ output "subscription_id" {
   description = "ID of the Pub/Sub subscription."
   value       = google_pubsub_subscription.this.id
 }
+
+variable "enable_message_ordering" {
+  description = "Whether to enable ordered message delivery for the subscription."
+  type        = bool
+  default     = true
+}
