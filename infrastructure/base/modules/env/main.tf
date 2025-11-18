@@ -386,7 +386,7 @@ resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
 }
 
 resource "google_service_account" "pubsub_invoker" {
-  account_id   = "${var.project_name}-pubsub_invoker-sa"
+  account_id   = "${var.project_name}-pubsub-invoker-sa"
   display_name = "${var.project_name} Job Queue"
 }
 
