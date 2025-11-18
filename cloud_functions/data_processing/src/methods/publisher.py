@@ -1,7 +1,7 @@
 import json
-import os
 
 from google.cloud import pubsub_v1
+
 
 def publish_jobs(jobs, project_id, topic_id):
     """Publish job messages to a Pub/Sub topic."""
