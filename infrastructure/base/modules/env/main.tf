@@ -412,7 +412,7 @@ module "data_pipes_job_queue" {
 
 module "data_pipes_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "${var.project_name}-trigger-mpatlas-download-method"
+  name                     = "${var.project_name}-trigger-data-pipes-method"
   schedule                 = "0 8 5 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
@@ -420,6 +420,8 @@ module "data_pipes_scheduler" {
     "Content-Type" = "application/json"
   }
   body = jsonencode({
-    METHOD = "publisher"
+    METHOD = "publisher",
+    PROJECT = var.gcp_project_id,
+    TOPIC = module.data_pipes_job_queue.topic_name
   })
 }

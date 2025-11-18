@@ -119,12 +119,14 @@ def main(request: Request) -> tuple[str, int]:
         data = request.get_json(silent=True) or {}
         method = data.get("METHOD", "default")
         tolerance = data.get("TOLERANCE", "default")
+        project = data.get("PROJECT", "default")
+        topic = data.get("TOPIC", "default")
 
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
             case "publisher":
-                monthly_job_publisher()
+                monthly_job_publisher(project, topic)
 
             # ------------------------------------------------------
             #                    Nearly Static

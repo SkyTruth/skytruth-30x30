@@ -3,11 +3,8 @@ import os
 
 from google.cloud import pubsub_v1
 
-
-def publish_jobs(jobs):
+def publish_jobs(jobs, project_id, topic_id):
     """Publish job messages to a Pub/Sub topic."""
-    project_id = os.environ["GCP_PROJECT"]
-    topic_id = "job-topic"
 
     publisher = pubsub_v1.PublisherClient()
     topic_path = publisher.topic_path(project_id, topic_id)
@@ -18,8 +15,8 @@ def publish_jobs(jobs):
         print(f"Published message ID: {future.result()}")
 
 
-def monthly_job_publisher():
+def monthly_job_publisher(project_id, topic_id):
     # Define jobs to queue — each will trigger your Cloud Function or Cloud Run worker
     jobs = [{"METHOD": "download_mpatlas"}]
 
-    publish_jobs(jobs)
+    publish_jobs(jobs, project_id, topic_id)
