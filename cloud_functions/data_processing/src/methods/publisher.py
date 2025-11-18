@@ -3,7 +3,7 @@ import json
 from google.cloud import pubsub_v1
 
 
-def publish_jobs(jobs, project_id, topic_id):
+def publish_jobs(jobs, project_id, topic_id, verbose):
     """Publish job messages to a Pub/Sub topic."""
 
     publisher = pubsub_v1.PublisherClient()
@@ -12,11 +12,12 @@ def publish_jobs(jobs, project_id, topic_id):
     for job in jobs:
         message_data = json.dumps(job).encode("utf-8")
         future = publisher.publish(topic_path, message_data)
-        print(f"Published message ID: {future.result()}")
+        if verbose:
+            print(f"Published message ID: {future.result()}")
 
 
-def monthly_job_publisher(project_id, topic_id):
+def monthly_job_publisher(project_id, topic_id, verbose=True):
     # Define jobs to queue — each will trigger your Cloud Function or Cloud Run worker
-    jobs = [{"METHOD": "download_mpatlas"}]
+    jobs = [{"METHOD": "dry_run"}]
 
-    publish_jobs(jobs, project_id, topic_id)
+    publish_jobs(jobs, project_id, topic_id, verbose)

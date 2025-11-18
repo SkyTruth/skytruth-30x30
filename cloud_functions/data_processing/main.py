@@ -126,7 +126,7 @@ def main(request: Request) -> tuple[str, int]:
             case "dry_run":
                 print("Dry Run Complete!")
             case "publisher":
-                monthly_job_publisher(project, topic)
+                monthly_job_publisher(project, topic, verbose=verbose)
 
             # ------------------------------------------------------
             #                    Nearly Static
@@ -331,5 +331,5 @@ def main(request: Request) -> tuple[str, int]:
 
         fn = datetime.datetime.now()
 
-        print("Process complete!")
+        print(f"METHOD: {method} complete!")
         print(f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes")
