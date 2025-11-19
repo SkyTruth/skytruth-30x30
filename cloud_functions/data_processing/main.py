@@ -136,6 +136,7 @@ def main(request: Request) -> tuple[str, int]:
                 print("Dry Run Complete!")
             case "test_dead_letter":
                 from src.methods.publisher import launch_next_step
+
                 next_method = "dry_run"
                 launch_next_step(next_method, project, topic, verbose=True)
             case "publisher":
