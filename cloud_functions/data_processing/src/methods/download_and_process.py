@@ -158,8 +158,14 @@ def download_mpatlas(
 
     # invoke next step
     if topic is not None:
-        jobs = [{"METHOD": "generate_marine_protection_level_stats_table"}]
-        publish_jobs(jobs, project_id, topic, verbose)
+        next_method = "generate_marine_protection_level_stats_table"
+        try:
+            if verbose:
+                print(f"launching method: {next_method}")
+            jobs = [{"METHOD": next_method}]
+            publish_jobs(jobs, project_id, topic, verbose)
+        except Exception as e:
+            logger.warning({"message": f"Error invoking {next_method}: {e}"})
 
 
 def download_protected_seas(
