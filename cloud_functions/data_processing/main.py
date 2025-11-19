@@ -206,7 +206,7 @@ def main(request: Request) -> tuple[str, int]:
             #     Downloads
             # ------------------
             case "download_mpatlas":
-                download_mpatlas(verbose=verbose)
+                download_mpatlas(verbose=verbose, topic=topic)
 
             case "download_protected_seas":
                 download_protected_seas(verbose=verbose)

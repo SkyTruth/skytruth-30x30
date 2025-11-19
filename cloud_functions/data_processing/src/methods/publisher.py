@@ -19,9 +19,9 @@ def publish_jobs(jobs, project_id, topic_id, verbose):
 def monthly_job_publisher(project_id, topic_id, verbose=True):
     # Define jobs to queue — each will trigger your Cloud Function or Cloud Run worker
     jobs = [
-        # {"METHOD": "download_mpatlas"},
-        {"METHOD": "download_protected_seas"},
-        {"METHOD": "download_protected_planet_country"},
+        {"METHOD": "download_mpatlas"},
+        # {"METHOD": "download_protected_seas"},
+        # {"METHOD": "download_protected_planet_country"},
         # {"METHOD": "download_protected_planet_pas", "TOLERANCE": 0.001},
         # {"METHOD": "download_protected_planet_pas", "TOLERANCE": 0.0001},
     ]

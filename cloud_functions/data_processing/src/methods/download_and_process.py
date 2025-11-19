@@ -52,6 +52,7 @@ from src.core.params import (
     WDPA_URL,
 )
 from src.core.processors import calculate_area, choose_pa_area
+from src.methods.publisher import publish_jobs
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
@@ -97,6 +98,7 @@ def download_mpatlas(
     archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     verbose: bool = True,
     project_id: str = PROJECT,
+    topic: str = None
 ) -> None:
     def safe_shape(geom):
         try:
@@ -153,6 +155,11 @@ def download_mpatlas(
         project_id=project_id,
         verbose=verbose,
     )
+
+    # invoke next step
+    if topic is not None:
+        jobs = [{"METHOD": "generate_marine_protection_level_stats_table"}]
+        publish_jobs(jobs, project_id, topic, verbose)
 
 
 def download_protected_seas(
