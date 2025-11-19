@@ -52,7 +52,6 @@ from src.core.params import (
     WDPA_URL,
 )
 from src.core.processors import calculate_area, choose_pa_area
-from src.methods.publisher import launch_next_step
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
@@ -98,7 +97,6 @@ def download_mpatlas(
     archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     verbose: bool = True,
     project_id: str = PROJECT,
-    topic: str = None,
 ) -> None:
     def safe_shape(geom):
         try:
@@ -156,10 +154,6 @@ def download_mpatlas(
         verbose=verbose,
     )
 
-    # invoke next step
-    next_method = "generate_marine_protection_level_stats_table"
-    launch_next_step(next_method, project_id, topic, verbose=verbose)
-
 
 def download_protected_seas(
     url: str = PROTECTED_SEAS_URL,
@@ -168,8 +162,6 @@ def download_protected_seas(
     archive_filename: str = ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     project: str = PROJECT,
     verbose: bool = True,
-    project_id: str = PROJECT,
-    topic: str = None,
 ) -> None:
     """
     Downloads Protected Seas data from the provided URL, processes it into a DataFrame,
@@ -204,10 +196,6 @@ def download_protected_seas(
         print(f"saving Protected Seas to gs://{bucket}/{archive_filename}")
     upload_dataframe(bucket, data, archive_filename, project_id=project, verbose=verbose)
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
-
-    # invoke next step
-    next_method = "generate_fishing_protection_table"
-    launch_next_step(next_method, project_id, topic, verbose=verbose)
 
 
 def download_and_process_protected_planet_pas(

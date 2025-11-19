@@ -23,6 +23,7 @@ from src.core.params import (
     PROTECTION_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
+    TOLERANCES,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -45,7 +46,7 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
-from src.methods.publisher import monthly_job_publisher
+from src.methods.publisher import monthly_job_publisher, launch_next_step
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
@@ -135,10 +136,8 @@ def main(request: Request) -> tuple[str, int]:
             case "dry_run":
                 print("Dry Run Complete!")
             case "test_dead_letter":
-                from src.methods.publisher import launch_next_step
-
                 next_method = "dry_run"
-                launch_next_step(next_method, project, topic, verbose=True)
+                launch_next_step(next_method, project, topic, verbose=verbose)
             case "publisher":
                 monthly_job_publisher(project, topic, verbose=verbose)
 
@@ -211,18 +210,33 @@ def main(request: Request) -> tuple[str, int]:
             #     Downloads
             # ------------------
             case "download_mpatlas":
-                download_mpatlas(verbose=verbose, project_id=project, topic=topic)
+                download_mpatlas(verbose=verbose)
+                next_method = "generate_marine_protection_level_stats_table"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_protected_seas":
-                download_protected_seas(verbose=verbose, project_id=project, topic=topic)
+                download_protected_seas(verbose=verbose)
+                next_method = "generate_fishing_protection_table"
+                launch_next_step(next_method, project, topic, verbose=verbose)
+
+            case "download_protected_planet_country":
+                download_protected_planet(verbose=verbose)
+                next_method = "generate_protection_coverage_stats_table"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_protected_planet_pas":
                 download_and_process_protected_planet_pas(
                     verbose=verbose, tolerance=tolerance, batch_size=1000
                 )
-
-            case "download_protected_planet_country":
-                download_protected_planet(verbose=verbose)
+                if tolerance == TOLERANCES[0]:
+                    next_method = "generate_protected_areas_table"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "update_marine_protected_areas_tileset"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "update_terrestrial_protected_areas_tileset"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "generate_terrestrial_biome_stats"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             # ------------------
             #   Table updates
@@ -230,25 +244,36 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_terrestrial_biome_stats":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
+                next_method = "generate_habitat_protection_table"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_habitat_protection_table":
-                # NOTE: must be run after generate_terrestrial_biome_stats
                 _ = generate_habitat_protection_table(verbose=verbose)
+                next_method = "update_habitat_protection_stats"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
                 _ = generate_protection_coverage_stats_table(verbose=verbose)
+                next_method = "update_protection_coverage_stats"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_marine_protection_level_stats_table":
                 _ = generate_marine_protection_level_stats_table(verbose=verbose)
+                next_method = "update_mpaa_protection_level_stats"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
+                next_method = "update_fishing_protection_stats"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
 
             case "generate_protected_areas_table":
                 generate_protected_areas_diff_table(verbose=verbose)
+                next_method = "update_protected_areas"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             # ------------------
             #   Database updates
