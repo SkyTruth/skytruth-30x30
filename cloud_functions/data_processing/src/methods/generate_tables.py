@@ -139,6 +139,8 @@ def generate_protected_areas_diff_table(
     if verbose:
         print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
 
+    # return True if the database is being updated, otherwise False
+    return len(db_changes["new"]) + len(db_changes["changed"]) > 0
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
     counts = gdf[key].value_counts()

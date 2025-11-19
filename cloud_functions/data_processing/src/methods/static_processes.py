@@ -477,7 +477,6 @@ def process_mangroves(
     tolerance=0.001,
     batch_size=3000,
 ):
-
     tqdm.pandas()
 
     if verbose:

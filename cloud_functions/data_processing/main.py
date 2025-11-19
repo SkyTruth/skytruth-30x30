@@ -137,6 +137,7 @@ def main(request: Request) -> tuple[str, int]:
                 print("Dry Run Complete!")
             case "test_dead_letter":
                 import time
+
                 time.sleep(30)
                 raise RuntimeError("DLQ test intentional failure")
             case "publisher":
@@ -225,9 +226,6 @@ def main(request: Request) -> tuple[str, int]:
             case "generate_terrestrial_biome_stats_country":
                 generate_terrestrial_biome_stats_country(verbose=verbose)
 
-            case "process_terrestrial_biome_raster":
-                process_terrestrial_biome_raster(verbose=verbose)
-
             # ------------------------------------------------------
             #                    Update monthly
             # ------------------------------------------------------
@@ -299,9 +297,15 @@ def main(request: Request) -> tuple[str, int]:
                 launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_protected_areas_table":
-                generate_protected_areas_diff_table(verbose=verbose)
+                updates = generate_protected_areas_diff_table(verbose=verbose)
                 next_method = "update_protected_areas"
                 launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if updates:
+                    next_method = "update_marine_protected_areas_tileset"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "update_terrestrial_protected_areas_tileset"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             # ------------------
             #   Database updates
