@@ -42,4 +42,4 @@ def launch_next_step(next_method, project_id, topic_id, verbose=True):
             jobs = [{"METHOD": next_method}]
             publish_jobs(jobs, project_id, topic_id, verbose)
         except Exception as e:
-            logger.warning({"message": f"Error invoking {next_method}: {e}"})
+            logger.error({"message": f"Error invoking {next_method}: {e}"})
