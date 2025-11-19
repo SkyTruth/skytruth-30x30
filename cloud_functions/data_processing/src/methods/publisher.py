@@ -6,6 +6,7 @@ from src.utils.logger import Logger
 
 logger = Logger()
 
+
 def publish_jobs(jobs, project_id, topic_id, verbose):
     """Publish job messages to a Pub/Sub topic."""
 
@@ -31,8 +32,8 @@ def monthly_job_publisher(project_id, topic_id, verbose=True):
 
     publish_jobs(jobs, project_id, topic_id, verbose)
 
-def launch_next_step(next_method, project_id, topic_id, verbose=True):
 
+def launch_next_step(next_method, project_id, topic_id, verbose=True):
     if topic_id is not None:
         try:
             if verbose:
