@@ -52,7 +52,7 @@ from src.core.params import (
     WDPA_URL,
 )
 from src.core.processors import calculate_area, choose_pa_area
-from src.methods.publisher import publish_jobs
+from src.methods.publisher import launch_next_step
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
@@ -157,15 +157,8 @@ def download_mpatlas(
     )
 
     # invoke next step
-    if topic is not None:
-        next_method = "generate_marine_protection_level_stats_table"
-        try:
-            if verbose:
-                print(f"launching method: {next_method}")
-            jobs = [{"METHOD": next_method}]
-            publish_jobs(jobs, project_id, topic, verbose)
-        except Exception as e:
-            logger.warning({"message": f"Error invoking {next_method}: {e}"})
+    next_method = "generate_marine_protection_level_stats_table"
+    launch_next_step(next_method, project_id, topic, verbose=True)
 
 
 def download_protected_seas(
