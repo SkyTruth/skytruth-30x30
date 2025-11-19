@@ -21,9 +21,9 @@ from src.core.params import (
     MARINE_REGIONS_URL,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
+    TOLERANCES,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
-    TOLERANCES,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -46,7 +46,7 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
-from src.methods.publisher import monthly_job_publisher, launch_next_step
+from src.methods.publisher import launch_next_step, monthly_job_publisher
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
