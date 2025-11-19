@@ -59,3 +59,8 @@ variable "max_delivery_attempts" {
   type    = number
   default = 5
 }
+
+variable "function_name" {
+  type        = string
+  description = "(Required) A user-defined name of the function. Function names must be unique globally."
+}

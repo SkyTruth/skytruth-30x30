@@ -409,12 +409,13 @@ module "data_pipes_job_queue" {
   source = "../pubsub_queue"
   topic_name        = "job-topic"
   subscription_name = "job-subscription"
+  function_name     = "${var.project_name}-data"
   
   push_endpoint              = module.data_pipes_cloud_function.function_uri
   push_service_account_email = google_service_account.pubsub_invoker.email
 
   enable_dlq            = true
-  max_delivery_attempts = 2
+  max_delivery_attempts = 5
 }
 
 module "data_pipes_scheduler" {

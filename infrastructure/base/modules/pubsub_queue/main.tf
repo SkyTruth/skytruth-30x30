@@ -1,3 +1,5 @@
+data "google_project" "project" {}
+
 # Pub/Sub Topic
 resource "google_pubsub_topic" "topic" {
   name   = var.topic_name
@@ -11,6 +13,31 @@ resource "google_pubsub_topic" "topic" {
 resource "google_pubsub_topic" "dlq" {
   count = var.enable_dlq ? 1 : 0
   name  = "${var.topic_name}-dlq"
+}
+
+resource "google_service_account" "service_account" {
+  account_id   = "${var.function_name}-ps-sa"
+  display_name = "${var.function_name} PubSub Service Account"
+}
+
+resource "google_pubsub_topic_iam_member" "dlq_publisher" {
+  count  = var.enable_dlq ? 1 : 0
+  topic  = google_pubsub_topic.dlq[0].name
+  role   = "roles/pubsub.publisher"
+  member = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+}
+
+resource "google_pubsub_subscription_iam_member" "dlq_subscriber" {
+  count        = var.enable_dlq ? 1 : 0
+  subscription = google_pubsub_subscription.subscription.name
+  role         = "roles/pubsub.subscriber"
+  member       = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+}
+
+resource "google_pubsub_subscription" "dlq_sub" {
+  count = var.enable_dlq ? 1 : 0
+  name  = "${var.topic_name}-dlq-sub"
+  topic = google_pubsub_topic.dlq[0].name
 }
 
 # Pub/Sub Subscription
