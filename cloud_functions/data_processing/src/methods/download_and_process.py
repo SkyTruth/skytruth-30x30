@@ -98,7 +98,7 @@ def download_mpatlas(
     archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     verbose: bool = True,
     project_id: str = PROJECT,
-    topic: str = None
+    topic: str = None,
 ) -> None:
     def safe_shape(geom):
         try:
