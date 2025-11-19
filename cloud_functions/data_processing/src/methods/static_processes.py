@@ -477,8 +477,6 @@ def process_mangroves(
     tolerance=0.001,
     batch_size=3000,
 ):
-    # Pre-process - this should be done only when a new
-    # country_union_reproj or mangrove is downloaded
 
     tqdm.pandas()
 

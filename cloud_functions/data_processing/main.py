@@ -136,8 +136,9 @@ def main(request: Request) -> tuple[str, int]:
             case "dry_run":
                 print("Dry Run Complete!")
             case "test_dead_letter":
-                next_method = "dry_run"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+                import time
+                time.sleep(30)
+                raise RuntimeError("DLQ test intentional failure")
             case "publisher":
                 monthly_job_publisher(project, topic, verbose=verbose)
 
@@ -152,10 +153,8 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-
-            case "process_gadm":
-                # NOTE: download_gadm must have been run first
-                process_gadm_geoms(verbose=verbose)
+                next_method = "process_gadm"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_eezs":
                 download_zip_to_gcs(
@@ -168,6 +167,10 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
+                next_method = "process_eezs"
+                launch_next_step(next_method, project, topic, verbose=verbose)
+                next_method = "process_eez_gadm_unions"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_high_seas":
                 download_zip_to_gcs(
@@ -180,27 +183,50 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
+                next_method = "process_eezs"
+                launch_next_step(next_method, project, topic, verbose=verbose)
+                next_method = "process_eez_gadm_unions"
+                launch_next_step(next_method, project, topic, verbose=verbose)
+
+            case "process_gadm":
+                process_gadm_geoms(verbose=verbose)
+                next_method = "generate_locations_table"
+                launch_next_step(next_method, project, topic, verbose=verbose)
+                next_method = "update_country_tileset"
+                launch_next_step(next_method, project, topic, verbose=verbose)
+                next_method = "update_terrestrial_regions_tileset"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_eezs":
-                # NOTE: download_eezs and download_high_seas must have been run first
                 process_eez_geoms(verbose=verbose)
+                next_method = "generate_locations_table"
+                launch_next_step(next_method, project, topic, verbose=verbose)
+                next_method = "update_eez_tileset"
+                launch_next_step(next_method, project, topic, verbose=verbose)
+                next_method = "update_marine_regions_tileset"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_eez_gadm_unions":
-                # NOTE: Must be run after download_gadm,
-                # process_gadm, download_high_seas, download_eezs, and process_eezs
                 process_eez_gadm_unions(verbose=verbose)
+                next_method = "process_mangroves"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_marine_habitats":
                 download_marine_habitats(verbose=verbose)
 
             case "process_terrestrial_biomes":
                 process_terrestrial_biome_raster(verbose=verbose)
+                next_method = "generate_terrestrial_biome_stats_country"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_mangroves":
                 process_mangroves(verbose=verbose)
 
             case "generate_terrestrial_biome_stats_country":
                 generate_terrestrial_biome_stats_country(verbose=verbose)
+
+            case "process_terrestrial_biome_raster":
+                process_terrestrial_biome_raster(verbose=verbose)
 
             # ------------------------------------------------------
             #                    Update monthly
@@ -269,6 +295,8 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
+                next_method = "update_locations"
+                launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_protected_areas_table":
                 generate_protected_areas_diff_table(verbose=verbose)
