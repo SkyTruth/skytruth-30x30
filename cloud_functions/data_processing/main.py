@@ -120,10 +120,6 @@ def main(request: Request) -> tuple[str, int]:
     try:
         data = request.get_json(silent=True) or {}
 
-        tolerance = data.get("TOLERANCE", "default")
-        project = data.get("PROJECT", "default")
-        topic = data.get("TOPIC", "default")
-
         # in case received as a Pub/Sub message
         if "message" in data:
             msg = data["message"]
@@ -131,6 +127,9 @@ def main(request: Request) -> tuple[str, int]:
             data = json.loads(data_bytes.decode("utf-8"))
 
         method = data.get("METHOD", "default")
+        tolerance = data.get("TOLERANCE", "default")
+        project = data.get("PROJECT", "default")
+        topic = data.get("TOPIC", "default")
 
         match method:
             case "dry_run":

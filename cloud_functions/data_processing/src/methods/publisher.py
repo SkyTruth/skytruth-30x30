@@ -39,7 +39,7 @@ def launch_next_step(next_method, project_id, topic_id, verbose=True):
         try:
             if verbose:
                 print(f"launching method: {next_method}")
-            jobs = [{"METHOD": next_method}]
+            jobs = [{"METHOD": next_method, "PROJECT": project_id, "TOPIC": topic_id}]
             publish_jobs(jobs, project_id, topic_id, verbose)
         except Exception as e:
             logger.error({"message": f"Error invoking {next_method}: {e}"})
