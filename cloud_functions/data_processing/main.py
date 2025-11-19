@@ -119,7 +119,7 @@ def main(request: Request) -> tuple[str, int]:
 
     try:
         data = request.get_json(silent=True) or {}
-        
+
         tolerance = data.get("TOLERANCE", "default")
         project = data.get("PROJECT", "default")
         topic = data.get("TOPIC", "default")
