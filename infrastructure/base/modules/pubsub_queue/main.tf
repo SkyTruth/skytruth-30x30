@@ -7,6 +7,12 @@ resource "google_pubsub_topic" "topic" {
   message_retention_duration = var.message_retention_duration
 }
 
+# Dead Letter Queue Topic
+resource "google_pubsub_topic" "dlq" {
+  count = var.enable_dlq ? 1 : 0
+  name  = "${var.topic_name}-dlq"
+}
+
 # Pub/Sub Subscription
 resource "google_pubsub_subscription" "subscription" {
   name  = var.subscription_name
@@ -15,8 +21,30 @@ resource "google_pubsub_subscription" "subscription" {
   ack_deadline_seconds       = var.ack_deadline_seconds
   retain_acked_messages      = var.retain_acked_messages
   message_retention_duration = var.subscription_retention_duration
+  enable_message_ordering = var.enable_message_ordering
 
-  # push configuration
+  # ---------------------------
+  # Dead Letter Queue (optional)
+  # ---------------------------
+  dynamic "dead_letter_policy" {
+    for_each = var.enable_dlq ? [1] : []
+    content {
+      dead_letter_topic     = google_pubsub_topic.dlq[0].id
+      max_delivery_attempts = var.max_delivery_attempts
+    }
+  }
+
+  # ---------------------------
+  # Retry Settings
+  # ---------------------------
+  retry_policy {
+    minimum_backoff = "10s"
+    maximum_backoff = "600s"
+  }
+
+  # ---------------------------
+  # Push Configuration
+  # ---------------------------
   dynamic "push_config" {
     for_each = var.push_endpoint != null ? [1] : []
     content {
@@ -28,5 +56,4 @@ resource "google_pubsub_subscription" "subscription" {
     }
   }
 
-  enable_message_ordering = var.enable_message_ordering
 }

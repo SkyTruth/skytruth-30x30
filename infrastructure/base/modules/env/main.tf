@@ -404,16 +404,17 @@ resource "google_cloudfunctions2_function_iam_member" "pubsub_invoker" {
   member         = "serviceAccount:${google_service_account.pubsub_invoker.email}"
 }
 
+
 module "data_pipes_job_queue" {
   source = "../pubsub_queue"
   topic_name        = "job-topic"
   subscription_name = "job-subscription"
+  
   push_endpoint              = module.data_pipes_cloud_function.function_uri
   push_service_account_email = google_service_account.pubsub_invoker.email
-  labels = {
-    environment = "prod"
-    purpose     = "job-queue"
-  }
+
+  enable_dlq            = true
+  max_delivery_attempts = 2
 }
 
 module "data_pipes_scheduler" {

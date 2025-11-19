@@ -134,6 +134,9 @@ def main(request: Request) -> tuple[str, int]:
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
+            case "test_dead_letter":
+                print("Intentionally failing to test DLQ routing")
+                raise RuntimeError("This is a deliberate failure for DLQ testing")
             case "publisher":
                 monthly_job_publisher(project, topic, verbose=verbose)
 

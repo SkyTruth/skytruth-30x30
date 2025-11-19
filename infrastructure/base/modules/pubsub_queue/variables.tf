@@ -49,3 +49,13 @@ variable "push_service_account_email" {
   type        = string
   default     = null
 }
+
+variable "enable_dlq" {
+  type    = bool
+  default = false
+}
+
+variable "max_delivery_attempts" {
+  type    = number
+  default = 5
+}
