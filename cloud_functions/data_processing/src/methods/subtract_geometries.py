@@ -78,28 +78,28 @@ def update_total_area_minus_pa(bucket: str,
     """
     start = time.time()
 
-    # Total area: GADM (terrestrial) or EEZ (marine)
+    # Total areas: GADM (terrestrial) or EEZ (marine)
     total_area = read_json_df(
         bucket_name=bucket,
         filename=total_area_file.replace('.geojson', f'_{tolerance}.geojson'),
         verbose=verbose
     )
-    # Protected area: PA (terrestrial) or MPA (marine)
+    # Protected areas: PA (terrestrial) or MPA (marine)
     pa = read_json_df(
         bucket_name=bucket,
         filename=pa_file.replace('.geojson', f'_{tolerance}.geojson'),
         verbose=verbose
     )
 
-    # Keep only polygon records
+    # Keep only polygon records and clean geometries
     pa = pa[pa.geometry.geom_type.isin(['MultiPolygon', 'Polygon'])]
-
-    # Clean geometries
     pa.geometry = pa.geometry.make_valid()
+
+    # Force Antarctica PAs to ABNJ (areas beyond national jurisdiction)
+    pa.loc[pa["ISO3"] == "ATA", "ISO3"] = "ABNJ"
 
     # Subtract protected area from each country in parallel
     countries = total_area['location'].unique().tolist()
-
     results = Parallel(n_jobs=4, backend='loky')(
         delayed(process_country)(
             country,
@@ -108,7 +108,6 @@ def update_total_area_minus_pa(bucket: str,
         )
         for country in tqdm(countries)
     )
-
     total_area_minus_pa = pd.concat(results).reset_index()
 
     if verbose:
