@@ -135,8 +135,9 @@ def main(request: Request) -> tuple[str, int]:
             case "dry_run":
                 print("Dry Run Complete!")
             case "test_dead_letter":
-                print("Intentionally failing to test DLQ routing")
-                raise RuntimeError("This is a deliberate failure for DLQ testing")
+                from src.methods.publisher import launch_next_step
+                next_method = "dry_run"
+                launch_next_step(next_method, project, topic, verbose=True)
             case "publisher":
                 monthly_job_publisher(project, topic, verbose=verbose)
 
