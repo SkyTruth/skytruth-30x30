@@ -211,10 +211,10 @@ def main(request: Request) -> tuple[str, int]:
             #     Downloads
             # ------------------
             case "download_mpatlas":
-                download_mpatlas(verbose=verbose, topic=topic)
+                download_mpatlas(verbose=verbose, project_id=project, topic=topic)
 
             case "download_protected_seas":
-                download_protected_seas(verbose=verbose)
+                download_protected_seas(verbose=verbose, project_id=project, topic=topic)
 
             case "download_protected_planet_pas":
                 download_and_process_protected_planet_pas(

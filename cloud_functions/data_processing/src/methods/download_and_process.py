@@ -158,7 +158,7 @@ def download_mpatlas(
 
     # invoke next step
     next_method = "generate_marine_protection_level_stats_table"
-    launch_next_step(next_method, project_id, topic, verbose=True)
+    launch_next_step(next_method, project_id, topic, verbose=verbose)
 
 
 def download_protected_seas(
@@ -168,6 +168,8 @@ def download_protected_seas(
     archive_filename: str = ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     project: str = PROJECT,
     verbose: bool = True,
+    project_id: str = PROJECT,
+    topic: str = None,
 ) -> None:
     """
     Downloads Protected Seas data from the provided URL, processes it into a DataFrame,
@@ -202,6 +204,10 @@ def download_protected_seas(
         print(f"saving Protected Seas to gs://{bucket}/{archive_filename}")
     upload_dataframe(bucket, data, archive_filename, project_id=project, verbose=verbose)
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
+
+    # invoke next step
+    next_method = "generate_fishing_protection_table"
+    launch_next_step(next_method, project_id, topic, verbose=verbose)
 
 
 def download_and_process_protected_planet_pas(
