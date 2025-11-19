@@ -129,7 +129,7 @@ def main(request: Request) -> tuple[str, int]:
         method = data.get("METHOD", "default")
         tolerance = data.get("TOLERANCE", "default")
         project = data.get("PROJECT", "default")
-        topic = data.get("TOPIC", "default")
+        topic = data.get("TOPIC", None)
 
         match method:
             case "dry_run":
