@@ -1,5 +1,7 @@
 import functions_framework
 from flask import Request
+import os
+os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
 
 from src.core import map_params
 from src.core.params import (
