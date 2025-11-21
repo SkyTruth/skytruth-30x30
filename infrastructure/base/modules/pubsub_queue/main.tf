@@ -48,7 +48,7 @@ resource "google_pubsub_subscription" "subscription" {
   ack_deadline_seconds       = var.ack_deadline_seconds
   retain_acked_messages      = var.retain_acked_messages
   message_retention_duration = var.subscription_retention_duration
-  enable_message_ordering = var.enable_message_ordering
+  enable_message_ordering    = var.enable_message_ordering
 
   # ---------------------------
   # Dead Letter Queue (optional)

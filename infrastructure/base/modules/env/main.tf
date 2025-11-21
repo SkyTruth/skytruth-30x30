@@ -413,6 +413,7 @@ module "data_pipes_job_queue" {
   
   push_endpoint              = module.data_pipes_cloud_function.function_uri
   push_service_account_email = google_service_account.pubsub_invoker.email
+  enable_message_ordering    = true
 
   enable_dlq            = true
   max_delivery_attempts = 5

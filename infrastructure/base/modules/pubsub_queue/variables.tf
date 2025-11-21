@@ -26,6 +26,12 @@ variable "subscription_retention_duration" {
   default     = "604800s"
 }
 
+variable "enable_message_ordering" {
+  description = "Whether to enable message ordering on the Pub/Sub subscription."
+  type        = bool
+  default     = false
+}
+
 variable "ack_deadline_seconds" {
   description = "The time (in seconds) that the subscriber has to acknowledge messages."
   type        = number
