@@ -10,7 +10,8 @@ logger = Logger()
 def publish_jobs(jobs, project_id, topic_id, verbose):
     """Publish job messages to a Pub/Sub topic."""
 
-    publisher = pubsub_v1.PublisherClient()
+    publisher_options = pubsub_v1.types.PublisherOptions(enable_message_ordering=True)
+    publisher = pubsub_v1.PublisherClient(publisher_options=publisher_options)
     topic_path = publisher.topic_path(project_id, topic_id)
 
     for job in jobs:
