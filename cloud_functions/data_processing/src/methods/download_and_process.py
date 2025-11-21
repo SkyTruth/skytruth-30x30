@@ -318,21 +318,12 @@ def download_and_process_protected_planet_pas(
             """
 
             def calculate_radius(rep_area: float, geom) -> float:
-                if geom.geom_type == "MultiPoint":
-                    npts = len(geom.geoms)
-                else:
-                    npts = 1
-                
+                npts = len(geom.geoms) if geom.geom_type == "MultiPoint" else 1
                 return (((rep_area / npts) * 1e6) / np.pi) ** 0.5
 
             df = df.to_crs("ESRI:54009")
             df["geometry"] = df.apply(
-                lambda row: 
-                row.geometry.buffer(
-                    calculate_radius(
-                        row["REP_AREA"], row["geometry"]
-                        )
-                    ),
+                lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"], row["geometry"])),
                 axis=1,
             )
             return df.to_crs("EPSG:4326").copy()
@@ -363,9 +354,8 @@ def download_and_process_protected_planet_pas(
                 chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
 
                 # Remove the unreliable reported area of MAB reserves
-                mask = (
-                    (chunk["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") &
-                    (chunk.geometry.geom_type == "Point")
+                mask = (chunk["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") & (
+                    chunk.geometry.geom_type == "Point"
                 )
                 chunk.loc[mask, ["REP_AREA", "REP_M_AREA"]] = 0
 
