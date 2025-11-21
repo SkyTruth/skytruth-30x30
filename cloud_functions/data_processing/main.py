@@ -6,7 +6,6 @@ import signal
 import functions_framework
 from flask import Request
 
-from src.core import map_params
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -22,8 +21,6 @@ from src.core.params import (
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCES,
-    WDPA_MARINE_FILE_NAME,
-    WDPA_TERRESTRIAL_FILE_NAME,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -57,13 +54,6 @@ from src.methods.static_processes import (
     process_terrestrial_biome_raster,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
-from src.methods.tileset_processes import (
-    create_and_update_country_tileset,
-    create_and_update_eez_tileset,
-    create_and_update_marine_regions_tileset,
-    create_and_update_protected_area_tileset,
-    create_and_update_terrestrial_regions_tileset,
-)
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
