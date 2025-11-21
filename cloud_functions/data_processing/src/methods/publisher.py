@@ -15,7 +15,7 @@ def publish_jobs(jobs, project_id, topic_id, verbose):
 
     for job in jobs:
         message_data = json.dumps(job).encode("utf-8")
-        future = publisher.publish(topic_path, message_data, ordering_key="default"))
+        future = publisher.publish(topic_path, message_data, ordering_key="default")
         if verbose:
             print(f"Published message ID: {future.result()}")
 
