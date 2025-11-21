@@ -302,10 +302,11 @@ def main(request: Request) -> tuple[str, int]:
                 launch_next_step(next_method, project, topic, verbose=verbose)
 
                 if updates:
-                    next_method = "update_marine_protected_areas_tileset"
-                    launch_next_step(next_method, project, topic, verbose=verbose)
-                    next_method = "update_terrestrial_protected_areas_tileset"
-                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    pass
+                    # next_method = "update_marine_protected_areas_tileset"
+                    # launch_next_step(next_method, project, topic, verbose=verbose)
+                    # next_method = "update_terrestrial_protected_areas_tileset"
+                    # launch_next_step(next_method, project, topic, verbose=verbose)
 
             # ------------------
             #   Database updates
@@ -354,39 +355,39 @@ def main(request: Request) -> tuple[str, int]:
             #   Map Tilesets Updates
             # ------------------
 
-            case "update_eez_tileset":
-                create_and_update_eez_tileset(verbose=verbose)
+            # case "update_eez_tileset":
+            #     create_and_update_eez_tileset(verbose=verbose)
 
-            case "update_marine_regions_tileset":
-                create_and_update_marine_regions_tileset(verbose=verbose)
+            # case "update_marine_regions_tileset":
+            #     create_and_update_marine_regions_tileset(verbose=verbose)
 
-            case "update_country_tileset":
-                create_and_update_country_tileset(verbose=verbose)
+            # case "update_country_tileset":
+            #     create_and_update_country_tileset(verbose=verbose)
 
-            case "update_terrestrial_regions_tileset":
-                create_and_update_terrestrial_regions_tileset(verbose=verbose)
+            # case "update_terrestrial_regions_tileset":
+            #     create_and_update_terrestrial_regions_tileset(verbose=verbose)
 
-            case "update_marine_protected_areas_tileset":
-                create_and_update_protected_area_tileset(
-                    bucket=BUCKET,
-                    source_file=WDPA_MARINE_FILE_NAME,
-                    tileset_file=map_params.MARINE_PA_TILESET_FILE,
-                    tileset_id=map_params.MARINE_PA_TILESET_ID,
-                    display_name=map_params.MARINE_PA_TILESET_NAME,
-                    tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose,
-                )
+            # case "update_marine_protected_areas_tileset":
+            #     create_and_update_protected_area_tileset(
+            #         bucket=BUCKET,
+            #         source_file=WDPA_MARINE_FILE_NAME,
+            #         tileset_file=map_params.MARINE_PA_TILESET_FILE,
+            #         tileset_id=map_params.MARINE_PA_TILESET_ID,
+            #         display_name=map_params.MARINE_PA_TILESET_NAME,
+            #         tolerance=map_params.WDPA_TOLERANCE,
+            #         verbose=verbose,
+            #     )
 
-            case "update_terrestrial_protected_areas_tileset":
-                create_and_update_protected_area_tileset(
-                    bucket=BUCKET,
-                    source_file=WDPA_TERRESTRIAL_FILE_NAME,
-                    tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
-                    tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
-                    display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
-                    tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose,
-                )
+            # case "update_terrestrial_protected_areas_tileset":
+            #     create_and_update_protected_area_tileset(
+            #         bucket=BUCKET,
+            #         source_file=WDPA_TERRESTRIAL_FILE_NAME,
+            #         tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
+            #         tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
+            #         display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
+            #         tolerance=map_params.WDPA_TOLERANCE,
+            #         verbose=verbose,
+            #     )
 
             case _:
                 print(f"METHOD: {method} not a valid option")
