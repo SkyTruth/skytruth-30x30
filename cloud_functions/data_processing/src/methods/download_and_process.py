@@ -311,18 +311,28 @@ def download_and_process_protected_planet_pas(
 
             del parquet_file, df, gdf
 
-        def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        def create_point_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             """
             Create circular buffer polygons around point geometries based on a
             representative area field.
             """
 
-            def calculate_radius(rep_area: float) -> float:
-                return ((rep_area * 1e6) / np.pi) ** 0.5
+            def calculate_radius(rep_area: float, geom) -> float:
+                if geom.geom_type == "MultiPoint":
+                    npts = len(geom.geoms)
+                else:
+                    npts = 1
+                
+                return (((rep_area / npts) * 1e6) / np.pi) ** 0.5
 
             df = df.to_crs("ESRI:54009")
             df["geometry"] = df.apply(
-                lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+                lambda row: 
+                row.geometry.buffer(
+                    calculate_radius(
+                        row["REP_AREA"], row["geometry"]
+                        )
+                    ),
                 axis=1,
             )
             return df.to_crs("EPSG:4326").copy()
@@ -340,7 +350,7 @@ def download_and_process_protected_planet_pas(
                     geometry="geometry",
                     crs=crs,  # 1-row DataFrame
                 )
-                buffed = create_buffer(row_gdf)  # your existing function
+                buffed = create_point_buffer(row_gdf)  # your existing function
                 return buffed.geometry.iloc[0]
             return g
 
@@ -351,6 +361,14 @@ def download_and_process_protected_planet_pas(
 
             try:
                 chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
+
+                # Remove the unreliable reported area of MAB reserves
+                mask = (
+                    (chunk["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") &
+                    (chunk.geometry.geom_type == "Point")
+                )
+                chunk.loc[mask, ["REP_AREA", "REP_M_AREA"]] = 0
+
                 chunk = choose_pa_area(chunk)
                 crs = chunk.crs
                 chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
