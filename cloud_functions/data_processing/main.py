@@ -245,12 +245,12 @@ def main(request: Request) -> tuple[str, int]:
                 if tolerance == TOLERANCES[0]:
                     next_method = "generate_protected_areas_table"
                     launch_next_step(next_method, project, topic, verbose=verbose)
-                    next_method = "update_marine_protected_areas_tileset"
-                    launch_next_step(next_method, project, topic, verbose=verbose)
-                    next_method = "update_terrestrial_protected_areas_tileset"
-                    launch_next_step(next_method, project, topic, verbose=verbose)
                     next_method = "generate_terrestrial_biome_stats"
                     launch_next_step(next_method, project, topic, verbose=verbose)
+                    # next_method = "update_marine_protected_areas_tileset"
+                    # launch_next_step(next_method, project, topic, verbose=verbose)
+                    # next_method = "update_terrestrial_protected_areas_tileset"
+                    # launch_next_step(next_method, project, topic, verbose=verbose)
 
             # ------------------
             #   Table updates

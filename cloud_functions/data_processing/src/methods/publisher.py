@@ -26,7 +26,7 @@ def monthly_job_publisher(project_id, topic_id, verbose=True):
     try:
         jobs = [
             # # {"METHOD": "test_dead_letter", "PROJECT": project_id, "TOPIC": topic_id},
-            {"METHOD": "download_mpatlas", "PROJECT": project_id, "TOPIC": topic_id},
+            # {"METHOD": "download_mpatlas", "PROJECT": project_id, "TOPIC": topic_id},
             # {"METHOD": "download_protected_seas", "PROJECT": project_id, "TOPIC": topic_id},
             # {
             #     "METHOD": "download_protected_planet_country",
