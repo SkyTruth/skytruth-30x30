@@ -1,7 +1,6 @@
 import datetime
 import os
 
-
 today_formatted = datetime.datetime.today().strftime("%b%Y")
 
 # ------------------------
