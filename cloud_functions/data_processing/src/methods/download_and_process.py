@@ -497,7 +497,7 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print("Renaming variables to match old format")
-    match_old_pa_naming_convantion(df)
+    df = match_old_pa_naming_convantion(df)
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")

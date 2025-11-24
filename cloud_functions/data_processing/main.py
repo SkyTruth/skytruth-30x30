@@ -382,6 +382,8 @@ def main(request: Request) -> tuple[str, int]:
             case _:
                 print(f"METHOD: {method} not a valid option")
 
+        print(f"METHOD: {method} complete!")
+
         return "OK", 200
     except Exception as e:
         logger.error({"message": f"METHOD {method} failed", "error": str(e)})
