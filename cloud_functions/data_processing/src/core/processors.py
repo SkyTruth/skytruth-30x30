@@ -29,7 +29,7 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
         }
     )
     df["PA_DEF"] = df["SITE_TYPE"].map({"OECM": 0, "PA": 1})
-    df["MARINE"] = df["REALM"].map({"TERRESTRIAL": 0, "MARINE": 1, "COASTAL": 2})
+    df["MARINE"] = df["REALM"].map({"Terrestrial": 0, "Marine": 1, "Coastal": 2})
 
     df = df.drop(
         columns=[
@@ -126,12 +126,12 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
           the reference dataset, rounded to 2 decimals and capped at 100.
     """
     # build fast lookup dicts for area by location
-    print("Make eez lok up", type(eez["location"]), type(eez["location"]))
+    print("Make eez look up", type(eez["location"]), type(eez["location"]))
     eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"], strict=False))
     eez_lookup["ATA"] = eez_lookup["ABNJ"]
     eez_lookup["HKG"] = eez_lookup["CHN"]
 
-    print("Make gadem lok up", type(gadm["location"]), type(gadm["location"]))
+    print("Make gadem look up", type(gadm["location"]), type(gadm["location"]))
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
     gadm_lookup["ATA"] = gadm_lookup["ABNJ"]
 
