@@ -29,7 +29,7 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
         }
     )
     df["PA_DEF"] = df["SITE_TYPE"].map({"OECM": 0, "PA": 1})
-    df["MARINE"] = df["REALM"].map({"Terrestrial": 0, "Marine": 1, "Coastal": 2})
+    df["MARINE"] = df["REALM"].map({"Terrestrial": "0", "Marine": "1", "Coastal": "2"})
 
     df = df.drop(
         columns=[
