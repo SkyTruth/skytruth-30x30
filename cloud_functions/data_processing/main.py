@@ -122,6 +122,8 @@ def main(request: Request) -> tuple[str, int]:
         project = data.get("PROJECT", "default")
         topic = data.get("TOPIC", None)
 
+        print(f"Starting METHOD: {method}")
+
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
