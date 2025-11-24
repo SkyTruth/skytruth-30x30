@@ -19,7 +19,7 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
     https://www.protectedplanet.net/en/news-and-stories/introducing-the-wdpca
     """
 
-    df.replace(
+    df = df.rename(
         columns={
             "WDPAID": "SITE_ID",
             "WDPA_PID": "SITE_PID",
@@ -31,7 +31,7 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
     df["PA_DEF"] = df["SITE_TYPE"].map({"OECM": 0, "PA": 1})
     df["MARINE"] = df["REALM"].map({"TERRESTRIAL": 0, "MARINE": 1, "COASTAL": 2})
 
-    df.drop(
+    df = df.drop(
         columns=[
             "SITE_TYPE",
             "REALM",
