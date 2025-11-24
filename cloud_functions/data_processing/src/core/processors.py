@@ -21,8 +21,8 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
 
     df = df.rename(
         columns={
-            "WDPAID": "SITE_ID",
-            "WDPA_PID": "SITE_PID",
+            "SITE_ID": "WDPAID",
+            "SITE_PID": "WDPA_PID",
             "NAME_ENG": "NAME",
             "NAME": "ORIG_NAME",
             "PRNT_ISO3": "PARENT_ISO3",
@@ -37,6 +37,7 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
             "REALM",
         ]
     )
+    return df
 
 
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
