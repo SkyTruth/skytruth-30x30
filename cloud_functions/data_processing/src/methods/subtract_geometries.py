@@ -2,9 +2,8 @@ import pandas as pd
 import geopandas as gpd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
-import time
 from src.utils.gcp import (
-    read_json_df,   # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame.
+    read_json_df,       # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame.
     upload_gdf_zip      # Saves a GeoDataFrame to GCS as a .geojson file.
 )
 from src.utils.logger import Logger
@@ -36,10 +35,10 @@ def process_country(country: str,
         country_area = boundary_gdf[boundary_gdf['location'] == country]
         country_pa = pa_gdf[pa_gdf['ISO3'].str.contains(country)].dissolve()
         if country_pa.empty:
-            # If no protected areas in boundary, return original boundary
+            # If no protected areas, return original boundary
             return country_area
         else:
-            # If protected areas in boundary, return original boundary with protected areas removed
+            # If protected areas found, return original boundary with protected areas removed
             return country_area.overlay(country_pa, how='difference')
     
     except Exception as e:
@@ -76,7 +75,6 @@ def update_total_area_minus_pa(bucket: str,
     -------
         GeoDataFrame saved to GCS as a zipped shapefile.
     """
-    start = time.time()
 
     # Total areas: GADM (terrestrial) or EEZ (marine)
     total_area = read_json_df(
@@ -95,7 +93,7 @@ def update_total_area_minus_pa(bucket: str,
     pa = pa[pa.geometry.geom_type.isin(['MultiPolygon', 'Polygon'])]
     pa.geometry = pa.geometry.make_valid()
 
-    # Force Antarctica PAs to ABNJ (areas beyond national jurisdiction)
+    # Label Antarctica PAs as ABNJ (areas beyond national jurisdiction)
     pa.loc[pa["ISO3"] == "ATA", "ISO3"] = "ABNJ"
 
     # Subtract protected area from each country in parallel
@@ -112,8 +110,6 @@ def update_total_area_minus_pa(bucket: str,
 
     if verbose:
         print(f'Output file has {len(total_area_minus_pa)} rows.')
-        end = time.time()
-        print(f'Time: {end - start} seconds')
 
     # Save to GCS as zipped shapefile
     upload_gdf_zip(
