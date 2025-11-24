@@ -511,6 +511,7 @@ def download_and_process_protected_planet_pas(
         )
     except Exception as e:
         logger.error({"message": "Error saving metadata", "error": str(e)})
+        raise e
 
     try:
         ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
@@ -526,6 +527,7 @@ def download_and_process_protected_planet_pas(
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
     except Exception as e:
         logger.error({"message": "Error saving simplified PAs", "error": str(e)})
+        raise e
 
     if verbose:
         print("Cleaning up")
