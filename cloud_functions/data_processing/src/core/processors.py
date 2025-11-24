@@ -13,6 +13,32 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
+def match_old_pa_naming_convantion(df: pd.DataFrame):
+    """
+    Update PA naming convention to reflect changes in:
+    https://www.protectedplanet.net/en/news-and-stories/introducing-the-wdpca
+    """
+
+    df.replace(
+        columns={
+            "WDPAID": "SITE_ID",
+            "WDPA_PID": "SITE_PID",
+            "NAME_ENG": "NAME",
+            "NAME": "ORIG_NAME",
+            "PRNT_ISO3": "PARENT_ISO3",
+        }
+    )
+    df["PA_DEF"] = df["SITE_TYPE"].map({"OECM": 0, "PA": 1})
+    df["MARINE"] = df["REALM"].map({"TERRESTRIAL": 0, "MARINE": 1, "COASTAL": 2})
+
+    df.drop(
+        columns=[
+            "SITE_TYPE",
+            "REALM",
+        ]
+    )
+
+
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
     """
     Add a set of constant columns to a DataFrame.

@@ -51,7 +51,7 @@ from src.core.params import (
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_URL,
 )
-from src.core.processors import calculate_area, choose_pa_area
+from src.core.processors import calculate_area, choose_pa_area, match_old_pa_naming_convantion
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
@@ -456,7 +456,10 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print(f"downloading {wdpa_url}")
-    _ = download_file_with_progress(wdpa_url, base_zip_path)
+    status = download_file_with_progress(wdpa_url, base_zip_path)
+    if not status:
+        raise ValueError(f"Failed to download {wdpa_url}")
+
     show_mem("After download")
     show_container_mem("After download")
 
@@ -491,6 +494,10 @@ def download_and_process_protected_planet_pas(
     if df is None:
         logger.error({"message": "process_protected_area_geoms returned None"})
         raise ValueError("Error: process_protected_area_geoms returned None")
+
+    if verbose:
+        print("Renaming variables to match old format")
+    match_old_pa_naming_convantion(df)
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")
