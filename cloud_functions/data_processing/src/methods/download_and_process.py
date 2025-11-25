@@ -336,11 +336,7 @@ def download_and_process_protected_planet_pas(
 
             # Get buffer area - do not buffer if MAB reserve as reported
             # area can be unreliable
-            rep_area = (
-                row.REP_AREA 
-                if row["DESIG_ENG"]!="UNESCO-MAB Biosphere Reserve" 
-                else 0
-            )
+            rep_area = row.REP_AREA if row["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve" else 0
 
             g = row.geometry
             if rep_area > 0 and isinstance(g, (Point, MultiPoint)):
@@ -517,11 +513,10 @@ def download_and_process_protected_planet_pas(
         raise e
 
     try:
-
         # Remove non-OECM MAB reserves (matching Protected Planet's methods)
         df = df[
-            (df['DESIG_ENG']!="UNESCO-MAB Biosphere Reserve" ) |
-            (df['DESIG_ENG']=="UNESCO-MAB Biosphere Reserve" ) & (df['PA_DEF']==0)
+            (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve")
+            | (df["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") & (df["PA_DEF"] == 0)
         ]
 
         # Save terrestrial PAs
