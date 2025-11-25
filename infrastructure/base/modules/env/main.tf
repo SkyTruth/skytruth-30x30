@@ -430,6 +430,7 @@ module "data_pipes_scheduler" {
   }
   body = jsonencode({
     METHOD = "publisher",
+    TRIGGER_NEXT = true,
     PROJECT = var.gcp_project_id,
     TOPIC = module.data_pipes_job_queue.topic_name
   })

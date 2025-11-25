@@ -128,6 +128,7 @@ def main(request: Request) -> tuple[str, int]:
             data = json.loads(data_bytes.decode("utf-8"))
 
         method = data.get("METHOD", "default")
+        trigger_next = data.get("TRIGGER_NEXT", False)
         tolerance = data.get("TOLERANCE", "default")
         project = data.get("PROJECT", "default")
         topic = data.get("TOPIC", None)
@@ -153,8 +154,9 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-                next_method = "process_gadm"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+                if trigger_next:
+                    next_method = "process_gadm"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_eezs":
                 download_zip_to_gcs(
@@ -167,10 +169,11 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-                next_method = "process_eezs"
-                launch_next_step(next_method, project, topic, verbose=verbose)
-                next_method = "process_eez_gadm_unions"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+                if trigger_next:
+                    next_method = "process_eezs"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "process_eez_gadm_unions"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_high_seas":
                 download_zip_to_gcs(
@@ -183,41 +186,51 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-                next_method = "process_eezs"
-                launch_next_step(next_method, project, topic, verbose=verbose)
-                next_method = "process_eez_gadm_unions"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "process_eezs"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "process_eez_gadm_unions"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_gadm":
                 process_gadm_geoms(verbose=verbose)
-                next_method = "generate_locations_table"
-                launch_next_step(next_method, project, topic, verbose=verbose)
-                next_method = "update_country_tileset"
-                launch_next_step(next_method, project, topic, verbose=verbose)
-                next_method = "update_terrestrial_regions_tileset"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "generate_locations_table"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "update_country_tileset"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "update_terrestrial_regions_tileset"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_eezs":
                 process_eez_geoms(verbose=verbose)
-                next_method = "generate_locations_table"
-                launch_next_step(next_method, project, topic, verbose=verbose)
-                next_method = "update_eez_tileset"
-                launch_next_step(next_method, project, topic, verbose=verbose)
-                next_method = "update_marine_regions_tileset"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "generate_locations_table"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "update_eez_tileset"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "update_marine_regions_tileset"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_eez_gadm_unions":
                 process_eez_gadm_unions(verbose=verbose)
-                next_method = "process_mangroves"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "process_mangroves"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_marine_habitats":
                 download_marine_habitats(verbose=verbose)
 
             case "process_terrestrial_biomes":
                 process_terrestrial_biome_raster(verbose=verbose)
-                next_method = "generate_terrestrial_biome_stats_country"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "generate_terrestrial_biome_stats_country"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_mangroves":
                 process_mangroves(verbose=verbose)
@@ -234,24 +247,30 @@ def main(request: Request) -> tuple[str, int]:
             # ------------------
             case "download_mpatlas":
                 download_mpatlas(verbose=verbose)
-                next_method = "generate_marine_protection_level_stats_table"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "generate_marine_protection_level_stats_table"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_protected_seas":
                 download_protected_seas(verbose=verbose)
-                next_method = "generate_fishing_protection_table"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "generate_fishing_protection_table"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_protected_planet_country":
                 download_protected_planet(verbose=verbose)
-                next_method = "generate_protection_coverage_stats_table"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "generate_protection_coverage_stats_table"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_protected_planet_pas":
                 download_and_process_protected_planet_pas(
                     verbose=verbose, tolerance=tolerance, batch_size=1000
                 )
-                if tolerance == TOLERANCES[0]:
+                if tolerance == TOLERANCES[0] and trigger_next:
                     next_method = "generate_protected_areas_table"
                     launch_next_step(next_method, project, topic, verbose=verbose)
                     next_method = "generate_terrestrial_biome_stats"
@@ -263,45 +282,59 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_terrestrial_biome_stats":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
-                next_method = "generate_habitat_protection_table"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "generate_habitat_protection_table"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_habitat_protection_table":
                 _ = generate_habitat_protection_table(verbose=verbose)
-                next_method = "update_habitat_protection_stats"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "update_habitat_protection_stats"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
                 _ = generate_protection_coverage_stats_table(verbose=verbose)
-                next_method = "update_protection_coverage_stats"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "update_protection_coverage_stats"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_marine_protection_level_stats_table":
                 _ = generate_marine_protection_level_stats_table(verbose=verbose)
-                next_method = "update_mpaa_protection_level_stats"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "update_mpaa_protection_level_stats"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
-                next_method = "update_fishing_protection_stats"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "update_fishing_protection_stats"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
-                next_method = "update_locations"
-                launch_next_step(next_method, project, topic, verbose=verbose)
+
+                if trigger_next:
+                    next_method = "update_locations"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "generate_protected_areas_table":
                 updates = generate_protected_areas_diff_table(verbose=verbose)
-                next_method = "update_protected_areas"
-                launch_next_step(next_method, project, topic, verbose=verbose)
 
-                if updates:
-                    pass
-                    # next_method = "update_marine_protected_areas_tileset"
-                    # launch_next_step(next_method, project, topic, verbose=verbose)
-                    # next_method = "update_terrestrial_protected_areas_tileset"
-                    # launch_next_step(next_method, project, topic, verbose=verbose)
+                if trigger_next:
+                    next_method = "update_protected_areas"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+
+                    if updates:
+                        pass
+                        # next_method = "update_marine_protected_areas_tileset"
+                        # launch_next_step(next_method, project, topic, verbose=verbose)
+                        # next_method = "update_terrestrial_protected_areas_tileset"
+                        # launch_next_step(next_method, project, topic, verbose=verbose)
 
             # ------------------
             #   Database updates
