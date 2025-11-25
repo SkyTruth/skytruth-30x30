@@ -125,13 +125,13 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
         - ``coverage`` : float, percent coverage of area relative to
           the reference dataset, rounded to 2 decimals and capped at 100.
     """
+    print("making eez and gadm lookup tables")
+
     # build fast lookup dicts for area by location
-    print("Make eez look up", type(eez["location"]), type(eez["location"]))
     eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"], strict=False))
     eez_lookup["ATA"] = eez_lookup["ABNJ"]
     eez_lookup["HKG"] = eez_lookup["CHN"]
 
-    print("Make gadem look up", type(gadm["location"]), type(gadm["location"]))
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
     gadm_lookup["ATA"] = gadm_lookup["ABNJ"]
 
@@ -152,7 +152,7 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
     df = df.copy()
     tqdm.pandas()
 
-    print("calculatig coverage")
+    print("calculating coverage")
     df["coverage"] = df.progress_apply(_calc_coverage, axis=1)
     print("finished coverage calc")
 

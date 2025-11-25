@@ -128,9 +128,6 @@ def main(request: Request) -> tuple[str, int]:
             case "dry_run":
                 print("Dry Run Complete!")
             case "test_dead_letter":
-                import time
-
-                time.sleep(30)
                 raise RuntimeError("DLQ test intentional failure")
             case "publisher":
                 monthly_job_publisher(project, topic, verbose=verbose)
@@ -241,9 +238,9 @@ def main(request: Request) -> tuple[str, int]:
                 launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_protected_planet_pas":
-                download_and_process_protected_planet_pas(
-                    verbose=verbose, tolerance=tolerance, batch_size=1000
-                )
+                # download_and_process_protected_planet_pas(
+                #     verbose=verbose, tolerance=tolerance, batch_size=1000
+                # )
                 if tolerance == TOLERANCES[0]:
                     next_method = "generate_protected_areas_table"
                     launch_next_step(next_method, project, topic, verbose=verbose)
