@@ -1,7 +1,5 @@
 import functions_framework
 from flask import Request
-import os
-os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
 
 from src.core import map_params
 from src.core.params import (
@@ -62,7 +60,7 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
-from src.methods.subtract_geometries import update_total_area_minus_pa
+from src.methods.subtract_geometries import generate_total_area_minus_pa
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 
@@ -220,6 +218,26 @@ def main(request: Request) -> tuple[str, int]:
             case "generate_protected_areas_table":
                 generate_protected_areas_diff_table(verbose=verbose)
 
+            case "generate_gadm_minus_pa":
+                generate_total_area_minus_pa(
+                    bucket=BUCKET,
+                    total_area_file=GADM_FILE_NAME,
+                    pa_file=WDPA_TERRESTRIAL_FILE_NAME,
+                    out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                    tolerance=map_params.WDPA_TOLERANCE,
+                    verbose=verbose
+                )
+
+            case "generate_eez_minus_mpa":
+                generate_total_area_minus_pa(
+                    bucket=BUCKET,
+                    total_area_file=EEZ_FILE_NAME,
+                    pa_file=WDPA_MARINE_FILE_NAME,
+                    out_file=CONSERVATION_BUILDER_MARINE_DATA,
+                    tolerance=map_params.WDPA_TOLERANCE,
+                    verbose=verbose
+                )
+
             # ------------------
             #   Database updates
             # ------------------
@@ -262,26 +280,6 @@ def main(request: Request) -> tuple[str, int]:
             case "update_protected_areas":
                 update_segment = data.get("UPDATE_SEGMENT", "all")
                 upload_protected_areas(verbose=verbose, update_segment=update_segment)
-
-            case "update_gadm_minus_pa":
-                update_total_area_minus_pa(
-                    bucket=BUCKET,
-                    total_area_file=GADM_FILE_NAME,
-                    pa_file=WDPA_TERRESTRIAL_FILE_NAME,
-                    out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-                    tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose
-                )
-
-            case "update_eez_minus_mpa":
-                update_total_area_minus_pa(
-                    bucket=BUCKET,
-                    total_area_file=EEZ_FILE_NAME,
-                    pa_file=WDPA_MARINE_FILE_NAME,
-                    out_file=CONSERVATION_BUILDER_MARINE_DATA,
-                    tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose
-                )
 
             # ------------------
             #   Map Tilesets Updates

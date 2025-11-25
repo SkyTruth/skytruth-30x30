@@ -45,16 +45,16 @@ def process_country(country: str,
         logger.warning({'message': f'Error processing {country}: {e}'})
         return None
 
-def update_total_area_minus_pa(bucket: str, 
-                               total_area_file: str, 
-                               pa_file: str, 
-                               out_file: str, 
-                               tolerance: float, 
-                               verbose: bool = True
+def generate_total_area_minus_pa(bucket: str, 
+                                 total_area_file: str, 
+                                 pa_file: str, 
+                                 out_file: str, 
+                                 tolerance: float, 
+                                 verbose: bool = True
     ):
     """
-    Loads terrestrial and marine data (total areas and protected areas) and subtracts
-    the protected areas from the total areas.
+    Subtracts protected areas from the corresponding terrestrial or marine boundaries;
+    saves the output as a zipped shapefile to GCS.
 
     Parameters
     ----------
@@ -65,7 +65,7 @@ def update_total_area_minus_pa(bucket: str,
     pa_file : str
         Filename of protected area geojson (PA or MPA).
     out_file : str
-        Filename for output zipped file (total area minus protected area).
+        Filename for output zipped file.
     tolerance : float
         Tolerance value used in simplification.
     verbose : bool, optional
@@ -89,14 +89,14 @@ def update_total_area_minus_pa(bucket: str,
         verbose=verbose
     )
 
-    # Keep only polygon records and clean geometries
+    # Keep only polygon records and make the geometries valid
     pa = pa[pa.geometry.geom_type.isin(['MultiPolygon', 'Polygon'])]
     pa.geometry = pa.geometry.make_valid()
 
     # Label Antarctica PAs as ABNJ (areas beyond national jurisdiction)
     pa.loc[pa["ISO3"] == "ATA", "ISO3"] = "ABNJ"
 
-    # Subtract protected area from each country in parallel
+    # Subtract protected areas from each country in parallel
     countries = total_area['location'].unique().tolist()
     results = Parallel(n_jobs=4, backend='loky')(
         delayed(process_country)(
@@ -116,5 +116,5 @@ def update_total_area_minus_pa(bucket: str,
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=out_file,
-        suffix='.shp'
+        output_file_type='.shp'
     )

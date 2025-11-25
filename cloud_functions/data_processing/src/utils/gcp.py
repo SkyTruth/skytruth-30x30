@@ -352,7 +352,7 @@ def upload_gdf_zip(
     project_id: str = PROJECT,
     verbose: bool = True,
     timeout: int = 600,
-    suffix: str = '.gpkg'
+    output_file_type: str = '.gpkg'
 ) -> None:
     """
     Saves a GeoDataFrame to GCS as a zipped .gpkg or .shp file.
@@ -371,9 +371,8 @@ def upload_gdf_zip(
         If True, prints progress messages.
     timeout : int, optional
         Timeout in seconds for the upload. Defaults to 600 (10 minutes).
-    suffix : str, optional
-        File extension, either '.gpkg' (default) or '.shp';
-        if another extension is inputted, file will be saved as a zipped .shp.
+    output_file_type : str, optional
+        File extension, either .gpkg or .shp. Defaults to .gpkg.
     """
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
@@ -384,20 +383,25 @@ def upload_gdf_zip(
         file_name = os.path.splitext(os.path.basename(destination_blob_name))[0]
 
         # Create data file
-        gdf_path = os.path.join(tmpdir, file_name + suffix)
+        gdf_path = os.path.join(tmpdir, file_name + output_file_type)
         gdf.to_file(gdf_path)
 
         # Create zip file
         zip_path = os.path.join(tmpdir, file_name + '.zip')
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            if suffix == '.gpkg':
-                zf.write(gdf_path, arcname = file_name + suffix)
-            elif suffix == '.shp':
+            if output_file_type == '.gpkg':
+                zf.write(gdf_path, arcname = file_name + output_file_type)
+            elif output_file_type == '.shp':
                 # Add shapefiles (.shp, .shx, .dbf, .prj)
                 for file in os.listdir(tmpdir):
                     if not file.endswith('.zip'):
                         file_path = os.path.join(tmpdir, file)
                         zf.write(file_path, arcname = file)
+            else:
+                raise ValueError(
+                    f"Unsupported file extension: {output_file_type} (expected .gpkg or .shp)"
+                )
+
         if verbose:
             print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
 

@@ -200,5 +200,5 @@ REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 # ------------------------------------------------------------
 #                     Conservation Builder
 # ------------------------------------------------------------
-CONSERVATION_BUILDER_MARINE_DATA = f".conservation_builder/eez_minus_mpa_{today_formatted}.zip"
-CONSERVATION_BUILDER_TERRESTRIAL_DATA = f".conservation_builder/gadm_minus_pa_{today_formatted}.zip"
+CONSERVATION_BUILDER_MARINE_DATA = f"conservation_builder/eez_minus_mpa_{today_formatted}.zip"
+CONSERVATION_BUILDER_TERRESTRIAL_DATA = f"conservation_builder/gadm_minus_pa_{today_formatted}.zip"
