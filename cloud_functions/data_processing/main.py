@@ -30,7 +30,6 @@ from src.methods.database_uploads import (
     upload_stats,
 )
 from src.methods.download_and_process import (
-    download_and_process_protected_planet_pas,
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
