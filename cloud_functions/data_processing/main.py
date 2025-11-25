@@ -6,6 +6,7 @@ import signal
 import functions_framework
 from flask import Request
 
+from src.core import map_params
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -21,6 +22,8 @@ from src.core.params import (
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCES,
+    WDPA_MARINE_FILE_NAME,
+    WDPA_TERRESTRIAL_FILE_NAME,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -30,6 +33,7 @@ from src.methods.database_uploads import (
     upload_stats,
 )
 from src.methods.download_and_process import (
+    download_and_process_protected_planet_pas,
     download_mpatlas,
     download_protected_planet,
     download_protected_seas,
@@ -53,6 +57,13 @@ from src.methods.static_processes import (
     process_terrestrial_biome_raster,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
+from src.methods.tileset_processes import (
+    create_and_update_country_tileset,
+    create_and_update_eez_tileset,
+    create_and_update_marine_regions_tileset,
+    create_and_update_protected_area_tileset,
+    create_and_update_terrestrial_regions_tileset,
+)
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -237,18 +248,14 @@ def main(request: Request) -> tuple[str, int]:
                 launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "download_protected_planet_pas":
-                # download_and_process_protected_planet_pas(
-                #     verbose=verbose, tolerance=tolerance, batch_size=1000
-                # )
+                download_and_process_protected_planet_pas(
+                    verbose=verbose, tolerance=tolerance, batch_size=1000
+                )
                 if tolerance == TOLERANCES[0]:
                     next_method = "generate_protected_areas_table"
                     launch_next_step(next_method, project, topic, verbose=verbose)
-                    # next_method = "generate_terrestrial_biome_stats"
-                    # launch_next_step(next_method, project, topic, verbose=verbose)
-                    # next_method = "update_marine_protected_areas_tileset"
-                    # launch_next_step(next_method, project, topic, verbose=verbose)
-                    # next_method = "update_terrestrial_protected_areas_tileset"
-                    # launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "generate_terrestrial_biome_stats"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
 
             # ------------------
             #   Table updates
@@ -343,39 +350,39 @@ def main(request: Request) -> tuple[str, int]:
             #   Map Tilesets Updates
             # ------------------
 
-            # case "update_eez_tileset":
-            #     create_and_update_eez_tileset(verbose=verbose)
+            case "update_eez_tileset":
+                create_and_update_eez_tileset(verbose=verbose)
 
-            # case "update_marine_regions_tileset":
-            #     create_and_update_marine_regions_tileset(verbose=verbose)
+            case "update_marine_regions_tileset":
+                create_and_update_marine_regions_tileset(verbose=verbose)
 
-            # case "update_country_tileset":
-            #     create_and_update_country_tileset(verbose=verbose)
+            case "update_country_tileset":
+                create_and_update_country_tileset(verbose=verbose)
 
-            # case "update_terrestrial_regions_tileset":
-            #     create_and_update_terrestrial_regions_tileset(verbose=verbose)
+            case "update_terrestrial_regions_tileset":
+                create_and_update_terrestrial_regions_tileset(verbose=verbose)
 
-            # case "update_marine_protected_areas_tileset":
-            #     create_and_update_protected_area_tileset(
-            #         bucket=BUCKET,
-            #         source_file=WDPA_MARINE_FILE_NAME,
-            #         tileset_file=map_params.MARINE_PA_TILESET_FILE,
-            #         tileset_id=map_params.MARINE_PA_TILESET_ID,
-            #         display_name=map_params.MARINE_PA_TILESET_NAME,
-            #         tolerance=map_params.WDPA_TOLERANCE,
-            #         verbose=verbose,
-            #     )
+            case "update_marine_protected_areas_tileset":
+                create_and_update_protected_area_tileset(
+                    bucket=BUCKET,
+                    source_file=WDPA_MARINE_FILE_NAME,
+                    tileset_file=map_params.MARINE_PA_TILESET_FILE,
+                    tileset_id=map_params.MARINE_PA_TILESET_ID,
+                    display_name=map_params.MARINE_PA_TILESET_NAME,
+                    tolerance=map_params.WDPA_TOLERANCE,
+                    verbose=verbose,
+                )
 
-            # case "update_terrestrial_protected_areas_tileset":
-            #     create_and_update_protected_area_tileset(
-            #         bucket=BUCKET,
-            #         source_file=WDPA_TERRESTRIAL_FILE_NAME,
-            #         tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
-            #         tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
-            #         display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
-            #         tolerance=map_params.WDPA_TOLERANCE,
-            #         verbose=verbose,
-            #     )
+            case "update_terrestrial_protected_areas_tileset":
+                create_and_update_protected_area_tileset(
+                    bucket=BUCKET,
+                    source_file=WDPA_TERRESTRIAL_FILE_NAME,
+                    tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
+                    tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
+                    display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
+                    tolerance=map_params.WDPA_TOLERANCE,
+                    verbose=verbose,
+                )
 
             case _:
                 print(f"METHOD: {method} not a valid option")

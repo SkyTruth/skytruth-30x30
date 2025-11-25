@@ -25,26 +25,25 @@ def monthly_job_publisher(project_id, topic_id, verbose=True):
     # Define jobs to queue — each will trigger your Cloud Function or Cloud Run worker
     try:
         jobs = [
-            # # {"METHOD": "test_dead_letter", "PROJECT": project_id, "TOPIC": topic_id},
-            # {"METHOD": "download_mpatlas", "PROJECT": project_id, "TOPIC": topic_id},
-            # {"METHOD": "download_protected_seas", "PROJECT": project_id, "TOPIC": topic_id},
-            # {
-            #     "METHOD": "download_protected_planet_country",
-            #     "PROJECT": project_id,
-            #     "TOPIC": topic_id,
-            # },
+            {"METHOD": "download_mpatlas", "PROJECT": project_id, "TOPIC": topic_id},
+            {"METHOD": "download_protected_seas", "PROJECT": project_id, "TOPIC": topic_id},
+            {
+                "METHOD": "download_protected_planet_country",
+                "PROJECT": project_id,
+                "TOPIC": topic_id,
+            },
             {
                 "METHOD": "download_protected_planet_pas",
                 "TOLERANCE": 0.001,
                 "PROJECT": project_id,
                 "TOPIC": topic_id,
             },
-            # {
-            #     "METHOD": "download_protected_planet_pas",
-            #     "TOLERANCE": 0.0001,
-            #     "PROJECT": project_id,
-            #     "TOPIC": topic_id,
-            # },
+            {
+                "METHOD": "download_protected_planet_pas",
+                "TOLERANCE": 0.0001,
+                "PROJECT": project_id,
+                "TOPIC": topic_id,
+            },
         ]
 
         publish_jobs(jobs, project_id, topic_id, verbose)
