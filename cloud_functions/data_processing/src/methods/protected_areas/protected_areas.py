@@ -336,7 +336,7 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         )
         num_cols = ["area", "coverage"]
         relation_list_cols = ["children", "parent"]
-        ordered_list_cols = [] #["bbox"]
+        ordered_list_cols = []  # ["bbox"]
 
         # build up combined mask
         change_indx = pd.Series(False, index=static_current.index)
