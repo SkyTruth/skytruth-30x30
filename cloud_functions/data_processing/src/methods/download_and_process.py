@@ -333,8 +333,17 @@ def download_and_process_protected_planet_pas(
             Conditionally buffer a single point or multipoint geometry based on a
             representative area value.
             """
+
+            # Get buffer area - do not buffer if MAB reserve as reported
+            # area can be unreliable
+            rep_area = (
+                row.REP_AREA 
+                if row["DESIG_ENG"]!="UNESCO-MAB Biosphere Reserve" 
+                else 0
+            )
+
             g = row.geometry
-            if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
+            if rep_area > 0 and isinstance(g, (Point, MultiPoint)):
                 # build a 1-row GeoDataFrame with the same CRS
                 row_gdf = gpd.GeoDataFrame(
                     row.to_frame().T,
@@ -352,12 +361,6 @@ def download_and_process_protected_planet_pas(
 
             try:
                 chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
-
-                # Remove the unreliable reported area of MAB reserves
-                mask = (chunk["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") & (
-                    chunk.geometry.geom_type == "Point"
-                )
-                chunk.loc[mask, ["REP_AREA", "REP_M_AREA"]] = 0
 
                 chunk = choose_pa_area(chunk)
                 crs = chunk.crs
@@ -514,12 +517,21 @@ def download_and_process_protected_planet_pas(
         raise e
 
     try:
+
+        # Remove non-OECM MAB reserves (matching Protected Planet's methods)
+        df = df[
+            (df['DESIG_ENG']!="UNESCO-MAB Biosphere Reserve" ) |
+            (df['DESIG_ENG']=="UNESCO-MAB Biosphere Reserve" ) & (df['PA_DEF']==0)
+        ]
+
+        # Save terrestrial PAs
         ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
             print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
         upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
         duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
 
+        # Save marine PAs
         mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
             print(f"saving and duplicating marine PAs to {mar_out_fn}")

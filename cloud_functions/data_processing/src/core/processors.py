@@ -356,7 +356,7 @@ def choose_pa_area(df):
     gis_area = np.where(gis_area > 0, gis_area, np.nan)
     rep_area = np.where(rep_area > 0, rep_area, np.nan)
 
-    # # Prefer GIS area if valid, otherwise REP area, otherwise 0
+    # Prefer GIS area if valid, otherwise REP area, otherwise 0
     df["calculated_area_km2"] = np.where(
         ~np.isnan(gis_area), gis_area, np.where(~np.isnan(rep_area), rep_area, 0)
     )

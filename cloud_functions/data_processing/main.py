@@ -19,6 +19,7 @@ from src.core.params import (
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
+    PROJECT,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCES,
@@ -127,10 +128,10 @@ def main(request: Request) -> tuple[str, int]:
             data_bytes = base64.b64decode(msg["data"])
             data = json.loads(data_bytes.decode("utf-8"))
 
-        method = data.get("METHOD", "default")
+        method = data.get("METHOD", "dry_run")
         trigger_next = data.get("TRIGGER_NEXT", False)
-        tolerance = data.get("TOLERANCE", "default")
-        project = data.get("PROJECT", "default")
+        tolerance = data.get("TOLERANCE", TOLERANCES[0])
+        project = data.get("PROJECT", PROJECT)
         topic = data.get("TOPIC", None)
 
         print(f"Starting METHOD: {method}")
