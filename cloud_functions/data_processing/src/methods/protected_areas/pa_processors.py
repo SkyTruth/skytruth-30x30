@@ -52,8 +52,8 @@ def str_dif_idx(df1, df2, col):
 def num_dif_idx(df1, df2, col):
     # Round to 2 digits to match precision of DB.
     # Round with added epsilon so that 0.005 rounds up.
-    df1[col] = (pd.to_numeric(df1[col], errors='coerce') + 1e-6).round(2)
-    df2[col] = (pd.to_numeric(df2[col], errors='coerce') + 1e-6).round(2)
+    df1[col] = (pd.to_numeric(df1[col], errors="coerce") + 1e-6).round(2)
+    df2[col] = (pd.to_numeric(df2[col], errors="coerce") + 1e-6).round(2)
     return (~df2[col].isna()) & ((df1[col].isna()) | (abs(df2[col] - df1[col]) / df1[col] > 0.01))
 
 
