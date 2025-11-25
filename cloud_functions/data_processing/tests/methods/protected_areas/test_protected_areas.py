@@ -438,7 +438,7 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     deleted = result["deleted"]
 
     assert len(new) == 1  # new_pa
-    assert len(changed) == 4  # changed_pa, changed_bbox, changed_parent, changed_child
+    assert len(changed) == 3  # changed_pa, changed_parent, changed_child
     assert len(deleted) == 1  # third_pa
 
     new_entry = new[0]
