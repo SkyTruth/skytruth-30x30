@@ -424,9 +424,7 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     del changed_child["id"]
 
     current_db = make_df([base_entry, second_entry, third_entry, fourth_entry, parent, child])
-    updated_pas = make_df(
-        [unchanged_pa, changed_pa, new_pa, changed_child, changed_parent]
-    )
+    updated_pas = make_df([unchanged_pa, changed_pa, new_pa, changed_child, changed_parent])
 
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     new = result["new"]
