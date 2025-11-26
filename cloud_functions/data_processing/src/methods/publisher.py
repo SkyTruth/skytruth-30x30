@@ -1,4 +1,5 @@
 import json
+
 from google.cloud import tasks_v2
 
 from src.utils.logger import Logger
@@ -110,9 +111,7 @@ def create_task(
             "url": target_url,
             "headers": {"Content-Type": "application/json"},
             "body": json.dumps(payload).encode(),
-            "oidc_token": {
-                "service_account_email": service_account_email
-            },
+            "oidc_token": {"service_account_email": service_account_email},
         }
     }
 
@@ -124,6 +123,7 @@ def create_task(
     except Exception as e:
         logger.error({"message": f"Error creating Cloud Task: {e}"})
         raise
+
 
 def monthly_job_publisher(task_config, verbose=True):
     """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
@@ -200,6 +200,7 @@ def launch_next_step(
         verbose=verbose,
     )
 
+
 def pipe_next_steps(
     step_list: list,
     trigger_next: bool,
@@ -219,4 +220,3 @@ def pipe_next_steps(
                 task_config["service_account_email"],
                 verbose=verbose,
             )
-
