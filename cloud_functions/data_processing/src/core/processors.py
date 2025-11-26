@@ -40,6 +40,18 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
     return df
 
 
+def wdpa_country_wrapping(df: pd.DataFrame, loc_col: str = "ISO3"):
+    """
+    Method for adjusting countries as needed for coverage stats and mapping
+    """
+    df = df.copy()
+
+    # Label Antarctica PAs as ABNJ (areas beyond national jurisdiction)
+    df.loc[df[loc_col] == "ATA", loc_col] = "ABNJ"
+
+    return df
+
+
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
     """
     Add a set of constant columns to a DataFrame.
@@ -133,7 +145,6 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
     eez_lookup["HKG"] = eez_lookup["CHN"]
 
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
-    gadm_lookup["ATA"] = gadm_lookup["ABNJ"]
 
     def _calc_coverage(x):
         if x["environment"] == "marine":
