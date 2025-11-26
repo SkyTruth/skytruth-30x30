@@ -25,27 +25,37 @@ def monthly_job_publisher(project_id, topic_id, verbose=True):
     # Define jobs to queue — each will trigger your Cloud Function or Cloud Run worker
     try:
         jobs = [
-            {"METHOD": "download_mpatlas", "PROJECT": project_id, "TOPIC": topic_id, "TRIGGER_NEXT": True},
-            {"METHOD": "download_protected_seas", "PROJECT": project_id, "TOPIC": topic_id, "TRIGGER_NEXT": True},
+            {
+                "METHOD": "download_mpatlas",
+                "PROJECT": project_id,
+                "TOPIC": topic_id,
+                "TRIGGER_NEXT": True,
+            },
+            {
+                "METHOD": "download_protected_seas",
+                "PROJECT": project_id,
+                "TOPIC": topic_id,
+                "TRIGGER_NEXT": True,
+            },
             {
                 "METHOD": "download_protected_planet_country",
                 "PROJECT": project_id,
                 "TOPIC": topic_id,
-                "TRIGGER_NEXT": True
+                "TRIGGER_NEXT": True,
             },
             {
                 "METHOD": "download_protected_planet_pas",
                 "TOLERANCE": 0.001,
                 "PROJECT": project_id,
                 "TOPIC": topic_id,
-                "TRIGGER_NEXT": True
+                "TRIGGER_NEXT": True,
             },
             {
                 "METHOD": "download_protected_planet_pas",
                 "TOLERANCE": 0.0001,
                 "PROJECT": project_id,
                 "TOPIC": topic_id,
-                "TRIGGER_NEXT": True
+                "TRIGGER_NEXT": True,
             },
         ]
 
@@ -59,7 +69,14 @@ def launch_next_step(next_method, project_id, topic_id, verbose=True):
         try:
             if verbose:
                 print(f"launching method: {next_method}")
-            jobs = [{"METHOD": next_method, "PROJECT": project_id, "TOPIC": topic_id, "TRIGGER_NEXT": True}]
+            jobs = [
+                {
+                    "METHOD": next_method,
+                    "PROJECT": project_id,
+                    "TOPIC": topic_id,
+                    "TRIGGER_NEXT": True,
+                }
+            ]
             publish_jobs(jobs, project_id, topic_id, verbose)
         except Exception as e:
             logger.error({"message": f"Error invoking {next_method}: {e}"})
