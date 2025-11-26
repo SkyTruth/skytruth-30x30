@@ -205,10 +205,10 @@ def main(request: Request) -> tuple[str, int]:
                 if trigger_next:
                     next_method = "generate_locations_table"
                     launch_next_step(next_method, project, topic, verbose=verbose)
-                    next_method = "update_country_tileset"
-                    launch_next_step(next_method, project, topic, verbose=verbose)
-                    next_method = "update_terrestrial_regions_tileset"
-                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    # next_method = "update_country_tileset"
+                    # launch_next_step(next_method, project, topic, verbose=verbose)
+                    # next_method = "update_terrestrial_regions_tileset"
+                    # launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_eezs":
                 process_eez_geoms(verbose=verbose)
@@ -216,10 +216,10 @@ def main(request: Request) -> tuple[str, int]:
                 if trigger_next:
                     next_method = "generate_locations_table"
                     launch_next_step(next_method, project, topic, verbose=verbose)
-                    next_method = "update_eez_tileset"
-                    launch_next_step(next_method, project, topic, verbose=verbose)
-                    next_method = "update_marine_regions_tileset"
-                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    # next_method = "update_eez_tileset"
+                    # launch_next_step(next_method, project, topic, verbose=verbose)
+                    # next_method = "update_marine_regions_tileset"
+                    # launch_next_step(next_method, project, topic, verbose=verbose)
 
             case "process_eez_gadm_unions":
                 process_eez_gadm_unions(verbose=verbose)
@@ -280,6 +280,10 @@ def main(request: Request) -> tuple[str, int]:
                     next_method = "generate_protected_areas_table"
                     launch_next_step(next_method, project, topic, verbose=verbose)
                     next_method = "generate_terrestrial_biome_stats"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "generate_gadm_minus_pa"
+                    launch_next_step(next_method, project, topic, verbose=verbose)
+                    next_method = "generate_eez_minus_mpa"
                     launch_next_step(next_method, project, topic, verbose=verbose)
 
             # ------------------
