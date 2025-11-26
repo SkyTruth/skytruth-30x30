@@ -372,11 +372,74 @@ resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
-resource "google_project_iam_member" "google_pubsub_iam_member" {
-  project = var.gcp_project_id
-  role    = "roles/pubsub.publisher"
-  member  = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
+# resource "google_project_iam_member" "google_pubsub_iam_member" {
+#   project = var.gcp_project_id
+#   role    = "roles/pubsub.publisher"
+#   member  = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
+# }
+
+# resource "google_service_account" "pubsub_invoker" {
+#   account_id   = "${var.project_name}-pubsub-invoker-sa"
+#   display_name = "${var.project_name} Job Queue"
+# }
+
+# resource "google_cloudfunctions2_function_iam_member" "pubsub_invoker" {
+#   project        = var.gcp_project_id
+#   location       = var.gcp_region
+#   cloud_function = module.data_pipes_cloud_function.function_name
+#   role           = "roles/cloudfunctions.invoker"
+#   member         = "serviceAccount:${google_service_account.pubsub_invoker.email}"
+# }
+
+
+# module "data_pipes_job_queue" {
+#   source = "../pubsub_queue"
+#   topic_name        = "job-topic"
+#   subscription_name = "job-subscription"
+#   function_name     = "${var.project_name}-data"
+  
+#   push_endpoint              = module.data_pipes_cloud_function.function_uri
+#   push_service_account_email = google_service_account.pubsub_invoker.email
+#   enable_message_ordering    = true
+
+#   enable_dlq            = true
+#   max_delivery_attempts = 5
+# }
+
+resource "google_service_account" "cloudtasks_invoker" {
+  account_id   = "${var.project_name}-cloudtasks-invoker"
+  display_name = "${var.project_name} Cloud Tasks Invoker"
 }
+
+resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
+  project        = var.gcp_project_id
+  location       = var.gcp_region
+  cloud_function = module.data_pipes_cloud_function.function_name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "serviceAccount:${google_service_account.cloudtasks_invoker.email}"
+}
+
+module "monthly_job_queue" {
+  source = "../cloudtasks"
+
+  queue_name  = "monthly-jobs"
+  location    = var.gcp_region
+
+  target_url = module.data_pipes_cloud_function.function_uri
+  invoker_service_account_email = google_service_account.cloudtasks_invoker.email
+
+  max_concurrent_dispatches = 1
+  max_dispatches_per_second = 1
+
+  # Daily retries for a week
+  max_attempts       = 7
+  min_backoff        = "86400s"
+  max_backoff        = "86400s"
+  max_retry_duration = "604800s"
+
+  enable_dlq = false
+}
+
 
 resource "google_service_account" "scheduler_invoker" {
   account_id   = "${var.project_name}-scheduler-sa"
@@ -389,34 +452,6 @@ resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
   cloud_function = module.data_pipes_cloud_function.function_name
   role           = "roles/cloudfunctions.invoker"
   member         = "serviceAccount:${google_service_account.scheduler_invoker.email}"
-}
-
-resource "google_service_account" "pubsub_invoker" {
-  account_id   = "${var.project_name}-pubsub-invoker-sa"
-  display_name = "${var.project_name} Job Queue"
-}
-
-resource "google_cloudfunctions2_function_iam_member" "pubsub_invoker" {
-  project        = var.gcp_project_id
-  location       = var.gcp_region
-  cloud_function = module.data_pipes_cloud_function.function_name
-  role           = "roles/cloudfunctions.invoker"
-  member         = "serviceAccount:${google_service_account.pubsub_invoker.email}"
-}
-
-
-module "data_pipes_job_queue" {
-  source = "../pubsub_queue"
-  topic_name        = "job-topic"
-  subscription_name = "job-subscription"
-  function_name     = "${var.project_name}-data"
-  
-  push_endpoint              = module.data_pipes_cloud_function.function_uri
-  push_service_account_email = google_service_account.pubsub_invoker.email
-  enable_message_ordering    = true
-
-  enable_dlq            = true
-  max_delivery_attempts = 5
 }
 
 module "data_pipes_scheduler" {
@@ -432,6 +467,10 @@ module "data_pipes_scheduler" {
     METHOD = "publisher",
     TRIGGER_NEXT = true,
     PROJECT = var.gcp_project_id,
-    TOPIC = module.data_pipes_job_queue.topic_name
+    # TOPIC = module.data_pipes_job_queue.topic_name
+    LOCATION   = var.gcp_region
+    QUEUE_NAME = module.monthly_job_queue.queue_name
+    TARGET_URL = module.data_pipes_cloud_function.function_uri
+    INVOKER_SA = google_service_account.cloudtasks_invoker.email
   })
 }
