@@ -3,6 +3,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
+from src.core.processors import wdpa_country_wrapping
 from src.utils.gcp import (
     read_json_df,
     upload_gdf_zip,
@@ -33,7 +34,7 @@ def process_country(country: str, boundary_gdf: gpd.GeoDataFrame, pa_gdf: gpd.Ge
     """
     try:
         country_area = boundary_gdf[boundary_gdf["location"] == country]
-        country_pa = pa_gdf[pa_gdf["ISO3"].str.contains(country)].dissolve()
+        country_pa = pa_gdf[pa_gdf["ISO3"]==country].dissolve()
         if country_pa.empty:
             # If no protected areas, return original boundary
             return country_area
@@ -94,6 +95,14 @@ def generate_total_area_minus_pa(
     # Keep only polygon records and make the geometries valid
     pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])]
     pa.geometry = pa.geometry.make_valid()
+
+
+    pa["ISO3"] = pa["ISO3"].str.split(";")
+    pa = pa.explode("ISO3")
+    pa["ISO3"] = pa["ISO3"].str.strip()
+
+    # Adjust countries as needed
+    pa = wdpa_country_wrapping(pa, loc_col="ISO3")
 
     # Subtract protected areas from each country in parallel
     countries = total_area["location"].unique().tolist()
