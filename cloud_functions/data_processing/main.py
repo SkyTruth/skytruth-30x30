@@ -25,6 +25,10 @@ from src.core.params import (
     TOLERANCES,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
+    EEZ_FILE_NAME,
+    GADM_FILE_NAME,
+    CONSERVATION_BUILDER_MARINE_DATA,
+    CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -65,6 +69,7 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
+from src.methods.subtract_geometries import generate_total_area_minus_pa
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -336,6 +341,26 @@ def main(request: Request) -> tuple[str, int]:
                         # launch_next_step(next_method, project, topic, verbose=verbose)
                         # next_method = "update_terrestrial_protected_areas_tileset"
                         # launch_next_step(next_method, project, topic, verbose=verbose)
+
+            case "generate_gadm_minus_pa":
+                generate_total_area_minus_pa(
+                    bucket=BUCKET,
+                    total_area_file=GADM_FILE_NAME,
+                    pa_file=WDPA_TERRESTRIAL_FILE_NAME,
+                    out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                    tolerance=map_params.WDPA_TOLERANCE,
+                    verbose=verbose
+                )
+
+            case "generate_eez_minus_mpa":
+                generate_total_area_minus_pa(
+                    bucket=BUCKET,
+                    total_area_file=EEZ_FILE_NAME,
+                    pa_file=WDPA_MARINE_FILE_NAME,
+                    out_file=CONSERVATION_BUILDER_MARINE_DATA,
+                    tolerance=map_params.WDPA_TOLERANCE,
+                    verbose=verbose
+                )
 
             # ------------------
             #   Database updates
