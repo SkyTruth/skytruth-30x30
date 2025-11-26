@@ -22,7 +22,6 @@ from tqdm.auto import tqdm
 
 from src.core.commons import (
     download_file_with_progress,
-    download_mpatlas_zone,
     unzip_file,
 )
 from src.core.params import (
@@ -51,10 +50,16 @@ from src.core.params import (
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_URL,
 )
-from src.core.processors import calculate_area, choose_pa_area, match_old_pa_naming_convantion
+from src.core.processors import (
+    calculate_area,
+    choose_pa_area,
+    match_old_pa_naming_convantion,
+    wdpa_country_wrapping,
+)
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
+    save_file_bucket,
     upload_dataframe,
     upload_gdf,
 )
@@ -83,6 +88,48 @@ def download_mpatlas_country(
 
     upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+
+
+def download_mpatlas_zone(
+    url: str = MPATLAS_URL,
+    bucket: str = BUCKET,
+    filename: str = MPATLAS_FILE_NAME,
+    archive_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
+    verbose: bool = True,
+) -> None:
+    """
+    Downloads the MPAtlas Zone Assessment dataset from a specified URL,
+    saves it to a Google Cloud Storage bucket, and duplicates the blob.
+
+    Parameters:
+    ----------
+    url : str
+        URL of the MPAtlas Zone Assessment file to download.
+    bucket : str
+        Name of the GCS bucket where the file should be stored.
+    filename : str
+        GCS blob name for the primary reference copy of the file.
+    archive_filename : str
+        GCS blob name for the archived/original version of the file.
+    verbose : bool, optional
+        If True, prints progress messages. Default is True.
+    """
+    if verbose:
+        print(f"downloading MPAtlas Zone Assessment from {url}")
+
+    response = requests.get(url)
+    response.raise_for_status()
+
+    if verbose:
+        print(f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}")
+    save_file_bucket(
+        response.content,
+        response.headers.get("Content-Type"),
+        archive_filename,
+        bucket,
+        verbose=verbose,
+    )
+    duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
 def download_mpatlas(
@@ -124,7 +171,7 @@ def download_mpatlas(
         print(f"loading MPAtlas from {mpatlas_filename}")
     mpa = read_json_from_gcs(bucket, mpatlas_filename)
 
-    mpa_all = gpd.GeoDataFrame(
+    mpa = gpd.GeoDataFrame(
         [
             {**feat["properties"], "geometry": safe_shape(feat.get("geometry"))}
             for feat in mpa["features"]
@@ -136,19 +183,19 @@ def download_mpatlas(
     # add area column
     if verbose:
         print("calculating MPA area (calculated_area_km2)")
-    mpa_all = calculate_area(mpa_all, output_area_column="calculated_area_km2")
+    mpa = calculate_area(mpa, output_area_column="calculated_area_km2")
 
     # add bounding box column
     if verbose:
         print("calculating MPA bounding box (bbox)")
-    mpa_all["bbox"] = mpa_all.geometry.apply(lambda g: g.bounds if g is not None else None)
+    mpa["bbox"] = mpa.geometry.apply(lambda g: g.bounds if g is not None else None)
 
     # Upload metadata (no geometry)
     if verbose:
         print(f"saving metadata to {meta_file_name}")
     upload_dataframe(
         bucket,
-        mpa_all.drop(columns="geometry"),
+        mpa.drop(columns="geometry"),
         meta_file_name,
         project_id=project_id,
         verbose=verbose,
@@ -497,6 +544,10 @@ def download_and_process_protected_planet_pas(
     if verbose:
         print("Renaming variables to match old format")
     df = match_old_pa_naming_convantion(df)
+
+    if verbose:
+        print("Adjusting country wrapping")
+    df = wdpa_country_wrapping(df)
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")
