@@ -10,8 +10,12 @@ from src.core import map_params
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
+    CONSERVATION_BUILDER_MARINE_DATA,
+    CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+    EEZ_FILE_NAME,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
+    GADM_FILE_NAME,
     GADM_URL,
     GADM_ZIPFILE_NAME,
     HABITAT_PROTECTION_FILE_NAME,
@@ -25,10 +29,6 @@ from src.core.params import (
     TOLERANCES,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
-    EEZ_FILE_NAME,
-    GADM_FILE_NAME,
-    CONSERVATION_BUILDER_MARINE_DATA,
-    CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -61,6 +61,7 @@ from src.methods.static_processes import (
     process_mangroves,
     process_terrestrial_biome_raster,
 )
+from src.methods.subtract_geometries import generate_total_area_minus_pa
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.tileset_processes import (
     create_and_update_country_tileset,
@@ -69,7 +70,6 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
-from src.methods.subtract_geometries import generate_total_area_minus_pa
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -349,7 +349,7 @@ def main(request: Request) -> tuple[str, int]:
                     pa_file=WDPA_TERRESTRIAL_FILE_NAME,
                     out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                     tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose
+                    verbose=verbose,
                 )
 
             case "generate_eez_minus_mpa":
@@ -359,7 +359,7 @@ def main(request: Request) -> tuple[str, int]:
                     pa_file=WDPA_MARINE_FILE_NAME,
                     out_file=CONSERVATION_BUILDER_MARINE_DATA,
                     tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose
+                    verbose=verbose,
                 )
 
             # ------------------

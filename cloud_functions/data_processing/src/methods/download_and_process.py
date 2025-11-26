@@ -54,7 +54,6 @@ from src.core.processors import (
     calculate_area,
     choose_pa_area,
     match_old_pa_naming_convantion,
-    wdpa_country_wrapping,
 )
 from src.utils.gcp import (
     duplicate_blob,
@@ -544,10 +543,6 @@ def download_and_process_protected_planet_pas(
     if verbose:
         print("Renaming variables to match old format")
     df = match_old_pa_naming_convantion(df)
-
-    if verbose:
-        print("Adjusting country wrapping")
-    df = wdpa_country_wrapping(df)
 
     if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")

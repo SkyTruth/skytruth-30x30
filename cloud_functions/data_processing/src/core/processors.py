@@ -40,7 +40,7 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
     return df
 
 
-def wdpa_country_wrapping(df: pd.DataFrame, loc_col: str = "ISO3"):
+def wdpa_country_wrapping(df: pd.DataFrame, loc_col: str = "location"):
     """
     Method for adjusting countries as needed for coverage stats and mapping
     """
