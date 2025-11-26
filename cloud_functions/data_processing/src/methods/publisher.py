@@ -134,28 +134,28 @@ def monthly_job_publisher(task_config, verbose=True):
             "PROJECT": task_config["project_id"],
             "TRIGGER_NEXT": True,
         },
-        {
-            "METHOD": "download_protected_seas",
-            "PROJECT": task_config["project_id"],
-            "TRIGGER_NEXT": True,
-        },
-        {
-            "METHOD": "download_protected_planet_country",
-            "PROJECT": task_config["project_id"],
-            "TRIGGER_NEXT": True,
-        },
-        {
-            "METHOD": "download_protected_planet_pas",
-            "TOLERANCE": 0.001,
-            "PROJECT": task_config["project_id"],
-            "TRIGGER_NEXT": True,
-        },
-        {
-            "METHOD": "download_protected_planet_pas",
-            "TOLERANCE": 0.0001,
-            "PROJECT": task_config["project_id"],
-            "TRIGGER_NEXT": True,
-        },
+        # {
+        #     "METHOD": "download_protected_seas",
+        #     "PROJECT": task_config["project_id"],
+        #     "TRIGGER_NEXT": True,
+        # },
+        # {
+        #     "METHOD": "download_protected_planet_country",
+        #     "PROJECT": task_config["project_id"],
+        #     "TRIGGER_NEXT": True,
+        # },
+        # {
+        #     "METHOD": "download_protected_planet_pas",
+        #     "TOLERANCE": 0.001,
+        #     "PROJECT": task_config["project_id"],
+        #     "TRIGGER_NEXT": True,
+        # },
+        # {
+        #     "METHOD": "download_protected_planet_pas",
+        #     "TOLERANCE": 0.0001,
+        #     "PROJECT": task_config["project_id"],
+        #     "TRIGGER_NEXT": True,
+        # },
     ]
 
     for job in jobs:
