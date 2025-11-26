@@ -82,7 +82,9 @@ def launch_next_step(next_method, project_id, topic_id, verbose=True):
             logger.error({"message": f"Error invoking {next_method}: {e}"})
 
 
-def pipe_next_steps(step_list: list, trigger_next: bool, project_id: str, topic_id: str, verbose: bool=True):
+def pipe_next_steps(
+    step_list: list, trigger_next: bool, project_id: str, topic_id: str, verbose: bool = True
+):
     if trigger_next:
         for next_method in step_list:
             launch_next_step(next_method, project_id, topic_id, verbose=verbose)

@@ -196,19 +196,23 @@ def main(request: Request) -> tuple[str, int]:
             case "process_gadm":
                 process_gadm_geoms(verbose=verbose)
 
-                step_list = ["generate_locations_table" ], #"update_country_tileset", "update_terrestrial_regions_tileset"]
+                step_list = (
+                    ["generate_locations_table"],
+                )  # "update_country_tileset", "update_terrestrial_regions_tileset"]
                 pipe_next_steps(step_list, trigger_next, project, topic, verbose=verbose)
 
             case "process_eezs":
                 process_eez_geoms(verbose=verbose)
 
-                step_list = ["generate_locations_table" ], #"update_eez_tileset", "update_marine_regions_tileset"]
+                step_list = (
+                    ["generate_locations_table"],
+                )  # "update_eez_tileset", "update_marine_regions_tileset"]
                 pipe_next_steps(step_list, trigger_next, project, topic, verbose=verbose)
 
             case "process_eez_gadm_unions":
                 process_eez_gadm_unions(verbose=verbose)
 
-                step_list = ["process_mangroves" ]
+                step_list = ["process_mangroves"]
                 pipe_next_steps(step_list, trigger_next, project, topic, verbose=verbose)
 
             case "download_marine_habitats":
@@ -217,7 +221,7 @@ def main(request: Request) -> tuple[str, int]:
             case "process_terrestrial_biomes":
                 process_terrestrial_biome_raster(verbose=verbose)
 
-                step_list = ["generate_terrestrial_biome_stats_country" ]
+                step_list = ["generate_terrestrial_biome_stats_country"]
                 pipe_next_steps(step_list, trigger_next, project, topic, verbose=verbose)
 
             case "process_mangroves":
@@ -256,7 +260,12 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose, tolerance=tolerance, batch_size=1000
                 )
                 if tolerance == TOLERANCES[0]:
-                    step_list = ["generate_protected_areas_table", "generate_terrestrial_biome_stats", "generate_gadm_minus_pa", "generate_eez_minus_mpa"]
+                    step_list = [
+                        "generate_protected_areas_table",
+                        "generate_terrestrial_biome_stats",
+                        "generate_gadm_minus_pa",
+                        "generate_eez_minus_mpa",
+                    ]
                     pipe_next_steps(step_list, trigger_next, project, topic, verbose=verbose)
 
             # ------------------
@@ -305,7 +314,10 @@ def main(request: Request) -> tuple[str, int]:
                 step_list = ["update_protected_areas"]
                 pipe_next_steps(step_list, trigger_next, project, topic, verbose=verbose)
                 if updates:
-                    step_list = ["update_marine_protected_areas_tileset", "update_terrestrial_protected_areas_tileset"]
+                    step_list = [
+                        "update_marine_protected_areas_tileset",
+                        "update_terrestrial_protected_areas_tileset",
+                    ]
                     # pipe_next_steps(step_list, trigger_next, project, topic, verbose=verbose)
 
             case "generate_gadm_minus_pa":
