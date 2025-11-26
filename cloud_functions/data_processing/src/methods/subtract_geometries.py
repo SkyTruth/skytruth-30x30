@@ -34,7 +34,7 @@ def process_country(country: str, boundary_gdf: gpd.GeoDataFrame, pa_gdf: gpd.Ge
     """
     try:
         country_area = boundary_gdf[boundary_gdf["location"] == country]
-        country_pa = pa_gdf[pa_gdf["ISO3"]==country].dissolve()
+        country_pa = pa_gdf[pa_gdf["ISO3"] == country].dissolve()
         if country_pa.empty:
             # If no protected areas, return original boundary
             return country_area
@@ -95,7 +95,6 @@ def generate_total_area_minus_pa(
     # Keep only polygon records and make the geometries valid
     pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])]
     pa.geometry = pa.geometry.make_valid()
-
 
     pa["ISO3"] = pa["ISO3"].str.split(";")
     pa = pa.explode("ISO3")
