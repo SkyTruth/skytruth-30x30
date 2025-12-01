@@ -211,8 +211,8 @@ def main(request: Request) -> tuple[str, int]:
                 process_eez_geoms(verbose=verbose)
 
                 step_list = (
-                    ["generate_locations_table"],
-                )  # "update_eez_tileset", "update_marine_regions_tileset"]
+                    ["generate_locations_table", "update_eez_tileset", "update_marine_regions_tileset"],
+                )
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eez_gadm_unions":
@@ -320,12 +320,11 @@ def main(request: Request) -> tuple[str, int]:
                 step_list = ["update_protected_areas"]
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
                 if updates:
-                    pass
-                    # step_list = [
-                    #     "update_marine_protected_areas_tileset",
-                    #     "update_terrestrial_protected_areas_tileset",
-                    # ]
-                    # pipe_next_steps(step_list, trigger_next, project, topic, verbose=verbose)
+                    step_list = [
+                        "update_marine_protected_areas_tileset",
+                        "update_terrestrial_protected_areas_tileset",
+                    ]
+                    pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_gadm_minus_pa":
                 generate_total_area_minus_pa(
