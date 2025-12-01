@@ -211,7 +211,11 @@ def main(request: Request) -> tuple[str, int]:
                 process_eez_geoms(verbose=verbose)
 
                 step_list = (
-                    ["generate_locations_table", "update_eez_tileset", "update_marine_regions_tileset"],
+                    [
+                        "generate_locations_table",
+                        "update_eez_tileset",
+                        "update_marine_regions_tileset",
+                    ],
                 )
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
