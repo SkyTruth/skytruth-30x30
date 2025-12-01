@@ -1,3 +1,9 @@
+variable "allow_unauthenticated" {
+  type        = bool
+  description = "If true, grant allUsers the run.invoker role"
+  default     = true
+}
+
 variable "region" {
   type        = string
   description = "GCP region"

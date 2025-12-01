@@ -358,6 +358,7 @@ module "data_pipes_cloud_function" {
   available_cpu                    = var.data_processing_available_cpu
   max_instance_count               = var.data_processing_max_instance_count
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
+  allow_unauthenticated            = false
 }
 
 resource "google_storage_bucket_iam_member" "function_writer" {
@@ -372,42 +373,26 @@ resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
-# resource "google_project_iam_member" "google_pubsub_iam_member" {
-#   project = var.gcp_project_id
-#   role    = "roles/pubsub.publisher"
-#   member  = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
-# }
+resource "google_project_iam_member" "google_cloudtasks_iam_member" {
+  count = length(var.cloud_tasks_roles)
 
-# resource "google_service_account" "pubsub_invoker" {
-#   account_id   = "${var.project_name}-pubsub-invoker-sa"
-#   display_name = "${var.project_name} Job Queue"
-# }
+  project = var.gcp_project_id
+  role    = var.cloud_tasks_roles[count.index]
+  member  = "serviceAccount:${module.data_pipes_cloud_function.runtime_service_account_email}"
+}
 
-# resource "google_cloudfunctions2_function_iam_member" "pubsub_invoker" {
-#   project        = var.gcp_project_id
-#   location       = var.gcp_region
-#   cloud_function = module.data_pipes_cloud_function.function_name
-#   role           = "roles/cloudfunctions.invoker"
-#   member         = "serviceAccount:${google_service_account.pubsub_invoker.email}"
-# }
-
-
-# module "data_pipes_job_queue" {
-#   source = "../pubsub_queue"
-#   topic_name        = "job-topic"
-#   subscription_name = "job-subscription"
-#   function_name     = "${var.project_name}-data"
-  
-#   push_endpoint              = module.data_pipes_cloud_function.function_uri
-#   push_service_account_email = google_service_account.pubsub_invoker.email
-#   enable_message_ordering    = true
-
-#   enable_dlq            = true
-#   max_delivery_attempts = 5
-# }
+variable "cloud_tasks_roles" {
+  description = "List of roles to grant to the Data Pipes Service Account"
+  type        = list(string)
+  default = [
+    "roles/iam.serviceAccountTokenCreator",
+    "roles/iam.serviceAccountUser",
+    "roles/cloudtasks.enqueuer"
+  ]
+}
 
 resource "google_service_account" "cloudtasks_invoker" {
-  account_id   = "${var.project_name}-cloudtasks-invoker"
+  account_id   = "${var.project_name}-cloud-tasks-invoker"
   display_name = "${var.project_name} Cloud Tasks Invoker"
 }
 
@@ -417,12 +402,13 @@ resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
   cloud_function = module.data_pipes_cloud_function.function_name
   role           = "roles/cloudfunctions.invoker"
   member         = "serviceAccount:${google_service_account.cloudtasks_invoker.email}"
+  depends_on = [google_service_account.cloudtasks_invoker]
 }
 
 module "monthly_job_queue" {
   source = "../cloudtasks"
 
-  queue_name  = "monthly-jobs"
+  queue_name  = "monthly-data-pipes-jobs"
   location    = var.gcp_region
 
   target_url = module.data_pipes_cloud_function.function_uri
@@ -440,18 +426,26 @@ module "monthly_job_queue" {
   enable_dlq = false
 }
 
-
 resource "google_service_account" "scheduler_invoker" {
-  account_id   = "${var.project_name}-scheduler-sa"
+  account_id   = "${var.project_name}-data-pipes-invoker-sa"
   display_name = "${var.project_name} Cloud Scheduler Invoker"
 }
 
-resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
-  project        = var.gcp_project_id
-  location       = var.gcp_region
-  cloud_function = module.data_pipes_cloud_function.function_name
-  role           = "roles/cloudfunctions.invoker"
-  member         = "serviceAccount:${google_service_account.scheduler_invoker.email}"
+# resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
+#   project        = var.gcp_project_id
+#   location       = var.gcp_region
+#   cloud_function = module.data_pipes_cloud_function.function_name
+#   role           = "roles/run.invoker"
+#   member         = "serviceAccount:${google_service_account.scheduler_invoker.email}"
+# }
+
+resource "google_cloud_run_service_iam_member" "scheduler_invoker" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+  service  = module.data_pipes_cloud_function.service_name
+
+  role   = "roles/run.invoker"
+  member = "serviceAccount:${google_service_account.scheduler_invoker.email}"
 }
 
 module "data_pipes_scheduler" {
@@ -467,7 +461,6 @@ module "data_pipes_scheduler" {
     METHOD = "publisher",
     TRIGGER_NEXT = true,
     PROJECT = var.gcp_project_id,
-    # TOPIC = module.data_pipes_job_queue.topic_name
     LOCATION   = var.gcp_region
     QUEUE_NAME = module.monthly_job_queue.queue_name
     TARGET_URL = module.data_pipes_cloud_function.function_uri

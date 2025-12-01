@@ -137,19 +137,17 @@ def main(request: Request) -> tuple[str, int]:
         trigger_next = data.get("TRIGGER_NEXT", False)
         tolerance = data.get("TOLERANCE", TOLERANCES[0])
         project = data.get("PROJECT", PROJECT)
-        # topic = data.get("TOPIC", None)
-        location = data.get("LOCATION", "")
-        queue_name = data.get("QUEUE_NAME", "")
-        target_url = data.get("TARGET_URL", "")
-        service_account_email = data.get("INVOKER_SA", "PROJECT")
 
         task_config = {
-            "project_id": project,
-            "location": location,
-            "queue_name": queue_name,
-            "target_url": target_url,
-            "service_account_email": service_account_email,
+            "PROJECT": project,
+            "LOCATION": data.get("LOCATION", ""),
+            "QUEUE_NAME": data.get("QUEUE_NAME", ""),
+            "TARGET_URL": data.get("TARGET_URL", ""),
+            "INVOKER_SA": data.get("INVOKER_SA", ""),
+            "TRIGGER_NEXT": trigger_next
         }
+
+        print("DEBUGGING - ", task_config)
 
         print(f"Starting METHOD: {method}")
 
