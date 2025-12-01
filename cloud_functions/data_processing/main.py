@@ -1,7 +1,7 @@
 import base64
 import datetime
-import os
 import json
+import os
 import signal
 
 import functions_framework
@@ -24,7 +24,6 @@ from src.core.params import (
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
-    PROJECT,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCES,
@@ -206,11 +205,12 @@ def main(request: Request) -> tuple[str, int]:
             case "process_gadm":
                 process_gadm_geoms(verbose=verbose)
 
-                step_list = (
-                    ["generate_locations_table"],
-                )
+                step_list = (["generate_locations_table"],)
                 if env == "prod":
-                    step_list = step_list +  ["update_country_tileset", "update_terrestrial_regions_tileset"]
+                    step_list = step_list + [
+                        "update_country_tileset",
+                        "update_terrestrial_regions_tileset",
+                    ]
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eezs":
@@ -219,7 +219,7 @@ def main(request: Request) -> tuple[str, int]:
                 step_list = ["generate_locations_table"]
 
                 if env == "prod":
-                    step_list = step_list +  ["update_eez_tileset", "update_marine_regions_tileset"]
+                    step_list = step_list + ["update_eez_tileset", "update_marine_regions_tileset"]
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eez_gadm_unions":
@@ -326,7 +326,7 @@ def main(request: Request) -> tuple[str, int]:
 
                 step_list = ["update_protected_areas"]
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
-                if updates and env=="prod":
+                if updates and env == "prod":
                     step_list = [
                         "update_marine_protected_areas_tileset",
                         "update_terrestrial_protected_areas_tileset",

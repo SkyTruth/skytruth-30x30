@@ -44,12 +44,7 @@ def create_task(
         raise
 
 
-def monthly_job_publisher(
-    task_config, 
-    retry_attempts: int = 1,
-    backoff: int = 86400,
-    verbose=True
-):
+def monthly_job_publisher(task_config, retry_attempts: int = 1, backoff: int = 86400, verbose=True):
     """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
 
     jobs = [
