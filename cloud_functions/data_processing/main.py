@@ -144,7 +144,7 @@ def main(request: Request) -> tuple[str, int]:
             "QUEUE_NAME": data.get("QUEUE_NAME", ""),
             "TARGET_URL": data.get("TARGET_URL", ""),
             "INVOKER_SA": data.get("INVOKER_SA", ""),
-            "TRIGGER_NEXT": trigger_next
+            "TRIGGER_NEXT": trigger_next,
         }
 
         print("DEBUGGING - ", task_config)

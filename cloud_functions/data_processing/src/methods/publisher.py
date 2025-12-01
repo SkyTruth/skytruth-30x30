@@ -1,9 +1,11 @@
 import json
+
 from google.cloud import tasks_v2
 
 from src.utils.logger import Logger
 
 logger = Logger()
+
 
 def create_task(
     project_id: str,
@@ -87,10 +89,7 @@ def launch_next_step(
 ):
     """Enqueue exactly one downstream task."""
 
-    payload = {
-        "METHOD": next_method,
-        **task_config
-    }
+    payload = {"METHOD": next_method, **task_config}
 
     if verbose:
         print(f"Launching next step: {next_method}")
