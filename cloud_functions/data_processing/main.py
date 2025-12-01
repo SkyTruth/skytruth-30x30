@@ -147,8 +147,6 @@ def main(request: Request) -> tuple[str, int]:
             "TRIGGER_NEXT": trigger_next,
         }
 
-        print("DEBUGGING - ", task_config)
-
         print(f"Starting METHOD: {method}")
 
         match method:
