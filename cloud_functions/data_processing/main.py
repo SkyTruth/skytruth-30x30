@@ -152,8 +152,6 @@ def main(request: Request) -> tuple[str, int]:
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
-            case "test_dead_letter":
-                raise RuntimeError("DLQ test intentional failure")
             case "publisher":
                 monthly_job_publisher(task_config, verbose=verbose)
 
