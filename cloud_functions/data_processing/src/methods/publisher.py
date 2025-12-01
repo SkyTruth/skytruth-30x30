@@ -43,7 +43,7 @@ def create_task(
         raise
 
 
-def monthly_job_publisher(task_config, retry_attempts: int = 1, backoff: int = 86400, verbose=True):
+def monthly_job_publisher(task_config, verbose=True):
     """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
 
     jobs = [
@@ -80,8 +80,6 @@ def monthly_job_publisher(task_config, retry_attempts: int = 1, backoff: int = 8
             target_url=task_config["TARGET_URL"],
             service_account_email=task_config["INVOKER_SA"],
             payload=job,
-            retry_attempts=retry_attempts,
-            backoff=backoff,
             verbose=verbose,
         )
 
@@ -89,8 +87,6 @@ def monthly_job_publisher(task_config, retry_attempts: int = 1, backoff: int = 8
 def launch_next_step(
     next_method: str,
     task_config: dict,
-    retry_attempts: int = 1,
-    backoff: int = 86400,
     verbose: bool = True,
 ):
     """Enqueue exactly one downstream task."""
@@ -107,8 +103,6 @@ def launch_next_step(
         target_url=task_config["TARGET_URL"],
         service_account_email=task_config["INVOKER_SA"],
         payload=payload,
-        retry_attempts=retry_attempts,
-        backoff=backoff,
         verbose=verbose,
     )
 
