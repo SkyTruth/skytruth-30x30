@@ -360,7 +360,6 @@ module "data_pipes_cloud_function" {
   available_cpu                    = var.data_processing_available_cpu
   max_instance_count               = var.data_processing_max_instance_count
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
-  allow_unauthenticated            = false
 }
 
 resource "google_storage_bucket_iam_member" "function_writer" {
