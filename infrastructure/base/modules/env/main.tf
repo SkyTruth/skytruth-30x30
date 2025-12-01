@@ -431,14 +431,6 @@ resource "google_service_account" "scheduler_invoker" {
   display_name = "${var.project_name} Cloud Scheduler Invoker"
 }
 
-# resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
-#   project        = var.gcp_project_id
-#   location       = var.gcp_region
-#   cloud_function = module.data_pipes_cloud_function.function_name
-#   role           = "roles/run.invoker"
-#   member         = "serviceAccount:${google_service_account.scheduler_invoker.email}"
-# }
-
 resource "google_cloud_run_service_iam_member" "scheduler_invoker" {
   project  = var.gcp_project_id
   location = var.gcp_region
@@ -451,7 +443,7 @@ resource "google_cloud_run_service_iam_member" "scheduler_invoker" {
 module "data_pipes_scheduler" {
   source                   = "../cloud_scheduler"
   name                     = "${var.project_name}-trigger-data-pipes-method"
-  schedule                 = "0 8 5 * *"
+  schedule                 = "0 8 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
   headers = {
