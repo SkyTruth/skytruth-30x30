@@ -58,15 +58,19 @@ def monthly_job_publisher(task_config, retry_attempts: int = 1, backoff: int = 8
         {
             "METHOD": "download_protected_planet_country",
             **task_config,
-        }
+        },
     ]
 
     for tolerance in TOLERANCES:
-        jobs.append([{
-            "METHOD": "download_protected_planet_pas",
-            "TOLERANCE": tolerance,
-            **task_config,
-        }])
+        jobs.append(
+            [
+                {
+                    "METHOD": "download_protected_planet_pas",
+                    "TOLERANCE": tolerance,
+                    **task_config,
+                }
+            ]
+        )
 
     for job in jobs:
         create_task(
