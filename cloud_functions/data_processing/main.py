@@ -1,5 +1,6 @@
 import base64
 import datetime
+import os
 import json
 import signal
 
@@ -124,6 +125,10 @@ def main(request: Request) -> tuple[str, int]:
 
     st = datetime.datetime.now()
 
+    project = os.environ.get("PROJECT", "")
+    env = os.environ.get("ENVIRONMENT", "")
+    location = os.environ.get("LOCATION", "")
+
     try:
         data = request.get_json(silent=True) or {}
 
@@ -136,11 +141,10 @@ def main(request: Request) -> tuple[str, int]:
         method = data.get("METHOD", "dry_run")
         trigger_next = data.get("TRIGGER_NEXT", False)
         tolerance = data.get("TOLERANCE", TOLERANCES[0])
-        project = data.get("PROJECT", PROJECT)
 
         task_config = {
             "PROJECT": project,
-            "LOCATION": data.get("LOCATION", ""),
+            "LOCATION": location,
             "QUEUE_NAME": data.get("QUEUE_NAME", ""),
             "TARGET_URL": data.get("TARGET_URL", ""),
             "INVOKER_SA": data.get("INVOKER_SA", ""),
@@ -204,19 +208,18 @@ def main(request: Request) -> tuple[str, int]:
 
                 step_list = (
                     ["generate_locations_table"],
-                )  # "update_country_tileset", "update_terrestrial_regions_tileset"]
+                )
+                if env == "prod":
+                    step_list = step_list +  ["update_country_tileset", "update_terrestrial_regions_tileset"]
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eezs":
                 process_eez_geoms(verbose=verbose)
 
-                step_list = (
-                    [
-                        "generate_locations_table",
-                        "update_eez_tileset",
-                        "update_marine_regions_tileset",
-                    ],
-                )
+                step_list = ["generate_locations_table"]
+
+                if env == "prod":
+                    step_list = step_list +  ["update_eez_tileset", "update_marine_regions_tileset"]
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eez_gadm_unions":
@@ -323,7 +326,7 @@ def main(request: Request) -> tuple[str, int]:
 
                 step_list = ["update_protected_areas"]
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
-                if updates:
+                if updates and env=="prod":
                     step_list = [
                         "update_marine_protected_areas_tileset",
                         "update_terrestrial_protected_areas_tileset",

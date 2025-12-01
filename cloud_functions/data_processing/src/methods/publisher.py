@@ -14,6 +14,8 @@ def create_task(
     target_url: str,
     service_account_email: str,
     payload: dict,
+    retry_attempts: int = 1,
+    backoff: int = 86400,
     verbose: bool = True,
 ):
     """Create a single Cloud Task to POST JSON to a Cloud Function."""
@@ -29,7 +31,7 @@ def create_task(
             "headers": {"Content-Type": "application/json"},
             "body": json.dumps(payload).encode(),
             "oidc_token": {"service_account_email": service_account_email},
-        }
+        },
     }
 
     try:
@@ -42,32 +44,37 @@ def create_task(
         raise
 
 
-def monthly_job_publisher(task_config, verbose=True):
+def monthly_job_publisher(
+    task_config, 
+    retry_attempts: int = 1,
+    backoff: int = 86400,
+    verbose=True
+):
     """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
 
     jobs = [
-        {
-            "METHOD": "download_mpatlas",
-            **task_config,
-        },
+        # {
+        #     "METHOD": "download_mpatlas",
+        #     **task_config,
+        # },
         {
             "METHOD": "download_protected_seas",
             **task_config,
         },
-        {
-            "METHOD": "download_protected_planet_country",
-            **task_config,
-        },
-        {
-            "METHOD": "download_protected_planet_pas",
-            "TOLERANCE": 0.001,
-            **task_config,
-        },
-        {
-            "METHOD": "download_protected_planet_pas",
-            "TOLERANCE": 0.0001,
-            **task_config,
-        },
+        # {
+        #     "METHOD": "download_protected_planet_country",
+        #     **task_config,
+        # },
+        # {
+        #     "METHOD": "download_protected_planet_pas",
+        #     "TOLERANCE": 0.001,
+        #     **task_config,
+        # },
+        # {
+        #     "METHOD": "download_protected_planet_pas",
+        #     "TOLERANCE": 0.0001,
+        #     **task_config,
+        # },
     ]
 
     for job in jobs:
@@ -78,6 +85,8 @@ def monthly_job_publisher(task_config, verbose=True):
             target_url=task_config["TARGET_URL"],
             service_account_email=task_config["INVOKER_SA"],
             payload=job,
+            retry_attempts=retry_attempts,
+            backoff=backoff,
             verbose=verbose,
         )
 
@@ -85,6 +94,8 @@ def monthly_job_publisher(task_config, verbose=True):
 def launch_next_step(
     next_method: str,
     task_config: dict,
+    retry_attempts: int = 1,
+    backoff: int = 86400,
     verbose: bool = True,
 ):
     """Enqueue exactly one downstream task."""
@@ -101,6 +112,8 @@ def launch_next_step(
         target_url=task_config["TARGET_URL"],
         service_account_email=task_config["INVOKER_SA"],
         payload=payload,
+        retry_attempts=retry_attempts,
+        backoff=backoff,
         verbose=verbose,
     )
 

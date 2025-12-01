@@ -313,6 +313,8 @@ locals {
     PROJECT             = var.gcp_project_id
     STRAPI_API_URL      = local.api_lb_url
     STRAPI_USERNAME     = var.backend_write_user
+    LOCATION            = var.gcp_region
+    ENVIRONMENT         = var.environment
   }
 
   data_processing_cloud_function_secrets = [{
@@ -450,12 +452,10 @@ module "data_pipes_scheduler" {
     "Content-Type" = "application/json"
   }
   body = jsonencode({
-    METHOD = "publisher",
-    TRIGGER_NEXT = true,
-    PROJECT = var.gcp_project_id,
-    LOCATION   = var.gcp_region
-    QUEUE_NAME = module.monthly_job_queue.queue_name
-    TARGET_URL = module.data_pipes_cloud_function.function_uri
-    INVOKER_SA = google_service_account.cloudtasks_invoker.email
+    METHOD              = "publisher",
+    TRIGGER_NEXT        = true,
+    QUEUE_NAME          = module.monthly_job_queue.queue_name,
+    TARGET_URL          = module.data_pipes_cloud_function.function_uri,
+    INVOKER_SA          = google_service_account.cloudtasks_invoker.email
   })
 }
