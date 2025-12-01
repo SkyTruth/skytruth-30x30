@@ -29,7 +29,6 @@ from src.methods.protected_areas.pa_processors import (
     get_identifier_children,
     get_unique_identifier,
     num_dif_idx,
-    ordered_list_dif_idx,
     relation_diff_index,
     str_dif_idx,
 )
@@ -333,7 +332,6 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         )
         num_cols = ["area", "coverage"]
         relation_list_cols = ["children", "parent"]
-        ordered_list_cols = []  # ["bbox"]
 
         # build up combined mask
         change_indx = pd.Series(False, index=static_current.index)
@@ -349,10 +347,6 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         for col in num_cols:
             changed_cols[col] = num_dif_idx(static_current, static_updated, col)
             change_indx |= num_dif_idx(static_current, static_updated, col)
-
-        for col in ordered_list_cols:
-            changed_cols[col] = ordered_list_dif_idx(static_current, static_updated, col)
-            change_indx |= ordered_list_dif_idx(static_current, static_updated, col)
 
         # Updated version of changed entries
         changed = static_updated[change_indx]

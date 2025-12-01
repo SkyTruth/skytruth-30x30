@@ -2,6 +2,7 @@ import json
 
 from google.cloud import tasks_v2
 
+from src.core.params import TOLERANCES
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -14,8 +15,6 @@ def create_task(
     target_url: str,
     service_account_email: str,
     payload: dict,
-    retry_attempts: int = 1,
-    backoff: int = 86400,
     verbose: bool = True,
 ):
     """Create a single Cloud Task to POST JSON to a Cloud Function."""
@@ -48,29 +47,26 @@ def monthly_job_publisher(task_config, retry_attempts: int = 1, backoff: int = 8
     """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
 
     jobs = [
-        # {
-        #     "METHOD": "download_mpatlas",
-        #     **task_config,
-        # },
+        {
+            "METHOD": "download_mpatlas",
+            **task_config,
+        },
         {
             "METHOD": "download_protected_seas",
             **task_config,
         },
-        # {
-        #     "METHOD": "download_protected_planet_country",
-        #     **task_config,
-        # },
-        # {
-        #     "METHOD": "download_protected_planet_pas",
-        #     "TOLERANCE": 0.001,
-        #     **task_config,
-        # },
-        # {
-        #     "METHOD": "download_protected_planet_pas",
-        #     "TOLERANCE": 0.0001,
-        #     **task_config,
-        # },
+        {
+            "METHOD": "download_protected_planet_country",
+            **task_config,
+        }
     ]
+
+    for tolerance in TOLERANCES:
+        jobs.append([{
+            "METHOD": "download_protected_planet_pas",
+            "TOLERANCE": tolerance,
+            **task_config,
+        }])
 
     for job in jobs:
         create_task(

@@ -386,7 +386,7 @@ resource "google_project_iam_member" "google_cloudtasks_iam_member" {
 variable "cloud_tasks_roles" {
   description = "List of roles to grant to the Data Pipes Service Account"
   type        = list(string)
-  default = [
+  default     = [
     "roles/iam.serviceAccountTokenCreator",
     "roles/iam.serviceAccountUser",
     "roles/cloudtasks.enqueuer"

@@ -385,7 +385,7 @@ def download_and_process_protected_planet_pas(
             rep_area = row.REP_AREA if row["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve" else 0
 
             g = row.geometry
-            if rep_area > 0 and isinstance(g, (Point, MultiPoint)):
+            if rep_area and rep_area > 0 and isinstance(g, (Point, MultiPoint)):
                 # build a 1-row GeoDataFrame with the same CRS
                 row_gdf = gpd.GeoDataFrame(
                     row.to_frame().T,

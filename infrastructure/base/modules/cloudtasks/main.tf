@@ -17,7 +17,7 @@ resource "google_cloud_tasks_queue" "default" {
     max_doublings      = var.max_doublings
   }
 
-  # Logging (optional)
+  # Logging
   dynamic "stackdriver_logging_config" {
     for_each = var.enable_logging ? [1] : []
     content {
