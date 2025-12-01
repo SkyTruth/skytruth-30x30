@@ -48,7 +48,7 @@ def wdpa_country_wrapping(df: pd.DataFrame, loc_col: str = "location"):
 
     # Label Antarctica PAs as ABNJ (areas beyond national jurisdiction)
     df.loc[df[loc_col] == "ATA", loc_col] = "ABNJ"
-    df.loc[df[loc_col] == "ALA",  loc_col] = "FIN"
+    df.loc[df[loc_col] == "ALA", loc_col] = "FIN"
 
     return df
 
