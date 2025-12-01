@@ -127,7 +127,7 @@ def main(request: Request) -> tuple[str, int]:
     try:
         data = request.get_json(silent=True) or {}
 
-        # in case received as a Pub/Sub message
+        # in case received as a queue message
         if "message" in data:
             msg = data["message"]
             data_bytes = base64.b64decode(msg["data"])
