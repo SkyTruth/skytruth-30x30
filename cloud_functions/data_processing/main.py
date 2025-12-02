@@ -280,7 +280,8 @@ def main(request: Request) -> tuple[str, int]:
 
             case "download_protected_planet_pas":
                 retry_config = download_and_process_protected_planet_pas(
-                    verbose=verbose, tolerance=tolerance, batch_size=1000
+                    verbose=verbose, tolerance=tolerance, batch_size=1000,
+                    wdpa_url=f"https://d1gam3xoknrgr2.cloudfront.net/currentWDPA_WDOECM_Jan2026_Public_all_shp.zip"
                 )
                 if tolerance == TOLERANCES[0]:
                     step_list = [
@@ -462,7 +463,7 @@ def main(request: Request) -> tuple[str, int]:
             logger.error({"message": f"METHOD {method} failed after {attempt} attempts: {e}"})
 
             # TODO: Let's replace this with an alert and return 200 to clear from queue
-            return f"Internal Server Error - METHOD {method} failed: {e}", 500
+            return f"Internal Server Error - METHOD {method} failed: {e}", 200
 
     finally:
         print("Releasing memory")
