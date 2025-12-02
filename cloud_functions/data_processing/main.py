@@ -460,7 +460,7 @@ def main(request: Request) -> tuple[str, int]:
             return "retrying", 200
         else:
             logger.error({"message": f"METHOD {method} failed after {attempt} attempts: {e}"})
-            
+
             # TODO: Let's replace this with an alert and return 200 to clear from queue
             return f"Internal Server Error - METHOD {method} failed: {e}", 500
 
