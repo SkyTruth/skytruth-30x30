@@ -280,8 +280,10 @@ def main(request: Request) -> tuple[str, int]:
 
             case "download_protected_planet_pas":
                 retry_config = download_and_process_protected_planet_pas(
-                    verbose=verbose, tolerance=tolerance, batch_size=1000,
-                    wdpa_url=f"https://d1gam3xoknrgr2.cloudfront.net/currentWDPA_WDOECM_Jan2026_Public_all_shp.zip"
+                    verbose=verbose,
+                    tolerance=tolerance,
+                    batch_size=1000,
+                    wdpa_url="https://d1gam3xoknrgr2.cloudfront.net/currentWDPA_WDOECM_Jan2026_Public_all_shp.zip",
                 )
                 if tolerance == TOLERANCES[0]:
                     step_list = [
