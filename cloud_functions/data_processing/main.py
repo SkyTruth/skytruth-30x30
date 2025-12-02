@@ -140,7 +140,7 @@ def main(request: Request) -> tuple[str, int]:
         method = data.get("METHOD", "dry_run")
         trigger_next = data.get("TRIGGER_NEXT", False)
         tolerance = data.get("TOLERANCE", TOLERANCES[0])
-        max_retries = data.get("MAX_RETRIES", 1)
+        max_retries = data.get("MAX_RETRIES", 0)
         attempt = data.get("attempt", 1)
 
         task_config = {
@@ -163,7 +163,7 @@ def main(request: Request) -> tuple[str, int]:
                 print("Dry Run Complete!")
 
             case "test_retries":
-                retry_config = {"delay_seconds": 30, "max_retries": 3}
+                retry_config = {"delay_seconds": 30, "max_retries": 2}
                 logger.error({"message": "Error: Testing Retries"})
             case "publisher":
                 monthly_job_publisher(task_config, verbose=verbose)
@@ -453,7 +453,7 @@ def main(request: Request) -> tuple[str, int]:
         logger.error({"message": f"METHOD {method} failed", "error": str(e)})
 
         if retry_config and attempt >= retry_config["max_retries"]:
-            return (f"METHOD {method} failed after {attempt} attempts: {type(e).__name__}", 400)
+            return (f"METHOD {method} failed after {attempt} attempts: {type(e).__name__}", 500)
 
         payload = {"METHOD": method, "attempt": attempt + 1, **task_config}
         create_task(payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"])
