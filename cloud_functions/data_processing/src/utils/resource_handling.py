@@ -72,12 +72,6 @@ def release_memory(verbose=True):
     """
     Free up memory
     """
-
-    # log memory allocation before releasing memory
-    if verbose:
-        show_mem("Before releasing memory")
-        show_container_mem("Container memory before releasing memory")
-
     # Run garbage collector
     gc.collect()
 
@@ -87,7 +81,6 @@ def release_memory(verbose=True):
 
     # log memory allocation after releasing memory
     if verbose:
-        show_mem("After releasing memory")
         show_container_mem("Container memory after releasing memory")
 
 

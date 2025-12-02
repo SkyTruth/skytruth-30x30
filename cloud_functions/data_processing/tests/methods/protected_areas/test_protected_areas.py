@@ -392,10 +392,6 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     changed_pa["area"] = second_entry["area"] * 2
     changed_pa["iucn_category"] = "II"
 
-    changed_bbox = deepcopy(fourth_entry)
-    del changed_bbox["id"]
-    changed_bbox["bbox"][2] = 0
-
     # New PA with parent existing that has been updated
     new_pa = deepcopy(base_entry)
     del new_pa["id"]
@@ -428,9 +424,7 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     del changed_child["id"]
 
     current_db = make_df([base_entry, second_entry, third_entry, fourth_entry, parent, child])
-    updated_pas = make_df(
-        [unchanged_pa, changed_pa, changed_bbox, new_pa, changed_child, changed_parent]
-    )
+    updated_pas = make_df([unchanged_pa, changed_pa, new_pa, changed_child, changed_parent])
 
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     new = result["new"]
@@ -438,8 +432,8 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     deleted = result["deleted"]
 
     assert len(new) == 1  # new_pa
-    assert len(changed) == 4  # changed_pa, changed_bbox, changed_parent, changed_child
-    assert len(deleted) == 1  # third_pa
+    assert len(changed) == 3  # changed_pa, changed_parent, changed_child
+    assert len(deleted) == 2  # third_pa, fourth_pa
 
     new_entry = new[0]
     # New pa's parent should have an id equal to second_entry, other than that it should
@@ -455,10 +449,6 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     changed_string["id"] = second_entry["id"]
     changed_string["area"] = round(changed_string["area"], 2)
 
-    changed_bounds = deepcopy(changed_bbox)
-    changed_bounds["id"] = fourth_entry["id"]
-    changed_bounds["area"] = round(changed_bounds["area"], 2)
-
     expected_changed_parent = deepcopy(changed_parent)
     expected_changed_parent["id"] = parent["id"]
     expected_changed_parent["area"] = round(expected_changed_parent["area"], 2)
@@ -468,6 +458,5 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     expected_changed_child["area"] = round(expected_changed_child["area"], 2)
 
     assert changed_string in changed
-    assert changed_bounds in changed
     assert expected_changed_child in changed
     assert expected_changed_parent in changed

@@ -22,13 +22,13 @@ from src.core.processors import (
     remove_non_designated_m,
     remove_non_designated_p,
     update_mpaa_establishment_stage,
+    wdpa_country_wrapping,
 )
 from src.methods.protected_areas.pa_processors import (
     get_identifier,
     get_identifier_children,
     get_unique_identifier,
     num_dif_idx,
-    ordered_list_dif_idx,
     relation_diff_index,
     str_dif_idx,
 )
@@ -48,6 +48,7 @@ def generate_protected_areas_table(
     gadm_file_name: str = GADM_FILE_NAME,
     bucket: str = BUCKET,
     verbose: bool = True,
+    tolerance=TOLERANCES[0],
 ):
     def add_parent_children(subset: pd.DataFrame, fields=None) -> pd.DataFrame:
         """
@@ -104,10 +105,6 @@ def generate_protected_areas_table(
         wdpa = wdpa.explode("ISO3")
         wdpa["ISO3"] = wdpa["ISO3"].str.strip()
 
-        # force Antarctica PAs to ABNJ and ALA to FIN
-        wdpa.loc[wdpa["ISO3"] == "ATA", "ISO3"] = "ABNJ"
-        wdpa.loc[wdpa["ISO3"] == "ALA", "ISO3"] = "FIN"
-
         wdpa_dict = {
             "NAME": "name",
             "calculated_area_km2": "area",
@@ -127,6 +124,7 @@ def generate_protected_areas_table(
         wdpa_pa = (
             wdpa[cols]
             .rename(columns=wdpa_dict)
+            .pipe(wdpa_country_wrapping)
             .pipe(remove_non_designated_p)
             .pipe(add_environment)
             .pipe(add_oecm_status)
@@ -214,8 +212,6 @@ def generate_protected_areas_table(
         print("loading PA metadata")
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
-
-    tolerance = TOLERANCES[0]
 
     eez_file_name = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
     gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
@@ -336,7 +332,6 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         )
         num_cols = ["area", "coverage"]
         relation_list_cols = ["children", "parent"]
-        ordered_list_cols = ["bbox"]
 
         # build up combined mask
         change_indx = pd.Series(False, index=static_current.index)
@@ -352,10 +347,6 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         for col in num_cols:
             changed_cols[col] = num_dif_idx(static_current, static_updated, col)
             change_indx |= num_dif_idx(static_current, static_updated, col)
-
-        for col in ordered_list_cols:
-            changed_cols[col] = ordered_list_dif_idx(static_current, static_updated, col)
-            change_indx |= ordered_list_dif_idx(static_current, static_updated, col)
 
         # Updated version of changed entries
         changed = static_updated[change_indx]
