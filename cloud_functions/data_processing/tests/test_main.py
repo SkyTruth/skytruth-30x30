@@ -320,7 +320,7 @@ def test_error_bubbles_to_500(monkeypatch, call_log):
         make_recorder(call_log, "process_gadm_geoms", side_effect=RuntimeError("boom")),
         raising=True,
     )
-    resp = main.main(MockRequest({"METHOD": "process_gadm"}))
+    resp = main.main(MockRequest({"METHOD": "process_gadm", "MAX_RETRIES": 0}))
     assert isinstance(resp, tuple)
     body, status = resp
     assert status == 500
