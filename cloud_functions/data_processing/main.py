@@ -163,8 +163,8 @@ def main(request: Request) -> tuple[str, int]:
                 print("Dry Run Complete!")
 
             case "test_retries":
-                retry_config = {"delay_seconds": 30, "max_retries": 2}
-                logger.error({"message": "Error: Testing Retries"})
+                retry_config = {"delay_seconds": 30, "max_retries": 3}
+                raise ValueError("Error: Testing Retries")
             case "publisher":
                 monthly_job_publisher(task_config, verbose=verbose)
 
@@ -450,15 +450,16 @@ def main(request: Request) -> tuple[str, int]:
 
         return "OK", 200
     except Exception as e:
-        if retry_config is None or attempt >= retry_config["max_retries"]:
-            logger.error({"message": f"METHOD {method} failed: {e}"})
-            return f"Internal Server Error - METHOD {method} failed: {e}", 500
-        elif retry_config:
+        if retry_config and attempt <= retry_config["max_retries"]:
             logger.warning({"message": f"METHOD {method} failed attempt {attempt}: {e}"})
             payload = {"METHOD": method, "attempt": attempt + 1, **task_config}
             create_task(
                 payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"]
             )
+            return "retrying", 200
+        else:
+            logger.error({"message": f"METHOD {method} failed after {attempt} attempts: {e}"})
+            return f"Internal Server Error - METHOD {method} failed: {e}", 500
 
     finally:
         print("Releasing memory")
