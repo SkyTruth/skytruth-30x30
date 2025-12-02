@@ -1,6 +1,8 @@
+from datetime import datetime, timedelta, timezone
 import json
 
 from google.cloud import tasks_v2
+from google.protobuf import timestamp_pb2
 
 from src.core.params import TOLERANCES
 from src.utils.logger import Logger
@@ -9,15 +11,17 @@ logger = Logger()
 
 
 def create_task(
-    project_id: str,
-    location: str,
-    queue: str,
-    target_url: str,
-    service_account_email: str,
     payload: dict,
+    delay_seconds: int | None = None,
     verbose: bool = True,
 ):
     """Create a single Cloud Task to POST JSON to a Cloud Function."""
+
+    project_id=payload["PROJECT"]
+    location=payload["LOCATION"]
+    queue=payload["QUEUE_NAME"]
+    target_url=payload["TARGET_URL"]
+    service_account_email=payload["INVOKER_SA"]
 
     client = tasks_v2.CloudTasksClient()
 
@@ -32,6 +36,12 @@ def create_task(
             "oidc_token": {"service_account_email": service_account_email},
         },
     }
+
+    if delay_seconds is not None:
+        scheduled_time = datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)
+        timestamp = timestamp_pb2.Timestamp()
+        timestamp.FromDatetime(scheduled_time)
+        task["schedule_time"] = timestamp
 
     try:
         response = client.create_task(request={"parent": parent, "task": task})
@@ -48,38 +58,34 @@ def monthly_job_publisher(task_config, verbose=True):
 
     jobs = [
         {
-            "METHOD": "download_mpatlas",
+            "METHOD": "test_retries",
             **task_config,
         },
-        {
-            "METHOD": "download_protected_seas",
-            **task_config,
-        },
-        {
-            "METHOD": "download_protected_planet_country",
-            **task_config,
-        },
+        # {
+        #     "METHOD": "download_mpatlas",
+        #     **task_config,
+        # },
+        # {
+        #     "METHOD": "download_protected_seas",
+        #     **task_config,
+        # },
+        # {
+        #     "METHOD": "download_protected_planet_country",
+        #     **task_config,
+        # },
     ]
 
-    for tolerance in TOLERANCES:
-        jobs.append(
-            {
-                "METHOD": "download_protected_planet_pas",
-                "TOLERANCE": tolerance,
-                **task_config,
-            }
-        )
+    # for tolerance in TOLERANCES:
+    #     jobs.append(
+    #         {
+    #             "METHOD": "download_protected_planet_pas",
+    #             "TOLERANCE": tolerance,
+    #             **task_config,
+    #         }
+    #     )
 
     for job in jobs:
-        create_task(
-            project_id=task_config["PROJECT"],
-            location=task_config["LOCATION"],
-            queue=task_config["QUEUE_NAME"],
-            target_url=task_config["TARGET_URL"],
-            service_account_email=task_config["INVOKER_SA"],
-            payload=job,
-            verbose=verbose,
-        )
+        create_task(payload=job, verbose=verbose)
 
 
 def launch_next_step(
@@ -94,15 +100,7 @@ def launch_next_step(
     if verbose:
         print(f"Launching next step: {next_method}")
 
-    create_task(
-        project_id=task_config["PROJECT"],
-        location=task_config["LOCATION"],
-        queue=task_config["QUEUE_NAME"],
-        target_url=task_config["TARGET_URL"],
-        service_account_email=task_config["INVOKER_SA"],
-        payload=payload,
-        verbose=verbose,
-    )
+    create_task(payload=payload, verbose=verbose)
 
 
 def pipe_next_steps(

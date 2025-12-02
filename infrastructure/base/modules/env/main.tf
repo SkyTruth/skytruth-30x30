@@ -418,11 +418,8 @@ module "monthly_job_queue" {
   max_concurrent_dispatches = 1
   max_dispatches_per_second = 1
 
-  # Daily retries for a week
-  max_attempts       = 7
-  min_backoff        = "86400s"
-  max_backoff        = "86400s"
-  max_retry_duration = "604800s"
+  # Just try one time - retries are handled in handler
+  max_attempts       = 1
 
   enable_dlq = false
 }

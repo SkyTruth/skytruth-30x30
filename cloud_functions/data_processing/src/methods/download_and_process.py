@@ -503,7 +503,11 @@ def download_and_process_protected_planet_pas(
         print(f"downloading {wdpa_url}")
     status = download_file_with_progress(wdpa_url, base_zip_path)
     if not status:
-        raise ValueError(f"Failed to download {wdpa_url}")
+        logger.error({"message": f"Failed to download {wdpa_url}"})
+        return {
+            "delay_seconds": 60*60*24,
+            "max_attempts": 7
+        }
 
     show_mem("After download")
     show_container_mem("After download")
@@ -586,6 +590,8 @@ def download_and_process_protected_planet_pas(
         print("Cleaning up")
     df = pd.DataFrame()
     del df
+
+    return None
 
 
 def download_protected_planet_global(

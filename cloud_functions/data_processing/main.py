@@ -51,7 +51,7 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
-from src.methods.publisher import monthly_job_publisher, pipe_next_steps
+from src.methods.publisher import create_task, monthly_job_publisher, pipe_next_steps
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
@@ -140,6 +140,8 @@ def main(request: Request) -> tuple[str, int]:
         method = data.get("METHOD", "dry_run")
         trigger_next = data.get("TRIGGER_NEXT", False)
         tolerance = data.get("TOLERANCE", TOLERANCES[0])
+        max_retries = data.get("MAX_RETRIES", 1)
+        attempt = data.get("attempt", 1)
 
         task_config = {
             "PROJECT": project,
@@ -148,6 +150,13 @@ def main(request: Request) -> tuple[str, int]:
             "TARGET_URL": data.get("TARGET_URL", ""),
             "INVOKER_SA": data.get("INVOKER_SA", ""),
             "TRIGGER_NEXT": trigger_next,
+            "MAX_RETRIES": max_retries,
+            "attempt": attempt
+        }
+
+        retry_config = {
+            "delay_seconds": (attempt-1)*60,
+            "max_retries": max_retries
         }
 
         print(f"Starting METHOD: {method}")
@@ -155,6 +164,13 @@ def main(request: Request) -> tuple[str, int]:
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
+
+            case "test_retries":
+                retry_config = {
+                    "delay_seconds": 30,
+                    "max_retries": 3
+                }
+                logger.error({"message":"Error: Testing Retries"})
             case "publisher":
                 monthly_job_publisher(task_config, verbose=verbose)
 
@@ -269,7 +285,7 @@ def main(request: Request) -> tuple[str, int]:
                 pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_protected_planet_pas":
-                download_and_process_protected_planet_pas(
+                retry_config = download_and_process_protected_planet_pas(
                     verbose=verbose, tolerance=tolerance, batch_size=1000
                 )
                 if tolerance == TOLERANCES[0]:
@@ -441,6 +457,12 @@ def main(request: Request) -> tuple[str, int]:
         return "OK", 200
     except Exception as e:
         logger.error({"message": f"METHOD {method} failed", "error": str(e)})
+
+        if retry_config and attempt >= retry_config["max_retries"]:
+            return (f"METHOD {method} failed after {attempt} attempts: {type(e).__name__}", 400)
+
+        payload = {"METHOD": method, "attempt": attempt + 1, **task_config}
+        create_task(payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"])
 
         return f"Internal Server Error: {e}", 500
     finally:
