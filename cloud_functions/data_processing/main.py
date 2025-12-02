@@ -450,15 +450,15 @@ def main(request: Request) -> tuple[str, int]:
 
         return "OK", 200
     except Exception as e:
-        logger.error({"message": f"METHOD {method} failed", "error": str(e)})
 
-        if retry_config and attempt >= retry_config["max_retries"]:
-            return (f"METHOD {method} failed after {attempt} attempts: {type(e).__name__}", 500)
+        if retry_config is None or attempt >= retry_config["max_retries"]:
+            logger.error({"message": f"METHOD {method} failed: {e}"})
+            return f"Internal Server Error - METHOD {method} failed: {e}", 500
+        elif retry_config:
+            logger.warning({"message": f"METHOD {method} failed attempt {attempt}: {e}"})
+            payload = {"METHOD": method, "attempt": attempt + 1, **task_config}
+            create_task(payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"])
 
-        payload = {"METHOD": method, "attempt": attempt + 1, **task_config}
-        create_task(payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"])
-
-        return f"Internal Server Error: {e}", 500
     finally:
         print("Releasing memory")
         release_memory(verbose=verbose)
