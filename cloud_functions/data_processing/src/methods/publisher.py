@@ -63,13 +63,11 @@ def monthly_job_publisher(task_config, verbose=True):
 
     for tolerance in TOLERANCES:
         jobs.append(
-            [
-                {
-                    "METHOD": "download_protected_planet_pas",
-                    "TOLERANCE": tolerance,
-                    **task_config,
-                }
-            ]
+            {
+                "METHOD": "download_protected_planet_pas",
+                "TOLERANCE": tolerance,
+                **task_config,
+            }
         )
 
     for job in jobs:
