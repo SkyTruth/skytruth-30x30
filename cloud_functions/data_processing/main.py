@@ -140,7 +140,7 @@ def main(request: Request) -> tuple[str, int]:
         method = data.get("METHOD", "dry_run")
         trigger_next = data.get("TRIGGER_NEXT", False)
         tolerance = data.get("TOLERANCE", TOLERANCES[0])
-        max_retries = data.get("MAX_RETRIES", 0)
+        max_retries = data.get("MAX_RETRIES", 3)
         attempt = data.get("attempt", 1)
 
         task_config = {
@@ -460,6 +460,8 @@ def main(request: Request) -> tuple[str, int]:
             return "retrying", 200
         else:
             logger.error({"message": f"METHOD {method} failed after {attempt} attempts: {e}"})
+            
+            # TODO: Let's replace this with an alert and return 200 to clear from queue
             return f"Internal Server Error - METHOD {method} failed: {e}", 500
 
     finally:

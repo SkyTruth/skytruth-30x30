@@ -60,18 +60,18 @@ def monthly_job_publisher(task_config, verbose=True):
             "METHOD": "test_retries",
             **task_config,
         },
-        # {
-        #     "METHOD": "download_mpatlas",
-        #     **task_config,
-        # },
-        # {
-        #     "METHOD": "download_protected_seas",
-        #     **task_config,
-        # },
-        # {
-        #     "METHOD": "download_protected_planet_country",
-        #     **task_config,
-        # },
+        {
+            "METHOD": "download_mpatlas",
+            **task_config,
+        },
+        {
+            "METHOD": "download_protected_seas",
+            **task_config,
+        },
+        {
+            "METHOD": "download_protected_planet_country",
+            **task_config,
+        },
     ]
 
     # for tolerance in TOLERANCES:
