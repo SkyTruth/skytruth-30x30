@@ -312,8 +312,8 @@ def test_unknown_method_returns_ok_and_calls_nothing(patched_all):
 
 
 # Error path
-def test_error_bubbles_to_500(monkeypatch, call_log):
-    """If any called function raises, handler should catch and return 500."""
+def test_error_bubbles_to_208(monkeypatch, call_log):
+    """If any called function raises, handler should catch and return 208."""
     monkeypatch.setattr(
         main,
         "process_gadm_geoms",
@@ -323,5 +323,5 @@ def test_error_bubbles_to_500(monkeypatch, call_log):
     resp = main.main(MockRequest({"METHOD": "process_gadm", "MAX_RETRIES": 0}))
     assert isinstance(resp, tuple)
     body, status = resp
-    assert status == 500
+    assert status == 208
     assert "Internal Server Error" in body

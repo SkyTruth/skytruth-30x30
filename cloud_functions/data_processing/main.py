@@ -460,12 +460,12 @@ def main(request: Request) -> tuple[str, int]:
             create_task(
                 payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"]
             )
-            return "retrying", 200
+            return "retrying", 202
         else:
             logger.error({"message": f"METHOD {method} failed after {attempt} attempts: {e}"})
 
-            # TODO: Let's replace this with an alert and return 200 to clear from queue
-            return f"Internal Server Error - METHOD {method} failed: {e}", 200
+            # TODO: Create an alert
+            return f"Internal Server Error - METHOD {method} failed: {e}", 208
 
     finally:
         print("Releasing memory")
