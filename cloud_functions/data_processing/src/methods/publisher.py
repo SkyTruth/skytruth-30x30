@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta, timezone
 import json
+from datetime import UTC, datetime, timedelta
 
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
-from src.core.params import TOLERANCES
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -17,11 +16,11 @@ def create_task(
 ):
     """Create a single Cloud Task to POST JSON to a Cloud Function."""
 
-    project_id=payload["PROJECT"]
-    location=payload["LOCATION"]
-    queue=payload["QUEUE_NAME"]
-    target_url=payload["TARGET_URL"]
-    service_account_email=payload["INVOKER_SA"]
+    project_id = payload["PROJECT"]
+    location = payload["LOCATION"]
+    queue = payload["QUEUE_NAME"]
+    target_url = payload["TARGET_URL"]
+    service_account_email = payload["INVOKER_SA"]
 
     client = tasks_v2.CloudTasksClient()
 
@@ -38,7 +37,7 @@ def create_task(
     }
 
     if delay_seconds is not None:
-        scheduled_time = datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)
+        scheduled_time = datetime.now(UTC) + timedelta(seconds=delay_seconds)
         timestamp = timestamp_pb2.Timestamp()
         timestamp.FromDatetime(scheduled_time)
         task["schedule_time"] = timestamp

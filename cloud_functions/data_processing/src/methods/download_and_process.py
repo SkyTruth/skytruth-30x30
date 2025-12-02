@@ -504,10 +504,7 @@ def download_and_process_protected_planet_pas(
     status = download_file_with_progress(wdpa_url, base_zip_path)
     if not status:
         logger.error({"message": f"Failed to download {wdpa_url}"})
-        return {
-            "delay_seconds": 60*60*24,
-            "max_attempts": 7
-        }
+        return {"delay_seconds": 60 * 60 * 24, "max_attempts": 7}
 
     show_mem("After download")
     show_container_mem("After download")

@@ -151,13 +151,10 @@ def main(request: Request) -> tuple[str, int]:
             "INVOKER_SA": data.get("INVOKER_SA", ""),
             "TRIGGER_NEXT": trigger_next,
             "MAX_RETRIES": max_retries,
-            "attempt": attempt
+            "attempt": attempt,
         }
 
-        retry_config = {
-            "delay_seconds": (attempt-1)*60,
-            "max_retries": max_retries
-        }
+        retry_config = {"delay_seconds": (attempt - 1) * 60, "max_retries": max_retries}
 
         print(f"Starting METHOD: {method}")
 
@@ -166,11 +163,8 @@ def main(request: Request) -> tuple[str, int]:
                 print("Dry Run Complete!")
 
             case "test_retries":
-                retry_config = {
-                    "delay_seconds": 30,
-                    "max_retries": 3
-                }
-                logger.error({"message":"Error: Testing Retries"})
+                retry_config = {"delay_seconds": 30, "max_retries": 3}
+                logger.error({"message": "Error: Testing Retries"})
             case "publisher":
                 monthly_job_publisher(task_config, verbose=verbose)
 
