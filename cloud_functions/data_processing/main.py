@@ -452,7 +452,8 @@ def main(request: Request) -> tuple[str, int]:
     except Exception as e:
         if retry_config and attempt <= retry_config["max_retries"]:
             logger.warning({"message": f"METHOD {method} failed attempt {attempt}: {e}"})
-            payload = {"METHOD": method, "attempt": attempt + 1, **task_config}
+            task_config["attempt"] = attempt + 1
+            payload = {"METHOD": method, **task_config}
             create_task(
                 payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"]
             )
