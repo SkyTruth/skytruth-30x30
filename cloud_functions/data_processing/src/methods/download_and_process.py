@@ -499,26 +499,27 @@ def download_and_process_protected_planet_pas(
         )
         return results
 
+    show_container_mem("Start")
+
+    tmp_dir = "/tmp"
+    os.makedirs(tmp_dir, exist_ok=True)
+
+    base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
+    pa_dir = os.path.join(tmp_dir, "wdpa")
+
+    # download WDPA shapefiles and return retry config if fails
+    if verbose:
+        print(f"downloading {wdpa_url}")
+    status = retry_and_alert(
+        download_file_with_progress, wdpa_url, base_zip_path, alert_func=send_alert
+    )
+    if not status:
+        logger.error({"message": f"Failed to download {wdpa_url}"})
+        return {"delay_seconds": 60 * 60 * 24, "max_retries": 7}, False
+
+    show_container_mem("After download")
+
     try:
-        show_container_mem("Start")
-
-        tmp_dir = "/tmp"
-        os.makedirs(tmp_dir, exist_ok=True)
-
-        base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
-        pa_dir = os.path.join(tmp_dir, "wdpa")
-
-        # download WDPA shapefiles and return retry config if fails
-        if verbose:
-            print(f"downloading {wdpa_url}")
-        status = retry_and_alert(
-            download_file_with_progress, wdpa_url, base_zip_path, alert_func=send_alert
-        )
-        if not status:
-            logger.error({"message": f"Failed to download {wdpa_url}"})
-            return {"delay_seconds": 60 * 60 * 24, "max_retries": 7}, False
-
-        show_container_mem("After download")
 
         if verbose:
             print(f"unzipping {base_zip_path}")

@@ -290,10 +290,9 @@ def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_func=None, **k
             return func(*args, **kwargs)
 
         except Exception as e:
-            logger.error(
+            logger.warning(
                 {
-                    "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries + 1})",
-                    "error": str(e),
+                    "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries + 1})"
                 }
             )
 
