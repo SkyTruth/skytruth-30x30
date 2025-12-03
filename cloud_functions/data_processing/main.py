@@ -155,6 +155,8 @@ def main(request: Request) -> tuple[str, int]:
         }
 
         retry_config = {"delay_seconds": (attempt - 1) * 60, "max_retries": max_retries}
+        step_list = None
+        cont = True
 
         print(f"Starting METHOD: {method}")
 
@@ -180,7 +182,6 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
                 step_list = ["process_gadm"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_eezs":
                 download_zip_to_gcs(
@@ -193,9 +194,7 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-
                 step_list = ["process_eezs", "process_eez_gadm_unions"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_high_seas":
                 download_zip_to_gcs(
@@ -208,44 +207,33 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-
                 step_list = ["process_eezs", "process_eez_gadm_unions"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_gadm":
                 process_gadm_geoms(verbose=verbose)
-
                 step_list = ["generate_locations_table"]
                 if env == "prod":
                     step_list = step_list + [
                         "update_country_tileset",
                         "update_terrestrial_regions_tileset",
                     ]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eezs":
                 process_eez_geoms(verbose=verbose)
-
                 step_list = ["generate_locations_table"]
-
                 if env == "prod":
                     step_list = step_list + ["update_eez_tileset", "update_marine_regions_tileset"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eez_gadm_unions":
                 process_eez_gadm_unions(verbose=verbose)
-
                 step_list = ["process_mangroves"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_marine_habitats":
                 download_marine_habitats(verbose=verbose)
 
             case "process_terrestrial_biomes":
                 process_terrestrial_biome_raster(verbose=verbose)
-
                 step_list = ["generate_terrestrial_biome_stats_country"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_mangroves":
                 process_mangroves(verbose=verbose)
@@ -262,24 +250,18 @@ def main(request: Request) -> tuple[str, int]:
             # ------------------
             case "download_mpatlas":
                 download_mpatlas(verbose=verbose)
-
                 step_list = ["generate_marine_protection_level_stats_table"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_protected_seas":
                 download_protected_seas(verbose=verbose)
-
                 step_list = ["generate_fishing_protection_table"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_protected_planet_country":
                 download_protected_planet(verbose=verbose)
-
                 step_list = ["generate_protection_coverage_stats_table"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_protected_planet_pas":
-                retry_config = download_and_process_protected_planet_pas(
+                retry_config, cont = download_and_process_protected_planet_pas(
                     verbose=verbose,
                     tolerance=tolerance,
                     batch_size=1000,
@@ -292,7 +274,6 @@ def main(request: Request) -> tuple[str, int]:
                         "generate_gadm_minus_pa",
                         "generate_eez_minus_mpa",
                     ]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             # ------------------
             #   Table updates
@@ -300,50 +281,36 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_terrestrial_biome_stats":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
-
                 step_list = ["generate_habitat_protection_table"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_habitat_protection_table":
                 _ = generate_habitat_protection_table(verbose=verbose)
-
                 step_list = ["update_habitat_protection_stats"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
                 _ = generate_protection_coverage_stats_table(verbose=verbose)
-
                 step_list = ["update_protection_coverage_stats"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_marine_protection_level_stats_table":
                 _ = generate_marine_protection_level_stats_table(verbose=verbose)
-
                 step_list = ["update_mpaa_protection_level_stats"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
-
                 step_list = ["update_fishing_protection_stats"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
-
                 step_list = ["update_locations"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_protected_areas_table":
                 updates = generate_protected_areas_diff_table(verbose=verbose)
-
                 if updates and env == "prod":
                     step_list = [
                         "update_protected_areas",
                         "update_marine_protected_areas_tileset",
                         "update_terrestrial_protected_areas_tileset",
                     ]
-                    pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_gadm_minus_pa":
                 generate_total_area_minus_pa(
@@ -448,6 +415,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case _:
                 print(f"METHOD: {method} not a valid option")
+
+        if trigger_next and cont and step_list:
+            pipe_next_steps(step_list, task_config, verbose=verbose)
 
         print(f"METHOD: {method} complete!")
 

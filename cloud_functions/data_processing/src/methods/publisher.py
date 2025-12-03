@@ -109,16 +109,14 @@ def launch_next_step(
 
 def pipe_next_steps(
     step_list: list,
-    trigger_next: bool,
     task_config: dict,
     verbose: bool = True,
 ):
     """Enqueue a sequence of downstream steps."""
 
-    if trigger_next:
-        for next_method in step_list:
-            launch_next_step(
-                next_method,
-                task_config,
-                verbose=verbose,
-            )
+    for next_method in step_list:
+        launch_next_step(
+            next_method,
+            task_config,
+            verbose=verbose,
+        )

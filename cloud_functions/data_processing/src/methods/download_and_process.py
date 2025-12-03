@@ -22,7 +22,10 @@ from tqdm.auto import tqdm
 
 from src.core.commons import (
     download_file_with_progress,
+    retry_and_alert,
+    send_alert,
     unzip_file,
+    RetryFailed
 )
 from src.core.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
@@ -150,22 +153,30 @@ def download_mpatlas(
         except Exception:
             return None
 
-    download_mpatlas_country(
-        bucket=bucket,
-        project=project,
-        url=mpatlas_country_url,
-        current_filename=mpatlas_country_file_name,
-        archive_filename=archive_mpatlas_country_file_name,
-    )
+    try:
+        retry_and_alert(
+            download_mpatlas_country,
+            alert_func=send_alert,
+            bucket=bucket,
+            project=project,
+            url=mpatlas_country_url,
+            current_filename=mpatlas_country_file_name,
+            archive_filename=archive_mpatlas_country_file_name,
+        )
 
-    download_mpatlas_zone(
-        url=url,
-        bucket=bucket,
-        filename=mpatlas_filename,
-        archive_filename=archive_mpatlas_filename,
-        verbose=verbose,
-    )
-
+        retry_and_alert(
+            download_mpatlas_zone,
+            alert_func=send_alert,
+            url=url,
+            bucket=bucket,
+            filename=mpatlas_filename,
+            archive_filename=archive_mpatlas_filename,
+            verbose=verbose,
+        )
+    except RetryFailed:
+        # If downloading MPAtlas fails, try the next day for up to 3 days
+        return {"delay_seconds": 60 * 60 * 24, "max_retries": 3}, False
+    
     if verbose:
         print(f"loading MPAtlas from {mpatlas_filename}")
     mpa = read_json_from_gcs(bucket, mpatlas_filename)
@@ -438,17 +449,17 @@ def download_and_process_protected_planet_pas(
 
             # Estimate how many chunk batches will be processed
             est_batches = int(np.ceil(total_rows / batch_size))
+            if verbose:
+                logger.info(
+                    {
+                        "message": (
+                            f"Processing parquet files: {total_rows} rows, "
+                            f"~{est_batches} batches"
+                        )
+                    }
+                )
 
             try:
-                if verbose:
-                    logger.info(
-                        {
-                            "message": (
-                                f"Processing parquet files: {total_rows} rows, "
-                                f"~{est_batches} batches"
-                            )
-                        }
-                    )
 
                 # Simplify geometries in parallel batches
                 results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 20)(
@@ -490,76 +501,74 @@ def download_and_process_protected_planet_pas(
         )
         return results
 
-    show_mem("Start")
-    show_container_mem("Start")
-
-    tmp_dir = "/tmp"
-    os.makedirs(tmp_dir, exist_ok=True)
-
-    base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
-    pa_dir = os.path.join(tmp_dir, "wdpa")
-
-    if verbose:
-        print(f"downloading {wdpa_url}")
-    status = download_file_with_progress(wdpa_url, base_zip_path)
-    if not status:
-        logger.error({"message": f"Failed to download {wdpa_url}"})
-        return {"delay_seconds": 60 * 60 * 24, "max_attempts": 7}
-
-    show_mem("After download")
-    show_container_mem("After download")
-
-    if verbose:
-        print(f"unzipping {base_zip_path}")
-    _ = unzip_file(base_zip_path, pa_dir)
-    show_mem("After unzipping")
-    show_container_mem("After unzipping")
-
-    if verbose:
-        print("unpacking PA shapefiles into parquet files")
-    unpack_pas_to_parquet(pa_dir, verbose=verbose)
-    show_mem("After unpacking")
-    show_container_mem("After unpacking")
-
-    if verbose:
-        print(f"deleting {base_zip_path}")
-    remove_file_or_folder(base_zip_path, verbose=verbose)
-    show_mem(f"After deleting {base_zip_path}")
-    show_container_mem(f"After deleting {base_zip_path}")
-
-    if verbose:
-        print("processing and simplifying protected area geometries")
-    df = process_protected_area_geoms(
-        pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
-    )
-
-    if verbose:
-        print(f"deleting {pa_dir}")
-    remove_file_or_folder(pa_dir, verbose=verbose)
-
-    if df is None:
-        logger.error({"message": "process_protected_area_geoms returned None"})
-        raise ValueError("Error: process_protected_area_geoms returned None")
-
-    if verbose:
-        print("Renaming variables to match old format")
-    df = match_old_pa_naming_convantion(df)
-
-    if verbose:
-        print(f"saving wdpa metadata to {meta_file_name}")
     try:
-        upload_dataframe(
+        show_container_mem("Start")
+
+        tmp_dir = "/tmp"
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
+        pa_dir = os.path.join(tmp_dir, "wdpa")
+
+        # download WDPA shapefiles and return retry config if fails
+        if verbose:
+            print(f"downloading {wdpa_url}")
+        status = retry_and_alert(download_file_with_progress, wdpa_url, base_zip_path, alert_func=send_alert)
+        if not status:
+            logger.error({"message": f"Failed to download {wdpa_url}"})
+            return {"delay_seconds": 60 * 60 * 24, "max_retries": 7}, False
+
+        show_container_mem("After download")
+
+        if verbose:
+            print(f"unzipping {base_zip_path}")
+        _ = unzip_file(base_zip_path, pa_dir)
+        show_container_mem("After unzipping")
+
+        if verbose:
+            print("unpacking PA shapefiles into parquet files")
+        unpack_pas_to_parquet(pa_dir, verbose=verbose)
+        show_container_mem("After unpacking")
+
+        if verbose:
+            print(f"deleting {base_zip_path}")
+        remove_file_or_folder(base_zip_path, verbose=verbose)
+        show_container_mem(f"After deleting {base_zip_path}")
+
+        if verbose:
+            print("processing and simplifying protected area geometries")
+        df = process_protected_area_geoms(
+            pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
+        )
+
+        if verbose:
+            print(f"deleting {pa_dir}")
+        remove_file_or_folder(pa_dir, verbose=verbose)
+
+        # If simplifying geometries fails, retry once.
+        if df is None:
+            logger.error({"message": "process_protected_area_geoms returned None"})
+            return {"delay_seconds": None, "max_retries": 1}, False
+
+        if verbose:
+            print("Renaming variables to match old format")
+        df = match_old_pa_naming_convantion(df)
+
+
+        # Save metadata
+        if verbose:
+            print(f"saving wdpa metadata to {meta_file_name}")
+        
+        retry_and_alert(
+            upload_dataframe,
             bucket,
             df.drop(columns="geometry"),
             meta_file_name,
             project_id=project_id,
             verbose=verbose,
+            alert_func=send_alert,
         )
-    except Exception as e:
-        logger.error({"message": "Error saving metadata", "error": str(e)})
-        raise e
-
-    try:
+    
         # Remove non-OECM MAB reserves (matching Protected Planet's methods)
         df = df[
             (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve")
@@ -570,25 +579,25 @@ def download_and_process_protected_planet_pas(
         ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
             print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
-        upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
+
+        retry_and_alert(upload_gdf, bucket, df[df["MARINE"].eq("0")], ter_out_fn, alert_func=send_alert)
         duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
 
         # Save marine PAs
         mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
             print(f"saving and duplicating marine PAs to {mar_out_fn}")
-        upload_gdf(bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn)
-        duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
-    except Exception as e:
-        logger.error({"message": "Error saving simplified PAs", "error": str(e)})
-        raise e
 
-    if verbose:
-        print("Cleaning up")
+        retry_and_alert(upload_gdf, bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn, alert_func=send_alert)
+        duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
+    except RetryFailed:
+        return None, False
+
+    # Clean up memory
     df = pd.DataFrame()
     del df
 
-    return None
+    return None, True
 
 
 def download_protected_planet_global(
