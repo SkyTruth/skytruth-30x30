@@ -520,7 +520,6 @@ def download_and_process_protected_planet_pas(
     show_container_mem("After download")
 
     try:
-
         if verbose:
             print(f"unzipping {base_zip_path}")
         _ = unzip_file(base_zip_path, pa_dir)
