@@ -1,5 +1,6 @@
 import io
 import tempfile
+import time
 import zipfile
 from io import BytesIO
 
@@ -13,7 +14,6 @@ import requests
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
-import time
 from tqdm.auto import tqdm
 
 from src.core.params import (
@@ -267,9 +267,11 @@ def unzip_file(base_zip_path, destination_folder):
     with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_folder)
 
+
 def send_alert():
     # TODO: turn this into an actual alert
     logger.error({"message": "THIS IS AN ALERT"})
+
 
 class RetryFailed(Exception):
     pass
@@ -286,18 +288,20 @@ def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_func=None, **k
     for attempt in range(1, max_retries + 2):
         try:
             return func(*args, **kwargs)
-        
+
         except Exception as e:
-            logger.error({
-                "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries+1})",
-                "error": str(e),
-            })
+            logger.error(
+                {
+                    "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries + 1})",
+                    "error": str(e),
+                }
+            )
 
             # Final failure
             if attempt == max_retries + 1:
                 if alert_func:
                     alert_func()
                 raise RetryFailed(f"{func.__name__} failed after {max_retries} attempts") from e
-            
+
             # Backoff before retrying
             time.sleep(backoff)

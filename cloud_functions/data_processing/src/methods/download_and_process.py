@@ -21,11 +21,11 @@ from shapely.geometry import MultiPoint, Point, shape
 from tqdm.auto import tqdm
 
 from src.core.commons import (
+    RetryFailed,
     download_file_with_progress,
     retry_and_alert,
     send_alert,
     unzip_file,
-    RetryFailed
 )
 from src.core.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
@@ -176,7 +176,7 @@ def download_mpatlas(
     except RetryFailed:
         # If downloading MPAtlas fails, try the next day for up to 3 days
         return {"delay_seconds": 60 * 60 * 24, "max_retries": 3}, False
-    
+
     if verbose:
         print(f"loading MPAtlas from {mpatlas_filename}")
     mpa = read_json_from_gcs(bucket, mpatlas_filename)
@@ -453,14 +453,12 @@ def download_and_process_protected_planet_pas(
                 logger.info(
                     {
                         "message": (
-                            f"Processing parquet files: {total_rows} rows, "
-                            f"~{est_batches} batches"
+                            f"Processing parquet files: {total_rows} rows, ~{est_batches} batches"
                         )
                     }
                 )
 
             try:
-
                 # Simplify geometries in parallel batches
                 results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 20)(
                     delayed(simplify_chunk)(
@@ -513,7 +511,9 @@ def download_and_process_protected_planet_pas(
         # download WDPA shapefiles and return retry config if fails
         if verbose:
             print(f"downloading {wdpa_url}")
-        status = retry_and_alert(download_file_with_progress, wdpa_url, base_zip_path, alert_func=send_alert)
+        status = retry_and_alert(
+            download_file_with_progress, wdpa_url, base_zip_path, alert_func=send_alert
+        )
         if not status:
             logger.error({"message": f"Failed to download {wdpa_url}"})
             return {"delay_seconds": 60 * 60 * 24, "max_retries": 7}, False
@@ -554,11 +554,10 @@ def download_and_process_protected_planet_pas(
             print("Renaming variables to match old format")
         df = match_old_pa_naming_convantion(df)
 
-
         # Save metadata
         if verbose:
             print(f"saving wdpa metadata to {meta_file_name}")
-        
+
         retry_and_alert(
             upload_dataframe,
             bucket,
@@ -568,7 +567,7 @@ def download_and_process_protected_planet_pas(
             verbose=verbose,
             alert_func=send_alert,
         )
-    
+
         # Remove non-OECM MAB reserves (matching Protected Planet's methods)
         df = df[
             (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve")
@@ -580,7 +579,9 @@ def download_and_process_protected_planet_pas(
         if verbose:
             print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
 
-        retry_and_alert(upload_gdf, bucket, df[df["MARINE"].eq("0")], ter_out_fn, alert_func=send_alert)
+        retry_and_alert(
+            upload_gdf, bucket, df[df["MARINE"].eq("0")], ter_out_fn, alert_func=send_alert
+        )
         duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
 
         # Save marine PAs
@@ -588,7 +589,9 @@ def download_and_process_protected_planet_pas(
         if verbose:
             print(f"saving and duplicating marine PAs to {mar_out_fn}")
 
-        retry_and_alert(upload_gdf, bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn, alert_func=send_alert)
+        retry_and_alert(
+            upload_gdf, bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn, alert_func=send_alert
+        )
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
     except RetryFailed:
         return None, False
