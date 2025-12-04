@@ -239,15 +239,19 @@ def download_protected_seas(
     verbose : bool, optional
         If True, prints progress and status messages. Default is True.
     """
-    response = requests.get(url)
-    response.raise_for_status()
 
-    data = pd.DataFrame(response.json())
+    def download_from_url(url):
+        response = requests.get(url)
+        response.raise_for_status()
 
-    data["includes_multi_jurisdictional_areas"] = data["includes_multi_jurisdictional_areas"].map(
-        {"t": True, "f": False}
-    )
-    data = data.drop_duplicates()
+        data = pd.DataFrame(response.json())
+
+        data["includes_multi_jurisdictional_areas"] = data[
+            "includes_multi_jurisdictional_areas"
+        ].map({"t": True, "f": False})
+        return data.drop_duplicates()
+
+    data = retry_and_alert(download_from_url, url, alert_func=send_alert)
 
     if verbose:
         print(f"saving Protected Seas to gs://{bucket}/{archive_filename}")
@@ -507,7 +511,8 @@ def download_and_process_protected_planet_pas(
     base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
     pa_dir = os.path.join(tmp_dir, "wdpa")
 
-    # download WDPA shapefiles and return CloudRun retry config if fails
+    # download WDPA shapefiles and return CloudRun retry config 
+    # to try once per day for a week if fails
     if verbose:
         print(f"downloading {wdpa_url}")
     status = retry_and_alert(
@@ -547,7 +552,7 @@ def download_and_process_protected_planet_pas(
     try:
         if verbose:
             print("Renaming variables to match old format")
-        # On failure, don't retry but alert in case naming convention has changed
+        # On failure, alert in case naming convention has changed
         df = retry_and_alert(
             match_old_pa_naming_convantion, df, max_retries=0, alert_func=send_alert
         )
@@ -757,16 +762,19 @@ def download_protected_planet(
     """
 
     # download wdpa global stats
-    download_protected_planet_global(
+    retry_and_alert(
+        download_protected_planet_global,
         wdpa_global_level_file_name,
         archive_wdpa_global_level_file_name,
         project_id=project_id,
         url=wdpa_global_url,
         bucket=bucket,
+        alert_func=send_alert,
     )
 
     # download wdpa country stats
-    download_protected_planet_country(
+    retry_and_alert(
+        download_protected_planet_country,
         wdpa_country_level_file_name,
         archive_wdpa_country_level_file_name,
         pp_api_key,
@@ -775,4 +783,5 @@ def download_protected_planet(
         url=api_url,
         per_page=50,
         verbose=verbose,
+        alert_func=send_alert,
     )

@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import signal
+import traceback
 
 import functions_framework
 from flask import Request
@@ -141,7 +142,7 @@ def main(request: Request) -> tuple[str, int]:
         method = data.get("METHOD", "dry_run")
         trigger_next = data.get("TRIGGER_NEXT", False)
         tolerance = data.get("TOLERANCE", TOLERANCES[0])
-        max_retries = data.get("MAX_RETRIES", 3)
+        max_retries = data.get("MAX_RETRIES", 0)
         attempt = data.get("attempt", 1)
 
         task_config = {
@@ -431,7 +432,7 @@ def main(request: Request) -> tuple[str, int]:
 
         return "OK", 200
     except Exception as e:
-        if retry_config and attempt <= retry_config["max_retries"]:
+        if retry_config and attempt < retry_config["max_retries"] + 1:
             logger.warning({"message": f"METHOD {method} failed attempt {attempt}: {e}"})
             task_config["attempt"] = attempt + 1
             payload = {"METHOD": method, **task_config}
@@ -440,7 +441,13 @@ def main(request: Request) -> tuple[str, int]:
             )
             return "retrying", 202
         else:
-            logger.error({"message": f"METHOD {method} failed after {attempt} attempts: {e}"})
+            logger.error(
+                {
+                    "message": f"METHOD {method} failed after {attempt} attempts: {e}",
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                }
+            )
             send_alert()
             return f"Internal Server Error - METHOD {method} failed: {e}", 208
 
