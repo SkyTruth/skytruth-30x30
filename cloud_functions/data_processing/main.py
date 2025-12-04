@@ -453,12 +453,12 @@ def main(request: Request) -> tuple[str, int]:
         else:
             logger.error(
                 {
-                    "message": f"METHOD {method} failed after {attempt} attempts: {e}",
+                    "message": f"METHOD {method} failed after {attempt} attempts",
                     "error": str(e),
                     "traceback": traceback.format_exc(),
                 }
             )
-            send_alert()
+            send_alert(message=f"METHOD {method} failed after {attempt} attempts", error=e)
             return f"Internal Server Error - METHOD {method} failed: {e}", 208
 
     finally:

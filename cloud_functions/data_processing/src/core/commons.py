@@ -269,12 +269,12 @@ def unzip_file(base_zip_path, destination_folder):
         zip_ref.extractall(destination_folder)
 
 
-def send_alert(alert_message, error):
+def send_alert(message="", error=""):
     # TODO: turn this into an actual alert
 
     logger.error(
         {
-            "message": f"THIS IS AN ALERT: {alert_message}",
+            "message": f"THIS IS AN ALERT: {message}",
             "error": str(error),
             "traceback": traceback.format_exc(),
         }
@@ -311,7 +311,7 @@ def retry_and_alert(
             # Final failure
             if attempt == max_retries + 1:
                 if alert_func:
-                    alert_func(alert_message, e)
+                    alert_func(message=alert_message, error=e)
                 raise RetryFailed(f"{func.__name__} failed after {max_retries + 1} attempts") from e
 
             # Backoff before retrying
