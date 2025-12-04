@@ -436,7 +436,7 @@ def main(request: Request) -> tuple[str, int]:
         if retry_config and attempt < retries + 1:
             logger.warning(
                 {
-                    "message": f"METHOD {method} failed attempt {attempt}: {e} of {retries+1}",
+                    "message": f"METHOD {method} failed attempt {attempt}: {e} of {retries + 1}",
                     "error": str(e),
                     "traceback": traceback.format_exc(),
                 }
