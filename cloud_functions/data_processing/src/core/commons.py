@@ -272,12 +272,7 @@ def unzip_file(base_zip_path, destination_folder):
 def send_alert(message="", error=""):
     # TODO: turn this into an actual alert
 
-    logger.error(
-        {
-            "message": f"THIS IS AN ALERT: {message}",
-            "error": str(error)
-        }
-    )
+    logger.error({"message": f"THIS IS AN ALERT: {message}", "error": str(error)})
 
 
 class RetryFailed(Exception):
