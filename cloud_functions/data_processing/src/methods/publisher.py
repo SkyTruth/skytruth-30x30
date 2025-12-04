@@ -72,7 +72,7 @@ def monthly_job_publisher(task_config, verbose=True):
         {
             "METHOD": "download_protected_planet_country",
             **task_config,
-        }
+        },
     ]
 
     for tolerance in TOLERANCES:

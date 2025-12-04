@@ -38,7 +38,7 @@ from src.core.params import (
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
     WDPA_META_FILE_NAME,
-    WDPA_PA_FILE_NAME
+    WDPA_PA_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
@@ -68,7 +68,7 @@ from src.utils.gcp import (
 def generate_protected_areas_diff_table(
     wdpa_file_name: str = WDPA_META_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
-   pa_file_name: str = WDPA_PA_FILE_NAME,
+    pa_file_name: str = WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     tolerance: float = TOLERANCES[0],

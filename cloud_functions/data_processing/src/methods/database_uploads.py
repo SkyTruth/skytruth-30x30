@@ -4,7 +4,13 @@ import pandas as pd
 from tqdm import tqdm
 
 from src.core.commons import retry_and_alert, send_alert
-from src.core.params import ARCHIVE_WDPA_PA_FILE_NAME, BUCKET, LOCATIONS_FILE_NAME, PROJECT, WDPA_PA_FILE_NAME
+from src.core.params import (
+    ARCHIVE_WDPA_PA_FILE_NAME,
+    BUCKET,
+    LOCATIONS_FILE_NAME,
+    PROJECT,
+    WDPA_PA_FILE_NAME,
+)
 from src.core.strapi import Strapi
 from src.utils.gcp import load_pickle_from_gcs, read_dataframe, rename_blob
 from src.utils.logger import Logger
@@ -107,11 +113,11 @@ def upload_protected_areas(
 
     db_changes = retry_and_alert(
         load_pickle_from_gcs,
-        bucket_name=bucket, 
-        blob_name=pa_file_name, 
-        project_id=PROJECT, 
+        bucket_name=bucket,
+        blob_name=pa_file_name,
+        project_id=PROJECT,
         verbose=verbose,
-        alert_func=send_alert
+        alert_func=send_alert,
     )
     rename_blob(bucket, pa_file_name, archive_pa_file_name, verbose=True)
 

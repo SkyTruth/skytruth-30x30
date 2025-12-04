@@ -317,10 +317,12 @@ def main(request: Request) -> tuple[str, int]:
                 if updates:
                     step_list = ["update_protected_areas"]
                     if env == "prod":
-                        step_list.extend([
-                            "update_marine_protected_areas_tileset",
-                            "update_terrestrial_protected_areas_tileset",
-                        ])
+                        step_list.extend(
+                            [
+                                "update_marine_protected_areas_tileset",
+                                "update_terrestrial_protected_areas_tileset",
+                            ]
+                        )
 
             case "generate_gadm_minus_pa":
                 generate_total_area_minus_pa(

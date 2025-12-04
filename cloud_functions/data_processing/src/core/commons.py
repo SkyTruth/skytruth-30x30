@@ -285,7 +285,9 @@ class RetryFailed(Exception):
     pass
 
 
-def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_func=None, alert_message="", **kwargs):
+def retry_and_alert(
+    func, *args, max_retries=1, backoff=10, alert_func=None, alert_message="", **kwargs
+):
     """
     Retry a function call up to max_retries times.
     Calls alert_func() if provided and all retries fail.
