@@ -213,8 +213,7 @@ def process_eez_geoms(
                 logger.info(
                     {
                         "message": (
-                            f"simplifying eez by sovereign geometries "
-                            f"with tolerance {tolerance}"
+                            f"simplifying eez by sovereign geometries with tolerance {tolerance}"
                         )
                     }
                 )
