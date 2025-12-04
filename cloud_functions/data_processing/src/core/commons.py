@@ -1,6 +1,7 @@
 import io
 import tempfile
 import time
+import traceback
 import zipfile
 from io import BytesIO
 
@@ -15,7 +16,6 @@ from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
 from tqdm.auto import tqdm
-import traceback
 
 from src.core.params import (
     BUCKET,
@@ -291,11 +291,13 @@ def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_func=None, **k
             return func(*args, **kwargs)
 
         except Exception as e:
-            logger.warning({
-                "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries})",
-                "error": str(e),
-                "traceback": traceback.format_exc()
-            })
+            logger.warning(
+                {
+                    "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries})",
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                }
+            )
 
             # Final failure
             if attempt == max_retries + 1:
