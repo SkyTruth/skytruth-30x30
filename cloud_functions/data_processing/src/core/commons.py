@@ -269,16 +269,23 @@ def unzip_file(base_zip_path, destination_folder):
         zip_ref.extractall(destination_folder)
 
 
-def send_alert():
+def send_alert(alert_message, error):
     # TODO: turn this into an actual alert
-    logger.error({"message": "THIS IS AN ALERT"})
+
+    logger.error(
+        {
+            "message": f"THIS IS AN ALERT: {alert_message}",
+            "error": str(error),
+            "traceback": traceback.format_exc(),
+        }
+    )
 
 
 class RetryFailed(Exception):
     pass
 
 
-def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_func=None, **kwargs):
+def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_func=None, alert_message="", **kwargs):
     """
     Retry a function call up to max_retries times.
     Calls alert_func() if provided and all retries fail.
@@ -302,7 +309,7 @@ def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_func=None, **k
             # Final failure
             if attempt == max_retries + 1:
                 if alert_func:
-                    alert_func()
+                    alert_func(alert_message, e)
                 raise RetryFailed(f"{func.__name__} failed after {max_retries + 1} attempts") from e
 
             # Backoff before retrying

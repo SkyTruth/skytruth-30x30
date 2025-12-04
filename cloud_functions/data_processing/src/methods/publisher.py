@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
+from src.core.params import TOLERANCES
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -60,33 +61,28 @@ def monthly_job_publisher(task_config, verbose=True):
         #     "METHOD": "test_retries",
         #     **task_config,
         # },
-        # {
-        #     "METHOD": "download_mpatlas",
-        #     **task_config,
-        # },
-        # {
-        #     "METHOD": "download_protected_seas",
-        #     **task_config,
-        # },
-        # {
-        #     "METHOD": "download_protected_planet_country",
-        #     **task_config,
-        # },
         {
-            "METHOD": "download_protected_planet_pas",
-            "TOLERANCE": 0.001,
+            "METHOD": "download_mpatlas",
             **task_config,
         },
+        {
+            "METHOD": "download_protected_seas",
+            **task_config,
+        },
+        {
+            "METHOD": "download_protected_planet_country",
+            **task_config,
+        }
     ]
 
-    # for tolerance in TOLERANCES:
-    #     jobs.append(
-    #         {
-    #             "METHOD": "download_protected_planet_pas",
-    #             "TOLERANCE": tolerance,
-    #             **task_config,
-    #         }
-    #     )
+    for tolerance in TOLERANCES:
+        jobs.append(
+            {
+                "METHOD": "download_protected_planet_pas",
+                "TOLERANCE": tolerance,
+                **task_config,
+            }
+        )
 
     for job in jobs:
         create_task(payload=job, verbose=verbose)

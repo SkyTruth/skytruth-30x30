@@ -12,7 +12,6 @@ from src.core.commons import (
 )
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
-    ARCHIVE_WDPA_PA_FILE_NAME,
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
@@ -39,6 +38,7 @@ from src.core.params import (
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
     WDPA_META_FILE_NAME,
+    WDPA_PA_FILE_NAME
 )
 from src.core.processors import (
     add_constants,
@@ -68,7 +68,7 @@ from src.utils.gcp import (
 def generate_protected_areas_diff_table(
     wdpa_file_name: str = WDPA_META_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
-    archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
+   pa_file_name: str = WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     tolerance: float = TOLERANCES[0],
@@ -136,11 +136,11 @@ def generate_protected_areas_diff_table(
 
     client = storage.Client(project=project)
     bucket = client.bucket(bucket)
-    blob = bucket.blob(archive_pa_file_name)
+    blob = bucket.blob(pa_file_name)
     blob.upload_from_filename(source_file)
 
     if verbose:
-        print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
+        print(f"Uploaded {source_file} to gs://{bucket}/{pa_file_name}")
 
     # return True if the database is being updated, otherwise False
     return len(db_changes["new"]) + len(db_changes["changed"]) > 0

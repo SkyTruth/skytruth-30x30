@@ -3,9 +3,10 @@ from ast import literal_eval
 import pandas as pd
 from tqdm import tqdm
 
-from src.core.params import ARCHIVE_WDPA_PA_FILE_NAME, BUCKET, LOCATIONS_FILE_NAME, PROJECT
+from src.core.commons import retry_and_alert, send_alert
+from src.core.params import ARCHIVE_WDPA_PA_FILE_NAME, BUCKET, LOCATIONS_FILE_NAME, PROJECT, WDPA_PA_FILE_NAME
 from src.core.strapi import Strapi
-from src.utils.gcp import load_pickle_from_gcs, read_dataframe
+from src.utils.gcp import load_pickle_from_gcs, read_dataframe, rename_blob
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -96,6 +97,7 @@ def upload_stats(
 
 
 def upload_protected_areas(
+    pa_file_name: str = WDPA_PA_FILE_NAME,
     archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     update_segment: str = "all",
@@ -103,9 +105,15 @@ def upload_protected_areas(
 ):
     strapi = Strapi()
 
-    db_changes = load_pickle_from_gcs(
-        bucket_name=bucket, blob_name=archive_pa_file_name, project_id=PROJECT, verbose=verbose
+    db_changes = retry_and_alert(
+        load_pickle_from_gcs,
+        bucket_name=bucket, 
+        blob_name=pa_file_name, 
+        project_id=PROJECT, 
+        verbose=verbose,
+        alert_func=send_alert
     )
+    rename_blob(bucket, pa_file_name, archive_pa_file_name, verbose=True)
 
     if update_segment in ["delete", "all"]:
         deleted = db_changes["deleted"]
