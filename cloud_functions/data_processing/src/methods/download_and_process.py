@@ -156,22 +156,22 @@ def download_mpatlas(
     try:
         retry_and_alert(
             download_mpatlas_country,
-            alert_func=send_alert,
             bucket=bucket,
             project=project,
             url=mpatlas_country_url,
             current_filename=mpatlas_country_file_name,
             archive_filename=archive_mpatlas_country_file_name,
+            alert_func=send_alert,
         )
 
         retry_and_alert(
             download_mpatlas_zone,
-            alert_func=send_alert,
             url=url,
             bucket=bucket,
             filename=mpatlas_filename,
             archive_filename=archive_mpatlas_filename,
             verbose=verbose,
+            alert_func=send_alert,
         )
     except RetryFailed:
         # If downloading MPAtlas fails, try the next day for up to 3 days
@@ -507,11 +507,11 @@ def download_and_process_protected_planet_pas(
     base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
     pa_dir = os.path.join(tmp_dir, "wdpa")
 
-    # download WDPA shapefiles and return retry config if fails
+    # download WDPA shapefiles and return CloudRun retry config if fails
     if verbose:
         print(f"downloading {wdpa_url}")
     status = retry_and_alert(
-        download_file_with_progress, wdpa_url, base_zip_path, alert_func=send_alert
+        download_file_with_progress, wdpa_url, base_zip_path, max_retries=1, alert_func=send_alert
     )
     if not status:
         logger.error({"message": f"Failed to download {wdpa_url}"})
@@ -519,40 +519,38 @@ def download_and_process_protected_planet_pas(
 
     show_container_mem("After download")
 
+    if verbose:
+        print(f"unzipping {base_zip_path}")
+    _ = unzip_file(base_zip_path, pa_dir)
+    show_container_mem("After unzipping")
+
+    if verbose:
+        print("unpacking PA shapefiles into parquet files")
+    unpack_pas_to_parquet(pa_dir, verbose=verbose)
+    show_container_mem("After unpacking")
+
+    if verbose:
+        print(f"deleting {base_zip_path}")
+    remove_file_or_folder(base_zip_path, verbose=verbose)
+    show_container_mem(f"After deleting {base_zip_path}")
+
+    if verbose:
+        print("processing and simplifying protected area geometries")
+    df = process_protected_area_geoms(
+        pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
+    )
+
+    if verbose:
+        print(f"deleting {pa_dir}")
+    remove_file_or_folder(pa_dir, verbose=verbose)
+
     try:
         if verbose:
-            print(f"unzipping {base_zip_path}")
-        _ = unzip_file(base_zip_path, pa_dir)
-        show_container_mem("After unzipping")
-
-        if verbose:
-            print("unpacking PA shapefiles into parquet files")
-        unpack_pas_to_parquet(pa_dir, verbose=verbose)
-        show_container_mem("After unpacking")
-
-        if verbose:
-            print(f"deleting {base_zip_path}")
-        remove_file_or_folder(base_zip_path, verbose=verbose)
-        show_container_mem(f"After deleting {base_zip_path}")
-
-        if verbose:
-            print("processing and simplifying protected area geometries")
-        df = process_protected_area_geoms(
-            pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
-        )
-
-        if verbose:
-            print(f"deleting {pa_dir}")
-        remove_file_or_folder(pa_dir, verbose=verbose)
-
-        # If simplifying geometries fails, retry once.
-        if df is None:
-            logger.error({"message": "process_protected_area_geoms returned None"})
-            return {"delay_seconds": None, "max_retries": 1}, False
-
-        if verbose:
             print("Renaming variables to match old format")
-        df = match_old_pa_naming_convantion(df)
+        # On failure, don't retry but alert in case naming convention has changed
+        df = retry_and_alert(
+            match_old_pa_naming_convantion, df, max_retries=0, alert_func=send_alert
+        )
 
         # Save metadata
         if verbose:

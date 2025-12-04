@@ -8,6 +8,7 @@ import functions_framework
 from flask import Request
 
 from src.core import map_params
+from src.core.commons import send_alert
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -165,6 +166,14 @@ def main(request: Request) -> tuple[str, int]:
                 print("Dry Run Complete!")
 
             case "test_retries":
+                from src.core.commons import retry_and_alert
+
+                def sample_func(x):
+                    if x > 2:
+                        raise
+                    return "SUCCESS"
+
+                _ = retry_and_alert(sample_func, 3, alert_func=send_alert)
                 retry_config = {"delay_seconds": 30, "max_retries": 3}
                 raise ValueError("Error: Testing Retries")
             case "publisher":
@@ -265,7 +274,6 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                     tolerance=tolerance,
                     batch_size=1000,
-                    wdpa_url="https://d1gam3xoknrgr2.cloudfront.net/currentWDPA_WDOECM_Jan2026_Public_all_shp.zip",
                 )
                 if tolerance == TOLERANCES[0]:
                     step_list = [
@@ -433,8 +441,7 @@ def main(request: Request) -> tuple[str, int]:
             return "retrying", 202
         else:
             logger.error({"message": f"METHOD {method} failed after {attempt} attempts: {e}"})
-
-            # TODO: Create an alert
+            send_alert()
             return f"Internal Server Error - METHOD {method} failed: {e}", 208
 
     finally:
