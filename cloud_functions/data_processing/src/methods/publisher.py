@@ -56,10 +56,10 @@ def monthly_job_publisher(task_config, verbose=True):
     """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
 
     jobs = [
-        {
-            "METHOD": "test_retries",
-            **task_config,
-        },
+        # {
+        #     "METHOD": "test_retries",
+        #     **task_config,
+        # },
         # {
         #     "METHOD": "download_mpatlas",
         #     **task_config,

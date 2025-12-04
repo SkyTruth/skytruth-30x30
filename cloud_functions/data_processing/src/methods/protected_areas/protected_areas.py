@@ -94,6 +94,8 @@ def generate_protected_areas_table(
             # Assign parent and children to each PA
             ordered.iat[0, ordered.columns.get_loc("children")] = children_list
             ordered.loc[ordered.index[1:], "parent"] = [parent_dict] * (len(ordered) - 1)
+            for idx in ordered.index[1:]:
+                ordered.at[idx, "parent"] = parent_dict
 
         return ordered
 
