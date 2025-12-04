@@ -511,7 +511,7 @@ def download_and_process_protected_planet_pas(
     base_zip_path = os.path.join(tmp_dir, "wdpa.zip")
     pa_dir = os.path.join(tmp_dir, "wdpa")
 
-    # download WDPA shapefiles and return CloudRun retry config 
+    # download WDPA shapefiles and return CloudRun retry config
     # to try once per day for a week if fails
     if verbose:
         print(f"downloading {wdpa_url}")
