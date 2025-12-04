@@ -432,8 +432,15 @@ def main(request: Request) -> tuple[str, int]:
 
         return "OK", 200
     except Exception as e:
-        if retry_config and attempt < retry_config["max_retries"] + 1:
-            logger.warning({"message": f"METHOD {method} failed attempt {attempt}: {e}"})
+        retries = retry_config["max_retries"]
+        if retry_config and attempt < retries + 1:
+            logger.warning(
+                {
+                    "message": f"METHOD {method} failed attempt {attempt}: {e} of {retries+1}",
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                }
+            )
             task_config["attempt"] = attempt + 1
             payload = {"METHOD": method, **task_config}
             create_task(

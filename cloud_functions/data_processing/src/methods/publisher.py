@@ -45,7 +45,7 @@ def create_task(
     try:
         response = client.create_task(request={"parent": parent, "task": task})
         if verbose:
-            print(f"Created task: {response.name}")
+            print(f"Created task: {response.name}: {json.dumps(payload)}")
         return response
     except Exception as e:
         logger.error({"message": f"Error creating Cloud Task: {e}"})
