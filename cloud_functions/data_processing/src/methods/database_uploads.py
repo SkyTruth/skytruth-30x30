@@ -118,6 +118,7 @@ def upload_protected_areas(
         project_id=PROJECT,
         verbose=verbose,
         alert_func=send_alert,
+        alert_message=f"failed to load {pa_file_name}"
     )
     rename_blob(bucket, pa_file_name, archive_pa_file_name, verbose=True)
 

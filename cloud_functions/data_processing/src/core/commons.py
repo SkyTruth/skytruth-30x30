@@ -275,8 +275,7 @@ def send_alert(message="", error=""):
     logger.error(
         {
             "message": f"THIS IS AN ALERT: {message}",
-            "error": str(error),
-            "traceback": traceback.format_exc(),
+            "error": str(error)
         }
     )
 
