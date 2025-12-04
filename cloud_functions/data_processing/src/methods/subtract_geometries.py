@@ -111,7 +111,7 @@ def generate_total_area_minus_pa(
     total_area_minus_pa = pd.concat(results).reset_index()
 
     if verbose:
-        print(f"Output file has {len(total_area_minus_pa)} rows.")
+        logger.info({"message": f"Output file has {len(total_area_minus_pa)} rows."})
 
     # Save to GCS as zipped shapefile
     upload_gdf_zip(

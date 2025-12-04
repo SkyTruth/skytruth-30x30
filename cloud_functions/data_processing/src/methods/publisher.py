@@ -46,7 +46,7 @@ def create_task(
     try:
         response = client.create_task(request={"parent": parent, "task": task})
         if verbose:
-            print(f"Created task: {response.name}: {json.dumps(payload)}")
+            logger.info({"message": f"Created task: {response.name}: {json.dumps(payload)}"})
         return response
     except Exception as e:
         logger.error({"message": f"Error creating Cloud Task: {e}"})
@@ -98,7 +98,7 @@ def launch_next_step(
     payload = {"METHOD": next_method, **task_config}
 
     if verbose:
-        print(f"Launching next step: {next_method}")
+        logger.info({"message": f"Launching next step: {next_method}"})
 
     create_task(payload=payload, verbose=verbose)
 

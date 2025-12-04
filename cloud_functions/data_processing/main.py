@@ -160,11 +160,11 @@ def main(request: Request) -> tuple[str, int]:
         step_list = None
         cont = True
 
-        print(f"Starting METHOD: {method}")
+        logger.info({"message": f"Starting METHOD: {method}"})
 
         match method:
             case "dry_run":
-                print("Dry Run Complete!")
+                logger.info({"message": "Dry Run Complete!"})
 
             case "test_retries":
                 from src.core.commons import retry_and_alert
@@ -426,12 +426,12 @@ def main(request: Request) -> tuple[str, int]:
                 )
 
             case _:
-                print(f"METHOD: {method} not a valid option")
+                logger.warning({"message": f"METHOD: {method} not a valid option"})
 
         if trigger_next and cont and step_list:
             pipe_next_steps(step_list, task_config, verbose=verbose)
 
-        print(f"METHOD: {method} complete!")
+        logger.info({"message": f"METHOD: {method} complete!"})
 
         return "OK", 200
     except Exception as e:
@@ -462,8 +462,8 @@ def main(request: Request) -> tuple[str, int]:
             return f"Internal Server Error - METHOD {method} failed: {e}", 208
 
     finally:
-        print("Releasing memory")
+        logger.info({"message": "Releasing memory"})
         release_memory(verbose=verbose)
 
         fn = datetime.datetime.now()
-        print(f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes")
+        logger.info({"message": f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes"})

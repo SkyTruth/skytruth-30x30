@@ -36,6 +36,9 @@ from src.utils.gcp import (
     read_dataframe,
     read_json_df,
 )
+from src.utils.logger import Logger
+
+logger = Logger()
 
 PROTECTED_PLANET = "protected-planet"
 MPATLAS = "mpatlas"
@@ -210,27 +213,27 @@ def generate_protected_areas_table(
         return mpa_pa
 
     if verbose:
-        print("loading PA metadata")
+        logger.info({"message": "loading PA metadata"})
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
 
     eez_file_name = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
     gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
     if verbose:
-        print(f"loading eez from {eez_file_name}")
+        logger.info({"message": f"loading eez from {eez_file_name}"})
     eez = read_json_df(BUCKET, eez_file_name)
 
     if verbose:
-        print(f"loading gadm from {gadm_file_name}")
+        logger.info({"message": f"loading gadm from {gadm_file_name}"})
     gadm = read_json_df(BUCKET, gadm_file_name)
     gadm = calculate_area(gadm, output_area_column="AREA_KM2")
 
     if verbose:
-        print("processing WDPAs")
+        logger.info({"message": "processing WDPAs"})
     wdpa_pa = process_wdpa(wdpa)
 
     if verbose:
-        print("processing MPAs")
+        logger.info({"message": "processing MPAs"})
     mpa_pa = process_mpa(mpatlas)
 
     pas = pd.concat((wdpa_pa[mpa_pa.columns], mpa_pa), axis=0)
@@ -245,7 +248,7 @@ def generate_protected_areas_table(
     pas = pas[~pas["coverage"].isnull()]
 
     if verbose:
-        print("adding parent/child relationships")
+        logger.info({"message": "adding parent/child relationships"})
 
     results = []
     # Split by country to ensure parent/children are of the same country
@@ -278,7 +281,7 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
 
     # Create unique identifier and attach to the current and updated PAs for comparison
     if verbose:
-        print("adding unique identifier")
+        logger.info({"message": "adding unique identifier"})
     cols_for_id = ["environment", "wdpaid", "wdpa_p_id", "zone_id", "location"]
     updated_pas["identifier"] = updated_pas.apply(
         lambda x: get_unique_identifier(x, cols_for_id), axis=1
@@ -290,18 +293,18 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
 
     # Add identifier to parent/children
     if verbose:
-        print("adding database identifier to parent column")
+        logger.info({"message": "adding database identifier to parent column"})
     updated_pas["parent"] = updated_pas["parent"].apply(
         get_identifier, args=(cols_for_id, current_db)
     )
     if verbose:
-        print("adding database identifier to children column")
+        logger.info({"message": "adding database identifier to children column"})
     updated_pas["children"] = updated_pas["children"].apply(
         get_identifier_children, args=(cols_for_id, current_db)
     )
 
     if verbose:
-        print("finding new, deleted, and static PAs")
+        logger.info({"message": "finding new, deleted, and static PAs"})
 
     if len(current_db) > 0:
         new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
@@ -309,7 +312,7 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
 
         if verbose:
-            print("getting static PA tables")
+            logger.info({"message": "getting static PA tables"})
         # Current DB entries for PAs that are in updated table
         static_current = (
             current_db[current_db["identifier"].isin(static)]
@@ -353,7 +356,9 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         changed = static_updated[change_indx]
 
         if verbose:
-            print(f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}")
+            logger.info(
+                {"message": f"new: {len(new)}, deleted: {len(deleted)}, changed: {len(changed)}"}
+            )
 
         return {
             "new": updated_pas[updated_pas["identifier"].isin(new)]
@@ -365,7 +370,7 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
     else:
         new = list(set(updated_pas["identifier"]))
         if verbose:
-            print(f"new: {len(new)}")
+            logger.info({"message": f"new: {len(new)}"})
 
         return {
             "new": updated_pas[updated_pas["identifier"].isin(new)]

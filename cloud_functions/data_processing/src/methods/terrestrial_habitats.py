@@ -205,23 +205,23 @@ def generate_terrestrial_biome_stats_pa(
     gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
 
     if verbose:
-        print(f"loading GADM geometries from {gadm_file_name}")
+        logger.info({"message": f"loading GADM geometries from {gadm_file_name}"})
 
     gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
 
     if verbose:
-        print("loading protected areas (this may take a few minutes)")
+        logger.info({"message": "loading protected areas (this may take a few minutes)"})
 
     terrestrial_pas = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
     terrestrial_pas["geometry"] = terrestrial_pas.make_valid()
 
     if verbose:
-        print(f"downloading raster from {raster_path}")
+        logger.info({"message": f"downloading raster from {raster_path}"})
     local_raster_path = raster_path.split("/")[-1]
     download_file_from_gcs(bucket, raster_path, local_raster_path, verbose=False)
 
     if verbose:
-        print("calculating terrestrial habitat area within PAs")
+        logger.info({"message": "calculating terrestrial habitat area within PAs"})
 
     # --- Parallel execution ---
     countries = gadm["location"].unique().tolist()
@@ -273,12 +273,12 @@ def process_terrestrial_habitats(
         return out
 
     if verbose:
-        print(f"loading country habitat stats from {country_stats_filename}")
+        logger.info({"message": f"loading country habitat stats from {country_stats_filename}"})
     country_stats = read_dataframe(bucket, country_stats_filename, verbose=verbose)
     country_stats = country_stats.apply(pd.to_numeric, errors="ignore")
 
     if verbose:
-        print(f"loading country habitat stats from {pa_stats_filename}")
+        logger.info({"message": f"loading country habitat stats from {pa_stats_filename}"})
     pa_stats = read_dataframe(bucket, pa_stats_filename, verbose=verbose)
     pa_stats = pa_stats.apply(pd.to_numeric, errors="ignore")
 

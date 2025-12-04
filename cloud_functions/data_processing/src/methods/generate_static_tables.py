@@ -16,6 +16,9 @@ from src.core.params import (
 from src.core.processors import round_to_list
 from src.utils.gcp import read_dataframe, read_json_df, read_json_from_gcs, upload_dataframe
 from src.utils.geo import get_area_km2
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def generate_locations_table(
@@ -29,7 +32,7 @@ def generate_locations_table(
     verbose: bool = True,
 ):
     if verbose:
-        print("Generating locations table")
+        logger.info({"message": "Generating locations table"})
 
     eez_file = eez_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
     gadm_file = gadm_file_name.replace(".geojson", f"_{terrestrial_tolerance}.geojson")
@@ -46,7 +49,7 @@ def generate_locations_table(
     )
 
     if verbose:
-        print("Processing data to create the locations table")
+        logger.info({"message": "Processing data to create the locations table"})
 
     # Get just a map of the ISO* roll up countries and their territories
     group_map = {
@@ -61,7 +64,7 @@ def generate_locations_table(
     gadm["type"] = gadm.apply(_add_default_types, axis=1)
 
     if verbose:
-        print("Processing EEZs and their country relation mappings")
+        logger.info({"message": "Processing EEZs and their country relation mappings"})
     # Add country groups and regions
     eez = (
         eez.rename(columns={"location": "GID_0", "AREA_KM2": "total_marine_area"})
@@ -70,7 +73,7 @@ def generate_locations_table(
     )
 
     if verbose:
-        print("Processing GADM and its country relation mappings")
+        logger.info({"message": "Processing GADM and its country relation mappings"})
     gadm = (
         gadm.rename(columns={"location": "GID_0"})
         .pipe(_add_groups, group_map, "country")

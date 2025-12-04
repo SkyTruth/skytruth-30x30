@@ -51,7 +51,7 @@ def upload_locations(
     options = request.get("options") if request else None
 
     if verbose:
-        print("Writing locations to the database")
+        logger.info({"message": "Writing locations to the database"})
 
     client = Strapi()
     return client.upsert_locations(locations, options)
@@ -98,7 +98,7 @@ def upload_stats(
     stats_dict = stats_df.to_dict(orient="records")
 
     if verbose:
-        print(f"Uploading stats from {filename} via the API")
+        logger.info({"message": f"Uploading stats from {filename} via the API"})
     return upload_function(stats_dict)
 
 
@@ -125,15 +125,15 @@ def upload_protected_areas(
     if update_segment in ["delete", "all"]:
         deleted = db_changes["deleted"]
         if verbose:
-            print(f"deleting {len(deleted)} entries")
+            logger.info({"message": f"deleting {len(deleted)} entries"})
         delete_response = strapi.delete_pas(deleted)
         if verbose:
-            print("delete response:", delete_response)
+            logger.info({"message": f"delete response: {delete_response}"})
 
     if update_segment in ["upsert", "all"]:
         upserted = db_changes["new"] + db_changes["changed"]
         if verbose:
-            print(f"upserting {len(upserted)} entries")
+            logger.info({"message": f"upserting {len(upserted)} entries"})
 
         wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
         chunk_size = 20000
@@ -144,10 +144,10 @@ def upload_protected_areas(
                 upsert_response = strapi.upsert_pas(chunk)
 
                 if verbose:
-                    print("upsert response:", upsert_response)
+                    logger.info({"message": f"upsert response: {upsert_response}"})
             except Exception as excep:
                 logger.error({"message": f"Error on chunk {i // chunk_size}", "error": str(excep)})
                 continue
 
     if verbose:
-        print("Update complete!")
+        logger.info({"message": "Update complete!"})

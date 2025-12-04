@@ -67,6 +67,9 @@ from src.utils.gcp import (
     upload_gdf,
 )
 from src.utils.geo import fill_polygon_holes, tile_geometry
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def process_gadm_geoms(
@@ -78,7 +81,7 @@ def process_gadm_geoms(
     verbose: bool = True,
 ) -> None:
     if verbose:
-        print(f"loading gadm gpkg from {gadm_zipfile_name}")
+        logger.info({"message": f"loading gadm gpkg from {gadm_zipfile_name}"})
     related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
 
     # Create an inverse parent child location map excluding sovereign rollups with a trailing '*'
@@ -100,7 +103,7 @@ def process_gadm_geoms(
         bucket, gadm_zipfile_name, layers=["ADM_0", "ADM_1"]
     )
     if verbose:
-        print("Layers extracted from gpkg")
+        logger.info({"message": "Layers extracted from gpkg"})
 
     countries.drop(
         columns=list(set(countries.columns) - set(["GID_0", "COUNTRY", "geometry"])), inplace=True
@@ -140,14 +143,14 @@ def process_gadm_geoms(
 
         if tolerance is not None:
             if verbose:
-                print(f"simplifying geometries with tolerance {tolerance}")
+                logger.info({"message": f"simplifying geometries with tolerance {tolerance}"})
             df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
 
         df = df.pipe(clean_geometries)
 
         out_fn = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
-            print(f"uploading simplified GADM countries to {out_fn}")
+            logger.info({"message": f"uploading simplified GADM countries to {out_fn}"})
         upload_gdf(bucket, df, out_fn)
 
     gc.collect()
@@ -178,7 +181,7 @@ def process_eez_geoms(
         .geojson file to EEZ_MULTIPLE_SOV_FILE_NAME
     """
     if verbose:
-        print(f"loading eezs from {eez_params['zipfile_name']}")
+        logger.info({"message": f"loading eezs from {eez_params['zipfile_name']}"})
 
     related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
 
@@ -207,24 +210,38 @@ def process_eez_geoms(
     for tolerance in tolerances:
         if tolerance is not None:
             if verbose:
-                print(f"simplifying eez by sovereign geometries with tolerance {tolerance}")
+                logger.info(
+                    {
+                        "message": (
+                            f"simplifying eez by sovereign geometries "
+                            f"with tolerance {tolerance}"
+                        )
+                    }
+                )
             eez_by_sov["geometry"] = eez_by_sov["geometry"].simplify(tolerance=tolerance)
 
         eez_by_sov = eez_by_sov.pipe(clean_geometries)
 
         out_fn = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
-            print(f"uploading eez by sovereign file to {out_fn}")
+            logger.info({"message": f"uploading eez by sovereign file to {out_fn}"})
         upload_gdf(bucket, eez_by_sov, out_fn)
 
     if verbose:
-        print(f"simplifying eez with mulit-sovereign geometries with tolerance {TOLERANCES[1]}")
+        logger.info(
+            {
+                "message": (
+                    f"simplifying eez with mulit-sovereign geometries "
+                    f"with tolerance {TOLERANCES[1]}"
+                )
+            }
+        )
     eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
     blob_name = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{TOLERANCES[1]}.geojson")
     if verbose:
-        print(f"uploading eez with multi-sovereign file to {blob_name}")
+        logger.info({"message": f"uploading eez with multi-sovereign file to {blob_name}"})
     upload_gdf(bucket, eez_multiple_sovs, blob_name)
 
 
@@ -385,7 +402,7 @@ def process_eez_gadm_unions(
     )
 
     if verbose:
-        print("Generating eez/gadm unions")
+        logger.info({"message": "Generating eez/gadm unions"})
 
     eez_gadm_union = []
     for loc in tqdm(eez["location"].dropna().unique()):
@@ -402,7 +419,9 @@ def process_eez_gadm_unions(
     eez_gadm_union = gpd.GeoDataFrame(eez_gadm_union, geometry="geometry", crs=eez.crs)
 
     if verbose:
-        print(f"uploading GADM/eez union geometries to {gadm_eez_union_file_name}")
+        logger.info(
+            {"message": f"uploading GADM/eez union geometries to {gadm_eez_union_file_name}"}
+        )
     upload_gdf(bucket, eez_gadm_union, gadm_eez_union_file_name)
 
 
@@ -480,22 +499,26 @@ def process_mangroves(
     tqdm.pandas()
 
     if verbose:
-        print("loading mangroves")
+        logger.info({"message": "loading mangroves"})
     mangrove = load_zipped_shapefile_from_gcs(mangroves_zipfile_name, bucket).pipe(clean_geometries)
     mangrove["index"] = range(len(mangrove))
 
     if verbose:
-        print("loading eezs/gadm union")
+        logger.info({"message": "loading eezs/gadm union"})
 
     gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
     gadm_eez_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
     if verbose:
-        print("re-projecting mangroves for global area calculation")
+        logger.info({"message": "re-projecting mangroves for global area calculation"})
     mangrove_reproj = mangrove.to_crs("EPSG:6933").pipe(clean_geometries)
 
     if verbose:
-        print(f"saving global mangrove area to gs://{bucket}/{global_mangrove_area_file_name}")
+        logger.info(
+            {
+                "message": f"saving global mangrove area to gs://{bucket}/{global_mangrove_area_file_name}"
+            }
+        )
     mangrove_reproj["area_km2"] = mangrove_reproj.geometry.area / 1e6
     global_mangrove_area = mangrove_reproj["area_km2"].sum()
 
@@ -508,7 +531,7 @@ def process_mangroves(
     )
 
     if verbose:
-        print("generating mangrove polygons by country")
+        logger.info({"message": "generating mangrove polygons by country"})
     mangroves_by_country = []
     for cnt in tqdm(list(sorted(set(gadm_eez_union["location"].dropna())))):
         country_geom = gadm_eez_union[gadm_eez_union["location"] == cnt].iloc[0].geometry
@@ -593,7 +616,7 @@ def process_terrestrial_biome_raster(
 
     local_biome_raster_path = biome_raster_path.split("/")[-1]
     if verbose:
-        print(f"downloading {biome_raster_path} to {local_biome_raster_path}")
+        logger.info({"message": f"downloading {biome_raster_path} to {local_biome_raster_path}"})
     client = storage.Client()
     bucket = client.bucket(bucket)
     blob = bucket.blob(biome_raster_path)
@@ -602,7 +625,7 @@ def process_terrestrial_biome_raster(
     fn_out = processed_biome_raster_path.split("/")[-1]
 
     if verbose:
-        print(f"processing raster and saving to {fn_out}")
+        logger.info({"message": f"processing raster and saving to {fn_out}"})
     with rasterio.open(local_biome_raster_path) as src:
         # Create a destination dataset based on source params. The
         # destination will be tiled, and we'll process the tiles
@@ -663,11 +686,11 @@ def process_terrestrial_biome_raster(
             dst.update_tags(ns="rio_overview", resampling="average")
 
     if verbose:
-        print(f"saving processed raster to {processed_biome_raster_path}")
+        logger.info({"message": f"saving processed raster to {processed_biome_raster_path}"})
     upload_file_to_gcs(bucket, fn_out, processed_biome_raster_path)
 
     if verbose:
-        print("finished uploading")
+        logger.info({"message": "finished uploading"})
 
 
 def generate_terrestrial_biome_stats_country(
@@ -682,16 +705,16 @@ def generate_terrestrial_biome_stats_country(
 ):
     gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
 
-    print("loading and simplifying GADM geometries")
+    logger.info({"message": "loading and simplifying GADM geometries"})
     gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
 
     if verbose:
-        print(f"downloading raster from {raster_path}")
+        logger.info({"message": f"downloading raster from {raster_path}"})
     local_raster_path = raster_path.split("/")[-1]
     download_file_from_gcs(bucket, raster_path, local_raster_path, verbose=False)
 
     if verbose:
-        print("getting country habitat stats")
+        logger.info({"message": "getting country habitat stats"})
     country_stats = []
     with rasterio.open(local_raster_path) as src:
         for country in tqdm(gadm["GID_0"].unique()):
@@ -715,9 +738,11 @@ def generate_terrestrial_biome_stats_country(
             fn = datetime.datetime.now()
             if verbose:
                 elapsed_seconds = round((fn - st).total_seconds())
-                print(
-                    f"processed {len(tile_geoms)} tiles within {country}'s PAs "
-                    f"in {elapsed_seconds} seconds"
+                logger.info(
+                    {
+                        "message": f"processed {len(tile_geoms)} tiles within {country}'s PAs "
+                        f"in {elapsed_seconds} seconds"
+                    }
                 )
 
     country_stats = pd.DataFrame(country_stats)

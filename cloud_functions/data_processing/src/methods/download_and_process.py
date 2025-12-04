@@ -117,13 +117,15 @@ def download_mpatlas_zone(
         If True, prints progress messages. Default is True.
     """
     if verbose:
-        print(f"downloading MPAtlas Zone Assessment from {url}")
+        logger.info({"message": f"downloading MPAtlas Zone Assessment from {url}"})
 
     response = requests.get(url)
     response.raise_for_status()
 
     if verbose:
-        print(f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}")
+        logger.info(
+            {"message": f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}"}
+        )
     save_file_bucket(
         response.content,
         response.headers.get("Content-Type"),
@@ -178,7 +180,7 @@ def download_mpatlas(
         return {"delay_seconds": 60 * 60 * 24, "max_retries": 3}, False
 
     if verbose:
-        print(f"loading MPAtlas from {mpatlas_filename}")
+        logger.info({"message": f"loading MPAtlas from {mpatlas_filename}"})
     mpa = read_json_from_gcs(bucket, mpatlas_filename)
 
     mpa = gpd.GeoDataFrame(
@@ -192,17 +194,17 @@ def download_mpatlas(
 
     # add area column
     if verbose:
-        print("calculating MPA area (calculated_area_km2)")
+        logger.info({"message": "calculating MPA area (calculated_area_km2)"})
     mpa = calculate_area(mpa, output_area_column="calculated_area_km2")
 
     # add bounding box column
     if verbose:
-        print("calculating MPA bounding box (bbox)")
+        logger.info({"message": "calculating MPA bounding box (bbox)"})
     mpa["bbox"] = mpa.geometry.apply(lambda g: g.bounds if g is not None else None)
 
     # Upload metadata (no geometry)
     if verbose:
-        print(f"saving metadata to {meta_file_name}")
+        logger.info({"message": f"saving metadata to {meta_file_name}"})
     upload_dataframe(
         bucket,
         mpa.drop(columns="geometry"),
@@ -254,7 +256,7 @@ def download_protected_seas(
     data = retry_and_alert(download_from_url, url, alert_func=send_alert)
 
     if verbose:
-        print(f"saving Protected Seas to gs://{bucket}/{archive_filename}")
+        logger.info({"message": f"saving Protected Seas to gs://{bucket}/{archive_filename}"})
     upload_dataframe(bucket, data, archive_filename, project_id=project, verbose=verbose)
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
@@ -278,7 +280,9 @@ def download_and_process_protected_planet_pas(
             clear memory loaded by geopandas
             """
             if verbose:
-                print("running subprocess to unpack shapefile into a parquet file")
+                logger.info(
+                    {"message": "running subprocess to unpack shapefile into a parquet file"}
+                )
             out_path = f"{dir}/{zip_stem}_{layer_name}.parquet"
             script = textwrap.dedent(f"""
                 import os, glob, geopandas as gpd, gc
@@ -294,7 +298,7 @@ def download_and_process_protected_planet_pas(
             """)
             subprocess.run([sys.executable, "-c", script], check=True)
             if verbose:
-                print("subprocess completed")
+                logger.info({"message": "subprocess completed"})
 
         def unpack_parquet(zip_stem, zip_path, dir, shp, layer_name, verbose=True):
             """
@@ -338,17 +342,17 @@ def download_and_process_protected_planet_pas(
             if os.path.isdir(path):
                 shutil.rmtree(path)
                 if verbose:
-                    print(f"Deleted folder and its contents: {path}")
+                    logger.info({"message": f"Deleted folder and its contents: {path}"})
             elif os.path.exists(path):
                 os.remove(path)
                 if verbose:
-                    print(f"Deleted file: {path}")
+                    logger.info({"message": f"Deleted file: {path}"})
             else:
                 return
         except FileNotFoundError:
             pass
         except Exception as e:
-            print(f"Warning: could not delete {path}: {e}")
+            logger.warning({"message": f"Warning: could not delete {path}: {e}"})
 
     def process_protected_area_geoms(
         pa_dir, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
@@ -487,7 +491,6 @@ def download_and_process_protected_planet_pas(
                         "traceback": tb,
                     }
                 )
-                print(tb)
                 raise
 
         parquet_files = glob.glob(os.path.join(pa_dir, "*.parquet"))
@@ -514,7 +517,7 @@ def download_and_process_protected_planet_pas(
     # download WDPA shapefiles and return CloudRun retry config
     # to try once per day for a week if fails
     if verbose:
-        print(f"downloading {wdpa_url}")
+        logger.info({"message": f"downloading {wdpa_url}"})
     status = retry_and_alert(
         download_file_with_progress, wdpa_url, base_zip_path, max_retries=1, alert_func=send_alert
     )
@@ -525,33 +528,33 @@ def download_and_process_protected_planet_pas(
     show_container_mem("After download")
 
     if verbose:
-        print(f"unzipping {base_zip_path}")
+        logger.info({"message": f"unzipping {base_zip_path}"})
     _ = unzip_file(base_zip_path, pa_dir)
     show_container_mem("After unzipping")
 
     if verbose:
-        print("unpacking PA shapefiles into parquet files")
+        logger.info({"message": "unpacking PA shapefiles into parquet files"})
     unpack_pas_to_parquet(pa_dir, verbose=verbose)
     show_container_mem("After unpacking")
 
     if verbose:
-        print(f"deleting {base_zip_path}")
+        logger.info({"message": f"deleting {base_zip_path}"})
     remove_file_or_folder(base_zip_path, verbose=verbose)
     show_container_mem(f"After deleting {base_zip_path}")
 
     if verbose:
-        print("processing and simplifying protected area geometries")
+        logger.info({"message": "processing and simplifying protected area geometries"})
     df = process_protected_area_geoms(
         pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
     )
 
     if verbose:
-        print(f"deleting {pa_dir}")
+        logger.info({"message": f"deleting {pa_dir}"})
     remove_file_or_folder(pa_dir, verbose=verbose)
 
     try:
         if verbose:
-            print("Renaming variables to match old format")
+            logger.info({"message": "Renaming variables to match old format"})
         # On failure, alert in case naming convention has changed
         df = retry_and_alert(
             match_old_pa_naming_convantion, df, max_retries=0, alert_func=send_alert
@@ -559,7 +562,7 @@ def download_and_process_protected_planet_pas(
 
         # Save metadata
         if verbose:
-            print(f"saving wdpa metadata to {meta_file_name}")
+            logger.info({"message": f"saving wdpa metadata to {meta_file_name}"})
 
         retry_and_alert(
             upload_dataframe,
@@ -580,7 +583,7 @@ def download_and_process_protected_planet_pas(
         # Save terrestrial PAs
         ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
-            print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
+            logger.info({"message": f"saving and duplicating terrestrial PAs to {ter_out_fn}"})
 
         retry_and_alert(
             upload_gdf, bucket, df[df["MARINE"].eq("0")], ter_out_fn, alert_func=send_alert
@@ -590,7 +593,7 @@ def download_and_process_protected_planet_pas(
         # Save marine PAs
         mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
-            print(f"saving and duplicating marine PAs to {mar_out_fn}")
+            logger.info({"message": f"saving and duplicating marine PAs to {mar_out_fn}"})
 
         retry_and_alert(
             upload_gdf, bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn, alert_func=send_alert
@@ -638,7 +641,11 @@ def download_protected_planet_global(
     data = pd.read_csv(BytesIO(response.content))
 
     if verbose:
-        print(f"saving Global Protected Planet statistics to to gs://{bucket}/{archive_filename}")
+        logger.info(
+            {
+                "message": f"saving Global Protected Planet statistics to to gs://{bucket}/{archive_filename}"
+            }
+        )
     upload_dataframe(bucket, data, archive_filename, project_id=project_id, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
 
@@ -692,7 +699,7 @@ def download_protected_planet_country(
     results = fetch_data(params)
     while results:
         if verbose:
-            print(f"Fetching page {page}...")
+            logger.info({"message": f"Fetching page {page}..."})
 
         all_areas.extend(results)
         page += 1
@@ -700,7 +707,11 @@ def download_protected_planet_country(
         results = fetch_data(params)
 
     if verbose:
-        print(f"Uploading {len(all_areas)} protected areas to gs://{bucket}/{archive_filename}")
+        logger.info(
+            {
+                "message": f"Uploading {len(all_areas)} protected areas to gs://{bucket}/{archive_filename}"
+            }
+        )
 
     upload_dataframe(
         bucket, pd.DataFrame(all_areas), archive_filename, project_id=project, verbose=True
