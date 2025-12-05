@@ -3,7 +3,7 @@ from ast import literal_eval
 import pandas as pd
 from tqdm import tqdm
 
-from src.core.commons import retry_and_alert, send_alert
+from src.core.commons import retry_and_alert
 from src.core.params import (
     ARCHIVE_WDPA_PA_FILE_NAME,
     BUCKET,
@@ -107,18 +107,23 @@ def upload_protected_areas(
     archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     update_segment: str = "all",
+    webhook_url="",
     verbose: bool = True,
 ):
     strapi = Strapi()
 
+    # To prevent this from updating based on a stale change file name, load
+    # change file and then archive the file. This way, if it unexpectedly runs again,
+    # the expected (non-archived) file does not exist and it will fail to execute.
     db_changes = retry_and_alert(
         load_pickle_from_gcs,
         bucket_name=bucket,
         blob_name=pa_file_name,
         project_id=PROJECT,
         verbose=verbose,
-        alert_func=send_alert,
+        max_retries=0,
         alert_message=f"failed to load {pa_file_name}",
+        webhook_url=webhook_url,
     )
     rename_blob(bucket, pa_file_name, archive_pa_file_name, verbose=True)
 

@@ -9,7 +9,7 @@ import functions_framework
 from flask import Request
 
 from src.core import map_params
-from src.core.commons import send_alert
+from src.core.commons import send_slack_alert
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -135,6 +135,7 @@ def main(request: Request) -> tuple[str, int]:
     project = os.environ.get("PROJECT", "")
     env = os.environ.get("ENVIRONMENT", "")
     location = os.environ.get("LOCATION", "")
+    webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
 
     try:
         data = request.get_json(silent=True) or {}
@@ -162,8 +163,14 @@ def main(request: Request) -> tuple[str, int]:
             "attempt": attempt,
         }
 
+        # By default, delay each retry by an extra minute
         retry_config = {"delay_seconds": (attempt - 1) * 60, "max_retries": max_retries}
+
+        # By default, do not continue onto the next step
         step_list = None
+
+        # By default, continue to next steps - default to True, but will be reset to False if
+        # method fails and retries are being handled with a scheduled task
         cont = True
 
         logger.info({"message": f"Starting METHOD: {method}"})
@@ -180,7 +187,10 @@ def main(request: Request) -> tuple[str, int]:
                         raise
                     return "SUCCESS"
 
-                _ = retry_and_alert(sample_func, 3, alert_func=send_alert)
+                url = webhook_url if attempt == max_retries + 1 else ""
+                _ = retry_and_alert(
+                    sample_func, 3, alert_message="testing slack alerts from GCP", webhook_url=url
+                )
                 retry_config = {"delay_seconds": 30, "max_retries": 1}
                 raise ValueError("Error: Testing Retries")
             case "publisher":
@@ -391,7 +401,9 @@ def main(request: Request) -> tuple[str, int]:
 
             case "update_protected_areas":
                 update_segment = data.get("UPDATE_SEGMENT", "all")
-                upload_protected_areas(verbose=verbose, update_segment=update_segment)
+                upload_protected_areas(
+                    verbose=verbose, update_segment=update_segment, webhook_url=webhook_url
+                )
 
             # ------------------
             #   Map Tilesets Updates
@@ -464,7 +476,7 @@ def main(request: Request) -> tuple[str, int]:
                     "traceback": traceback.format_exc(),
                 }
             )
-            send_alert(message=f"METHOD {method} failed after {attempt} attempts", error=e)
+            send_slack_alert(webhook_url, f"METHOD {method} failed after {attempt} attempts")
             return f"Internal Server Error - METHOD {method} failed: {e}", 208
 
     finally:

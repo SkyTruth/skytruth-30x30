@@ -1,4 +1,5 @@
 import io
+import json
 import tempfile
 import time
 import traceback
@@ -269,10 +270,16 @@ def unzip_file(base_zip_path, destination_folder):
         zip_ref.extractall(destination_folder)
 
 
-def send_alert(message="", error=""):
-    # TODO: turn this into an actual alert
+def send_slack_alert(webhook_url, text):
+    headers = {"Content-Type": "application/json"}
+    payload = {"text": text}
+    response = requests.post(webhook_url, headers=headers, data=json.dumps(payload))
+    logger.error({"message": "ALERT sent"})
+    return response.status_code, response.text
 
-    logger.error({"message": f"THIS IS AN ALERT: {message}", "error": str(error)})
+
+# def send_alert(message="", error=""):
+#     logger.error({"message": f"THIS IS AN ALERT: {message}", "error": str(error)})
 
 
 class RetryFailed(Exception):
@@ -280,7 +287,7 @@ class RetryFailed(Exception):
 
 
 def retry_and_alert(
-    func, *args, max_retries=1, backoff=10, alert_func=None, alert_message="", **kwargs
+    func, *args, max_retries=1, backoff=10, alert_message="alert", webhook_url="", **kwargs
 ):
     """
     Retry a function call up to max_retries times.
@@ -304,9 +311,12 @@ def retry_and_alert(
 
             # Final failure
             if attempt == max_retries + 1:
-                if alert_func:
-                    alert_func(message=alert_message, error=e)
-                raise RetryFailed(f"{func.__name__} failed after {max_retries + 1} attempts") from e
+                if webhook_url != "":
+                    message = (
+                        f"{alert_message}: {func.__name__} failed after {max_retries + 1} attempts"
+                    )
+                    send_slack_alert(webhook_url, message)
+                raise RetryFailed(f"ALERT: {message}") from e
 
             # Backoff before retrying
             time.sleep(backoff)

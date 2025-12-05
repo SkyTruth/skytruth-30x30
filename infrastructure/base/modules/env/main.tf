@@ -340,7 +340,13 @@ locals {
     project_id = var.gcp_project_id
     secret     = module.postgres_application_user_password.secret_name
     version    = module.postgres_application_user_password.latest_version
-  }]
+  }],
+  {
+    key        = "SLACK_ALERTS_WEBHOOK"
+    project_id = var.gcp_project_id
+    secret     = "gcp-slack-alerts-webhook"
+    version    = "latest"
+  },
 }
 
 module "data_pipes_cloud_function" {
