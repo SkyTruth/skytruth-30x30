@@ -82,6 +82,8 @@ def generate_total_area_minus_pa(bucket: str,
         filename=total_area_file.replace('.geojson', f'_{tolerance}.geojson'),
         verbose=verbose
     )
+    total_area = total_area[['location', 'geometry']]
+
     # Protected areas: PA (terrestrial) or MPA (marine)
     pa = read_json_df(
         bucket_name=bucket,
