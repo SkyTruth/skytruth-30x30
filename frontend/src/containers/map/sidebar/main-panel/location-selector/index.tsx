@@ -80,7 +80,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   // TODO TECH-3174: Clean up
   const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
-  // TODO TECH-3233 Clean up
   const isCustomRegionEnabled = useFeatureFlag('is_custom_region_active');
 
   const { data: locationsData } = useGetLocations(
@@ -310,8 +309,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           {t('global-view')}
         </Button>
       )}
-      {/* TODO TECH-3233: Clean up */}
-      {isCustomRegionEnabled ? (
+      
         <Button
           className={cn({
             [BUTTON_CLASSES]: true,
@@ -333,7 +331,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           />
           {customRegionCTA}
         </Button>
-      ) : null}
 
       {showEEZWarning ? (
         <Button
