@@ -178,7 +178,7 @@ variable "data_processing_available_cpu" {
 
 variable "data_processing_max_instance_count" {
   type        = number
-  default     = 1
+  default     = 3
   description = "Max instance count for the data processing function"
 }
 

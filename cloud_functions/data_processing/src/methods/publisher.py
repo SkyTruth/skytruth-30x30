@@ -1,6 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 
+import requests
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
@@ -10,8 +11,26 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
+def long_running_tasks(payload, timeout=1, verbose=True):
+    if verbose:
+        method = payload.get("METHOD", "")
+        logger.info(
+            {"message": f"Launching Long-Running Cloudfunction: {method}: {json.dumps(payload)}"}
+        )
+    try:
+        requests.post(payload["TARGET_URL"], json=payload, timeout=timeout)
+    except requests.exceptions.Timeout:
+        pass
+    except Exception as e:
+        logger.warning(
+            {"message": "Non-critical error triggering long-running CF", "error": str(e)}
+        )
+
+    return ("OK", 200)
+
+
 def create_task(
-    payload: dict,
+    payload,
     delay_seconds: int | None = None,
     verbose: bool = True,
 ):
@@ -75,22 +94,23 @@ def monthly_job_publisher(task_config, verbose=True):
         },
     ]
 
-    for tolerance in TOLERANCES:
-        jobs.append(
-            {
-                "METHOD": "download_protected_planet_pas",
-                "TOLERANCE": tolerance,
-                **task_config,
-            }
-        )
-
     for job in jobs:
-        create_task(payload=job, verbose=verbose)
+        create_task(job, verbose=verbose)
+
+    # Long running tasks
+    for tolerance in TOLERANCES:
+        job = {
+            "METHOD": "download_protected_planet_pas",
+            "TOLERANCE": tolerance,
+            **task_config,
+        }
+        long_running_tasks(job, verbose=verbose)
 
 
 def launch_next_step(
     next_method: str,
     task_config: dict,
+    task_type: str = "queue",
     verbose: bool = True,
 ):
     """Enqueue exactly one downstream task."""
@@ -98,21 +118,34 @@ def launch_next_step(
     payload = {"METHOD": next_method, **task_config}
 
     if verbose:
-        logger.info({"message": f"Launching next step: {next_method}"})
+        logger.info({"message": f"Launching next step with {task_type}: {next_method}"})
 
-    create_task(payload=payload, verbose=verbose)
+    if task_type == "queue":
+        create_task(payload, verbose=verbose)
+    elif task_type == "long_running_task":
+        long_running_tasks(payload, verbose=verbose)
 
 
 def pipe_next_steps(
     step_list: list,
     task_config: dict,
+    long_running_task_list: list = None,
     verbose: bool = True,
 ):
     """Enqueue a sequence of downstream steps."""
 
     for next_method in step_list:
-        launch_next_step(
-            next_method,
-            task_config,
-            verbose=verbose,
-        )
+        if long_running_task_list and next_method in long_running_task_list:
+            launch_next_step(
+                next_method,
+                task_config,
+                task_type="long_running_task",
+                verbose=verbose,
+            )
+        else:
+            launch_next_step(
+                next_method,
+                task_config,
+                task_type="queue",
+                verbose=verbose,
+            )

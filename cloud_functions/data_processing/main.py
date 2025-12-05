@@ -82,6 +82,12 @@ logger = Logger()
 # Register SIGTERM handler
 signal.signal(signal.SIGTERM, handle_sigterm)
 
+LONG_RUNNING_TASKS = [
+    "download_protected_planet_pas",
+    "generate_terrestrial_biome_stats",
+    "update_protected_areas",
+]
+
 
 @functions_framework.http
 def main(request: Request) -> tuple[str, int]:
@@ -175,7 +181,7 @@ def main(request: Request) -> tuple[str, int]:
                     return "SUCCESS"
 
                 _ = retry_and_alert(sample_func, 3, alert_func=send_alert)
-                retry_config = {"delay_seconds": 30, "max_retries": 3}
+                retry_config = {"delay_seconds": 30, "max_retries": 1}
                 raise ValueError("Error: Testing Retries")
             case "publisher":
                 monthly_job_publisher(task_config, verbose=verbose)
@@ -429,7 +435,7 @@ def main(request: Request) -> tuple[str, int]:
                 logger.warning({"message": f"METHOD: {method} not a valid option"})
 
         if trigger_next and cont and step_list:
-            pipe_next_steps(step_list, task_config, verbose=verbose)
+            pipe_next_steps(step_list, task_config, LONG_RUNNING_TASKS, verbose=verbose)
 
         logger.info({"message": f"METHOD: {method} complete!"})
 
