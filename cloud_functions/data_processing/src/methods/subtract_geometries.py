@@ -100,7 +100,7 @@ def generate_total_area_minus_pa(bucket: str,
 
     # Subtract protected areas from each country in parallel
     countries = total_area['location'].unique().tolist()
-    results = Parallel(n_jobs=4, backend='loky')(
+    results = Parallel(n_jobs=-1, backend='loky')(
         delayed(process_country)(
             country,
             total_area,
