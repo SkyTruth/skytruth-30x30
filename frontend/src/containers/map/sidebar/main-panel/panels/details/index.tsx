@@ -7,7 +7,6 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGES } from '@/constants/pages';
-import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import {
   useMapSearchParams,
@@ -15,7 +14,6 @@ import {
 } from '@/containers/map/content/map/sync-settings';
 import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import useNameField from '@/hooks/use-name-field';
 import useScrollPosition from '@/hooks/use-scroll-position';
@@ -43,9 +41,6 @@ const SidebarDetails: FCWithMessages = () => {
   const containerScroll = useScrollPosition(containerRef);
 
   const [isWarningCollapsed, setIsWarningCollapsed] = useState(false);
-
-  // TODO TECH-3174: Clean up
-  const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
   const {
     push,
@@ -103,14 +98,9 @@ const SidebarDetails: FCWithMessages = () => {
           name: attributes?.[locationNameField],
         })
       );
-
-      if (areTerritoriesActive) {
         return mappedLocs;
-      }
-
-      return mappedLocs?.filter((loc) => !NEW_LOCS.has(loc?.code)); // TODO TECH-3174: Clean up NEW_LOCS filter
     },
-    [areTerritoriesActive, locationsData?.data, locationNameField]
+    [locationsData?.data, locationNameField]
   );
 
   const titleCountry = useMemo(() => {
@@ -201,15 +191,12 @@ const SidebarDetails: FCWithMessages = () => {
           <Warning toggleWarning={handleToggleWarning} />
         ) : null}
 
-        {/* TODO TECH-3174: Clean up Feature flag checks */}
-        {areTerritoriesActive ? (
-          <CountriesList
-            className="w-full shrink-0"
-            bgColorClassName="bg-orange"
-            countries={sovereignCountries}
-            title={t('claimed-by')}
-          />
-        ) : null}
+        <CountriesList
+          className="w-full shrink-0"
+          bgColorClassName="bg-orange"
+          countries={sovereignCountries}
+          title={t('claimed-by')}
+        />
         <CountriesList
           className="w-full shrink-0"
           bgColorClassName="bg-orange"

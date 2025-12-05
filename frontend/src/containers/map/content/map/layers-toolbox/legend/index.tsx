@@ -41,12 +41,9 @@ const Legend: FCWithMessages = () => {
     {
       locale,
       sort: 'title:asc',
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      fields: ['title', 'params_config', 'slug', 'config'],
-      // TODO TECH-3174: Clean up config 👆, only needed here for territory filtering
+      fields: ['title', 'params_config', 'slug'],
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
         legend_config: {

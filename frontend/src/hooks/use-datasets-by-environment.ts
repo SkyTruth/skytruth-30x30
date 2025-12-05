@@ -3,23 +3,16 @@ import { useMemo } from 'react';
 import { useLocale } from 'next-intl';
 
 import { ENVIRONMENTS } from '@/constants/environments';
-import { TERRITORY_LAYERS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { useGetDatasets } from '@/types/generated/dataset';
 import { DatasetUpdatedByData } from '@/types/generated/strapi.schemas';
 
-import { useFeatureFlag } from './use-feature-flag'; // TODO TECH-3174: Clean up
-
 export default function useDatasetsByEnvironment() {
   const locale = useLocale();
-
-  // TODO TECH-3174: Clean up
-  const areTerritoriesActive = useFeatureFlag('are_territories_active');
 
   const { data, isFetching } = useGetDatasets<DatasetUpdatedByData[]>(
     {
       locale,
       sort: 'name:asc',
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
         layers: {
@@ -48,22 +41,11 @@ export default function useDatasetsByEnvironment() {
       const layersData = layers?.data;
       return (
         layersData?.filter(({ attributes }) => {
-          // TODO TECH-3174: Clean up
-          const layerUrl = attributes?.config?.source?.url;
-          const layerSlug = attributes?.slug;
-
           const environmentData = attributes?.environment?.data;
-          return (
-            environmentData?.attributes?.slug === environment &&
-            // TODO TECH-3174: Clean up
-            ((!areTerritoriesActive &&
-              (!TERRITORY_LAYERS[layerSlug] || TERRITORY_LAYERS[layerSlug] !== layerUrl)) ||
-              (areTerritoriesActive &&
-                (!TERRITORY_LAYERS[layerSlug] || TERRITORY_LAYERS[layerSlug] === layerUrl)))
-          );
-        }) || [areTerritoriesActive]
-      );
-    };
+          return environmentData?.attributes?.slug === environment
+    }) || []
+  );
+};
 
     const parseDatasetsByEnvironment = (datasets: DatasetUpdatedByData[], environment: string) => {
       const parsedDatasets = datasets?.map((d) => {
@@ -99,7 +81,7 @@ export default function useDatasetsByEnvironment() {
       marine: marineDataset,
       basemap: basemapDataset,
     };
-  }, [data, areTerritoriesActive]);
+  }, [data]);
 
   return [datasets, { isLoading: isFetching }] as const;
 }
