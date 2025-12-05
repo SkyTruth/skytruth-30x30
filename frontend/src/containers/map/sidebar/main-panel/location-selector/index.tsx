@@ -185,9 +185,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       setLocationsFilter('all');
     }
 
-    let filtered = reorderedLocations.filter(
-      ({ attributes }) =>
-        FILTERS[locationsFilter].includes(attributes.type)
+    let filtered = reorderedLocations.filter(({ attributes }) =>
+      FILTERS[locationsFilter].includes(attributes.type)
     );
 
     if (locationsFilter === 'customRegion') {
@@ -223,13 +222,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       }
     }
     return filtered;
-  }, [
-    currentLocation,
-    locationsFilter,
-    reorderedLocations,
-    customRegionLocations,
-    t,
-  ]);
+  }, [currentLocation, locationsFilter, reorderedLocations, customRegionLocations, t]);
 
   const customRegionCTA = isCustomRegionActive
     ? t('close-custom-region')

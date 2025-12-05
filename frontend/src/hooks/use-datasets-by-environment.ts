@@ -42,10 +42,10 @@ export default function useDatasetsByEnvironment() {
       return (
         layersData?.filter(({ attributes }) => {
           const environmentData = attributes?.environment?.data;
-          return environmentData?.attributes?.slug === environment
-    }) || []
-  );
-};
+          return environmentData?.attributes?.slug === environment;
+        }) || []
+      );
+    };
 
     const parseDatasetsByEnvironment = (datasets: DatasetUpdatedByData[], environment: string) => {
       const parsedDatasets = datasets?.map((d) => {

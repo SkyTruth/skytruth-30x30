@@ -350,13 +350,13 @@ export const useData = (
   const [customRegionLocations] = useSyncCustomRegion();
 
   const regionLocationFilter = useMemo(() => {
-      return {
-        groups: {
-          code: {
-            $eq: locationCode,
-          },
+    return {
+      groups: {
+        code: {
+          $eq: locationCode,
         },
-      };
+      },
+    };
   }, [locationCode]);
 
   const customRegionLocationFilter = useMemo(() => {

@@ -98,7 +98,7 @@ const SidebarDetails: FCWithMessages = () => {
           name: attributes?.[locationNameField],
         })
       );
-        return mappedLocs;
+      return mappedLocs;
     },
     [locationsData?.data, locationNameField]
   );
