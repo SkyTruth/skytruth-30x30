@@ -13,6 +13,46 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
+def match_old_pa_naming_convantion(df: pd.DataFrame):
+    """
+    Update PA naming convention to reflect changes in:
+    https://www.protectedplanet.net/en/news-and-stories/introducing-the-wdpca
+    """
+
+    df = df.rename(
+        columns={
+            "SITE_ID": "WDPAID",
+            "SITE_PID": "WDPA_PID",
+            "NAME_ENG": "NAME",
+            "NAME": "ORIG_NAME",
+            "PRNT_ISO3": "PARENT_ISO3",
+        }
+    )
+    df["PA_DEF"] = df["SITE_TYPE"].map({"OECM": 0, "PA": 1})
+    df["MARINE"] = df["REALM"].map({"Terrestrial": "0", "Marine": "1", "Coastal": "2"})
+
+    df = df.drop(
+        columns=[
+            "SITE_TYPE",
+            "REALM",
+        ]
+    )
+    return df
+
+
+def wdpa_country_wrapping(df: pd.DataFrame, loc_col: str = "location"):
+    """
+    Method for adjusting countries as needed for coverage stats and mapping
+    """
+    df = df.copy()
+
+    # Label Antarctica PAs as ABNJ (areas beyond national jurisdiction)
+    df.loc[df[loc_col] == "ATA", loc_col] = "ABNJ"
+    df.loc[df[loc_col] == "ALA", loc_col] = "FIN"
+
+    return df
+
+
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
     """
     Add a set of constant columns to a DataFrame.
@@ -98,15 +138,14 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
         - ``coverage`` : float, percent coverage of area relative to
           the reference dataset, rounded to 2 decimals and capped at 100.
     """
+    print("making eez and gadm lookup tables")
+
     # build fast lookup dicts for area by location
-    print("Make eez lok up", type(eez["location"]), type(eez["location"]))
     eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"], strict=False))
     eez_lookup["ATA"] = eez_lookup["ABNJ"]
     eez_lookup["HKG"] = eez_lookup["CHN"]
 
-    print("Make gadem lok up", type(gadm["location"]), type(gadm["location"]))
     gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
-    gadm_lookup["ATA"] = gadm_lookup["ABNJ"]
 
     def _calc_coverage(x):
         if x["environment"] == "marine":
@@ -125,7 +164,7 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
     df = df.copy()
     tqdm.pandas()
 
-    print("calculatig coverage")
+    print("calculating coverage")
     df["coverage"] = df.progress_apply(_calc_coverage, axis=1)
     print("finished coverage calc")
 
@@ -329,7 +368,7 @@ def choose_pa_area(df):
     gis_area = np.where(gis_area > 0, gis_area, np.nan)
     rep_area = np.where(rep_area > 0, rep_area, np.nan)
 
-    # # Prefer GIS area if valid, otherwise REP area, otherwise 0
+    # Prefer GIS area if valid, otherwise REP area, otherwise 0
     df["calculated_area_km2"] = np.where(
         ~np.isnan(gis_area), gis_area, np.where(~np.isnan(rep_area), rep_area, 0)
     )

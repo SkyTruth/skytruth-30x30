@@ -34,6 +34,7 @@ from src.core.params import (
     PROTECTION_LEVEL_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
+    TOLERANCES,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -70,6 +71,7 @@ def generate_protected_areas_diff_table(
     archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
+    tolerance: float = TOLERANCES[0],
     verbose: bool = True,
 ):
     def clean_for_json(obj):
@@ -96,6 +98,7 @@ def generate_protected_areas_diff_table(
         mpatlas_file_name=mpatlas_file_name,
         bucket=bucket,
         verbose=verbose,
+        tolerance=tolerance,
     )
 
     # Get the current database
@@ -138,6 +141,9 @@ def generate_protected_areas_diff_table(
 
     if verbose:
         print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
+
+    # return True if the database is being updated, otherwise False
+    return len(db_changes["new"]) + len(db_changes["changed"]) > 0
 
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:

@@ -1,4 +1,7 @@
+import base64
 import datetime
+import json
+import os
 import signal
 
 import functions_framework
@@ -8,8 +11,12 @@ from src.core import map_params
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
+    CONSERVATION_BUILDER_MARINE_DATA,
+    CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+    EEZ_FILE_NAME,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
+    GADM_FILE_NAME,
     GADM_URL,
     GADM_ZIPFILE_NAME,
     HABITAT_PROTECTION_FILE_NAME,
@@ -19,12 +26,9 @@ from src.core.params import (
     MARINE_REGIONS_URL,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
+    TOLERANCES,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
-    EEZ_FILE_NAME,
-    GADM_FILE_NAME,
-    CONSERVATION_BUILDER_MARINE_DATA,
-    CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -47,6 +51,7 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
+from src.methods.publisher import monthly_job_publisher, pipe_next_steps
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
@@ -56,6 +61,7 @@ from src.methods.static_processes import (
     process_mangroves,
     process_terrestrial_biome_raster,
 )
+from src.methods.subtract_geometries import generate_total_area_minus_pa
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.tileset_processes import (
     create_and_update_country_tileset,
@@ -64,7 +70,6 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
-from src.methods.subtract_geometries import generate_total_area_minus_pa
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -119,14 +124,40 @@ def main(request: Request) -> tuple[str, int]:
 
     st = datetime.datetime.now()
 
+    project = os.environ.get("PROJECT", "")
+    env = os.environ.get("ENVIRONMENT", "")
+    location = os.environ.get("LOCATION", "")
+
     try:
         data = request.get_json(silent=True) or {}
-        method = data.get("METHOD", "default")
-        tolerance = data.get("TOLERANCE", "default")
+
+        # in case received as a queue message
+        if "message" in data:
+            msg = data["message"]
+            data_bytes = base64.b64decode(msg["data"])
+            data = json.loads(data_bytes.decode("utf-8"))
+
+        method = data.get("METHOD", "dry_run")
+        trigger_next = data.get("TRIGGER_NEXT", False)
+        tolerance = data.get("TOLERANCE", TOLERANCES[0])
+
+        task_config = {
+            "PROJECT": project,
+            "LOCATION": location,
+            "QUEUE_NAME": data.get("QUEUE_NAME", ""),
+            "TARGET_URL": data.get("TARGET_URL", ""),
+            "INVOKER_SA": data.get("INVOKER_SA", ""),
+            "TRIGGER_NEXT": trigger_next,
+        }
+
+        print(f"Starting METHOD: {method}")
 
         match method:
             case "dry_run":
                 print("Dry Run Complete!")
+            case "publisher":
+                monthly_job_publisher(task_config, verbose=verbose)
+
             # ------------------------------------------------------
             #                    Nearly Static
             # ------------------------------------------------------
@@ -138,10 +169,8 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-
-            case "process_gadm":
-                # NOTE: download_gadm must have been run first
-                process_gadm_geoms(verbose=verbose)
+                step_list = ["process_gadm"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_eezs":
                 download_zip_to_gcs(
@@ -155,6 +184,9 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
 
+                step_list = ["process_eezs", "process_eez_gadm_unions"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
             case "download_high_seas":
                 download_zip_to_gcs(
                     url=MARINE_REGIONS_URL,
@@ -167,20 +199,43 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
 
+                step_list = ["process_eezs", "process_eez_gadm_unions"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
+            case "process_gadm":
+                process_gadm_geoms(verbose=verbose)
+
+                step_list = ["generate_locations_table"]
+                if env == "prod":
+                    step_list = step_list + [
+                        "update_country_tileset",
+                        "update_terrestrial_regions_tileset",
+                    ]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
             case "process_eezs":
-                # NOTE: download_eezs and download_high_seas must have been run first
                 process_eez_geoms(verbose=verbose)
 
+                step_list = ["generate_locations_table"]
+
+                if env == "prod":
+                    step_list = step_list + ["update_eez_tileset", "update_marine_regions_tileset"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
             case "process_eez_gadm_unions":
-                # NOTE: Must be run after download_gadm,
-                # process_gadm, download_high_seas, download_eezs, and process_eezs
                 process_eez_gadm_unions(verbose=verbose)
+
+                step_list = ["process_mangroves"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_marine_habitats":
                 download_marine_habitats(verbose=verbose)
 
             case "process_terrestrial_biomes":
                 process_terrestrial_biome_raster(verbose=verbose)
+
+                step_list = ["generate_terrestrial_biome_stats_country"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_mangroves":
                 process_mangroves(verbose=verbose)
@@ -198,16 +253,33 @@ def main(request: Request) -> tuple[str, int]:
             case "download_mpatlas":
                 download_mpatlas(verbose=verbose)
 
+                step_list = ["generate_marine_protection_level_stats_table"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
             case "download_protected_seas":
                 download_protected_seas(verbose=verbose)
+
+                step_list = ["generate_fishing_protection_table"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
+            case "download_protected_planet_country":
+                download_protected_planet(verbose=verbose)
+
+                step_list = ["generate_protection_coverage_stats_table"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_protected_planet_pas":
                 download_and_process_protected_planet_pas(
                     verbose=verbose, tolerance=tolerance, batch_size=1000
                 )
-
-            case "download_protected_planet_country":
-                download_protected_planet(verbose=verbose)
+                if tolerance == TOLERANCES[0]:
+                    step_list = [
+                        "generate_protected_areas_table",
+                        "generate_terrestrial_biome_stats",
+                        "generate_gadm_minus_pa",
+                        "generate_eez_minus_mpa",
+                    ]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             # ------------------
             #   Table updates
@@ -216,24 +288,49 @@ def main(request: Request) -> tuple[str, int]:
             case "generate_terrestrial_biome_stats":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
 
+                step_list = ["generate_habitat_protection_table"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
             case "generate_habitat_protection_table":
-                # NOTE: must be run after generate_terrestrial_biome_stats
                 _ = generate_habitat_protection_table(verbose=verbose)
+
+                step_list = ["update_habitat_protection_stats"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
                 _ = generate_protection_coverage_stats_table(verbose=verbose)
 
+                step_list = ["update_protection_coverage_stats"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
             case "generate_marine_protection_level_stats_table":
                 _ = generate_marine_protection_level_stats_table(verbose=verbose)
+
+                step_list = ["update_mpaa_protection_level_stats"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
 
+                step_list = ["update_fishing_protection_stats"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
 
+                step_list = ["update_locations"]
+                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+
             case "generate_protected_areas_table":
-                generate_protected_areas_diff_table(verbose=verbose)
+                updates = generate_protected_areas_diff_table(verbose=verbose)
+
+                if updates and env == "prod":
+                    step_list = [
+                        "update_protected_areas",
+                        "update_marine_protected_areas_tileset",
+                        "update_terrestrial_protected_areas_tileset",
+                    ]
+                    pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_gadm_minus_pa":
                 generate_total_area_minus_pa(
@@ -242,7 +339,7 @@ def main(request: Request) -> tuple[str, int]:
                     pa_file=WDPA_TERRESTRIAL_FILE_NAME,
                     out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                     tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose
+                    verbose=verbose,
                 )
 
             case "generate_eez_minus_mpa":
@@ -252,7 +349,7 @@ def main(request: Request) -> tuple[str, int]:
                     pa_file=WDPA_MARINE_FILE_NAME,
                     out_file=CONSERVATION_BUILDER_MARINE_DATA,
                     tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose
+                    verbose=verbose,
                 )
 
             # ------------------
@@ -339,6 +436,8 @@ def main(request: Request) -> tuple[str, int]:
             case _:
                 print(f"METHOD: {method} not a valid option")
 
+        print(f"METHOD: {method} complete!")
+
         return "OK", 200
     except Exception as e:
         logger.error({"message": f"METHOD {method} failed", "error": str(e)})
@@ -349,6 +448,4 @@ def main(request: Request) -> tuple[str, int]:
         release_memory(verbose=verbose)
 
         fn = datetime.datetime.now()
-
-        print("Process complete!")
         print(f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes")

@@ -22,7 +22,6 @@ from tqdm.auto import tqdm
 
 from src.core.commons import (
     download_file_with_progress,
-    download_mpatlas_zone,
     unzip_file,
 )
 from src.core.params import (
@@ -51,10 +50,15 @@ from src.core.params import (
     WDPA_TERRESTRIAL_FILE_NAME,
     WDPA_URL,
 )
-from src.core.processors import calculate_area, choose_pa_area
+from src.core.processors import (
+    calculate_area,
+    choose_pa_area,
+    match_old_pa_naming_convantion,
+)
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
+    save_file_bucket,
     upload_dataframe,
     upload_gdf,
 )
@@ -83,6 +87,48 @@ def download_mpatlas_country(
 
     upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+
+
+def download_mpatlas_zone(
+    url: str = MPATLAS_URL,
+    bucket: str = BUCKET,
+    filename: str = MPATLAS_FILE_NAME,
+    archive_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
+    verbose: bool = True,
+) -> None:
+    """
+    Downloads the MPAtlas Zone Assessment dataset from a specified URL,
+    saves it to a Google Cloud Storage bucket, and duplicates the blob.
+
+    Parameters:
+    ----------
+    url : str
+        URL of the MPAtlas Zone Assessment file to download.
+    bucket : str
+        Name of the GCS bucket where the file should be stored.
+    filename : str
+        GCS blob name for the primary reference copy of the file.
+    archive_filename : str
+        GCS blob name for the archived/original version of the file.
+    verbose : bool, optional
+        If True, prints progress messages. Default is True.
+    """
+    if verbose:
+        print(f"downloading MPAtlas Zone Assessment from {url}")
+
+    response = requests.get(url)
+    response.raise_for_status()
+
+    if verbose:
+        print(f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}")
+    save_file_bucket(
+        response.content,
+        response.headers.get("Content-Type"),
+        archive_filename,
+        bucket,
+        verbose=verbose,
+    )
+    duplicate_blob(bucket, archive_filename, filename, verbose=True)
 
 
 def download_mpatlas(
@@ -124,7 +170,7 @@ def download_mpatlas(
         print(f"loading MPAtlas from {mpatlas_filename}")
     mpa = read_json_from_gcs(bucket, mpatlas_filename)
 
-    mpa_all = gpd.GeoDataFrame(
+    mpa = gpd.GeoDataFrame(
         [
             {**feat["properties"], "geometry": safe_shape(feat.get("geometry"))}
             for feat in mpa["features"]
@@ -136,19 +182,19 @@ def download_mpatlas(
     # add area column
     if verbose:
         print("calculating MPA area (calculated_area_km2)")
-    mpa_all = calculate_area(mpa_all, output_area_column="calculated_area_km2")
+    mpa = calculate_area(mpa, output_area_column="calculated_area_km2")
 
     # add bounding box column
     if verbose:
         print("calculating MPA bounding box (bbox)")
-    mpa_all["bbox"] = mpa_all.geometry.apply(lambda g: g.bounds if g is not None else None)
+    mpa["bbox"] = mpa.geometry.apply(lambda g: g.bounds if g is not None else None)
 
     # Upload metadata (no geometry)
     if verbose:
         print(f"saving metadata to {meta_file_name}")
     upload_dataframe(
         bucket,
-        mpa_all.drop(columns="geometry"),
+        mpa.drop(columns="geometry"),
         meta_file_name,
         project_id=project_id,
         verbose=verbose,
@@ -311,18 +357,19 @@ def download_and_process_protected_planet_pas(
 
             del parquet_file, df, gdf
 
-        def create_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        def create_point_buffer(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             """
             Create circular buffer polygons around point geometries based on a
             representative area field.
             """
 
-            def calculate_radius(rep_area: float) -> float:
-                return ((rep_area * 1e6) / np.pi) ** 0.5
+            def calculate_radius(rep_area: float, geom) -> float:
+                npts = len(geom.geoms) if geom.geom_type == "MultiPoint" else 1
+                return (((rep_area / npts) * 1e6) / np.pi) ** 0.5
 
             df = df.to_crs("ESRI:54009")
             df["geometry"] = df.apply(
-                lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"])),
+                lambda row: row.geometry.buffer(calculate_radius(row["REP_AREA"], row["geometry"])),
                 axis=1,
             )
             return df.to_crs("EPSG:4326").copy()
@@ -332,15 +379,20 @@ def download_and_process_protected_planet_pas(
             Conditionally buffer a single point or multipoint geometry based on a
             representative area value.
             """
+
+            # Get buffer area - do not buffer if MAB reserve as reported
+            # area can be unreliable
+            rep_area = row.REP_AREA if row["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve" else 0
+
             g = row.geometry
-            if isinstance(g, (Point, MultiPoint)) and row.REP_AREA > 0:
+            if rep_area and rep_area > 0 and isinstance(g, (Point, MultiPoint)):
                 # build a 1-row GeoDataFrame with the same CRS
                 row_gdf = gpd.GeoDataFrame(
                     row.to_frame().T,
                     geometry="geometry",
                     crs=crs,  # 1-row DataFrame
                 )
-                buffed = create_buffer(row_gdf)  # your existing function
+                buffed = create_point_buffer(row_gdf)  # your existing function
                 return buffed.geometry.iloc[0]
             return g
 
@@ -351,6 +403,7 @@ def download_and_process_protected_planet_pas(
 
             try:
                 chunk["bbox"] = chunk.geometry.apply(lambda g: g.bounds if g is not None else None)
+
                 chunk = choose_pa_area(chunk)
                 crs = chunk.crs
                 chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
@@ -448,7 +501,10 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         print(f"downloading {wdpa_url}")
-    _ = download_file_with_progress(wdpa_url, base_zip_path)
+    status = download_file_with_progress(wdpa_url, base_zip_path)
+    if not status:
+        raise ValueError(f"Failed to download {wdpa_url}")
+
     show_mem("After download")
     show_container_mem("After download")
 
@@ -485,6 +541,10 @@ def download_and_process_protected_planet_pas(
         raise ValueError("Error: process_protected_area_geoms returned None")
 
     if verbose:
+        print("Renaming variables to match old format")
+    df = match_old_pa_naming_convantion(df)
+
+    if verbose:
         print(f"saving wdpa metadata to {meta_file_name}")
     try:
         upload_dataframe(
@@ -496,14 +556,23 @@ def download_and_process_protected_planet_pas(
         )
     except Exception as e:
         logger.error({"message": "Error saving metadata", "error": str(e)})
+        raise e
 
     try:
+        # Remove non-OECM MAB reserves (matching Protected Planet's methods)
+        df = df[
+            (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve")
+            | (df["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") & (df["PA_DEF"] == 0)
+        ]
+
+        # Save terrestrial PAs
         ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
             print(f"saving and duplicating terrestrial PAs to {ter_out_fn}")
         upload_gdf(bucket, df[df["MARINE"].eq("0")], ter_out_fn)
         duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
 
+        # Save marine PAs
         mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
         if verbose:
             print(f"saving and duplicating marine PAs to {mar_out_fn}")
@@ -511,6 +580,7 @@ def download_and_process_protected_planet_pas(
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
     except Exception as e:
         logger.error({"message": "Error saving simplified PAs", "error": str(e)})
+        raise e
 
     if verbose:
         print("Cleaning up")

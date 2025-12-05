@@ -352,7 +352,7 @@ def upload_gdf_zip(
     project_id: str = PROJECT,
     verbose: bool = True,
     timeout: int = 600,
-    output_file_type: str = '.gpkg'
+    output_file_type: str = ".gpkg",
 ) -> None:
     """
     Saves a GeoDataFrame to GCS as a zipped .gpkg or .shp file.
@@ -387,16 +387,16 @@ def upload_gdf_zip(
         gdf.to_file(gdf_path)
 
         # Create zip file
-        zip_path = os.path.join(tmpdir, file_name + '.zip')
+        zip_path = os.path.join(tmpdir, file_name + ".zip")
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            if output_file_type == '.gpkg':
-                zf.write(gdf_path, arcname = file_name + output_file_type)
-            elif output_file_type == '.shp':
+            if output_file_type == ".gpkg":
+                zf.write(gdf_path, arcname=file_name + output_file_type)
+            elif output_file_type == ".shp":
                 # Add shapefiles (.shp, .shx, .dbf, .prj)
                 for file in os.listdir(tmpdir):
-                    if not file.endswith('.zip'):
+                    if not file.endswith(".zip"):
                         file_path = os.path.join(tmpdir, file)
-                        zf.write(file_path, arcname = file)
+                        zf.write(file_path, arcname=file)
             else:
                 raise ValueError(
                     f"Unsupported file extension: {output_file_type} (expected .gpkg or .shp)"
