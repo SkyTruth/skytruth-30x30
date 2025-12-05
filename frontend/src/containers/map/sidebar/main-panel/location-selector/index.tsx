@@ -26,9 +26,10 @@ import {
   LocationListResponseDataItem,
 } from '@/types/generated/strapi.schemas';
 
+import UploadLayer from '../panels/details/upload-layer';
+
 import LocationDropdown from './location-dropdown';
 import LocationTypeToggle from './type-toggle';
-import UploadLayer from '../panels/details/upload-layer';
 
 export const FILTERS = {
   all: ['country', 'highseas', 'region', 'worldwide'],
