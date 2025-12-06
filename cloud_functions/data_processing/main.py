@@ -85,6 +85,7 @@ signal.signal(signal.SIGTERM, handle_sigterm)
 LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
     "generate_terrestrial_biome_stats",
+    "generate_protected_areas_table",
     "update_protected_areas",
     "generate_gadm_minus_pa",
     "generate_eez_minus_mpa",
@@ -189,14 +190,13 @@ def main(request: Request) -> tuple[str, int]:
                         raise
                     return "SUCCESS"
 
-                url = webhook_url if attempt == max_retries + 1 else ""
                 _ = retry_and_alert(
-                    sample_func, 3, alert_message="testing slack alerts from GCP", webhook_url=url
+                    sample_func, 3, alert_message="testing slack alerts from GCP"
                 )
                 retry_config = {"delay_seconds": 30, "max_retries": 1}
                 raise ValueError("Error: Testing Retries")
             case "publisher":
-                monthly_job_publisher(task_config, verbose=verbose)
+                monthly_job_publisher(task_config, long_running_task_list=LONG_RUNNING_TASKS, verbose=verbose)
 
             # ------------------------------------------------------
             #                    Nearly Static
@@ -277,7 +277,7 @@ def main(request: Request) -> tuple[str, int]:
             #     Downloads
             # ------------------
             case "download_mpatlas":
-                download_mpatlas(webhook_url=webhook_url, verbose=verbose)
+                download_mpatlas(verbose=verbose)
                 step_list = ["generate_marine_protection_level_stats_table"]
 
             case "download_protected_seas":
@@ -404,7 +404,7 @@ def main(request: Request) -> tuple[str, int]:
             case "update_protected_areas":
                 update_segment = data.get("UPDATE_SEGMENT", "all")
                 upload_protected_areas(
-                    verbose=verbose, update_segment=update_segment, webhook_url=webhook_url
+                    verbose=verbose, update_segment=update_segment
                 )
 
             # ------------------

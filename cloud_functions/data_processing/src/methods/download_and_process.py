@@ -317,7 +317,6 @@ def download_and_process_protected_planet_pas(
             finally:
                 gc.collect()
                 pyarrow.default_memory_pool().release_unused()
-                show_mem("after garbage collection")
                 show_container_mem("after garbage collection")
 
         # Define params for unpacking

@@ -70,35 +70,45 @@ def create_task(
         raise
 
 
-def monthly_job_publisher(task_config, verbose=True):
-    """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
+def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True):
+    """Enqueue the monthly tasks into Cloud Tasks."""
 
     jobs = [
         {
-            "METHOD": "download_mpatlas",
-            **task_config,
-        },
-        {
-            "METHOD": "download_protected_seas",
-            **task_config,
-        },
-        {
-            "METHOD": "download_protected_planet_country",
-            **task_config,
-        },
-    ]
-
-    for job in jobs:
-        create_task(job, verbose=verbose)
-
-    # Long running tasks
-    for tolerance in TOLERANCES:
-        job = {
-            "METHOD": "download_protected_planet_pas",
-            "TOLERANCE": tolerance,
+            "METHOD": "generate_protected_areas_table",
             **task_config,
         }
-        long_running_tasks(job, verbose=verbose)
+    ]
+
+    # jobs = [
+    #     {
+    #         "METHOD": "download_mpatlas",
+    #         **task_config,
+    #     },
+    #     {
+    #         "METHOD": "download_protected_seas",
+    #         **task_config,
+    #     },
+    #     {
+    #         "METHOD": "download_protected_planet_country",
+    #         **task_config,
+    #     },
+    # ]
+
+    # for tolerance in TOLERANCES:
+    #     jobs.append(
+    #         {
+    #             "METHOD": "download_protected_planet_pas",
+    #             "TOLERANCE": tolerance,
+    #             **task_config,
+    #         }
+    #     )
+
+    for job in jobs:
+        if long_running_task_list and job["METHOD"] in long_running_task_list:
+            create_task(job, verbose=verbose)
+        else:
+            long_running_tasks(job, verbose=verbose)
 
 
 def launch_next_step(
