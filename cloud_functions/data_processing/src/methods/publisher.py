@@ -73,7 +73,6 @@ def create_task(
 def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True):
     """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
 
-
     jobs = [
         {
             "METHOD": "download_mpatlas",

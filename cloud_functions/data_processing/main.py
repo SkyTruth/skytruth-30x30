@@ -485,4 +485,6 @@ def main(request: Request) -> tuple[str, int]:
     finally:
         release_memory(verbose=verbose)
         fn = datetime.datetime.now()
-        logger.info({"message": f"{method} Completed in {(fn - st).total_seconds() / 60:.2f} minutes"})
+        logger.info(
+            {"message": f"{method} Completed in {(fn - st).total_seconds() / 60:.2f} minutes"}
+        )
