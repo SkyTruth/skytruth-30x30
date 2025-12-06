@@ -5,6 +5,7 @@ import requests
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
+from src.core.params import TOLERANCES
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -70,38 +71,32 @@ def create_task(
 
 
 def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True):
-    """Enqueue the monthly tasks into Cloud Tasks."""
+    """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
+
 
     jobs = [
         {
-            "METHOD": "generate_protected_areas_table",
+            "METHOD": "download_mpatlas",
             **task_config,
-        }
+        },
+        {
+            "METHOD": "download_protected_seas",
+            **task_config,
+        },
+        {
+            "METHOD": "download_protected_planet_country",
+            **task_config,
+        },
     ]
 
-    # jobs = [
-    #     {
-    #         "METHOD": "download_mpatlas",
-    #         **task_config,
-    #     },
-    #     {
-    #         "METHOD": "download_protected_seas",
-    #         **task_config,
-    #     },
-    #     {
-    #         "METHOD": "download_protected_planet_country",
-    #         **task_config,
-    #     },
-    # ]
-
-    # for tolerance in TOLERANCES:
-    #     jobs.append(
-    #         {
-    #             "METHOD": "download_protected_planet_pas",
-    #             "TOLERANCE": tolerance,
-    #             **task_config,
-    #         }
-    #     )
+    for tolerance in TOLERANCES:
+        jobs.append(
+            {
+                "METHOD": "download_protected_planet_pas",
+                "TOLERANCE": tolerance,
+                **task_config,
+            }
+        )
 
     for job in jobs:
         if long_running_task_list and job["METHOD"] in long_running_task_list:

@@ -478,11 +478,11 @@ def main(request: Request) -> tuple[str, int]:
             )
             send_slack_alert(webhook_url, f"METHOD {method} failed")
             return (
-                f"Internal Server Error - METHOD {method} failed after {attempt} attempts: {e}",
+                f"METHOD {method} failed after {attempt} attempts: {e}",
                 208,
             )
 
     finally:
         release_memory(verbose=verbose)
         fn = datetime.datetime.now()
-        logger.info({"message": f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes"})
+        logger.info({"message": f"{method} Completed in {(fn - st).total_seconds() / 60:.2f} minutes"})
