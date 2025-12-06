@@ -24,7 +24,6 @@ from src.core.commons import (
     RetryFailed,
     download_file_with_progress,
     retry_and_alert,
-    send_alert,
     unzip_file,
 )
 from src.core.params import (
@@ -163,7 +162,7 @@ def download_mpatlas(
             url=mpatlas_country_url,
             current_filename=mpatlas_country_file_name,
             archive_filename=archive_mpatlas_country_file_name,
-            alert_func=send_alert,
+            alert_message="failed to download MPAtlas country stats",
         )
 
         retry_and_alert(
@@ -173,7 +172,7 @@ def download_mpatlas(
             filename=mpatlas_filename,
             archive_filename=archive_mpatlas_filename,
             verbose=verbose,
-            alert_func=send_alert,
+            alert_message="failed to download MPAtlas zone stats",
         )
     except RetryFailed:
         # If downloading MPAtlas fails, try the next day for up to 3 days
@@ -253,7 +252,9 @@ def download_protected_seas(
         ].map({"t": True, "f": False})
         return data.drop_duplicates()
 
-    data = retry_and_alert(download_from_url, url, alert_func=send_alert)
+    data = retry_and_alert(
+        download_from_url, url, alert_message=f"failed to download Protected Seas from {url}"
+    )
 
     if verbose:
         logger.info({"message": f"saving Protected Seas to gs://{bucket}/{archive_filename}"})
@@ -518,9 +519,8 @@ def download_and_process_protected_planet_pas(
     # to try once per day for a week if fails
     if verbose:
         logger.info({"message": f"downloading {wdpa_url}"})
-    status = retry_and_alert(
-        download_file_with_progress, wdpa_url, base_zip_path, max_retries=1, alert_func=send_alert
-    )
+    # Do not send alert unless it fails all retries
+    status = download_file_with_progress(wdpa_url, base_zip_path, verbose=verbose)
     if not status:
         logger.error({"message": f"Failed to download {wdpa_url}"})
         return {"delay_seconds": 60 * 60 * 24, "max_retries": 7}, False
@@ -557,7 +557,10 @@ def download_and_process_protected_planet_pas(
             logger.info({"message": "Renaming variables to match old format"})
         # On failure, alert in case naming convention has changed
         df = retry_and_alert(
-            match_old_pa_naming_convantion, df, max_retries=0, alert_func=send_alert
+            match_old_pa_naming_convantion,
+            df,
+            max_retries=0,
+            alert_message="Failed to match WDPA format - possible change to data format",
         )
 
         # Save metadata
@@ -571,7 +574,7 @@ def download_and_process_protected_planet_pas(
             meta_file_name,
             project_id=project_id,
             verbose=verbose,
-            alert_func=send_alert,
+            alert_message="Failed to save WDPA metadata",
         )
 
         # Remove non-OECM MAB reserves (matching Protected Planet's methods)
@@ -586,7 +589,11 @@ def download_and_process_protected_planet_pas(
             logger.info({"message": f"saving and duplicating terrestrial PAs to {ter_out_fn}"})
 
         retry_and_alert(
-            upload_gdf, bucket, df[df["MARINE"].eq("0")], ter_out_fn, alert_func=send_alert
+            upload_gdf,
+            bucket,
+            df[df["MARINE"].eq("0")],
+            ter_out_fn,
+            alert_message="Failed to upload terrestrial PAs",
         )
         duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
 
@@ -596,7 +603,11 @@ def download_and_process_protected_planet_pas(
             logger.info({"message": f"saving and duplicating marine PAs to {mar_out_fn}"})
 
         retry_and_alert(
-            upload_gdf, bucket, df[df["MARINE"].isin(["1", "2"])], mar_out_fn, alert_func=send_alert
+            upload_gdf,
+            bucket,
+            df[df["MARINE"].isin(["1", "2"])],
+            mar_out_fn,
+            alert_message="Failed to upload marine PAs",
         )
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
     except RetryFailed:
@@ -780,7 +791,10 @@ def download_protected_planet(
         project_id=project_id,
         url=wdpa_global_url,
         bucket=bucket,
-        alert_func=send_alert,
+        alert_message=(
+            "Failed to download Protected Planet global stats from "
+            f"{wdpa_global_level_file_name}"
+        )
     )
 
     # download wdpa country stats
@@ -794,5 +808,7 @@ def download_protected_planet(
         url=api_url,
         per_page=50,
         verbose=verbose,
-        alert_func=send_alert,
+        alert_message=(
+            f"Failed to download Protected Planet country stats from {wdpa_country_level_file_name}"
+        ),
     )

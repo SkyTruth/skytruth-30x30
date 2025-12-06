@@ -86,6 +86,8 @@ LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
+    "generate_gadm_minus_pa",
+    "generate_eez_minus_mpa",
 ]
 
 
@@ -275,7 +277,7 @@ def main(request: Request) -> tuple[str, int]:
             #     Downloads
             # ------------------
             case "download_mpatlas":
-                download_mpatlas(verbose=verbose)
+                download_mpatlas(webhook_url=webhook_url, verbose=verbose)
                 step_list = ["generate_marine_protection_level_stats_table"]
 
             case "download_protected_seas":
@@ -476,12 +478,13 @@ def main(request: Request) -> tuple[str, int]:
                     "traceback": traceback.format_exc(),
                 }
             )
-            send_slack_alert(webhook_url, f"METHOD {method} failed after {attempt} attempts")
-            return f"Internal Server Error - METHOD {method} failed: {e}", 208
+            send_slack_alert(webhook_url, f"METHOD {method} failed")
+            return (
+                f"Internal Server Error - METHOD {method} failed after {attempt} attempts: {e}",
+                208,
+            )
 
     finally:
-        logger.info({"message": "Releasing memory"})
         release_memory(verbose=verbose)
-
         fn = datetime.datetime.now()
         logger.info({"message": f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes"})

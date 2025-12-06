@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import tempfile
 import time
 import traceback
@@ -38,6 +39,8 @@ from src.utils.geo import compute_pixel_area_map_km2
 from src.utils.logger import Logger
 
 logger = Logger()
+
+SLACK_ALERTS_WEBHOOK = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
@@ -278,17 +281,11 @@ def send_slack_alert(webhook_url, text):
     return response.status_code, response.text
 
 
-# def send_alert(message="", error=""):
-#     logger.error({"message": f"THIS IS AN ALERT: {message}", "error": str(error)})
-
-
 class RetryFailed(Exception):
     pass
 
 
-def retry_and_alert(
-    func, *args, max_retries=1, backoff=10, alert_message="alert", webhook_url="", **kwargs
-):
+def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_message="ALERT", **kwargs):
     """
     Retry a function call up to max_retries times.
     Calls alert_func() if provided and all retries fail.
@@ -305,18 +302,22 @@ def retry_and_alert(
                 {
                     "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries})",
                     "error": str(e),
-                    "traceback": traceback.format_exc(),
                 }
             )
 
             # Final failure
             if attempt == max_retries + 1:
-                if webhook_url != "":
-                    message = (
-                        f"{alert_message}: {func.__name__} failed after {max_retries + 1} attempts"
-                    )
-                    send_slack_alert(webhook_url, message)
-                raise RetryFailed(f"ALERT: {message}") from e
+                message = (
+                    f"{alert_message}: {func.__name__} failed after {max_retries + 1} attempts"
+                )
+                logger.error(
+                    {
+                        "message": message,
+                        "error": str(e),
+                        "traceback": traceback.format_exc(),
+                    }
+                )
+                raise RetryFailed(f"{message}: {e}") from e
 
             # Backoff before retrying
             time.sleep(backoff)

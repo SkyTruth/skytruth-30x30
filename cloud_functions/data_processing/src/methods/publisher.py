@@ -22,9 +22,7 @@ def long_running_tasks(payload, timeout=1, verbose=True):
     except requests.exceptions.Timeout:
         pass
     except Exception as e:
-        logger.warning(
-            {"message": "Non-critical error triggering long-running CF", "error": str(e)}
-        )
+        logger.error({"message": "Error triggering long-running CF", "error": str(e)})
 
     return ("OK", 200)
 
@@ -76,10 +74,6 @@ def monthly_job_publisher(task_config, verbose=True):
     """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
 
     jobs = [
-        {
-            "METHOD": "test_retries",
-            **task_config,
-        },
         {
             "METHOD": "download_mpatlas",
             **task_config,

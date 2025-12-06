@@ -1,3 +1,4 @@
+import os
 from ast import literal_eval
 
 import pandas as pd
@@ -16,6 +17,8 @@ from src.utils.gcp import load_pickle_from_gcs, read_dataframe, rename_blob
 from src.utils.logger import Logger
 
 logger = Logger()
+
+SLACK_ALERTS_WEBHOOK = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
 
 
 def upload_locations(
@@ -107,7 +110,7 @@ def upload_protected_areas(
     archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     update_segment: str = "all",
-    webhook_url="",
+    webhook_url=SLACK_ALERTS_WEBHOOK,
     verbose: bool = True,
 ):
     strapi = Strapi()
@@ -123,7 +126,6 @@ def upload_protected_areas(
         verbose=verbose,
         max_retries=0,
         alert_message=f"failed to load {pa_file_name}",
-        webhook_url=webhook_url,
     )
     rename_blob(bucket, pa_file_name, archive_pa_file_name, verbose=True)
 

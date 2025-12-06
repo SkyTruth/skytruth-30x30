@@ -340,13 +340,13 @@ locals {
     project_id = var.gcp_project_id
     secret     = module.postgres_application_user_password.secret_name
     version    = module.postgres_application_user_password.latest_version
-  }],
+  },
   {
     key        = "SLACK_ALERTS_WEBHOOK"
     project_id = var.gcp_project_id
     secret     = "gcp-slack-alerts-webhook"
     version    = "latest"
-  },
+  }]
 }
 
 module "data_pipes_cloud_function" {
@@ -425,7 +425,7 @@ module "monthly_job_queue" {
   max_dispatches_per_second = 1
 
   # Just try one time - retries are handled in handler
-  max_attempts       = 1
+  max_attempts       = 0
 
   enable_dlq = false
 }
