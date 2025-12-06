@@ -792,9 +792,8 @@ def download_protected_planet(
         url=wdpa_global_url,
         bucket=bucket,
         alert_message=(
-            "Failed to download Protected Planet global stats from "
-            f"{wdpa_global_level_file_name}"
-        )
+            f"Failed to download Protected Planet global stats from {wdpa_global_level_file_name}"
+        ),
     )
 
     # download wdpa country stats
