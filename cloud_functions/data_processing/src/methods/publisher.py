@@ -5,7 +5,6 @@ import requests
 from google.cloud import tasks_v2
 from google.protobuf import timestamp_pb2
 
-from src.core.params import TOLERANCES
 from src.utils.logger import Logger
 
 logger = Logger()

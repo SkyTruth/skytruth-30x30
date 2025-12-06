@@ -17,6 +17,7 @@ from src.utils.logger import Logger
 
 logger = Logger()
 
+
 def upload_locations(
     bucket: str = BUCKET,
     filename: str = LOCATIONS_FILE_NAME,

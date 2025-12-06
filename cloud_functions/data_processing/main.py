@@ -190,13 +190,13 @@ def main(request: Request) -> tuple[str, int]:
                         raise
                     return "SUCCESS"
 
-                _ = retry_and_alert(
-                    sample_func, 3, alert_message="testing slack alerts from GCP"
-                )
+                _ = retry_and_alert(sample_func, 3, alert_message="testing slack alerts from GCP")
                 retry_config = {"delay_seconds": 30, "max_retries": 1}
                 raise ValueError("Error: Testing Retries")
             case "publisher":
-                monthly_job_publisher(task_config, long_running_task_list=LONG_RUNNING_TASKS, verbose=verbose)
+                monthly_job_publisher(
+                    task_config, long_running_task_list=LONG_RUNNING_TASKS, verbose=verbose
+                )
 
             # ------------------------------------------------------
             #                    Nearly Static
@@ -403,9 +403,7 @@ def main(request: Request) -> tuple[str, int]:
 
             case "update_protected_areas":
                 update_segment = data.get("UPDATE_SEGMENT", "all")
-                upload_protected_areas(
-                    verbose=verbose, update_segment=update_segment
-                )
+                upload_protected_areas(verbose=verbose, update_segment=update_segment)
 
             # ------------------
             #   Map Tilesets Updates

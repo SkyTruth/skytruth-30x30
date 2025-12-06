@@ -67,7 +67,6 @@ from src.utils.gcp import (
 from src.utils.logger import Logger
 from src.utils.resource_handling import (
     show_container_mem,
-    show_mem,
 )
 
 logger = Logger()
