@@ -1,7 +1,8 @@
 import pandas as pd
 import geopandas as gpd
-import shapely
-from shapely.geometry import GeometryCollection
+from shapely import union_all
+from joblib import Parallel, delayed
+from tqdm.auto import tqdm
 from src.utils.gcp import (
     read_json_df,       # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame.
     upload_gdf_zip      # Saves a GeoDataFrame to GCS as a .geojson file.
@@ -9,6 +10,43 @@ from src.utils.gcp import (
 from src.utils.logger import Logger
 
 logger = Logger()
+
+def process_country(country: str, 
+                    boundary_gdf: gpd.GeoDataFrame, 
+                    pa_gdf: gpd.GeoDataFrame
+    ):
+    """
+    Subtracts the protected area from the total area and returns a GeoDataFrame.
+
+    Parameters
+    ----------
+    country : str 
+        Country name (3-letter abbreviation).
+    boundary_gdf : gpd.GeoDataFrame
+        Total areas GeoDataFrame.
+    pa_gdf : gpd.GeoDataFrame
+        Protected areas GeoDataFrame.
+    
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame of boundary_gdf with pa_gdf subtracted, retaining the original fields of boundary_gdf.
+    """
+    try:
+        country_area = boundary_gdf[boundary_gdf['location'] == country]
+        country_pa = pa_gdf[pa_gdf['ISO3'].str.contains(country)]
+        if country_pa.empty:
+            # If no protected areas, return original boundary
+            return country_area
+        else:
+            # If protected areas found, return original boundary with protected areas removed
+            pa_union = union_all(country_pa.geometry.values)
+            country_area.loc[:, 'geometry'] = country_area.geometry.difference(pa_union)
+            return country_area
+    
+    except Exception as e:
+        logger.warning({'message': f'Error processing {country}: {e}'})
+        return None
 
 def generate_total_area_minus_pa(bucket: str, 
                                  total_area_file: str, 
@@ -63,29 +101,18 @@ def generate_total_area_minus_pa(bucket: str,
     # Label Antarctica PAs as ABNJ (areas beyond national jurisdiction)
     pa.loc[pa["ISO3"] == "ATA", "ISO3"] = "ABNJ"
 
-    # Dissolve PAs per country
-    if verbose:
-        print('Dissolving protected areas by country...')
-    pa_union = (
-        pa.groupby("ISO3", sort=False)["geometry"]
-        .agg(lambda arr: shapely.union_all(arr.values))
-        .rename("pa_geom")
-        .reset_index()
+    # Subtract protected areas from each country in parallel
+    countries = total_area['location'].unique().tolist()
+    results = Parallel(n_jobs=-1, backend='loky')(
+        delayed(process_country)(
+            country,
+            total_area,
+            pa
+        )
+        for country in tqdm(countries)
     )
+    total_area_minus_pa = pd.concat(results).reset_index()
 
-    # Join PAs to total areas
-    total_area_minus_pa = total_area.merge(pa_union, left_on="location", right_on="ISO3", how="left")
-    
-    # Subtract PAs from total area per country
-    if verbose:
-        print('Subtracting protected areas from total areas...')
-    total_area_minus_pa["geometry"] = shapely.difference(
-        total_area_minus_pa["geometry"].values, 
-        total_area_minus_pa["pa_geom"].fillna(GeometryCollection()).values
-    )
-
-    # Filter columns
-    total_area_minus_pa = total_area_minus_pa[['location', 'geometry']]
     if verbose:
         print(f'Output file has {len(total_area_minus_pa)} rows.')
 
