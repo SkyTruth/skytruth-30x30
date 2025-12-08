@@ -71,7 +71,7 @@ def create_task(
 
 
 def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True):
-    """Enqueue the 4–5 monthly tasks into Cloud Tasks."""
+    """Enqueue the monthly tasks into Cloud Tasks."""
 
     jobs = [
         {
@@ -99,9 +99,9 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
 
     for job in jobs:
         if long_running_task_list and job["METHOD"] in long_running_task_list:
-            create_task(job, verbose=verbose)
-        else:
             long_running_tasks(job, verbose=verbose)
+        else:
+            create_task(job, verbose=verbose)
 
 
 def launch_next_step(

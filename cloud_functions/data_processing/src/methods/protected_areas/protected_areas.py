@@ -18,11 +18,11 @@ from src.core.processors import (
     add_year,
     calculate_area,
     convert_type,
+    country_wrapping,
     remove_columns,
     remove_non_designated_m,
     remove_non_designated_p,
     update_mpaa_establishment_stage,
-    wdpa_country_wrapping,
 )
 from src.methods.protected_areas.pa_processors import (
     get_identifier,
@@ -128,7 +128,7 @@ def generate_protected_areas_table(
         wdpa_pa = (
             wdpa[cols]
             .rename(columns=wdpa_dict)
-            .pipe(wdpa_country_wrapping)
+            .pipe(country_wrapping)
             .pipe(remove_non_designated_p)
             .pipe(add_environment)
             .pipe(add_oecm_status)
@@ -186,6 +186,7 @@ def generate_protected_areas_table(
         mpa_pa = (
             mpatlas[cols]
             .rename(columns=mpa_dict)
+            .pipe(country_wrapping)
             .pipe(remove_non_designated_m)
             .pipe(update_mpaa_establishment_stage)
             .pipe(add_year)
@@ -242,9 +243,9 @@ def generate_protected_areas_table(
     pas = add_percent_coverage(pas, eez, gadm)
     pas = pas.sort_values(["wdpaid", "wdpa_p_id", "zone_id"])
 
-    # TODO: Currently this will not add ALA (marine), and
-    # BVT (marine) because there is not GADM/EEZ lookup so the coverage
-    # is None. Do we want to roll them up, add polygons, or ignore?
+    # TODO: Currently this will not add  BVT (marine) because 
+    # there is not GADM/EEZ lookup so the coverage is None. 
+    # Do we want to roll them up, add polygons, or ignore?
     pas = pas[~pas["coverage"].isnull()]
 
     if verbose:
@@ -276,6 +277,7 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
     Compares newly downloaded PA data to existing PA's in the Database and generates
     a pickle file dictating which PA's are new, updated, or deleted
     """
+
     current_db = current_db.copy()
     updated_pas = updated_pas.copy()
 
@@ -290,6 +292,13 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         current_db["identifier"] = current_db.apply(
             lambda x: get_unique_identifier(x, cols_for_id), axis=1
         )
+
+    # remove duplicate entries if they exist
+    last_entry = current_db.groupby("identifier")["id"].transform("max")
+    dups = list(current_db[current_db["id"] != last_entry]["id"])
+    current_db = current_db[current_db["id"] == last_entry]
+    if verbose and len(dups) > 0:
+        logger.warning({"message": f"identified {len(dups)} duplicate entries in DB for removal"})
 
     # Add identifier to parent/children
     if verbose:
@@ -309,6 +318,10 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
     if len(current_db) > 0:
         new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
         deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
+        deleted = list(set(
+            list(current_db[current_db["identifier"].isin(deleted)]["id"])
+            + dups
+        ))
         static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
 
         if verbose:
@@ -323,12 +336,11 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         static_updated = (
             updated_pas[updated_pas["identifier"].isin(static)]
             .sort_values(by="identifier")
-            .reset_index(drop=True)
         )
         # Add DB id to static updated table
         static_updated = pd.merge(
             static_updated, current_db[["identifier", "id"]], on="identifier", how="left"
-        )
+        ).reset_index(drop=True)
 
         # specify which columns get which comparison
         string_cols = list(
@@ -365,7 +377,7 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
             .drop(columns="identifier")
             .to_dict(orient="records"),
             "changed": changed.drop(columns="identifier").to_dict(orient="records"),
-            "deleted": list(current_db[current_db["identifier"].isin(deleted)]["id"]),
+            "deleted": deleted,
         }, changed_cols
     else:
         new = list(set(updated_pas["identifier"]))
