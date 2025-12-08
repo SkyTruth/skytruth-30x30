@@ -243,8 +243,8 @@ def generate_protected_areas_table(
     pas = add_percent_coverage(pas, eez, gadm)
     pas = pas.sort_values(["wdpaid", "wdpa_p_id", "zone_id"])
 
-    # TODO: Currently this will not add  BVT (marine) because 
-    # there is not GADM/EEZ lookup so the coverage is None. 
+    # TODO: Currently this will not add  BVT (marine) because
+    # there is not GADM/EEZ lookup so the coverage is None.
     # Do we want to roll them up, add polygons, or ignore?
     pas = pas[~pas["coverage"].isnull()]
 
@@ -318,10 +318,7 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
     if len(current_db) > 0:
         new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
         deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
-        deleted = list(set(
-            list(current_db[current_db["identifier"].isin(deleted)]["id"])
-            + dups
-        ))
+        deleted = list(set(list(current_db[current_db["identifier"].isin(deleted)]["id"]) + dups))
         static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
 
         if verbose:
@@ -333,9 +330,8 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
             .reset_index(drop=True)
         )
         # Updated table entries for PAs that are in the current DB
-        static_updated = (
-            updated_pas[updated_pas["identifier"].isin(static)]
-            .sort_values(by="identifier")
+        static_updated = updated_pas[updated_pas["identifier"].isin(static)].sort_values(
+            by="identifier"
         )
         # Add DB id to static updated table
         static_updated = pd.merge(
