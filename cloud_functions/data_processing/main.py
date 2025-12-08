@@ -182,18 +182,7 @@ def main(request: Request) -> tuple[str, int]:
         match method:
             case "dry_run":
                 logger.info({"message": "Dry Run Complete!"})
-
-            case "test_retries":
-                from src.core.commons import retry_and_alert
-
-                def sample_func(x):
-                    if x > 2:
-                        raise
-                    return "SUCCESS"
-
-                _ = retry_and_alert(sample_func, 3, alert_message="testing slack alerts from GCP")
-                retry_config = {"delay_seconds": 30, "max_retries": 1}
-                raise ValueError("Error: Testing Retries")
+                
             case "publisher":
                 monthly_job_publisher(
                     task_config, long_running_task_list=LONG_RUNNING_TASKS, verbose=verbose
