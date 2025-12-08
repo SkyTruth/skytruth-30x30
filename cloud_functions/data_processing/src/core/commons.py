@@ -298,7 +298,6 @@ def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_message="ALERT
             return func(*args, **kwargs)
 
         except Exception as e:
-
             # Final failure
             if attempt == max_retries + 1:
                 message = (
