@@ -182,7 +182,7 @@ def main(request: Request) -> tuple[str, int]:
         match method:
             case "dry_run":
                 logger.info({"message": "Dry Run Complete!"})
-                
+
             case "publisher":
                 monthly_job_publisher(
                     task_config, long_running_task_list=LONG_RUNNING_TASKS, verbose=verbose
