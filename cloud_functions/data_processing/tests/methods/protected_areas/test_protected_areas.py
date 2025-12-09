@@ -443,7 +443,9 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     assert new_entry["parent"] == new_pa["parent"]
     assert new_entry.get("id") is None
 
-    assert deleted[0] == 300
+    # Verify that both expected deleted PA IDs (300, 400) were identified.
+    assert 300 in deleted
+    assert 400 in deleted
 
     changed_string = deepcopy(changed_pa)
     changed_string["id"] = second_entry["id"]

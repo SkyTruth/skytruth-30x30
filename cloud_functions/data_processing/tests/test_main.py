@@ -314,6 +314,14 @@ def test_unknown_method_returns_ok_and_calls_nothing(patched_all):
 # Error path
 def test_error_bubbles_to_208(monkeypatch, call_log):
     """If any called function raises, handler should catch and return 208."""
+    
+    monkeypatch.setattr(
+        main, 
+        "send_slack_alert", 
+        make_recorder(call_log, "send_slack_alert", return_value={"ok": True}),
+        raising=True
+    )
+
     monkeypatch.setattr(
         main,
         "process_gadm_geoms",
@@ -324,4 +332,4 @@ def test_error_bubbles_to_208(monkeypatch, call_log):
     assert isinstance(resp, tuple)
     body, status = resp
     assert status == 208
-    assert "Internal Server Error" in body
+    assert "failed after 1 attempts" in body
