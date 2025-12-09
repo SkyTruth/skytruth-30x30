@@ -274,11 +274,14 @@ def unzip_file(base_zip_path, destination_folder):
 
 
 def send_slack_alert(webhook_url, text):
-    headers = {"Content-Type": "application/json"}
-    payload = {"text": text}
-    response = requests.post(webhook_url, headers=headers, data=json.dumps(payload))
-    logger.error({"message": "ALERT sent"})
-    return response.status_code, response.text
+    try:
+      headers = {"Content-Type": "application/json"}
+      payload = {"text": text}
+      response = requests.post(webhook_url, headers=headers, data=json.dumps(payload))
+      logger.info({"message": "ALERT sent to slack", "alert": text})
+      return response.status_code, response.text
+   exception as excep:
+     logger.error({"message": "Failed to send slack alert", "alert": text})
 
 
 class RetryFailed(Exception):
