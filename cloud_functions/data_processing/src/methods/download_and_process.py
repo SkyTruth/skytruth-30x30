@@ -210,6 +210,7 @@ def download_mpatlas(
         project_id=project_id,
         verbose=verbose,
     )
+    return None, True
 
 
 def download_protected_seas(

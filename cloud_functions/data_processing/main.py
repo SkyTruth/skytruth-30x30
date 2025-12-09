@@ -265,7 +265,7 @@ def main(request: Request) -> tuple[str, int]:
             #     Downloads
             # ------------------
             case "download_mpatlas":
-                download_mpatlas(verbose=verbose)
+                retry_config, cont = download_mpatlas(verbose=verbose)
                 step_list = ["generate_marine_protection_level_stats_table"]
 
             case "download_protected_seas":
