@@ -85,10 +85,8 @@ signal.signal(signal.SIGTERM, handle_sigterm)
 LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
     "generate_terrestrial_biome_stats",
-    "generate_protected_areas_table",
     "update_protected_areas",
     "generate_gadm_minus_pa",
-    "generate_eez_minus_mpa",
 ]
 
 
