@@ -51,10 +51,11 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
     ]
     for name in simple_targets:
+        return_value = ({"ok": True}, {"ok": True}) if name == "download_mpatlas" else {"ok": True}
         monkeypatch.setattr(
             main,
             name,
-            make_recorder(call_log, name, return_value={"ok": True}),
+            make_recorder(call_log, name, return_value=return_value),
             raising=True,
         )
 
