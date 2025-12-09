@@ -161,7 +161,7 @@ def main(request: Request) -> tuple[str, int]:
             "QUEUE_NAME": data.get("QUEUE_NAME", ""),
             "TARGET_URL": data.get("TARGET_URL", ""),
             "INVOKER_SA": data.get("INVOKER_SA", ""),
-            "TOLERANCE": data.get("TOLERANCE", TOLERANCES[0]),
+            "TOLERANCE": tolerance,
             "TRIGGER_NEXT": trigger_next,
             "MAX_RETRIES": max_retries,
             "attempt": attempt,

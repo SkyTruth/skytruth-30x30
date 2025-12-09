@@ -92,8 +92,8 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
         jobs.append(
             {
                 "METHOD": "download_protected_planet_pas",
-                "TOLERANCE": tolerance,
                 **task_config,
+                "TOLERANCE": tolerance,
             }
         )
 
