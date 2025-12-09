@@ -12,7 +12,6 @@ from src.core.commons import (
 )
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
-    ARCHIVE_WDPA_PA_FILE_NAME,
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
@@ -39,6 +38,7 @@ from src.core.params import (
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
     WDPA_META_FILE_NAME,
+    WDPA_PA_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
@@ -63,12 +63,15 @@ from src.utils.gcp import (
     read_dataframe,
     upload_dataframe,
 )
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def generate_protected_areas_diff_table(
     wdpa_file_name: str = WDPA_META_FILE_NAME,
     mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
-    archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
+    pa_file_name: str = WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     tolerance: float = TOLERANCES[0],
@@ -103,7 +106,7 @@ def generate_protected_areas_diff_table(
 
     # Get the current database
     if verbose:
-        print("downloading current PA database")
+        logger.info({"message": "downloading current PA database"})
     current_db = get_pas()
     current_db_df = pd.DataFrame(current_db)
     if len(current_db_df) > 0:
@@ -113,10 +116,10 @@ def generate_protected_areas_diff_table(
         )
 
     if verbose:
-        print(f"current database length: {len(current_db)}")
+        logger.info({"message": f"current database length: {len(current_db)}"})
 
     if verbose:
-        print("finding database changes")
+        logger.info({"message": "finding database changes"})
     db_changes, change_cols = make_pa_updates(current_db_df, updated_pas, verbose=verbose)
 
     # Print which values have changed
@@ -124,7 +127,7 @@ def generate_protected_areas_diff_table(
         for col in change_cols.columns:
             size = len(change_cols[change_cols[col]])
             if size > 0:
-                print(f"{col}: {size} rows changed")
+                logger.info({"message": f"{col}: {size} rows changed"})
 
     db_changes["new"] = clean_for_json(db_changes["new"])
     db_changes["changed"] = clean_for_json(db_changes["changed"])
@@ -136,11 +139,11 @@ def generate_protected_areas_diff_table(
 
     client = storage.Client(project=project)
     bucket = client.bucket(bucket)
-    blob = bucket.blob(archive_pa_file_name)
+    blob = bucket.blob(pa_file_name)
     blob.upload_from_filename(source_file)
 
     if verbose:
-        print(f"Uploaded {source_file} to gs://{bucket}/{archive_pa_file_name}")
+        logger.info({"message": f"Uploaded {source_file} to gs://{bucket}/{pa_file_name}"})
 
     # return True if the database is being updated, otherwise False
     return len(db_changes["new"]) + len(db_changes["changed"]) > 0
@@ -180,7 +183,7 @@ def generate_habitat_protection_table(
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
     if verbose:
-        print("loading regions")
+        logger.info({"message": "loading regions"})
     combined_regions, _ = load_regions()
 
     marine_habitats = process_marine_habitats(
@@ -381,32 +384,36 @@ def generate_protection_coverage_stats_table(
 
     # Load protected planet country level statistics
     if verbose:
-        print(
-            f"loading Protected Planet Country-level data gs://{bucket}/{wdpa_country_level_file_name}"
+        logger.info(
+            {
+                "message": f"loading Protected Planet Country-level data gs://{bucket}/{wdpa_country_level_file_name}"
+            }
         )
     wdpa_country = read_dataframe(bucket, wdpa_country_level_file_name)
 
     if verbose:
-        print(
-            f"loading Protected Planet Global-level data gs://{bucket}/{wdpa_global_level_file_name}"
+        logger.info(
+            {
+                "message": f"loading Protected Planet Global-level data gs://{bucket}/{wdpa_global_level_file_name}"
+            }
         )
     wdpa_global = load_wdpa_global(bucket, wdpa_global_level_file_name)
 
     # Load related countries and regions
     if verbose:
-        print("loading country and region groupings")
+        logger.info({"message": "loading country and region groupings"})
     combined_regions, _ = load_regions()
 
     # WDPA country level
     if verbose:
-        print("processing Marine and terrestrial country level stats")
+        logger.info({"message": "processing Marine and terrestrial country level stats"})
 
     wdpa_cl_m = process_protected_area(wdpa_country, environment="marine")
     wdpa_cl_t = process_protected_area(wdpa_country, environment="land")
     wdpa_cl_t["environment"] = wdpa_cl_t["environment"].replace("land", "terrestrial")
 
     if verbose:
-        print("Grouping by sovereign country and region")
+        logger.info({"message": "Grouping by sovereign country and region"})
 
     # Roll up into sovereign countries and regions
     reg_t = group_by_region(wdpa_cl_t, combined_regions)
@@ -475,18 +482,20 @@ def generate_marine_protection_level_stats_table(
 
     # Load related countries and regions
     if verbose:
-        print("loading country and region groupings")
+        logger.info({"message": "loading country and region groupings"})
     combined_regions, _ = load_regions()
 
     # Load MPAtlas Country level statistics
     if verbose:
-        print(
-            f"loading MPAtlas country-level stats from gs://{bucket}/{mpatlas_country_level_file_name}"
+        logger.info(
+            {
+                "message": f"loading MPAtlas country-level stats from gs://{bucket}/{mpatlas_country_level_file_name}"
+            }
         )
     mpatlas_country = load_mpatlas_country(bucket, mpatlas_country_level_file_name)
 
     if verbose:
-        print("loading high seas region to get area")
+        logger.info({"message": "loading high seas region to get area"})
     high_seas = load_marine_regions(high_seas_params, bucket)
     high_seas_area_km2 = high_seas.iloc[0]["area_km2"]
 
@@ -496,7 +505,7 @@ def generate_marine_protection_level_stats_table(
     mpatlas_country.loc[mpatlas_country["id"] == "HS", "wdpa_marine_km2"] = high_seas_area_km2
 
     if verbose:
-        print("Calculating Marine Protection Level Statistics")
+        logger.info({"message": "Calculating Marine Protection Level Statistics"})
 
     protection_level = "fully-highly-protected"
     mpa_dict = {
@@ -519,7 +528,7 @@ def generate_marine_protection_level_stats_table(
     ).drop(columns="wdpa_marine_km2")
 
     if verbose:
-        print("Grouping by sovereign country and region")
+        logger.info({"message": "Grouping by sovereign country and region"})
     protection_level_table = pd.DataFrame(
         stat
         for loc in combined_regions
@@ -589,16 +598,20 @@ def generate_fishing_protection_table(
 
     # Load related countries and regions
     if verbose:
-        print("loading country and region groupings")
+        logger.info({"message": "loading country and region groupings"})
     combined_regions, _ = load_regions()
 
     if verbose:
-        print(f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}")
+        logger.info(
+            {
+                "message": f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}"
+            }
+        )
     protected_seas = read_dataframe(bucket, protected_seas_file_name)
     protected_seas["iso_sov"] = protected_seas["iso_sov"].replace("CRV", "HRV")
 
     if verbose:
-        print("processing fishing level protection")
+        logger.info({"message": "processing fishing level protection"})
 
     ps_dict = {
         "iso_ter": "iso_ter",
@@ -619,7 +632,7 @@ def generate_fishing_protection_table(
     }
 
     if verbose:
-        print("processing fishing level protection")
+        logger.info({"message": "processing fishing level protection"})
 
     ps_cl_fp = (
         protected_seas[cols]

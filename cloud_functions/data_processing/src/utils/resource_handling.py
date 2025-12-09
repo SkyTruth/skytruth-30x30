@@ -5,6 +5,7 @@ import tracemalloc
 import psutil
 import pyarrow
 
+from src.core.commons import send_slack_alert
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -96,6 +97,9 @@ def handle_sigterm(signum, frame):
             "line_number": frame.f_lineno,
         }
     )
+
+    webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
+    send_slack_alert(webhook_url, "TIMEOUT ERROR - SIGTERM signal received")
 
     # Free up memory
     release_memory()

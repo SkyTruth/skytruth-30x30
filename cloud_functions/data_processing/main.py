@@ -3,11 +3,13 @@ import datetime
 import json
 import os
 import signal
+import traceback
 
 import functions_framework
 from flask import Request
 
 from src.core import map_params
+from src.core.commons import send_slack_alert
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -51,7 +53,7 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
-from src.methods.publisher import monthly_job_publisher, pipe_next_steps
+from src.methods.publisher import create_task, monthly_job_publisher, pipe_next_steps
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
@@ -79,6 +81,13 @@ logger = Logger()
 
 # Register SIGTERM handler
 signal.signal(signal.SIGTERM, handle_sigterm)
+
+LONG_RUNNING_TASKS = [
+    "download_protected_planet_pas",
+    "generate_terrestrial_biome_stats",
+    "update_protected_areas",
+    "generate_gadm_minus_pa",
+]
 
 
 @functions_framework.http
@@ -127,6 +136,7 @@ def main(request: Request) -> tuple[str, int]:
     project = os.environ.get("PROJECT", "")
     env = os.environ.get("ENVIRONMENT", "")
     location = os.environ.get("LOCATION", "")
+    webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
 
     try:
         data = request.get_json(silent=True) or {}
@@ -140,6 +150,8 @@ def main(request: Request) -> tuple[str, int]:
         method = data.get("METHOD", "dry_run")
         trigger_next = data.get("TRIGGER_NEXT", False)
         tolerance = data.get("TOLERANCE", TOLERANCES[0])
+        max_retries = data.get("MAX_RETRIES", 0)
+        attempt = data.get("attempt", 1)
 
         task_config = {
             "PROJECT": project,
@@ -147,16 +159,32 @@ def main(request: Request) -> tuple[str, int]:
             "QUEUE_NAME": data.get("QUEUE_NAME", ""),
             "TARGET_URL": data.get("TARGET_URL", ""),
             "INVOKER_SA": data.get("INVOKER_SA", ""),
+            "TOLERANCE": tolerance,
             "TRIGGER_NEXT": trigger_next,
+            "MAX_RETRIES": max_retries,
+            "attempt": attempt,
         }
 
-        print(f"Starting METHOD: {method}")
+        # By default, delay each retry by an extra minute
+        retry_config = {"delay_seconds": (attempt - 1) * 60, "max_retries": max_retries}
+
+        # By default, do not continue onto the next step
+        step_list = None
+
+        # By default, continue to next steps - default to True, but will be reset to False if
+        # method fails and retries are being handled with a scheduled task
+        cont = True
+
+        logger.info({"message": f"Starting METHOD: {method}"})
 
         match method:
             case "dry_run":
-                print("Dry Run Complete!")
+                logger.info({"message": "Dry Run Complete!"})
+
             case "publisher":
-                monthly_job_publisher(task_config, verbose=verbose)
+                monthly_job_publisher(
+                    task_config, long_running_task_list=LONG_RUNNING_TASKS, verbose=verbose
+                )
 
             # ------------------------------------------------------
             #                    Nearly Static
@@ -170,7 +198,6 @@ def main(request: Request) -> tuple[str, int]:
                     verbose=verbose,
                 )
                 step_list = ["process_gadm"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_eezs":
                 download_zip_to_gcs(
@@ -183,9 +210,7 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-
                 step_list = ["process_eezs", "process_eez_gadm_unions"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_high_seas":
                 download_zip_to_gcs(
@@ -198,44 +223,33 @@ def main(request: Request) -> tuple[str, int]:
                     chunk_size=CHUNK_SIZE,
                     verbose=verbose,
                 )
-
                 step_list = ["process_eezs", "process_eez_gadm_unions"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_gadm":
                 process_gadm_geoms(verbose=verbose)
-
                 step_list = ["generate_locations_table"]
                 if env == "prod":
                     step_list = step_list + [
                         "update_country_tileset",
                         "update_terrestrial_regions_tileset",
                     ]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eezs":
                 process_eez_geoms(verbose=verbose)
-
                 step_list = ["generate_locations_table"]
-
                 if env == "prod":
                     step_list = step_list + ["update_eez_tileset", "update_marine_regions_tileset"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_eez_gadm_unions":
                 process_eez_gadm_unions(verbose=verbose)
-
                 step_list = ["process_mangroves"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_marine_habitats":
                 download_marine_habitats(verbose=verbose)
 
             case "process_terrestrial_biomes":
                 process_terrestrial_biome_raster(verbose=verbose)
-
                 step_list = ["generate_terrestrial_biome_stats_country"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "process_mangroves":
                 process_mangroves(verbose=verbose)
@@ -251,26 +265,22 @@ def main(request: Request) -> tuple[str, int]:
             #     Downloads
             # ------------------
             case "download_mpatlas":
-                download_mpatlas(verbose=verbose)
-
+                retry_config, cont = download_mpatlas(verbose=verbose)
                 step_list = ["generate_marine_protection_level_stats_table"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_protected_seas":
                 download_protected_seas(verbose=verbose)
-
                 step_list = ["generate_fishing_protection_table"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_protected_planet_country":
                 download_protected_planet(verbose=verbose)
-
                 step_list = ["generate_protection_coverage_stats_table"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "download_protected_planet_pas":
-                download_and_process_protected_planet_pas(
-                    verbose=verbose, tolerance=tolerance, batch_size=1000
+                retry_config, cont = download_and_process_protected_planet_pas(
+                    verbose=verbose,
+                    tolerance=tolerance,
+                    batch_size=1000,
                 )
                 if tolerance == TOLERANCES[0]:
                     step_list = [
@@ -279,7 +289,6 @@ def main(request: Request) -> tuple[str, int]:
                         "generate_gadm_minus_pa",
                         "generate_eez_minus_mpa",
                     ]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             # ------------------
             #   Table updates
@@ -287,50 +296,39 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_terrestrial_biome_stats":
                 _ = generate_terrestrial_biome_stats_pa(verbose=verbose)
-
                 step_list = ["generate_habitat_protection_table"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_habitat_protection_table":
                 _ = generate_habitat_protection_table(verbose=verbose)
-
                 step_list = ["update_habitat_protection_stats"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_protection_coverage_stats_table":
                 _ = generate_protection_coverage_stats_table(verbose=verbose)
-
                 step_list = ["update_protection_coverage_stats"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_marine_protection_level_stats_table":
                 _ = generate_marine_protection_level_stats_table(verbose=verbose)
-
                 step_list = ["update_mpaa_protection_level_stats"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_fishing_protection_table":
                 _ = generate_fishing_protection_table(verbose=verbose)
-
                 step_list = ["update_fishing_protection_stats"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_locations_table":
                 generate_locations_table(verbose=verbose)
-
                 step_list = ["update_locations"]
-                pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
 
             case "generate_protected_areas_table":
                 updates = generate_protected_areas_diff_table(verbose=verbose)
-
-                if updates and env == "prod":
-                    step_list = [
-                        "update_protected_areas",
-                        "update_marine_protected_areas_tileset",
-                        "update_terrestrial_protected_areas_tileset",
-                    ]
-                    pipe_next_steps(step_list, trigger_next, task_config, verbose=verbose)
+                if updates:
+                    step_list = ["update_protected_areas"]
+                    if env == "prod":
+                        step_list.extend(
+                            [
+                                "update_marine_protected_areas_tileset",
+                                "update_terrestrial_protected_areas_tileset",
+                            ]
+                        )
 
             case "generate_gadm_minus_pa":
                 generate_total_area_minus_pa(
@@ -434,18 +432,47 @@ def main(request: Request) -> tuple[str, int]:
                 )
 
             case _:
-                print(f"METHOD: {method} not a valid option")
+                logger.warning({"message": f"METHOD: {method} not a valid option"})
 
-        print(f"METHOD: {method} complete!")
+        if trigger_next and cont and step_list:
+            pipe_next_steps(step_list, task_config, LONG_RUNNING_TASKS, verbose=verbose)
+
+        logger.info({"message": f"METHOD: {method} complete!"})
 
         return "OK", 200
     except Exception as e:
-        logger.error({"message": f"METHOD {method} failed", "error": str(e)})
+        retries = retry_config["max_retries"]
+        if retry_config and attempt < retries + 1:
+            logger.warning(
+                {
+                    "message": f"METHOD {method} failed attempt {attempt}: {e} of {retries + 1}",
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                }
+            )
+            task_config["attempt"] = attempt + 1
+            payload = {"METHOD": method, **task_config}
+            create_task(
+                payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"]
+            )
+            return "retrying", 202
+        else:
+            logger.error(
+                {
+                    "message": f"METHOD {method} failed after {attempt} attempts",
+                    "error": str(e),
+                    "traceback": traceback.format_exc(),
+                }
+            )
+            send_slack_alert(webhook_url, f"METHOD {method} failed")
+            return (
+                f"METHOD {method} failed after {attempt} attempts: {e}",
+                208,
+            )
 
-        return f"Internal Server Error: {e}", 500
     finally:
-        print("Releasing memory")
         release_memory(verbose=verbose)
-
         fn = datetime.datetime.now()
-        print(f"Completed in {(fn - st).total_seconds() / 60:.2f} minutes")
+        logger.info(
+            {"message": f"{method} Completed in {(fn - st).total_seconds() / 60:.2f} minutes"}
+        )

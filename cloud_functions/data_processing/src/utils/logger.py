@@ -11,6 +11,11 @@ class Logger:
         self.project = os.environ.get("PROJECT")
         self.request = request
 
+    def debug(self, payload: dict) -> None:
+        """Log a debugging message to GCP logging service"""
+        payload["severity"] = "DEBUG"
+        self.log(payload)
+
     def info(self, payload: dict) -> None:
         """Log an info message to GCP logging service"""
         payload["severity"] = "INFO"

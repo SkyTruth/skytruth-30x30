@@ -779,7 +779,22 @@ def load_gdb_layer_from_gcs(
 
             return pd.concat((to_append), axis=0)
 
-            return gdf
+
+def rename_blob(bucket_name, old_name, new_name, verbose=True):
+    """
+    Rename a blob in Google Cloud Storage by copying it
+    to a new name and deleting the original.
+    """
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+
+    blob = bucket.blob(old_name)
+    bucket.copy_blob(blob, bucket, new_name)
+    blob.delete()
+
+    if verbose:
+        print(f"Renamed '{old_name}' → '{new_name}' in bucket '{bucket_name}'")
 
 
 def download_file_from_gcs(

@@ -28,6 +28,9 @@ from src.utils.gcp import (
     read_json_from_gcs,
 )
 from src.utils.geo import get_area_km2
+from src.utils.logger import Logger
+
+logger = Logger()
 
 
 def create_seamounts_subtable(
@@ -66,19 +69,19 @@ def create_seamounts_subtable(
         }
 
     if verbose:
-        print("loading seamounts")
+        logger.info({"message": "loading seamounts"})
 
     seamounts = load_zipped_shapefile_from_gcs(
         seamounts_zipfile_name, bucket, internal_shapefile_path=seamounts_shapefile_name
     )
 
     if verbose:
-        print("loading eezs")
+        logger.info({"message": "loading eezs"})
     eez_file_name = eez_file.replace(".geojson", f"_{tolerance}.geojson")
     eez = read_json_df(BUCKET, eez_file_name, verbose)
 
     if verbose:
-        print("spatially joining seamounts with eezs and marine protected areas")
+        logger.info({"message": "spatially joining seamounts with eezs and marine protected areas"})
 
     eez_joined = gpd.sjoin(
         seamounts[["PEAKID", "AREA2D", "geometry"]],
@@ -145,12 +148,12 @@ def create_mangroves_subtable(
         }
 
     if verbose:
-        print("loading eez/land union")
+        logger.info({"message": "loading eez/land union"})
     gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
     country_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
     if verbose:
-        print("loading pre-processed mangroves")
+        logger.info({"message": "loading pre-processed mangroves"})
     mangroves_by_country = read_json_df(bucket, mangroves_by_country_file_name, verbose=True).pipe(
         clean_geometries
     )
@@ -159,7 +162,7 @@ def create_mangroves_subtable(
     ]
 
     if verbose:
-        print("getting protected mangrove area by country")
+        logger.info({"message": "getting protected mangrove area by country"})
     protected_mangroves = []
     for cnt in tqdm(list(sorted(set(country_union["location"].dropna())))):
         country_geom = country_union[country_union["location"] == cnt].iloc[0].geometry
@@ -237,7 +240,7 @@ def create_ocean_habitat_subtable(
     habitats = ["warmwatercorals", "coldwatercorals", "seagrasses", "saltmarshes"]
 
     if verbose:
-        print("downloading habitats zipfile into memory")
+        logger.info({"message": "downloading habitats zipfile into memory"})
 
     fs = gcsfs.GCSFileSystem()
     with fs.open(f"gs://{bucket}/{habitats_file_name}", "rb") as f:
@@ -250,7 +253,7 @@ def create_ocean_habitat_subtable(
                 dfs[name] = pd.read_csv(csv_file)
 
     if verbose:
-        print("generating habitats table")
+        logger.info({"message": "generating habitats table"})
 
     ocean_habitats = pd.DataFrame()
     for habitat in habitats:
@@ -260,7 +263,7 @@ def create_ocean_habitat_subtable(
         ocean_habitats = pd.concat((ocean_habitats, tmp))
 
     if verbose:
-        print("Grouping by sovereign country and region")
+        logger.info({"message": "Grouping by sovereign country and region"})
 
     ocean_habitats_group = []
     for habitat in habitats:
@@ -305,12 +308,12 @@ def process_marine_habitats(
     verbose: bool = True,
 ):
     if verbose:
-        print("getting protected areas (this may take a few minutes)")
+        logger.info({"message": "getting protected areas (this may take a few minutes)"})
 
     marine_protected_areas = read_json_df(bucket, marine_pa_file_name, verbose=verbose)
 
     if verbose:
-        print("dissolving over protected areas")
+        logger.info({"message": "dissolving over protected areas"})
 
     marine_protected_areas = (
         dissolve_multipolygons(marine_protected_areas[["ISO3", "WDPAID", "geometry"]])
@@ -319,13 +322,13 @@ def process_marine_habitats(
     )
 
     if verbose:
-        print("getting marine habitats subtable")
+        logger.info({"message": "getting marine habitats subtable"})
     ocean_habitats_subtable = create_ocean_habitat_subtable(
         bucket, habitats_zipfile_name, combined_regions, verbose
     )
 
     if verbose:
-        print("getting seamounts subtable")
+        logger.info({"message": "getting seamounts subtable"})
     seamounts_subtable = create_seamounts_subtable(
         seamounts_zipfile_name,
         seamounts_shapefile_name,
@@ -338,7 +341,7 @@ def process_marine_habitats(
     )
 
     if verbose:
-        print("getting mangroves subtable")
+        logger.info({"message": "getting mangroves subtable"})
 
     mangroves_subtable = create_mangroves_subtable(
         marine_protected_areas,
