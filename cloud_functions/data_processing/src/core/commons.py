@@ -1,5 +1,9 @@
 import io
+import json
+import os
 import tempfile
+import time
+import traceback
 import zipfile
 from io import BytesIO
 
@@ -16,12 +20,10 @@ from shapely.ops import unary_union
 from tqdm.auto import tqdm
 
 from src.core.params import (
-    ARCHIVE_MPATLAS_FILE_NAME,
     BUCKET,
     CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
-    MPATLAS_URL,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -32,12 +34,13 @@ from src.utils.gcp import (
     duplicate_blob,
     read_dataframe,
     read_json_from_gcs,
-    save_file_bucket,
 )
 from src.utils.geo import compute_pixel_area_map_km2
 from src.utils.logger import Logger
 
 logger = Logger()
+
+SLACK_ALERTS_WEBHOOK = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
@@ -225,48 +228,6 @@ def read_mpatlas_from_gcs(
     return gdf
 
 
-def download_mpatlas_zone(
-    url: str = MPATLAS_URL,
-    bucket: str = BUCKET,
-    filename: str = MPATLAS_FILE_NAME,
-    archive_filename: str = ARCHIVE_MPATLAS_FILE_NAME,
-    verbose: bool = True,
-) -> None:
-    """
-    Downloads the MPAtlas Zone Assessment dataset from a specified URL,
-    saves it to a Google Cloud Storage bucket, and duplicates the blob.
-
-    Parameters:
-    ----------
-    url : str
-        URL of the MPAtlas Zone Assessment file to download.
-    bucket : str
-        Name of the GCS bucket where the file should be stored.
-    filename : str
-        GCS blob name for the primary reference copy of the file.
-    archive_filename : str
-        GCS blob name for the archived/original version of the file.
-    verbose : bool, optional
-        If True, prints progress messages. Default is True.
-    """
-    if verbose:
-        print(f"downloading MPAtlas Zone Assessment from {url}")
-
-    response = requests.get(url)
-    response.raise_for_status()
-
-    if verbose:
-        print(f"saving MPAtlas Zone Assessment to gs://{bucket}/{archive_filename}")
-    save_file_bucket(
-        response.content,
-        response.headers.get("Content-Type"),
-        archive_filename,
-        bucket,
-        verbose=verbose,
-    )
-    duplicate_blob(bucket, archive_filename, filename, verbose=True)
-
-
 def download_file_with_progress(url: str, filename: str, verbose: bool = True):
     """
     Downloads a file from a given URL and displays a progress bar.
@@ -310,3 +271,56 @@ def download_file_with_progress(url: str, filename: str, verbose: bool = True):
 def unzip_file(base_zip_path, destination_folder):
     with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_folder)
+
+
+def send_slack_alert(webhook_url, text):
+    try:
+        headers = {"Content-Type": "application/json"}
+        payload = {"text": text}
+        response = requests.post(webhook_url, headers=headers, data=json.dumps(payload))
+        logger.info({"message": "ALERT sent to slack", "alert": text})
+        return response.status_code, response.text
+    except Exception as e:
+        logger.error({"message": "Failed to send slack alert", "alert": text, "exception": e})
+
+
+class RetryFailed(Exception):
+    pass
+
+
+def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_message="ALERT", **kwargs):
+    """
+    Retry a function call up to max_retries times.
+    Calls alert_func() if provided and all retries fail.
+    Returns output of func as well as success (True if
+    succeeded, False if reached max_retries)
+    """
+
+    for attempt in range(1, max_retries + 2):
+        try:
+            return func(*args, **kwargs)
+
+        except Exception as e:
+            # Final failure
+            if attempt == max_retries + 1:
+                message = (
+                    f"{alert_message}: {func.__name__} failed after {max_retries + 1} attempts"
+                )
+                logger.error(
+                    {
+                        "message": message,
+                        "error": str(e),
+                        "traceback": traceback.format_exc(),
+                    }
+                )
+                raise RetryFailed(f"{message}: {e}") from e
+            else:
+                logger.warning(
+                    {
+                        "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries})",
+                        "error": str(e),
+                    }
+                )
+
+                # Backoff before retrying
+                time.sleep(backoff)
