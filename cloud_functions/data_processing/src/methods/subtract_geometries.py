@@ -1,7 +1,9 @@
-import pandas as pd
 import geopandas as gpd
+import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
+
+from src.core.processors import country_wrapping
 from src.utils.gcp import (
     read_json_df,       # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
     upload_gdf_zip,     # Saves a GeoDataFrame to GCS as a zipped file
@@ -67,13 +69,17 @@ def dissolve_geometries(bucket: str,
         filename=gdf_file.replace('.geojson', f'_{tolerance}.geojson'),
         verbose=verbose
     )
-
+    
     # Keep only polygon records and make the geometries valid
     pa = pa[pa.geometry.geom_type.isin(['MultiPolygon', 'Polygon'])]
     pa.geometry = pa.geometry.make_valid()
 
-    # Label Antarctica PAs as ABNJ (areas beyond national jurisdiction)
-    pa.loc[pa["ISO3"] == "ATA", "ISO3"] = "ABNJ"
+    pa["ISO3"] = pa["ISO3"].str.split(";")
+    pa = pa.explode("ISO3")
+    pa["ISO3"] = pa["ISO3"].str.strip()
+
+    # Adjust countries as needed
+    pa = country_wrapping(pa, loc_col="ISO3")
 
     # Dissolve geometries by unique ISO3 codes
     if verbose:
@@ -120,7 +126,7 @@ def generate_total_area_minus_pa(bucket: str,
         Tolerance value used in simplification.
     verbose : bool, optional
         Whether to print verbose logs, by default True.
-    
+
     Returns
     -------
         GeoDataFrame saved to GCS as a zipped shapefile.
@@ -129,16 +135,16 @@ def generate_total_area_minus_pa(bucket: str,
     # Total areas: GADM (terrestrial) or EEZ (marine)
     total_area = read_json_df(
         bucket_name=bucket,
-        filename=total_area_file.replace('.geojson', f'_{tolerance}.geojson'),
-        verbose=verbose
+        filename=total_area_file.replace(".geojson", f"_{tolerance}.geojson"),
+        verbose=verbose,
     )
     total_area = total_area[['location', 'geometry']]
 
     # Dissolved protected areas: PA (terrestrial) or MPA (marine)
     pa = read_json_df(
         bucket_name=bucket,
-        filename=pa_file.replace('.geojson', f'_{tolerance}.geojson'),
-        verbose=verbose
+        filename=pa_file.replace(".geojson", f"_{tolerance}.geojson"),
+        verbose=verbose,
     )
 
     # Get list of unique country codes
@@ -149,8 +155,12 @@ def generate_total_area_minus_pa(bucket: str,
         pa = pa[pa.geometry.geom_type.isin(['MultiPolygon', 'Polygon'])]
         pa.geometry = pa.geometry.make_valid()
 
-        # Label Antarctica PAs as ABNJ (areas beyond national jurisdiction)
-        pa.loc[pa["ISO3"] == "ATA", "ISO3"] = "ABNJ"
+        pa["ISO3"] = pa["ISO3"].str.split(";")
+        pa = pa.explode("ISO3")
+        pa["ISO3"] = pa["ISO3"].str.strip()
+
+        # Adjust countries as needed
+        pa = country_wrapping(pa, loc_col="ISO3")
 
         # Dissolve country geometries by location
         if verbose:
@@ -172,12 +182,12 @@ def generate_total_area_minus_pa(bucket: str,
 
     total_area_minus_pa = pd.concat(results).reset_index(drop=True)
     if verbose:
-        print(f'Output file has {len(total_area_minus_pa)} rows.')
+        logger.info({"message": f"Output file has {len(total_area_minus_pa)} rows."})
 
     # Save to GCS as zipped shapefile
     upload_gdf_zip(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=out_file,
-        output_file_type='.shp'
+        output_file_type=".shp",
     )

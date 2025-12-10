@@ -3,9 +3,16 @@ from ast import literal_eval
 import pandas as pd
 from tqdm import tqdm
 
-from src.core.params import ARCHIVE_WDPA_PA_FILE_NAME, BUCKET, LOCATIONS_FILE_NAME, PROJECT
+from src.core.commons import retry_and_alert
+from src.core.params import (
+    ARCHIVE_WDPA_PA_FILE_NAME,
+    BUCKET,
+    LOCATIONS_FILE_NAME,
+    PROJECT,
+    WDPA_PA_FILE_NAME,
+)
 from src.core.strapi import Strapi
-from src.utils.gcp import load_pickle_from_gcs, read_dataframe
+from src.utils.gcp import load_pickle_from_gcs, read_dataframe, rename_blob
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -44,7 +51,7 @@ def upload_locations(
     options = request.get("options") if request else None
 
     if verbose:
-        print("Writing locations to the database")
+        logger.info({"message": "Writing locations to the database"})
 
     client = Strapi()
     return client.upsert_locations(locations, options)
@@ -91,11 +98,12 @@ def upload_stats(
     stats_dict = stats_df.to_dict(orient="records")
 
     if verbose:
-        print(f"Uploading stats from {filename} via the API")
+        logger.info({"message": f"Uploading stats from {filename} via the API"})
     return upload_function(stats_dict)
 
 
 def upload_protected_areas(
+    pa_file_name: str = WDPA_PA_FILE_NAME,
     archive_pa_file_name: str = ARCHIVE_WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     update_segment: str = "all",
@@ -103,22 +111,32 @@ def upload_protected_areas(
 ):
     strapi = Strapi()
 
-    db_changes = load_pickle_from_gcs(
-        bucket_name=bucket, blob_name=archive_pa_file_name, project_id=PROJECT, verbose=verbose
+    # To prevent this from updating based on a stale change file name, load
+    # change file and then archive the file. This way, if it unexpectedly runs again,
+    # the expected (non-archived) file does not exist and it will fail to execute.
+    db_changes = retry_and_alert(
+        load_pickle_from_gcs,
+        bucket_name=bucket,
+        blob_name=pa_file_name,
+        project_id=PROJECT,
+        verbose=verbose,
+        max_retries=0,
+        alert_message=f"failed to load {pa_file_name}",
     )
+    rename_blob(bucket, pa_file_name, archive_pa_file_name, verbose=True)
 
     if update_segment in ["delete", "all"]:
         deleted = db_changes["deleted"]
         if verbose:
-            print(f"deleting {len(deleted)} entries")
+            logger.info({"message": f"deleting {len(deleted)} entries"})
         delete_response = strapi.delete_pas(deleted)
         if verbose:
-            print("delete response:", delete_response)
+            logger.info({"message": f"delete response: {delete_response}"})
 
     if update_segment in ["upsert", "all"]:
         upserted = db_changes["new"] + db_changes["changed"]
         if verbose:
-            print(f"upserting {len(upserted)} entries")
+            logger.info({"message": f"upserting {len(upserted)} entries"})
 
         wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
         chunk_size = 20000
@@ -129,10 +147,10 @@ def upload_protected_areas(
                 upsert_response = strapi.upsert_pas(chunk)
 
                 if verbose:
-                    print("upsert response:", upsert_response)
+                    logger.info({"message": f"upsert response: {upsert_response}"})
             except Exception as excep:
                 logger.error({"message": f"Error on chunk {i // chunk_size}", "error": str(excep)})
                 continue
 
     if verbose:
-        print("Update complete!")
+        logger.info({"message": "Update complete!"})

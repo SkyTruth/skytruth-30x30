@@ -53,7 +53,7 @@ def create_and_update_eez_tileset(
 ):
     try:
         if verbose:
-            print("Creating and updating EEZ tileset...")
+            logger.info({"message": "Creating and updating EEZ tileset..."})
 
         cfg = TilesetConfig(
             bucket=bucket,
@@ -86,7 +86,7 @@ def create_and_update_marine_regions_tileset(
 ):
     try:
         if verbose:
-            print("Creating and updating EEZ tileset...")
+            logger.info({"message": "Creating and updating EEZ tileset..."})
 
         cfg = TilesetConfig(
             bucket=bucket,
@@ -157,7 +157,7 @@ def create_and_update_country_tileset(
 ):
     try:
         if verbose:
-            print("Creating and updating Country tileset...")
+            logger.info({"message": "Creating and updating Country tileset..."})
 
         cfg = TilesetConfig(
             bucket=bucket,
@@ -223,7 +223,7 @@ def create_and_update_terrestrial_regions_tileset(
 ):
     try:
         if verbose:
-            print("Creating and updating Terrestrial Regions tileset...")
+            logger.info({"message": "Creating and updating Terrestrial Regions tileset..."})
 
         cfg = TilesetConfig(
             bucket=bucket,
@@ -292,7 +292,7 @@ def create_and_update_protected_area_tileset(
 ):
     try:
         if verbose:
-            print(f"Creating and updating {display_name} tileset...")
+            logger.info({"message": f"Creating and updating {display_name} tileset..."})
 
         cfg = TilesetConfig(
             bucket=bucket,

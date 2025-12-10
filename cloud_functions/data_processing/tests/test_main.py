@@ -51,10 +51,11 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
     ]
     for name in simple_targets:
+        return_value = ({"ok": True}, {"ok": True}) if name == "download_mpatlas" else {"ok": True}
         monkeypatch.setattr(
             main,
             name,
-            make_recorder(call_log, name, return_value={"ok": True}),
+            make_recorder(call_log, name, return_value=return_value),
             raising=True,
         )
 
@@ -312,16 +313,24 @@ def test_unknown_method_returns_ok_and_calls_nothing(patched_all):
 
 
 # Error path
-def test_error_bubbles_to_500(monkeypatch, call_log):
-    """If any called function raises, handler should catch and return 500."""
+def test_error_bubbles_to_208(monkeypatch, call_log):
+    """If any called function raises, handler should catch and return 208."""
+
+    monkeypatch.setattr(
+        main,
+        "send_slack_alert",
+        make_recorder(call_log, "send_slack_alert", return_value={"ok": True}),
+        raising=True,
+    )
+
     monkeypatch.setattr(
         main,
         "process_gadm_geoms",
         make_recorder(call_log, "process_gadm_geoms", side_effect=RuntimeError("boom")),
         raising=True,
     )
-    resp = main.main(MockRequest({"METHOD": "process_gadm"}))
+    resp = main.main(MockRequest({"METHOD": "process_gadm", "MAX_RETRIES": 0}))
     assert isinstance(resp, tuple)
     body, status = resp
-    assert status == 500
-    assert "Internal Server Error" in body
+    assert status == 208
+    assert "failed after 1 attempts" in body
