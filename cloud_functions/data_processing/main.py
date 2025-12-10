@@ -87,6 +87,7 @@ LONG_RUNNING_TASKS = [
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",
+    "generate_protected_areas_table",
 ]
 
 
@@ -228,7 +229,7 @@ def main(request: Request) -> tuple[str, int]:
             case "process_gadm":
                 process_gadm_geoms(verbose=verbose)
                 step_list = ["generate_locations_table"]
-                if env == "prod":
+                if env == "production":
                     step_list = step_list + [
                         "update_country_tileset",
                         "update_terrestrial_regions_tileset",
@@ -237,7 +238,7 @@ def main(request: Request) -> tuple[str, int]:
             case "process_eezs":
                 process_eez_geoms(verbose=verbose)
                 step_list = ["generate_locations_table"]
-                if env == "prod":
+                if env == "production":
                     step_list = step_list + ["update_eez_tileset", "update_marine_regions_tileset"]
 
             case "process_eez_gadm_unions":
@@ -322,7 +323,7 @@ def main(request: Request) -> tuple[str, int]:
                 updates = generate_protected_areas_diff_table(verbose=verbose)
                 if updates:
                     step_list = ["update_protected_areas"]
-                    if env == "prod":
+                    if env == "production":
                         step_list.extend(
                             [
                                 "update_marine_protected_areas_tileset",
