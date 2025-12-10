@@ -3,7 +3,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
-from src.core.processors import wdpa_country_wrapping
+from src.core.processors import country_wrapping
 from src.utils.gcp import (
     read_json_df,
     upload_gdf_zip,
@@ -101,7 +101,7 @@ def generate_total_area_minus_pa(
     pa["ISO3"] = pa["ISO3"].str.strip()
 
     # Adjust countries as needed
-    pa = wdpa_country_wrapping(pa, loc_col="ISO3")
+    pa = country_wrapping(pa, loc_col="ISO3")
 
     # Subtract protected areas from each country in parallel
     countries = total_area["location"].unique().tolist()
@@ -111,7 +111,7 @@ def generate_total_area_minus_pa(
     total_area_minus_pa = pd.concat(results).reset_index()
 
     if verbose:
-        print(f"Output file has {len(total_area_minus_pa)} rows.")
+        logger.info({"message": f"Output file has {len(total_area_minus_pa)} rows."})
 
     # Save to GCS as zipped shapefile
     upload_gdf_zip(

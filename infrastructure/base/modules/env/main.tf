@@ -340,6 +340,12 @@ locals {
     project_id = var.gcp_project_id
     secret     = module.postgres_application_user_password.secret_name
     version    = module.postgres_application_user_password.latest_version
+  },
+  {
+    key        = "SLACK_ALERTS_WEBHOOK"
+    project_id = var.gcp_project_id
+    secret     = "gcp-slack-alerts-webhook"
+    version    = "latest"
   }]
 }
 
@@ -393,8 +399,8 @@ variable "cloud_tasks_roles" {
 }
 
 resource "google_service_account" "cloudtasks_invoker" {
-  account_id   = "${var.project_name}-cloud-tasks-invoker"
-  display_name = "${var.project_name} Cloud Tasks Invoker"
+  account_id   = "${var.project_name}-data-tasks-invoker"
+  display_name = "${var.project_name} Data Pipes Cloud Tasks Invoker"
 }
 
 resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
@@ -409,7 +415,7 @@ resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
 module "monthly_job_queue" {
   source = "../cloudtasks"
 
-  queue_name  = "monthly-data-pipes-jobs"
+  queue_name  = "${var.project_name}-monthly-data-pipes-jobs"
   location    = var.gcp_region
 
   target_url = module.data_pipes_cloud_function.function_uri
@@ -418,11 +424,8 @@ module "monthly_job_queue" {
   max_concurrent_dispatches = 1
   max_dispatches_per_second = 1
 
-  # Daily retries for a week
-  max_attempts       = 7
-  min_backoff        = "86400s"
-  max_backoff        = "86400s"
-  max_retry_duration = "604800s"
+  # Just try one time - retries are handled in handler
+  max_attempts       = 0
 
   enable_dlq = false
 }

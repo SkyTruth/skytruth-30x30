@@ -1,5 +1,9 @@
 import io
+import json
+import os
 import tempfile
+import time
+import traceback
 import zipfile
 from io import BytesIO
 
@@ -35,6 +39,8 @@ from src.utils.geo import compute_pixel_area_map_km2
 from src.utils.logger import Logger
 
 logger = Logger()
+
+SLACK_ALERTS_WEBHOOK = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
@@ -265,3 +271,56 @@ def download_file_with_progress(url: str, filename: str, verbose: bool = True):
 def unzip_file(base_zip_path, destination_folder):
     with zipfile.ZipFile(base_zip_path, "r") as zip_ref:
         zip_ref.extractall(destination_folder)
+
+
+def send_slack_alert(webhook_url, text):
+    try:
+        headers = {"Content-Type": "application/json"}
+        payload = {"text": text}
+        response = requests.post(webhook_url, headers=headers, data=json.dumps(payload))
+        logger.info({"message": "ALERT sent to slack", "alert": text})
+        return response.status_code, response.text
+    except Exception as e:
+        logger.error({"message": "Failed to send slack alert", "alert": text, "exception": e})
+
+
+class RetryFailed(Exception):
+    pass
+
+
+def retry_and_alert(func, *args, max_retries=1, backoff=10, alert_message="ALERT", **kwargs):
+    """
+    Retry a function call up to max_retries times.
+    Calls alert_func() if provided and all retries fail.
+    Returns output of func as well as success (True if
+    succeeded, False if reached max_retries)
+    """
+
+    for attempt in range(1, max_retries + 2):
+        try:
+            return func(*args, **kwargs)
+
+        except Exception as e:
+            # Final failure
+            if attempt == max_retries + 1:
+                message = (
+                    f"{alert_message}: {func.__name__} failed after {max_retries + 1} attempts"
+                )
+                logger.error(
+                    {
+                        "message": message,
+                        "error": str(e),
+                        "traceback": traceback.format_exc(),
+                    }
+                )
+                raise RetryFailed(f"{message}: {e}") from e
+            else:
+                logger.warning(
+                    {
+                        "message": f"Error in {func.__name__} (attempt {attempt}/{max_retries})",
+                        "error": str(e),
+                    }
+                )
+
+                # Backoff before retrying
+                time.sleep(backoff)

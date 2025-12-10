@@ -49,25 +49,25 @@ variable "max_dispatches_per_second" {
 variable "max_attempts" {
   description = "Max attempts including first attempt."
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "max_retry_duration" {
-  description = "Total retry window (e.g., '604800s' for 7 days)."
+  description = "Total retry window."
   type        = string
-  default     = "604800s"
+  default     = "86400s"
 }
 
 variable "min_backoff" {
-  description = "Minimum wait before retry (e.g., '86400s' = 1 day)."
+  description = "Minimum wait before retry"
   type        = string
-  default     = "86400s"
+  default     = "7200s"
 }
 
 variable "max_backoff" {
   description = "Maximum wait between retries."
   type        = string
-  default     = "86400s"
+  default     = "7200s"
 }
 
 variable "max_doublings" {

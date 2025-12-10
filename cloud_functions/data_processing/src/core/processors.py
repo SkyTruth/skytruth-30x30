@@ -40,7 +40,7 @@ def match_old_pa_naming_convantion(df: pd.DataFrame):
     return df
 
 
-def wdpa_country_wrapping(df: pd.DataFrame, loc_col: str = "location"):
+def country_wrapping(df: pd.DataFrame, loc_col: str = "location"):
     """
     Method for adjusting countries as needed for coverage stats and mapping
     """
@@ -50,7 +50,7 @@ def wdpa_country_wrapping(df: pd.DataFrame, loc_col: str = "location"):
     df.loc[df[loc_col] == "ATA", loc_col] = "ABNJ"
     df.loc[df[loc_col] == "ALA", loc_col] = "FIN"
 
-    return df
+    return df.drop_duplicates()
 
 
 def add_constants(df: pd.DataFrame, const: Mapping[str, Any]) -> pd.DataFrame:
