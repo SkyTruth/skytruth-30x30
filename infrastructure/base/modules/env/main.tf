@@ -399,8 +399,8 @@ variable "cloud_tasks_roles" {
 }
 
 resource "google_service_account" "cloudtasks_invoker" {
-  account_id   = "${var.project_name}-cloud-tasks-invoker"
-  display_name = "${var.project_name} Cloud Tasks Invoker"
+  account_id   = "${var.project_name}-data-tasks-invoker"
+  display_name = "${var.project_name} Data Pipes Cloud Tasks Invoker"
 }
 
 resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
@@ -415,7 +415,7 @@ resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
 module "monthly_job_queue" {
   source = "../cloudtasks"
 
-  queue_name  = "monthly-data-pipes-jobs"
+  queue_name  = "${var.project_name}-monthly-data-pipes-jobs"
   location    = var.gcp_region
 
   target_url = module.data_pipes_cloud_function.function_uri
