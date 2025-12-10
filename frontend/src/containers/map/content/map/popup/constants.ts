@@ -55,7 +55,7 @@ export const POPUP_BUTTON_CONTENT_BY_SOURCE = {
   [EEZ_SOURCE]: 'open-country-insights',
   'marine-regions-source': 'open-region-insights',
   countries: 'open-country-insights',
-  'gadm-regions': 'open-region-insights',
+  'terrestrial-regions': 'open-region-insights'
 };
 
 export const CUSTOM_REGION_ELIGABILITY_BY_SOURCE = new Set(['countries', EEZ_SOURCE]);
