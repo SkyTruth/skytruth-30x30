@@ -292,7 +292,7 @@ def main(request: Request) -> tuple[str, int]:
                     step_list = [
                         "generate_protected_areas_table",
                         "generate_terrestrial_biome_stats",
-                        "generate_gadm_minus_pa",
+                        "generate_dissolved_terrestrial_pa",
                         "generate_eez_minus_mpa",
                     ]
 
@@ -336,18 +336,6 @@ def main(request: Request) -> tuple[str, int]:
                             ]
                         )
 
-            case "generate_gadm_minus_pa":
-                # NOTE: must be run after generate_dissolved_terrestrial_pa
-                generate_total_area_minus_pa(
-                    bucket=BUCKET,
-                    total_area_file=GADM_FILE_NAME,
-                    pa_file=DISSOLVED_TERRESTRIAL_DATA,
-                    is_processed=True,
-                    out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-                    tolerance=map_params.WDPA_TOLERANCE,
-                    verbose=verbose,
-                )
-
             case "generate_eez_minus_mpa":
                 generate_total_area_minus_pa(
                     bucket=BUCKET,
@@ -355,7 +343,28 @@ def main(request: Request) -> tuple[str, int]:
                     pa_file=WDPA_MARINE_FILE_NAME,
                     is_processed=False,
                     out_file=CONSERVATION_BUILDER_MARINE_DATA,
-                    tolerance=map_params.WDPA_TOLERANCE,
+                    tolerance=tolerance,
+                    verbose=verbose,
+                )
+
+            case "generate_dissolved_terrestrial_pa":
+                dissolve_geometries(
+                    bucket=BUCKET,
+                    gdf_file=WDPA_TERRESTRIAL_FILE_NAME,
+                    out_file=DISSOLVED_TERRESTRIAL_DATA,
+                    tolerance=tolerance,
+                    verbose=verbose,
+                )
+                step_list = ["generate_gadm_minus_pa"]
+
+            case "generate_gadm_minus_pa":
+                generate_total_area_minus_pa(
+                    bucket=BUCKET,
+                    total_area_file=GADM_FILE_NAME,
+                    pa_file=DISSOLVED_TERRESTRIAL_DATA,
+                    is_processed=True,
+                    out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                    tolerance=tolerance,
                     verbose=verbose,
                 )
 
