@@ -122,14 +122,9 @@ def process_gadm_geoms(
     hong_kong = sub_countries[sub_countries["GID_1"] == "CHN.HKG"].copy()
     hong_kong.loc[:, "GID_0"] = "HKG"
     hong_kong = hong_kong[["GID_0", "COUNTRY", "geometry"]]
-    # Remove Hong Kong from China in the countries layer
-    countries.loc[countries["GID_0"] == "CHN", "geometry"] = countries.loc[countries["GID_0"] == "CHN", "geometry"].difference(hong_kong.geometry.iloc[0])
-    
-    # Add Areas Beyond National Jurisdiction (ABNJ)
     abnj = {"GID_0": "ABNJ", "COUNTRY": "Areas Beyond National Jurisdiction", "geometry": None}
     abnj = gpd.GeoDataFrame([abnj], crs=countries.crs)
 
-    # Concatenate to countries
     countries = pd.concat([countries, hong_kong, abnj], ignore_index=True, sort=False)
 
     # Map each code to inv_map[code] if it exists, otherwise leave it unchanged
