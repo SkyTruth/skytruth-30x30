@@ -1,15 +1,22 @@
 import os
-
 import psycopg
 from psycopg.rows import dict_row
-
+from shapely.geometry import MultiPolygon, Polygon
+from sqlalchemy import create_engine
+from src.core.params import BUCKET
+from src.utils.gcp import load_zipped_shapefile_from_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
 
 
-def get_connection():
-    """Establish a connection to the database"""
+def get_connection(format: str = "psycopg"):
+    """
+    Establish a connection to the database
+
+    Input:
+    format (str): Method used to connect to database ('psycopg' or 'sqlalchemy')
+    """
     try:
         DATABASE_USERNAME = os.environ.get("DATABASE_USERNAME", None)
         DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD", None)
@@ -24,21 +31,68 @@ def get_connection():
         ):
             raise ValueError("Missing DB Crednetials")
 
-        conn = psycopg.connect(
-            dbname=DATABASE_NAME,
-            user=DATABASE_USERNAME,
-            password=DATABASE_PASSWORD,
-            host=DATABASE_HOST,
-            port=5432,
-            row_factory=dict_row,
-        )
+        if format == "psycopg":
+            return psycopg.connect(
+                dbname=DATABASE_NAME,
+                user=DATABASE_USERNAME,
+                password=DATABASE_PASSWORD,
+                host=DATABASE_HOST,
+                port=5432,
+                row_factory=dict_row,
+            )
 
-        return conn
+        elif format == "sqlalchemy":
+            return create_engine(
+                f"postgresql+psycopg://{DATABASE_USERNAME}:{DATABASE_PASSWORD}@{DATABASE_HOST}:5432/{DATABASE_NAME}"
+            )
 
     except Exception as excep:
         logger.error(
             {"message": "Failed to establish connection with database", "error": str(excep)}
         )
+
+
+def update_cb(table_name, gcs_file, verbose: bool = False, cols: list[str] = ['location', 'geometry']):
+    """
+    Update Conservation Builder table from GCS file.
+
+    Inputs:
+    table_name (str): Name of the table to update (either 'gadm_minus_pa' or 'eez_minus_mpa')
+    gcs_file (str): GCS file path to load the shapefile from
+    verbose (bool): Whether to print progress messages
+    cols (list[str]): List of columns to retain
+    """
+    try:
+        conn = get_connection(format="sqlalchemy")
+
+        if verbose:
+            print(f"Loading {gcs_file}...")
+        gdf = load_zipped_shapefile_from_gcs(filename=gcs_file, bucket=BUCKET)
+
+        # Filter columns
+        gdf = gdf[cols]
+
+        # Turn Polygon to MultiPolygon for consistency
+        gdf["geometry"] = gdf["geometry"].apply(
+            lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
+        )
+        gdf = gdf.rename_geometry("the_geom")
+
+        # Write to PostgreSQL
+        if verbose:
+            print(f"Replacing {table_name} for Conservation Builder...")
+        gdf.to_postgis(
+            name=table_name,
+            schema="data",
+            con=conn,
+            if_exists="replace",
+            index=True,
+            index_label="id",
+            dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
+        )
+
+    except Exception as excep:
+        logger.error({"message": "Failed to update table", "error": str(excep)})
 
 
 def get_pas(verbose: bool = False) -> list[dict]:

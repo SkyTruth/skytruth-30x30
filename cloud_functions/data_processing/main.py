@@ -78,6 +78,7 @@ from src.methods.tileset_processes import (
     create_and_update_terrestrial_regions_tileset,
 )
 from src.methods.subtract_geometries import generate_total_area_minus_pa, dissolve_geometries
+from src.utils.database import update_cb
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -412,6 +413,20 @@ def main(request: Request) -> tuple[str, int]:
                 update_segment = data.get("UPDATE_SEGMENT", "all")
                 upload_protected_areas(verbose=verbose, update_segment=update_segment)
 
+            case "update_gadm_minus_pa":
+                update_cb(
+                    table_name="gadm_minus_pa",
+                    gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                    verbose=verbose,
+                )
+
+            case "update_eez_minus_mpa":
+                update_cb(
+                    table_name="eez_minus_mpa",
+                    gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
+                    verbose=verbose,
+                )
+            
             # ------------------
             #   Map Tilesets Updates
             # ------------------
