@@ -413,19 +413,19 @@ def main(request: Request) -> tuple[str, int]:
                 update_segment = data.get("UPDATE_SEGMENT", "all")
                 upload_protected_areas(verbose=verbose, update_segment=update_segment)
 
-            case "update_gadm_minus_pa":
-                update_cb(
-                    table_name="gadm_minus_pa",
-                    gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-                    verbose=verbose,
-                )
+            # case "update_gadm_minus_pa":
+            #     update_cb(
+            #         table_name="gadm_minus_pa",
+            #         gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+            #         verbose=verbose,
+            #     )
 
-            case "update_eez_minus_mpa":
-                update_cb(
-                    table_name="eez_minus_mpa",
-                    gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
-                    verbose=verbose,
-                )
+            # case "update_eez_minus_mpa":
+            #     update_cb(
+            #         table_name="eez_minus_mpa",
+            #         gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
+            #         verbose=verbose,
+            #     )
             
             # ------------------
             #   Map Tilesets Updates

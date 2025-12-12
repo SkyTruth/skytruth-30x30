@@ -1,8 +1,10 @@
 import os
+
 import psycopg
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import create_engine
+
 from src.core.params import BUCKET
 from src.utils.gcp import load_zipped_shapefile_from_gcs
 from src.utils.logger import Logger
@@ -52,7 +54,9 @@ def get_connection(format: str = "psycopg"):
         )
 
 
-def update_cb(table_name, gcs_file, verbose: bool = False, cols: list[str] = ['location', 'geometry']):
+def update_cb(
+    table_name, gcs_file, verbose: bool = False
+):
     """
     Update Conservation Builder table from GCS file.
 
@@ -60,7 +64,6 @@ def update_cb(table_name, gcs_file, verbose: bool = False, cols: list[str] = ['l
     table_name (str): Name of the table to update (either 'gadm_minus_pa' or 'eez_minus_mpa')
     gcs_file (str): GCS file path to load the shapefile from
     verbose (bool): Whether to print progress messages
-    cols (list[str]): List of columns to retain
     """
     try:
         conn = get_connection(format="sqlalchemy")
@@ -70,7 +73,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False, cols: list[str] = ['l
         gdf = load_zipped_shapefile_from_gcs(filename=gcs_file, bucket=BUCKET)
 
         # Filter columns
-        gdf = gdf[cols]
+        gdf = gdf[["location", "geometry"]]
 
         # Turn Polygon to MultiPolygon for consistency
         gdf["geometry"] = gdf["geometry"].apply(
