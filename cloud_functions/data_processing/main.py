@@ -15,6 +15,7 @@ from src.core.params import (
     CHUNK_SIZE,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+    DISSOLVED_TERRESTRIAL_DATA,
     EEZ_FILE_NAME,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
@@ -31,11 +32,6 @@ from src.core.params import (
     TOLERANCES,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
-    EEZ_FILE_NAME,
-    GADM_FILE_NAME,
-    CONSERVATION_BUILDER_MARINE_DATA,
-    CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-    DISSOLVED_TERRESTRIAL_DATA,
     verbose,
 )
 from src.core.strapi import Strapi
@@ -68,7 +64,7 @@ from src.methods.static_processes import (
     process_mangroves,
     process_terrestrial_biome_raster,
 )
-from src.methods.subtract_geometries import generate_total_area_minus_pa
+from src.methods.subtract_geometries import dissolve_geometries, generate_total_area_minus_pa
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.tileset_processes import (
     create_and_update_country_tileset,
@@ -77,8 +73,6 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
-from src.methods.subtract_geometries import generate_total_area_minus_pa, dissolve_geometries
-from src.utils.database import update_cb
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -93,6 +87,7 @@ LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
+    "generate_dissolved_terrestrial_pa",
     "generate_gadm_minus_pa",
     "generate_protected_areas_table",
 ]
@@ -426,7 +421,7 @@ def main(request: Request) -> tuple[str, int]:
             #         gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
             #         verbose=verbose,
             #     )
-            
+
             # ------------------
             #   Map Tilesets Updates
             # ------------------
