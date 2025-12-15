@@ -53,9 +53,9 @@ def process_pas(pa: gpd.GeoDataFrame):
     pa.geometry = pa.geometry.make_valid()
 
     # Split PAs with multiple country codes into separate rows
-    pa["ISO3"] = pa["ISO3"].str.split(";")
+    pa.loc[:, "ISO3"] = pa["ISO3"].str.split(";")
     pa = pa.explode("ISO3")
-    pa["ISO3"] = pa["ISO3"].str.strip()
+    pa.loc[:, "ISO3"] = pa["ISO3"].str.strip()
 
     # Adjust countries as needed
     pa = country_wrapping(pa, loc_col="ISO3")
