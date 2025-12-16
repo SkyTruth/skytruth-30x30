@@ -18,7 +18,7 @@ locally: `http://0.0.0.0:3001`
 ### Output Response
 
 ```json
-{locations_area:[{"code":<location_iso>, "protected_area": <area>, "area":<location_marine_area>}], "total_area":<total_area>, "total_protected_area":<total_area>}
+{locations_area:[{"code":<location_iso>, "protected_area": <area>}], "total_area":<total_area>, "total_protected_area":<total_area>}
 ```
 
 ### Development instructions
