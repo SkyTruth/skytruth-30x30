@@ -50,9 +50,9 @@ def get_locations_stats(
     geojson: JSON
 ) -> dict:
     if environment == 'marine':
-        table = 'eez_minus_mpa_new'
+        table = 'eez_minus_mpa_v2'
     elif environment == 'terrestrial':
-        table = 'gadm_minus_pa_new'
+        table = 'gadm_minus_pa_v2'
 
     with db.connect() as conn:
         stmt = sqlalchemy.text(
