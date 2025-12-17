@@ -73,6 +73,7 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
+from src.utils.database import update_cb
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -122,6 +123,9 @@ def main(request: Request) -> tuple[str, int]:
     - "download_protected_planet_wdpa": Downloads full Protected Planet suite
             (WDPA ZIP + stats) and processes/simplifies polygons
     - "generate_protected_areas_diff_table": Updates protected areas table
+    - "generate_dissolved_terrestrial_pa": Dissolves PAs, used for "generate_gadm_minus_pa"
+    - "generate_gadm_minus_pa": Updates terrestrial data for Conservation Builder
+    - "generate_eez_minus_mpa": Updates marine data for Conservation Builder
 
     Parameters:
     ----------
@@ -333,17 +337,6 @@ def main(request: Request) -> tuple[str, int]:
                             ]
                         )
 
-            case "generate_eez_minus_mpa":
-                generate_total_area_minus_pa(
-                    bucket=BUCKET,
-                    total_area_file=EEZ_FILE_NAME,
-                    pa_file=WDPA_MARINE_FILE_NAME,
-                    is_processed=False,
-                    out_file=CONSERVATION_BUILDER_MARINE_DATA,
-                    tolerance=tolerance,
-                    verbose=verbose,
-                )
-
             case "generate_dissolved_terrestrial_pa":
                 dissolve_geometries(
                     bucket=BUCKET,
@@ -364,6 +357,19 @@ def main(request: Request) -> tuple[str, int]:
                     tolerance=tolerance,
                     verbose=verbose,
                 )
+                step_list = ["update_gadm_minus_pa"]
+
+            case "generate_eez_minus_mpa":
+                generate_total_area_minus_pa(
+                    bucket=BUCKET,
+                    total_area_file=EEZ_FILE_NAME,
+                    pa_file=WDPA_MARINE_FILE_NAME,
+                    is_processed=False,
+                    out_file=CONSERVATION_BUILDER_MARINE_DATA,
+                    tolerance=tolerance,
+                    verbose=verbose,
+                )
+                step_list = ["update_eez_minus_mpa"]
 
             # ------------------
             #   Database updates
@@ -408,19 +414,19 @@ def main(request: Request) -> tuple[str, int]:
                 update_segment = data.get("UPDATE_SEGMENT", "all")
                 upload_protected_areas(verbose=verbose, update_segment=update_segment)
 
-            # case "update_gadm_minus_pa":
-            #     update_cb(
-            #         table_name="gadm_minus_pa",
-            #         gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-            #         verbose=verbose,
-            #     )
+            case "update_gadm_minus_pa":
+                update_cb(
+                    table_name="gadm_minus_pa",
+                    gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                    verbose=verbose,
+                )
 
-            # case "update_eez_minus_mpa":
-            #     update_cb(
-            #         table_name="eez_minus_mpa",
-            #         gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
-            #         verbose=verbose,
-            #     )
+            case "update_eez_minus_mpa":
+                update_cb(
+                    table_name="eez_minus_mpa",
+                    gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
+                    verbose=verbose,
+                )
 
             # ------------------
             #   Map Tilesets Updates
