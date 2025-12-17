@@ -416,14 +416,14 @@ def main(request: Request) -> tuple[str, int]:
 
             case "update_gadm_minus_pa":
                 update_cb(
-                    table_name="gadm_minus_pa",
+                    table_name="gadm_minus_pa_v2",
                     gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                     verbose=verbose,
                 )
 
             case "update_eez_minus_mpa":
                 update_cb(
-                    table_name="eez_minus_mpa",
+                    table_name="eez_minus_mpa_v2",
                     gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
                     verbose=verbose,
                 )
