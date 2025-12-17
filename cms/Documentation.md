@@ -6,7 +6,7 @@ This API provides a single source for accessing open source data related to terr
 
 ## ⚠️ ${\color{red}Upcoming \space Breaking \space Changes}$ ⚠️
 
-A major update of the API will occur sometime in between December 2205 and March 2026 that will introduce breaking changes to the API response contract. We will notify our users of this change when it is planned. In order to safeguard yourself against these changes you can add the following header to your request
+A major update of the API will occur sometime in between December 2025 and March 2026 that will introduce breaking changes to the API response contract. We will notify our users of this change when it is planned. In order to safeguard yourself against these changes you can add the following header to your request
 
 ${\color{lightgreen} Strapi-Response-Format: v4}$
 

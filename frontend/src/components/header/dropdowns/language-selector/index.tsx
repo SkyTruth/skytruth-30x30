@@ -3,13 +3,11 @@ import { useRouter } from 'next/router';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { FCWithMessages } from '@/types';
 
 const LanguageSelector: FCWithMessages = () => {
   const t = useTranslations('components.language-selector');
   const locale = useLocale();
-  const isPTActive = useFeatureFlag('is_pt_active');
 
   const { push, asPath, pathname, query } = useRouter();
 
@@ -37,9 +35,7 @@ const LanguageSelector: FCWithMessages = () => {
         <SelectItem value="en">English{locale !== 'en' && ` (${t('english')})`}</SelectItem>
         <SelectItem value="es">Español{locale !== 'es' && ` (${t('spanish')})`}</SelectItem>
         <SelectItem value="fr">Français{locale !== 'fr' && ` (${t('french')})`}</SelectItem>
-        {isPTActive ? (
-          <SelectItem value="pt">Português{locale !== 'pt' && ` (${t('portuguese')})`}</SelectItem>
-        ) : null}
+        <SelectItem value="pt">Português{locale !== 'pt' && ` (${t('portuguese')})`}</SelectItem>
       </SelectContent>
     </Select>
   );
