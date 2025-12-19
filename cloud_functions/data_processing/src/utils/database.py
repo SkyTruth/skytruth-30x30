@@ -1,10 +1,12 @@
 import os
-
 import psycopg
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import create_engine
-
+import geopandas as gpd
+from shapely.geometry import box
+import numpy as np
+import pandas as pd
 from src.core.params import BUCKET
 from src.utils.gcp import load_zipped_shapefile_from_gcs
 from src.utils.logger import Logger
@@ -54,6 +56,50 @@ def get_connection(format: str = "psycopg"):
         )
 
 
+def create_tiles(gdf, grid_size=2000000):
+    """
+    Split GeoDataFrame into tiles for faster loading.
+
+    Inputs:
+      gdf (gpd.GeoDataFrame): GeoDataFrame to split into tiles
+      grid_size (int): size of tiles in meters
+    """
+    # Project to meters
+    gdf_projected = gdf.to_crs('EPSG:3857')
+    minx_m, miny_m, maxx_m, maxy_m = gdf_projected.total_bounds
+    
+    # Create grid
+    x_coords = np.arange(np.floor(minx_m / grid_size) * grid_size, 
+                         np.ceil(maxx_m / grid_size) * grid_size, 
+                         grid_size)
+    y_coords = np.arange(np.floor(miny_m / grid_size) * grid_size,
+                         np.ceil(maxy_m / grid_size) * grid_size,
+                         grid_size)
+    
+    # Build spatial index
+    sindex = gdf_projected.sindex
+    
+    result_parts = []    
+    for x in x_coords:
+        for y in y_coords:
+            # Query spatial index
+            grid_bounds = (x, y, x + grid_size, y + grid_size)
+            possible_idx = list(sindex.intersection(grid_bounds))
+            
+            if possible_idx:
+                # Clip to tiles
+                subset = gdf_projected.iloc[possible_idx]
+                grid_geom = box(*grid_bounds)
+                clipped = subset.clip(grid_geom, keep_geom_type=True)
+                if len(clipped) > 0:
+                    result_parts.append(clipped)
+    
+    result = pd.concat(result_parts, ignore_index=True, copy=False)
+    result = result.to_crs('EPSG:4326')
+    
+    return result
+
+
 def update_cb(
     table_name, gcs_file, verbose: bool = False
 ):
@@ -61,7 +107,7 @@ def update_cb(
     Update Conservation Builder table from GCS file.
 
     Inputs:
-    table_name (str): Name of the table to update (either 'gadm_minus_pa' or 'eez_minus_mpa')
+    table_name (str): Name of the table to update
     gcs_file (str): GCS file path to load the shapefile from
     verbose (bool): Whether to print progress messages
     """
@@ -80,6 +126,10 @@ def update_cb(
             lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
         )
         gdf = gdf.rename_geometry("the_geom")
+
+        if table_name == 'gadm_minus_pa_v2':
+          # To save loading time, split into 1000km square tiles
+          gdf = create_tiles(gdf)
 
         # Write to PostgreSQL
         if verbose:
