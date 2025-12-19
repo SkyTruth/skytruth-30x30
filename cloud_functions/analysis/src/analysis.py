@@ -57,27 +57,31 @@ def get_locations_stats(
     with db.connect() as conn:
         stmt = sqlalchemy.text(
             f"""
-            with user_data as (
-                select ST_GeomFromGeoJSON(:geometry) as geom
-            ),
-	        user_data_stats as (
-                select *, 
-                    round((st_area(st_transform(geom,
-                    '+proj=longlat +datum=WGS84 +no_defs +type=crs', 
-                    '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)) 
-                    user_area_km2
-                from user_data)
-            select 
-                location, 
+            WITH
+                user_data AS (
+                    SELECT ST_GeomFromGeoJSON(:geometry) AS geom
+                ),
+                user_data_stats AS (
+                    SELECT *,
+                        round((st_area(st_transform(geom,
+                        '+proj=longlat +datum=WGS84 +no_defs +type=crs',
+                        '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6))
+                        user_area_km2
+                    FROM user_data
+                )
+            SELECT
+                location,
                 round((st_area(st_transform(
                     st_makevalid(st_intersection(the_geom, user_data_stats.geom)),
-                    '+proj=longlat +datum=WGS84 +no_defs +type=crs', 
-                    '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)) 
-                    portion_area_km2, 
-                user_data_stats.user_area_km2 
-            from data.{table}, 
+                    '+proj=longlat +datum=WGS84 +no_defs +type=crs',
+                    '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6))
+                    portion_area_km2,
+                user_data_stats.user_area_km2
+            FROM
+                data.{table},
                 user_data_stats
-            where st_intersects(the_geom, user_data_stats.geom)
+            WHERE
+                st_intersects(the_geom, user_data_stats.geom)
             """
         )
         data_response = conn.execute(
