@@ -69,7 +69,7 @@ def update_cb(
         conn = get_connection(format="sqlalchemy")
 
         if verbose:
-            print(f"Loading {gcs_file}...")
+            logger.info({"message": f"Loading {gcs_file}..."})
         gdf = load_zipped_shapefile_from_gcs(filename=gcs_file, bucket=BUCKET)
 
         # Filter columns
@@ -83,7 +83,7 @@ def update_cb(
 
         # Write to PostgreSQL
         if verbose:
-            print(f"Replacing {table_name} for Conservation Builder...")
+            logger.info({"message": f"Updating {table_name} in PostgreSQL..."})
         gdf.to_postgis(
             name=table_name,
             schema="data",

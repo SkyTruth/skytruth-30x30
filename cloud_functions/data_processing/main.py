@@ -15,7 +15,7 @@ from src.core.params import (
     CHUNK_SIZE,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-    DISSOLVED_TERRESTRIAL_DATA,
+    DISSOLVED_TERRESTRIAL_PA,
     EEZ_FILE_NAME,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
@@ -338,20 +338,13 @@ def main(request: Request) -> tuple[str, int]:
                         )
 
             case "generate_dissolved_terrestrial_pa":
-                dissolve_geometries(
-                    bucket=BUCKET,
-                    gdf_file=WDPA_TERRESTRIAL_FILE_NAME,
-                    out_file=DISSOLVED_TERRESTRIAL_DATA,
-                    tolerance=tolerance,
-                    verbose=verbose,
-                )
+                dissolve_geometries(tolerance=tolerance, verbose=verbose)
                 step_list = ["generate_gadm_minus_pa"]
 
             case "generate_gadm_minus_pa":
                 generate_total_area_minus_pa(
-                    bucket=BUCKET,
                     total_area_file=GADM_FILE_NAME,
-                    pa_file=DISSOLVED_TERRESTRIAL_DATA,
+                    pa_file=DISSOLVED_TERRESTRIAL_PA,
                     is_processed=True,
                     out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                     tolerance=tolerance,
@@ -361,7 +354,6 @@ def main(request: Request) -> tuple[str, int]:
 
             case "generate_eez_minus_mpa":
                 generate_total_area_minus_pa(
-                    bucket=BUCKET,
                     total_area_file=EEZ_FILE_NAME,
                     pa_file=WDPA_MARINE_FILE_NAME,
                     is_processed=False,

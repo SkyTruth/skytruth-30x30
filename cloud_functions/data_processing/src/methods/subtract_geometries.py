@@ -3,18 +3,27 @@ import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
-from src.core.processors import country_wrapping
+from src.core.params import (
+    BUCKET,
+    DISSOLVED_TERRESTRIAL_PA,
+    TOLERANCES,
+    WDPA_TERRESTRIAL_FILE_NAME,
+)
 from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,  # Loads a zipped shapefile from GCS into a GeoDataFrame
     read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
     upload_gdf_zip,  # Saves a GeoDataFrame to GCS as a zipped file
 )
+
 from src.utils.logger import Logger
 
 logger = Logger()
 
 
-def process_country(country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame):
+def process_country(
+        country_area: gpd.GeoDataFrame,
+        country_pa: gpd.GeoDataFrame
+    ):
     """
     Subtracts protected areas from total area for a country.
 
@@ -53,14 +62,6 @@ def process_pas(pa: gpd.GeoDataFrame):
     pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
     pa.geometry = pa.geometry.make_valid()
 
-    # Split PAs with multiple country codes into separate rows
-    pa["ISO3"] = pa["ISO3"].str.split(";")
-    pa = pa.explode("ISO3")
-    pa["ISO3"] = pa["ISO3"].str.strip()
-
-    # Adjust countries as needed
-    pa = country_wrapping(pa, loc_col="ISO3")
-
     # Dissolve geometries by country
     dissolved = pa[["ISO3", "geometry"]].dissolve(by="ISO3").reset_index()
     dissolved = dissolved[dissolved.geometry.geom_type.isin(["MultiPolygon", "Polygon"])]
@@ -69,7 +70,11 @@ def process_pas(pa: gpd.GeoDataFrame):
 
 
 def dissolve_geometries(
-    bucket: str, gdf_file: str, out_file: str, tolerance: float, verbose: bool = True
+    bucket: str = BUCKET,
+    gdf_file: str = WDPA_TERRESTRIAL_FILE_NAME,
+    out_file: str = DISSOLVED_TERRESTRIAL_PA,
+    tolerance: float = TOLERANCES[0],
+    verbose: bool = True
 ):
     """
     Loads a GeoDataFrame from GCS, dissolves geometries by country,
@@ -115,12 +120,12 @@ def dissolve_geometries(
 
 
 def generate_total_area_minus_pa(
-    bucket: str,
     total_area_file: str,
     pa_file: str,
     is_processed: bool,
     out_file: str,
     tolerance: float,
+    bucket: str = BUCKET,
     verbose: bool = True,
 ):
     """
