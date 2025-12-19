@@ -15,6 +15,7 @@ from src.core.params import (
     CHUNK_SIZE,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+    DISSOLVED_TERRESTRIAL_PA,
     EEZ_FILE_NAME,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
@@ -63,7 +64,7 @@ from src.methods.static_processes import (
     process_mangroves,
     process_terrestrial_biome_raster,
 )
-from src.methods.subtract_geometries import generate_total_area_minus_pa
+from src.methods.subtract_geometries import dissolve_geometries, generate_total_area_minus_pa
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.tileset_processes import (
     create_and_update_country_tileset,
@@ -72,6 +73,7 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
+from src.utils.database import update_cb
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -86,6 +88,7 @@ LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
+    "generate_dissolved_terrestrial_pa",
     "generate_gadm_minus_pa",
     "generate_protected_areas_table",
 ]
@@ -120,6 +123,9 @@ def main(request: Request) -> tuple[str, int]:
     - "download_protected_planet_wdpa": Downloads full Protected Planet suite
             (WDPA ZIP + stats) and processes/simplifies polygons
     - "generate_protected_areas_diff_table": Updates protected areas table
+    - "generate_dissolved_terrestrial_pa": Dissolves PAs, used for "generate_gadm_minus_pa"
+    - "generate_gadm_minus_pa": Updates terrestrial data for Conservation Builder
+    - "generate_eez_minus_mpa": Updates marine data for Conservation Builder
 
     Parameters:
     ----------
@@ -287,7 +293,7 @@ def main(request: Request) -> tuple[str, int]:
                     step_list = [
                         "generate_protected_areas_table",
                         "generate_terrestrial_biome_stats",
-                        "generate_gadm_minus_pa",
+                        "generate_dissolved_terrestrial_pa",
                         "generate_eez_minus_mpa",
                     ]
 
@@ -331,25 +337,31 @@ def main(request: Request) -> tuple[str, int]:
                             ]
                         )
 
+            case "generate_dissolved_terrestrial_pa":
+                dissolve_geometries(tolerance=tolerance, verbose=verbose)
+                step_list = ["generate_gadm_minus_pa"]
+
             case "generate_gadm_minus_pa":
                 generate_total_area_minus_pa(
-                    bucket=BUCKET,
                     total_area_file=GADM_FILE_NAME,
-                    pa_file=WDPA_TERRESTRIAL_FILE_NAME,
+                    pa_file=DISSOLVED_TERRESTRIAL_PA,
+                    is_processed=True,
                     out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-                    tolerance=map_params.WDPA_TOLERANCE,
+                    tolerance=tolerance,
                     verbose=verbose,
                 )
+                step_list = ["update_gadm_minus_pa"]
 
             case "generate_eez_minus_mpa":
                 generate_total_area_minus_pa(
-                    bucket=BUCKET,
                     total_area_file=EEZ_FILE_NAME,
                     pa_file=WDPA_MARINE_FILE_NAME,
+                    is_processed=False,
                     out_file=CONSERVATION_BUILDER_MARINE_DATA,
-                    tolerance=map_params.WDPA_TOLERANCE,
+                    tolerance=tolerance,
                     verbose=verbose,
                 )
+                step_list = ["update_eez_minus_mpa"]
 
             # ------------------
             #   Database updates
@@ -393,6 +405,20 @@ def main(request: Request) -> tuple[str, int]:
             case "update_protected_areas":
                 update_segment = data.get("UPDATE_SEGMENT", "all")
                 upload_protected_areas(verbose=verbose, update_segment=update_segment)
+
+            case "update_gadm_minus_pa":
+                update_cb(
+                    table_name="gadm_minus_pa_v2",
+                    gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                    verbose=verbose,
+                )
+
+            case "update_eez_minus_mpa":
+                update_cb(
+                    table_name="eez_minus_mpa_v2",
+                    gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
+                    verbose=verbose,
+                )
 
             # ------------------
             #   Map Tilesets Updates
