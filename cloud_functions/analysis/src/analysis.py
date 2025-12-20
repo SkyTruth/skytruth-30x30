@@ -101,7 +101,7 @@ def get_locations_stats(
                         SELECT
                             location,
                             round((st_area(st_transform(
-                                st_makevalid(st_intersection(the_geom, user_data_stats.geom)),
+                                st_makevalid(st_intersection(st_makevalid(the_geom), user_data_stats.geom)),
                                 '+proj=longlat +datum=WGS84 +no_defs +type=crs', 
                                 '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
                             ) AS portion_area_km2,
