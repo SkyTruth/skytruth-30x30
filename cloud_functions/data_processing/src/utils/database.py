@@ -1,12 +1,14 @@
 import os
-import psycopg
-from psycopg.rows import dict_row
-from shapely.geometry import MultiPolygon, Polygon
-from sqlalchemy import create_engine
 import geopandas as gpd
-from shapely.geometry import box
 import numpy as np
 import pandas as pd
+import psycopg
+from psycopg.rows import dict_row
+from shapely.geometry import MultiPolygon, Polygon, box
+from sqlalchemy import create_engine
+from joblib import Parallel, delayed
+from tqdm.auto import tqdm
+
 from src.core.params import BUCKET
 from src.utils.gcp import load_zipped_shapefile_from_gcs
 from src.utils.logger import Logger
@@ -18,8 +20,10 @@ def get_connection(format: str = "psycopg"):
     """
     Establish a connection to the database
 
-    Input:
-    format (str): Method used to connect to database ('psycopg' or 'sqlalchemy')
+    Parameter
+    ----------
+    format : str
+      Method used to connect to database ('psycopg' or 'sqlalchemy')
     """
     try:
         DATABASE_USERNAME = os.environ.get("DATABASE_USERNAME", None)
@@ -56,60 +60,42 @@ def get_connection(format: str = "psycopg"):
         )
 
 
-def create_tiles(gdf, grid_size=2000000):
+def split_by_grid(gdf_country, grid_gdf):
     """
-    Split GeoDataFrame into tiles for faster loading.
+    Split GeoDataFrame based on a grid for faster loading from PostgreSQL database
+    on Conservation Builder.
 
-    Inputs:
-      gdf (gpd.GeoDataFrame): GeoDataFrame to split into tiles
-      grid_size (int): size of tiles in meters
+    Parameters
+    ----------
+      gdf_country : gpd.GeoDataFrame
+        Country boundary.
+      grid_gdf : gpd.GeoDataFrame
+        Grid filtered to country.
     """
-    # Project to meters
-    gdf_projected = gdf.to_crs('EPSG:3857')
-    minx_m, miny_m, maxx_m, maxy_m = gdf_projected.total_bounds
-    
-    # Create grid
-    x_coords = np.arange(np.floor(minx_m / grid_size) * grid_size, 
-                         np.ceil(maxx_m / grid_size) * grid_size, 
-                         grid_size)
-    y_coords = np.arange(np.floor(miny_m / grid_size) * grid_size,
-                         np.ceil(maxy_m / grid_size) * grid_size,
-                         grid_size)
-    
-    # Build spatial index
-    sindex = gdf_projected.sindex
-    
-    result_parts = []    
-    for x in x_coords:
-        for y in y_coords:
-            # Query spatial index
-            grid_bounds = (x, y, x + grid_size, y + grid_size)
-            possible_idx = list(sindex.intersection(grid_bounds))
-            
-            if possible_idx:
-                # Clip to tiles
-                subset = gdf_projected.iloc[possible_idx]
-                grid_geom = box(*grid_bounds)
-                clipped = subset.clip(grid_geom, keep_geom_type=True)
-                if len(clipped) > 0:
-                    result_parts.append(clipped)
-    
-    result = pd.concat(result_parts, ignore_index=True, copy=False)
-    result = result.to_crs('EPSG:4326')
+    # Do not split ABNJ
+    if gdf_country['location'].eq('ABNJ').any():
+        return gdf_country
+
+    # Clip geometries to grid
+    result = gpd.overlay(gdf_country, grid_gdf, how='intersection', keep_geom_type=False)
+    result.geometry = result.geometry.make_valid()
+    result = result[result.geometry.geom_type.isin(["MultiPolygon", "Polygon"])]
     
     return result
 
 
-def update_cb(
-    table_name, gcs_file, verbose: bool = False
-):
+def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     Update Conservation Builder table from GCS file.
 
-    Inputs:
-    table_name (str): Name of the table to update
-    gcs_file (str): GCS file path to load the shapefile from
-    verbose (bool): Whether to print progress messages
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    gcs_file : str
+      GCS path of the file.
+    verbose : bool
+      Whether to print progress messages.
     """
     try:
         conn = get_connection(format="sqlalchemy")
@@ -125,11 +111,48 @@ def update_cb(
         gdf["geometry"] = gdf["geometry"].apply(
             lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
         )
-        gdf = gdf.rename_geometry("the_geom")
+        
+        if table_name == "gadm_minus_pa_v2":
+            # To save loading time, split into 2000km grid
+            grid_size = 2000000
+            if verbose:
+                logger.info({"message": f"Splitting into tiles."})
 
-        if table_name == 'gadm_minus_pa_v2':
-          # To save loading time, split into 1000km square tiles
-          gdf = create_tiles(gdf)
+            # Get list of unique country codes
+            countries = gdf["location"].unique().tolist()
+          
+            # Create grid
+            gdf = gdf.to_crs("EPSG:3857") # Meters
+            minx_m, miny_m, maxx_m, maxy_m = gdf.total_bounds
+            
+            x_coords = np.arange(np.floor(minx_m / grid_size) * grid_size, 
+                                np.ceil(maxx_m / grid_size) * grid_size, 
+                                grid_size)
+            y_coords = np.arange(np.floor(miny_m / grid_size) * grid_size,
+                                np.ceil(maxy_m / grid_size) * grid_size,
+                                grid_size)
+            grid_cells = [box(x, y, x + grid_size, y + grid_size) 
+                          for x in x_coords for y in y_coords]
+            grid_gdf = gpd.GeoDataFrame({'geometry': grid_cells}, crs='EPSG:3857')
+
+            # Find grids intersecting each country
+            country_grids = {}
+            for country in countries:
+                country_geom = gdf[gdf["location"] == country]
+                country_grids[country] = grid_gdf.iloc[
+                    list(grid_gdf.sindex.intersection(country_geom.total_bounds))
+                ]
+            
+            # Divide into grid in parallel
+            results = Parallel(n_jobs=-1, backend="loky")(
+                delayed(split_by_grid)(
+                    gdf[gdf["location"] == country].reset_index(drop=True),
+                    country_grids.get(country, gpd.GeoDataFrame())
+                )
+                for country in tqdm(countries)
+            )
+            gdf = pd.concat(results).reset_index(drop=True).to_crs('EPSG:4326')
+            gdf = gdf.rename_geometry("the_geom")
 
         # Write to PostgreSQL
         if verbose:
