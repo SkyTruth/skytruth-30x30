@@ -152,7 +152,9 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
                 for country in tqdm(countries)
             )
             gdf = pd.concat(results).reset_index(drop=True).to_crs('EPSG:4326')
-            gdf = gdf.rename_geometry("the_geom")
+
+        # Update geometry name for consistency in PostgreSQL database
+        gdf = gdf.rename_geometry("the_geom")
 
         # Write to PostgreSQL
         if verbose:
