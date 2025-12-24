@@ -9,7 +9,6 @@ import FiltersButton from '@/components/filters-button';
 import type { Source } from '@/components/tooltip-button';
 import Icon from '@/components/ui/icon';
 import { PAGES } from '@/constants/pages';
-import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import HeaderItem from '@/containers/map/content/details/table/header-item';
 import { cellFormatter } from '@/containers/map/content/details/table/helpers';
 import SortingButton from '@/containers/map/content/details/table/sorting-button';
@@ -18,7 +17,6 @@ import {
   useMapSearchParams,
   useSyncCustomRegion,
 } from '@/containers/map/content/map/sync-settings';
-import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useNameField from '@/hooks/use-name-field';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
@@ -351,38 +349,15 @@ export const useData = (
   const locale = useLocale();
   const [customRegionLocations] = useSyncCustomRegion();
 
-  // TODO TECH-3174: Clean up,
-  const areTerritoriesActive = useFeatureFlag('are_territories_active');
-
-  // TODO TECH-3174: Clean up, only filter by group code === locationCode
   const regionLocationFilter = useMemo(() => {
-    if (areTerritoriesActive) {
-      return {
-        groups: {
-          code: {
-            $eq: locationCode,
-          },
-        },
-      };
-    }
-
     return {
-      $and: [
-        {
-          groups: {
-            code: {
-              $eq: locationCode,
-            },
-          },
+      groups: {
+        code: {
+          $eq: locationCode,
         },
-        {
-          code: {
-            $notIn: [...NEW_LOCS],
-          },
-        },
-      ],
+      },
     };
-  }, [areTerritoriesActive, locationCode]);
+  }, [locationCode]);
 
   const customRegionLocationFilter = useMemo(() => {
     return {

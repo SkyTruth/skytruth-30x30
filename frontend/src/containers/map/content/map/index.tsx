@@ -73,9 +73,8 @@ const MainMap: FCWithMessages = () => {
   const { data: defaultLayers } = useGetLayers(
     {
       locale,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      fields: ['slug', 'config'], // TODO TECH-3174: Clean up config
+      fields: 'slug',
       filters: {
         default: {
           $eq: true,

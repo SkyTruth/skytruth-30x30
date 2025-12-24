@@ -10,11 +10,9 @@ import { CustomRegionActions, customRegionEngaged } from '@/components/analytics
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { NEW_LOCS } from '@/constants/territories'; // TODO TECH-3174: Clean up
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { popupAtom } from '@/containers/map/store';
-import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TODO TECH-3174: Clean up
 import useNameField from '@/hooks/use-name-field';
 import { cn } from '@/lib/classnames';
 import GlobeIcon from '@/styles/icons/globe.svg';
@@ -76,12 +74,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const prevLocation = useRef(currentLocation !== CUSTOM_REGION_CODE ? currentLocation : 'GLOB');
 
   const [customRegionLocations, setCustomRegionLocations] = useSyncCustomRegion();
-
-  // TODO TECH-3174: Clean up
-  const areTerritoriesActive = useFeatureFlag('are_territories_active');
-
-  // TODO TECH-3233 Clean up
-  const isCustomRegionEnabled = useFeatureFlag('is_custom_region_active');
 
   const { data: locationsData } = useGetLocations(
     {
@@ -186,21 +178,15 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
   const filteredLocations = useMemo(() => {
     if (!locationsFilter) {
-      // TODO TECH-3174: Clean up
-      return areTerritoriesActive
-        ? reorderedLocations
-        : reorderedLocations.filter(({ attributes }) => !NEW_LOCS.has(attributes.code));
+      return reorderedLocations;
     }
 
     if (currentLocation !== CUSTOM_REGION_CODE && locationsFilter === 'customRegion') {
       setLocationsFilter('all');
     }
 
-    let filtered = reorderedLocations.filter(
-      ({ attributes }) =>
-        // TODO TECH-3174: Clean up NEW_LOCS filter
-        FILTERS[locationsFilter].includes(attributes.type) &&
-        (areTerritoriesActive || !NEW_LOCS.has(attributes.code))
+    let filtered = reorderedLocations.filter(({ attributes }) =>
+      FILTERS[locationsFilter].includes(attributes.type)
     );
 
     if (locationsFilter === 'customRegion') {
@@ -236,14 +222,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       }
     }
     return filtered;
-  }, [
-    currentLocation,
-    locationsFilter,
-    reorderedLocations,
-    areTerritoriesActive,
-    customRegionLocations,
-    t,
-  ]);
+  }, [currentLocation, locationsFilter, reorderedLocations, customRegionLocations, t]);
 
   const customRegionCTA = isCustomRegionActive
     ? t('close-custom-region')
@@ -310,30 +289,28 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           {t('global-view')}
         </Button>
       )}
-      {/* TODO TECH-3233: Clean up */}
-      {isCustomRegionEnabled ? (
-        <Button
-          className={cn({
-            [BUTTON_CLASSES]: true,
-            'row-start-2':
-              (locationCode !== 'GLOB' && !isCustomRegionActive) ||
-              (locale !== 'en' && !isCustomRegionActive),
-          })}
-          type="button"
-          variant="text-link"
-          onClick={handleToggleCustomRegion}
-        >
-          <PlusCircle
-            className={cn(
-              {
-                'rotate-45': isCustomRegionActive,
-              },
-              'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
-            )}
-          />
-          {customRegionCTA}
-        </Button>
-      ) : null}
+
+      <Button
+        className={cn({
+          [BUTTON_CLASSES]: true,
+          'row-start-2':
+            (locationCode !== 'GLOB' && !isCustomRegionActive) ||
+            (locale !== 'en' && !isCustomRegionActive),
+        })}
+        type="button"
+        variant="text-link"
+        onClick={handleToggleCustomRegion}
+      >
+        <PlusCircle
+          className={cn(
+            {
+              'rotate-45': isCustomRegionActive,
+            },
+            'ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300'
+          )}
+        />
+        {customRegionCTA}
+      </Button>
 
       {showEEZWarning ? (
         <Button
