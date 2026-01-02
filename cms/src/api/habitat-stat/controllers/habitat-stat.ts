@@ -4,38 +4,9 @@
 
 import { factories } from '@strapi/strapi'
 
-import filterSovereigns from '../../../utils/filter-sovereigns';
-
 export const HABITAT_STATS_NAMESPACE = 'api::habitat-stat.habitat-stat';
 
 export default factories.createCoreController(HABITAT_STATS_NAMESPACE, ({ strapi }) => ({
-    async find(ctx) {
-          // TODO TECH-3174: Clean up
-        const { query } = ctx;
-        let locationFilter = query?.filters?.location;
-        const areTerritoriesActive = await strapi
-            .service('api::feature-flag.feature-flag')
-            .getFeaureFlag(ctx, 'are_territories_active');
-
-        if (locationFilter && !areTerritoriesActive) {
-            query.filters.location = filterSovereigns({...locationFilter})
-        }
-        
-        // find the most recently updated record and return its updatedAt date
-        const newQuery = {
-            ...ctx.query,
-            fields: ['updatedAt'],
-            sort: { updatedAt: 'desc' },
-            limit: 1
-        };
-        const updatedAt = await strapi.entityService.findMany(HABITAT_STATS_NAMESPACE, newQuery).then((data) => {
-            return data[0]?.updatedAt ?? null;
-        });
-        // run the original find function
-        const { data, meta } = await super.find(ctx);
-        // add the updatedAt date to the meta object
-        return { data, meta: { ...meta, updatedAt } }
-    },
     async bulkUpsert(ctx) {
         try {
             const { data } = ctx?.request?.body;

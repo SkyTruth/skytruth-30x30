@@ -317,17 +317,17 @@ def upload_gdf(
 
     Parameters:
     ----------
-    gdf : gpd.GeoDataFrame
-        The GeoDataFrame to upload.
     bucket_name : str
         Name of the GCS bucket.
+    gdf : gpd.GeoDataFrame
+        The GeoDataFrame to upload.
     destination_blob_name : str
         Destination path for the .geojson file in the bucket.
     project_id : str, optional
         Google Cloud project ID. Defaults to global PROJECT.
-    verbose : bool
+    verbose : bool, optional
         If True, prints progress messages.
-    timeout : int
+    timeout : int, optional
         Timeout in seconds for the upload. Defaults to 600 (10 minutes).
     """
     client = storage.Client(project=project_id)
@@ -340,6 +340,72 @@ def upload_gdf(
             print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
 
         bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
+
+    if verbose:
+        print("Upload complete.")
+
+
+def upload_gdf_zip(
+    bucket_name: str,
+    gdf: gpd.GeoDataFrame,
+    destination_blob_name: str,
+    project_id: str = PROJECT,
+    verbose: bool = True,
+    timeout: int = 600,
+    output_file_type: str = ".gpkg",
+) -> None:
+    """
+    Saves a GeoDataFrame to GCS as a zipped .gpkg or .shp file.
+
+    Parameters:
+    ----------
+    bucket_name : str
+        Name of the GCS bucket.
+    gdf : gpd.GeoDataFrame
+        The GeoDataFrame to upload.
+    destination_blob_name : str
+        Destination path for the .zip file in the bucket.
+    project_id : str, optional
+        Google Cloud project ID. Defaults to global PROJECT.
+    verbose : bool, optional
+        If True, prints progress messages.
+    timeout : int, optional
+        Timeout in seconds for the upload. Defaults to 600 (10 minutes).
+    output_file_type : str, optional
+        File extension, either .gpkg or .shp. Defaults to .gpkg.
+    """
+    client = storage.Client(project=project_id)
+    bucket = client.bucket(bucket_name)
+
+    # Export as a zipped geopackage or shapefile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Get the file name (excluding any folder names and extensions)
+        file_name = os.path.splitext(os.path.basename(destination_blob_name))[0]
+
+        # Create data file
+        gdf_path = os.path.join(tmpdir, file_name + output_file_type)
+        gdf.to_file(gdf_path)
+
+        # Create zip file
+        zip_path = os.path.join(tmpdir, file_name + ".zip")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            if output_file_type == ".gpkg":
+                zf.write(gdf_path, arcname=file_name + output_file_type)
+            elif output_file_type == ".shp":
+                # Add shapefiles (.shp, .shx, .dbf, .prj)
+                for file in os.listdir(tmpdir):
+                    if not file.endswith(".zip"):
+                        file_path = os.path.join(tmpdir, file)
+                        zf.write(file_path, arcname=file)
+            else:
+                raise ValueError(
+                    f"Unsupported file extension: {output_file_type} (expected .gpkg or .shp)"
+                )
+
+        if verbose:
+            print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
+
+        bucket.blob(destination_blob_name).upload_from_filename(zip_path, timeout=timeout)
 
     if verbose:
         print("Upload complete.")
@@ -713,7 +779,22 @@ def load_gdb_layer_from_gcs(
 
             return pd.concat((to_append), axis=0)
 
-            return gdf
+
+def rename_blob(bucket_name, old_name, new_name, verbose=True):
+    """
+    Rename a blob in Google Cloud Storage by copying it
+    to a new name and deleting the original.
+    """
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+
+    blob = bucket.blob(old_name)
+    bucket.copy_blob(blob, bucket, new_name)
+    blob.delete()
+
+    if verbose:
+        print(f"Renamed '{old_name}' → '{new_name}' in bucket '{bucket_name}'")
 
 
 def download_file_from_gcs(

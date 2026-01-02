@@ -5,6 +5,7 @@ import tracemalloc
 import psutil
 import pyarrow
 
+from src.core.commons import send_slack_alert
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -72,12 +73,6 @@ def release_memory(verbose=True):
     """
     Free up memory
     """
-
-    # log memory allocation before releasing memory
-    if verbose:
-        show_mem("Before releasing memory")
-        show_container_mem("Container memory before releasing memory")
-
     # Run garbage collector
     gc.collect()
 
@@ -87,7 +82,6 @@ def release_memory(verbose=True):
 
     # log memory allocation after releasing memory
     if verbose:
-        show_mem("After releasing memory")
         show_container_mem("Container memory after releasing memory")
 
 
@@ -103,6 +97,9 @@ def handle_sigterm(signum, frame):
             "line_number": frame.f_lineno,
         }
     )
+
+    webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
+    send_slack_alert(webhook_url, "TIMEOUT ERROR - SIGTERM signal received")
 
     # Free up memory
     release_memory()

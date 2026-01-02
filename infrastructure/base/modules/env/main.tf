@@ -313,6 +313,8 @@ locals {
     PROJECT             = var.gcp_project_id
     STRAPI_API_URL      = local.api_lb_url
     STRAPI_USERNAME     = var.backend_write_user
+    LOCATION            = var.gcp_region
+    ENVIRONMENT         = var.environment
   }
 
   data_processing_cloud_function_secrets = [{
@@ -338,6 +340,12 @@ locals {
     project_id = var.gcp_project_id
     secret     = module.postgres_application_user_password.secret_name
     version    = module.postgres_application_user_password.latest_version
+  },
+  {
+    key        = "SLACK_ALERTS_WEBHOOK"
+    project_id = var.gcp_project_id
+    secret     = "gcp-slack-alerts-webhook"
+    version    = "latest"
   }]
 }
 
@@ -372,22 +380,73 @@ resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
-resource "google_service_account" "scheduler_invoker" {
-  account_id   = "${var.project_name}-scheduler-sa"
-  display_name = "${var.project_name} Cloud Scheduler Invoker"
+resource "google_project_iam_member" "google_cloudtasks_iam_member" {
+  count = length(var.cloud_tasks_roles)
+
+  project = var.gcp_project_id
+  role    = var.cloud_tasks_roles[count.index]
+  member  = "serviceAccount:${module.data_pipes_cloud_function.runtime_service_account_email}"
 }
 
-resource "google_cloudfunctions2_function_iam_member" "scheduler_invoker" {
+variable "cloud_tasks_roles" {
+  description = "List of roles to grant to the Data Pipes Service Account"
+  type        = list(string)
+  default     = [
+    "roles/iam.serviceAccountTokenCreator",
+    "roles/iam.serviceAccountUser",
+    "roles/cloudtasks.enqueuer"
+  ]
+}
+
+resource "google_service_account" "cloudtasks_invoker" {
+  account_id   = "${var.project_name}-data-tasks-invoker"
+  display_name = "${var.project_name} Data Pipes Cloud Tasks Invoker"
+}
+
+resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
   project        = var.gcp_project_id
   location       = var.gcp_region
   cloud_function = module.data_pipes_cloud_function.function_name
   role           = "roles/cloudfunctions.invoker"
-  member         = "serviceAccount:${google_service_account.scheduler_invoker.email}"
+  member         = "serviceAccount:${google_service_account.cloudtasks_invoker.email}"
+  depends_on = [google_service_account.cloudtasks_invoker]
 }
 
-module "download_mpatlas_scheduler" {
+module "monthly_job_queue" {
+  source = "../cloudtasks"
+
+  queue_name  = "${var.project_name}-monthly-data-pipes-jobs"
+  location    = var.gcp_region
+
+  target_url = module.data_pipes_cloud_function.function_uri
+  invoker_service_account_email = google_service_account.cloudtasks_invoker.email
+
+  max_concurrent_dispatches = 1
+  max_dispatches_per_second = 1
+
+  # Just try one time - retries are handled in handler
+  max_attempts       = 0
+
+  enable_dlq = false
+}
+
+resource "google_service_account" "scheduler_invoker" {
+  account_id   = "${var.project_name}-data-pipes-invoker-sa"
+  display_name = "${var.project_name} Cloud Scheduler Invoker"
+}
+
+resource "google_cloud_run_service_iam_member" "scheduler_invoker" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+  service  = module.data_pipes_cloud_function.service_name
+
+  role   = "roles/run.invoker"
+  member = "serviceAccount:${google_service_account.scheduler_invoker.email}"
+}
+
+module "data_pipes_scheduler" {
   source                   = "../cloud_scheduler"
-  name                     = "${var.project_name}-trigger-mpatlas-download-method"
+  name                     = "${var.project_name}-trigger-data-pipes-method"
   schedule                 = "0 8 1 * *"
   target_url               = module.data_pipes_cloud_function.function_uri
   invoker_service_account  = google_service_account.scheduler_invoker.email
@@ -395,34 +454,10 @@ module "download_mpatlas_scheduler" {
     "Content-Type" = "application/json"
   }
   body = jsonencode({
-    METHOD = "download_mpatlas"
-  })
-}
-
-module "download_protected_seas_scheduler" {
-  source                   = "../cloud_scheduler"
-  name                     = "${var.project_name}-trigger-protected-seas-download-method"
-  schedule                 = "0 9 1 * *"
-  target_url               = module.data_pipes_cloud_function.function_uri
-  invoker_service_account  = google_service_account.scheduler_invoker.email
-  headers = {
-    "Content-Type" = "application/json"
-  }
-  body = jsonencode({
-    METHOD = "download_protected_seas"
-  })
-}
-
-module "download_protected_planet_wdpa_scheduler" {
-  source                   = "../cloud_scheduler"
-  name                     = "${var.project_name}-trigger-wdpa-download-method"
-  schedule                 = "0 10 1 * *"
-  target_url               = module.data_pipes_cloud_function.function_uri
-  invoker_service_account  = google_service_account.scheduler_invoker.email
-  headers = {
-    "Content-Type" = "application/json"
-  }
-  body = jsonencode({
-    METHOD = "download_protected_planet_wdpa"
+    METHOD              = "publisher",
+    TRIGGER_NEXT        = true,
+    QUEUE_NAME          = module.monthly_job_queue.queue_name,
+    TARGET_URL          = module.data_pipes_cloud_function.function_uri,
+    INVOKER_SA          = google_service_account.cloudtasks_invoker.email
   })
 }

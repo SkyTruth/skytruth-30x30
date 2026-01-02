@@ -120,6 +120,7 @@ WDPA_COUNTRY_LEVEL_FILE_NAME = "raw/WDPA_country_level.csv"
 ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_country_level.csv"
 WDPA_GLOBAL_LEVEL_FILE_NAME = "raw/WDPA_global_level.csv"
 ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_global_level.csv"
+WDPA_PA_FILE_NAME = "intermediates/pa_updates/WDPA_PA_changes.pkl"
 ARCHIVE_WDPA_PA_FILE_NAME = f"archive/pa_updates/WDPA_{today_formatted}_PA_changes.pkl"
 WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_download"
 WDPA_MPA_FILE_NAME = "raw/WDPA_marine_protected_areas.geojson"
@@ -196,3 +197,9 @@ LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
 RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
+
+# ------------------------------------------------------------
+#                     Conservation Builder
+# ------------------------------------------------------------
+CONSERVATION_BUILDER_MARINE_DATA = f"conservation_builder/eez_minus_mpa_{today_formatted}.zip"
+CONSERVATION_BUILDER_TERRESTRIAL_DATA = f"conservation_builder/gadm_minus_pa_{today_formatted}.zip"

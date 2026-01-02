@@ -17,3 +17,11 @@ output "function_service_name" {
 output "service_account_email" {
   value = google_cloudfunctions2_function.function.service_config[0].service_account_email
 }
+
+output "service_name" {
+  value = google_cloudfunctions2_function.function.service_config[0].service
+}
+
+output "runtime_service_account_email" {
+  value = google_service_account.service_account.email
+}
