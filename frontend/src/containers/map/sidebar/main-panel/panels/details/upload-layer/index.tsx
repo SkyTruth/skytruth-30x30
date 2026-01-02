@@ -1,16 +1,16 @@
 import { ChangeEvent, ChangeEventHandler, useCallback, useState } from 'react';
 
-import { useSetAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import { Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { drawStateAtom } from '@/containers/map/store';
+import { userLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 
 const UploadLayer = () => {
-  const setDrawState = useSetAtom(drawStateAtom);
+  const [userLayers, setUserLayers] = useAtom(userLayersAtom);
   // Remove this
   // eslint-disable-next-line
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -22,16 +22,18 @@ const UploadLayer = () => {
 
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
+          console.log(geojson)
           setErrorMessage(null);
-          setDrawState({ active: false, feature: geojson, status: 'success' });
+          setUserLayers([... userLayers, {name: "user-layer", geoJSON: geojson}]);
         } catch (errorMessage) {
+          console.log("ERROR", errorMessage)
           setErrorMessage(errorMessage as string);
         }
       };
 
       void handler(e);
     },
-    [setDrawState]
+    [setUserLayers, userLayers]
   );
 
   const BUTTON_CLASSES =

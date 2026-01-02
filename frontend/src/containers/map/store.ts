@@ -8,6 +8,7 @@ import { CustomMapProps } from '@/components/map/types';
 import type { SharedMarineAreaCountries } from '@/types';
 import type { Layer } from '@/types/generated/strapi.schemas';
 import type { ModellingData } from '@/types/modelling';
+import type { UserLayer } from '@/types/layers';
 
 export const sidebarAtom = atom(true);
 export const layersAtom = atom(false);
@@ -28,6 +29,9 @@ export const drawStateAtom = atomWithReset<{
   status: 'idle',
   feature: null,
 });
+export const userLayersAtom = atom<UserLayer[]>(
+  [],
+);
 export const sharedMarineAreaCountriesAtom = atom<SharedMarineAreaCountries>([]);
 
 // ? modelling state

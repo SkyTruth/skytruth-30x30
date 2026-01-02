@@ -4,15 +4,14 @@ import { Loader } from '@loaders.gl/loader-utils';
 import { ShapefileLoader } from '@loaders.gl/shapefile';
 import { ZipLoader } from '@loaders.gl/zip';
 import {
-  Feature,
   featureCollection,
-  FeatureCollection,
   GeoJSONObject,
   Geometries,
-  GeometryCollection,
   MultiPolygon,
   Polygon,
 } from '@turf/turf';
+
+import type { Feature, FeatureCollection, GeometryCollection } from 'geojson';
 
 export type ValidGeometryType = Polygon | MultiPolygon | GeometryCollection;
 
@@ -27,6 +26,7 @@ export const supportedFileformats = [
   ...KMLLoader.extensions,
   ...['kmz'],
   ...['shp', 'prj', 'shx', 'dbf', 'cfg'],
+  ...['geojson']
 ];
 
 /**
@@ -97,7 +97,7 @@ export const validateFile = async (
  * @param files Files to convert
  * @returns Error code if the convertion fails
  */
-export async function convertFilesToGeojson(files: File[]): Promise<Feature<ValidGeometryType>> {
+export async function convertFilesToGeojson(files: File[]): Promise<FeatureCollection> {
   // If multiple files are uploaded and one of them is a ShapeFile, this is the one we pass to the
   // loader because it is the one `ShapefileLoader` expects (out of the .prj, .shx, etc. other
   // Shapefile-related files). If the user uploaded files of a different extension, we just take the
@@ -156,6 +156,7 @@ export async function convertFilesToGeojson(files: File[]): Promise<Feature<Vali
         reproject: true,
       },
       shp: {
+        shape: 'geojson',
         // Shapefiles can hold up to 4 dimensions (XYZM). By default all dimensions are parsed;
         // when set to 2 only the X and Y dimensions are parsed. If not set, the resulting geometry
         // will not match the GeoJSON Specification (RFC 7946) and Google Maps will crash.
@@ -186,19 +187,29 @@ export async function convertFilesToGeojson(files: File[]): Promise<Feature<Vali
     return Promise.reject(UploadErrorType.UnsupportedFile);
   }
 
+  let parsed: FeatureCollection;
+
   if (loader === ShapefileLoader) {
-    content = (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>).data[0];
+    console.log("Content", content)
+    parsed = {
+      type: 'FeatureCollection',
+      features: (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>).data as Feature[]
+    }
+  } else {
+    parsed = content as FeatureCollection;
   }
 
-  let cleanedGeoJSON: Feature<ValidGeometryType>;
+  console.log("Parsed", parsed)
+  return parsed;
+  // let cleanedGeoJSON: Feature<ValidGeometryType>;
 
-  try {
-    cleanedGeoJSON = cleanupGeoJSON(content as GeoJSONObject);
-  } catch (e) {
-    return Promise.reject(UploadErrorType.UnsupportedFile);
-  }
+  // try {
+  //   cleanedGeoJSON = cleanupGeoJSON(content as GeoJSONObject);
+  // } catch (e) {
+  //   return Promise.reject(UploadErrorType.UnsupportedFile);
+  // }
 
-  return cleanedGeoJSON;
+  // return cleanedGeoJSON;
 }
 
 function cleanupGeoJSON(geoJSON: GeoJSONObject): Feature<ValidGeometryType> {
