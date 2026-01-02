@@ -10,7 +10,6 @@ import { useLocale } from 'next-intl';
 import Map, { ZoomControls, Attributions } from '@/components/map';
 import { DEFAULT_VIEW_STATE } from '@/components/map/constants';
 import DrawControls from '@/containers/map/content/map/draw-controls';
-import LayerUploadControls from './layer-upload-controls';
 import LabelsManager from '@/containers/map/content/map/labels-manager';
 import LayersToolbox from '@/containers/map/content/map/layers-toolbox';
 import Modelling from '@/containers/map/content/map/modelling';
@@ -29,6 +28,8 @@ import useMapBounds from '@/hooks/useMapBounds';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped } from '@/types/layers';
+
+import LayerUploadControls from './layer-upload-controls';
 
 const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-manager'), {
   ssr: false,

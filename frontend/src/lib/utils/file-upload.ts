@@ -3,14 +3,7 @@ import { KMLLoader } from '@loaders.gl/kml';
 import { Loader } from '@loaders.gl/loader-utils';
 import { ShapefileLoader } from '@loaders.gl/shapefile';
 import { ZipLoader } from '@loaders.gl/zip';
-import {
-  featureCollection,
-  GeoJSONObject,
-  Geometries,
-  MultiPolygon,
-  Polygon,
-} from '@turf/turf';
-
+import { featureCollection, GeoJSONObject, Geometries, MultiPolygon, Polygon } from '@turf/turf';
 import type { Feature, FeatureCollection, GeometryCollection } from 'geojson';
 
 export type ValidGeometryType = Polygon | MultiPolygon | GeometryCollection;
@@ -26,7 +19,7 @@ export const supportedFileformats = [
   ...KMLLoader.extensions,
   ...['kmz'],
   ...['shp', 'prj', 'shx', 'dbf', 'cfg'],
-  ...['geojson']
+  ...['geojson'],
 ];
 
 /**
@@ -190,16 +183,14 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
   let parsed: FeatureCollection;
 
   if (loader === ShapefileLoader) {
-    console.log("Content", content)
     parsed = {
       type: 'FeatureCollection',
-      features: (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>).data as Feature[]
-    }
+      features: (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>).data as Feature[],
+    };
   } else {
     parsed = content as FeatureCollection;
   }
 
-  console.log("Parsed", parsed)
   return parsed;
   // let cleanedGeoJSON: Feature<ValidGeometryType>;
 
@@ -212,6 +203,8 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
   // return cleanedGeoJSON;
 }
 
+// Remove this
+// eslint-disable-next-line
 function cleanupGeoJSON(geoJSON: GeoJSONObject): Feature<ValidGeometryType> {
   const isFeature = (geoJSON: GeoJSONObject): geoJSON is Feature<Geometries, unknown> =>
     geoJSON.type === 'Feature';

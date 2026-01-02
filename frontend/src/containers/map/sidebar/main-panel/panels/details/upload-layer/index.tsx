@@ -22,11 +22,9 @@ const UploadLayer = () => {
 
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
-          console.log(geojson)
           setErrorMessage(null);
-          setUserLayers([... userLayers, {name: "user-layer", geoJSON: geojson}]);
+          setUserLayers([...userLayers, { name: 'user-layer', geoJSON: geojson }]);
         } catch (errorMessage) {
-          console.log("ERROR", errorMessage)
           setErrorMessage(errorMessage as string);
         }
       };

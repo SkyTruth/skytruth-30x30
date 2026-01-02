@@ -14,7 +14,7 @@ import { drawStateAtom } from '@/containers/map/store';
 
 const DrawControls: FC = () => {
   const [{ active, feature }, setDrawState] = useAtom(drawStateAtom);
-  console.log("Draw controls feature", feature)
+
   const onCreate: UseMapboxDrawProps['onCreate'] = useCallback(
     ({ features }) => {
       setDrawState((prevState) => ({

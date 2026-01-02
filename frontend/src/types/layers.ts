@@ -1,7 +1,7 @@
 import type { AnyLayer, AnySource } from 'react-map-gl';
 
-import { z } from 'zod';
 import { GeoJSON } from 'geojson';
+import { z } from 'zod';
 
 import { FormatProps } from '@/lib/utils/formats';
 import type { Layer } from '@/types/generated/strapi.schemas';
@@ -69,4 +69,4 @@ export type LayerTyped = Layer & {
 export type UserLayer = {
   name: string;
   geoJSON: GeoJSON;
-}
+};
