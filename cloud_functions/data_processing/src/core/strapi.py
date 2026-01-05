@@ -43,7 +43,7 @@ class Strapi:
             if attempt < 3 and response.status_code != 401:
                 self.logger.warning(
                     {
-                        "message": "Failed to authenticate with 30x30 API, retrying . . .",
+                        "message": "Error attempting to authenticate with 30x30 API, retrying...",
                         "exception": str(excep),
                     }
                 )
