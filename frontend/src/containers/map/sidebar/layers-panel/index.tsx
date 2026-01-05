@@ -1,5 +1,6 @@
 import { ComponentProps, useCallback } from 'react';
 
+import { useAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 
 import TooltipButton from '@/components/tooltip-button';
@@ -9,6 +10,10 @@ import { useSyncMapSettings } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
 import { FCWithMessages } from '@/types';
+import { DatasetUpdatedByData } from '@/types/generated/strapi.schemas';
+
+import { userLayersAtom } from '../../store';
+import UploadLayer from '../main-panel/panels/details/upload-layer';
 
 import LayersGroup, { SWITCH_LABEL_CLASSES } from './layers-group';
 
@@ -16,6 +21,8 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
   const [{ labels }, setMapSettings] = useSyncMapSettings();
   const [{ tab }] = useSyncMapContentSettings();
+
+  const [userLayers] = useAtom(userLayersAtom);
 
   const [datasets, { isLoading }] = useDatasetsByEnvironment();
 
@@ -28,6 +35,24 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
     },
     [setMapSettings]
   );
+
+  const renderCustomLayerItems = () => {
+    return userLayers.map((layer) => (
+      <li className="flex items-start justify-between" key={layer.name}>
+        <span className="flex items-start gap-2">
+          <Switch
+            id="labels-switch"
+            className="mt-px"
+            checked={true}
+            onCheckedChange={handleLabelsChange}
+          />
+          <Label htmlFor="labels-switch" className={SWITCH_LABEL_CLASSES}>
+            {layer.name}
+          </Label>
+        </span>
+      </li>
+    ));
+  };
 
   return (
     <div className="h-full overflow-auto px-4 text-xs">
@@ -46,6 +71,20 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
         isOpen={['summary', 'marine'].includes(tab)}
         loading={isLoading}
       />
+      {/*
+          The labels and custom layers toggles don't come from the datasets in the database and have slightly 
+          functionality. It's not an ideal set up, but until custom layers are saved for accounts, we'll pass 
+          the layer options as children to be displayed alongside the other entries, much like in the other
+          implementations.
+      */}
+      <LayersGroup
+        name={'Custom Layers'}
+        datasets={userLayers as DatasetUpdatedByData[]}
+        isOpen={false}
+        loading={false}
+      >
+        {renderCustomLayerItems()}
+      </LayersGroup>
       <LayersGroup
         name={t('basemap')}
         datasets={datasets.basemap}
@@ -55,11 +94,12 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
         showBottomBorder={false}
         extraActiveLayers={labels ? 1 : 0}
       >
-        {/*
-          The labels toggle doesn't come from the basemap dataset and has slightly functionality implemented.
-          Not ideal, but given it's a one-off, we'll pass the entry as a child to be displayed alongside the
-          other entries, much like in the previous implementation.
-        */}
+        <li className="flex items-start justify-between">
+          <span className="flex items-start gap-2">
+            <UploadLayer />
+          </span>
+        </li>
+
         <li className="flex items-start justify-between">
           <span className="flex items-start gap-2">
             <Switch

@@ -5,6 +5,8 @@ import { Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SWITCH_LABEL_CLASSES } from '@/containers/map/sidebar/layers-panel/layers-group';
 import { userLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
@@ -23,7 +25,7 @@ const UploadLayer = () => {
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
           setErrorMessage(null);
-          setUserLayers([...userLayers, { name: 'user-layer', geoJSON: geojson }]);
+          setUserLayers([...userLayers, { name: files[0].name, geoJSON: geojson }]);
         } catch (errorMessage) {
           setErrorMessage(errorMessage as string);
         }
@@ -46,17 +48,21 @@ const UploadLayer = () => {
       variant="text-link"
       onClick={() => {}}
     >
+      {/* <>  */}
+      <Label className={SWITCH_LABEL_CLASSES}>
+        <Upload className="" />
+        Upload layer
+      </Label>
       <Input
         type="file"
         multiple
         accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
         aria-label="Upload a geometry"
         aria-describedby="upload-notes upload-error"
-        className="mt-8"
+        // className="hidden"
         onChange={onChange}
       />
-      <Upload className="ease-&lsqb;cubic-bezier(0.87,_0,_0.13,_1)&rsqb; mr-2 h-4 w-4 pb-px transition-transform duration-300" />
-      Upload layer
+      {/* </> */}
     </Button>
   );
 };
