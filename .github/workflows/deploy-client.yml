@@ -29,7 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Determine environment
+      - name: Determine Environment
         id: env
         uses: ./.gitub/actions/determine-env
         with:
