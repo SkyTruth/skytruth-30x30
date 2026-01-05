@@ -1,0 +1,121 @@
+name: Deploy Services (Shared Orchestrator)
+
+on:
+  workflow_call:
+    inputs:
+      deploy_to_staging:
+        type: boolean
+        required: true
+      deploy_to_prod:
+        type: boolean
+        required: true
+
+# -----------------------------
+# STAGING PHASE
+# -----------------------------
+jobs:
+  staging_client:
+    if: |
+      inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-client.yml
+    secrets: inherit
+    with:
+      target_env: STAGING
+
+  staging_cms:
+    if: |
+      inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-cms.yml
+    secrets: inherit
+    with:
+      target_env: STAGING
+
+  staging_analysis_cloud_functions:
+    if: |
+      inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-analysis-cloud-function.yml
+    secrets: inherit
+    with:
+      target_env: STAGING
+
+  staging_data_cloud_functions:
+    if: inputs.deploy_to_staging
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-data-cloud-function.yml
+    secrets: inherit
+    with:
+      target_env: STAGING
+
+
+  # Barrier job: succeeds only when all staging jobs succeeded
+  staging_complete:
+    if: |
+      inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: [staging_client, staging_cms, staging_analysis_cloud_functions, staging_data_cloud_functions]
+    steps:
+      - run: echo "🎉 All staging deployments completed successfully."
+
+# -----------------------------
+# PRODUCTION PHASE
+# (runs only after staging_complete succeeds)
+# -----------------------------
+  prod_client:
+    if: |
+      inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    needs: [staging_complete]
+    uses: ./.github/workflows/deploy-client.yml
+    secrets: inherit
+    with:
+      target_env: PRODUCTION
+
+  prod_cms:
+    if: |
+      inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    needs: [staging_complete]
+    uses: ./.github/workflows/deploy-cms.yml
+    secrets: inherit
+    with:
+      target_env: PRODUCTION
+
+  prod_analysis_cloud_functions:
+    if: |
+      inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    needs: [staging_complete]
+    uses: ./.github/workflows/deploy-analysis-cloud-function.yml
+    secrets: inherit
+    with:
+      target_env: PRODUCTION
+
+  prod_data_cloud_functions:
+    if: inputs.deploy_to_prod
+    permissions:
+      contents: read
+      id-token: write
+    needs: [staging_complete]
+    uses: ./.github/workflows/deploy-analysis-cloud-function.yml
+    secrets: inherit
+    with:
+      target_env: PRODUCTION

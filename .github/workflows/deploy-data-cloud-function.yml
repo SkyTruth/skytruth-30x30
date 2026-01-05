@@ -1,0 +1,83 @@
+name: Deploy Analysis Cloud Function
+
+on:
+  workflow_call:
+    inputs:
+      target_env:
+        type: string
+        required: true
+    secrets:
+      GCP_PROJECT_ID:
+        required: true
+      GCP_REGION:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: ${{ secrets.GCP_REGION }}
+  REGION: ${{ secrets.GCP_REGION }}
+
+jobs:
+  test_data_cloud_function:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./cloud_functions/data_processing
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: '2.1.3'
+
+      - name: Configure Poetry (no venvs; install into runner)
+        run: poetry config virtualenvs.create false
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Run tests
+        run: poetry run pytest -q
+
+  deploy:
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GCP
+        id: setup
+        uses: ./.github/actions/setup-gcp
+        with:
+          gar_location: ${{ env.GAR_LOCATION }}
+          target_env: ${{ inputs.target_env }}
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 516.0.0'
+          
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
+
+      - name: 'Deploy to gen2 cloud function'
+        env:
+          CLOUD_FUNCTION_NAME: ${{ secrets[format('{0}_DATA_CF_NAME', steps.setup.outputs.environment)] }}
+        run:  |
+          gcloud functions deploy  ${{ env.CLOUD_FUNCTION_NAME }} \
+          --gen2 \
+          --region=${{ env.REGION }} \
+          --source=./cloud_functions/data_processing \

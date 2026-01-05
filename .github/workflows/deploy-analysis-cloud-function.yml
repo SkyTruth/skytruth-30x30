@@ -1,0 +1,52 @@
+name: Deploy Analysis Cloud Function
+
+on:
+  workflow_call:
+    inputs:
+      target_env:
+        type: string
+        required: true
+    secrets:
+      GCP_PROJECT_ID:
+        required: true
+      GCP_REGION:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: ${{ secrets.GCP_REGION }}
+  REGION: ${{ secrets.GCP_REGION }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GCP
+        id: setup
+        uses: ./.github/actions/setup-gcp
+        with:
+          gar_location: ${{ env.GAR_LOCATION }}
+          target_env: ${{ inputs.target_env }}
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 516.0.0'
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
+      - name: 'Deploy to gen2 cloud function'
+        env:
+          CLOUD_FUNCTION_NAME: ${{ secrets[format('{0}_ANALYSIS_CF_NAME', steps.setup.outputs.environment)] }}
+        run:  |
+          gcloud functions deploy  ${{ env.CLOUD_FUNCTION_NAME }} \
+          --gen2 \
+          --region=${{ env.REGION }} \
+          --source=./cloud_functions/analysis \

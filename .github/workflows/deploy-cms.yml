@@ -1,0 +1,67 @@
+name: Deploy CMS
+
+on:
+  workflow_call:
+    inputs:
+      target_env:
+        type: string
+        required: true
+    secrets:
+      GCP_PROJECT_ID:
+        required: true
+      GCP_REGION:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: ${{ secrets.GCP_REGION }}
+  REGION: ${{ secrets.GCP_REGION }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GCP
+        id: setup
+        uses: ./.github/actions/setup-gcp
+        with:
+          gar_location: ${{ env.GAR_LOCATION }}
+          target_env: ${{ inputs.target_env }}
+
+      - name: Copy env variables to docker
+        run: |
+          echo "${{ secrets[format('{0}_CMS_ENV', steps.setup.outputs.environment)] }}" > cms/.env
+          # append Terraform managed secrets
+          echo "${{ secrets[format('{0}_CMS_ENV_TF_MANAGED', steps.setup.outputs.environment)] }}" >> cms/.env
+
+      - name: Build and Push Container
+        env:
+          REPOSITORY: ${{ secrets[format('{0}_CMS_REPOSITORY', steps.setup.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CMS_SERVICE', steps.setup.outputs.environment)] }}
+        run: |-
+          docker build -f cms/Dockerfile.prod -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" ./cms
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
+          # tag as "latest"
+          docker tag "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:latest"
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:latest"
+
+      - name: Deploy to Cloud Run
+        env:
+          REPOSITORY: ${{ secrets[format('{0}_CMS_REPOSITORY', steps.setup.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CMS_SERVICE', steps.setup.outputs.environment)] }}
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
+      - name: Show Output
+        run: echo ${{ steps.deploy.outputs.url }}
