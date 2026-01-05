@@ -465,7 +465,7 @@ def main(request: Request) -> tuple[str, int]:
                     "traceback": traceback.format_exc(),
                 }
             )
-            send_slack_alert(webhook_url, f"METHOD {method} failed")
+            send_slack_alert(webhook_url, f"METHOD {method} failed on {env.upper()}")
             return (
                 f"METHOD {method} failed after {attempt} attempts: {e}",
                 208,
