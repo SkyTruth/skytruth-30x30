@@ -27,6 +27,8 @@ class Strapi:
         """Authenticate with the 30x30 API and return the JWT token."""
 
         attempt = 0
+        response = None
+        status = None
         try:
             attempt += 1
             if not self.PASSWORD:
@@ -36,11 +38,12 @@ class Strapi:
                 data={"identifier": self.USERNAME, "password": self.PASSWORD},
                 timeout=5,
             )
+            status = response.status_code
             response.raise_for_status()
             response_data = response.json()
             return response_data.get("jwt")
         except Exception as excep:
-            if attempt < 3 and response.status_code != 401:
+            if response is not None and attempt < 3 and status != 401:
                 self.logger.warning(
                     {
                         "message": "Error attempting to authenticate with 30x30 API, retrying...",
@@ -53,7 +56,7 @@ class Strapi:
                     {
                         "message": "Failed to authenticate with 30x30 API",
                         "exception": str(excep),
-                        "status_code": response.status_code,
+                        "status_code": status,
                     }
                 )
             raise excep
