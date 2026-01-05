@@ -1,8 +1,9 @@
 """Class for managing API credentials and CRUD methods for the intenral strapi API"""
 
 import os
-from datetime import datetime
 import time
+from datetime import datetime
+
 import requests
 
 from src.utils.logger import Logger
@@ -52,7 +53,7 @@ class Strapi:
                     {
                         "message": "Failed to authenticate with 30x30 API",
                         "exception": str(excep),
-                        "status_code": response.status_code
+                        "status_code": response.status_code,
                     }
                 )
             raise excep
