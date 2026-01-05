@@ -29,22 +29,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Determine environment
+        id: env
+        uses: ./.gitub/actions/determine-env
+        with:
+          target_env: ${{ inputs.target_env }}
+
       - name: Setup GCP
         id: setup
         uses: ./.github/actions/setup-gcp
         with:
           gar_location: ${{ env.GAR_LOCATION }}
-          target_env: ${{ inputs.target_env }}
+          credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.env.outputs.environment)] }}"
 
       - name: Copy env variables to docker
         run: |
-          echo "${{ secrets[format('{0}_CLIENT_ENV', steps.setup.outputs.environment)] }}" > frontend/.env.local
-          echo "${{ secrets[format('{0}_CLIENT_ENV_TF_MANAGED', steps.setup.outputs.environment)] }}" >> frontend/.env.local
+          echo "${{ secrets[format('{0}_CLIENT_ENV', steps.env.outputs.environment)] }}" > frontend/.env.local
+          echo "${{ secrets[format('{0}_CLIENT_ENV_TF_MANAGED', steps.env.outputs.environment)] }}" >> frontend/.env.local
 
       - name: Build and Push Container
         env:
-          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.setup.outputs.environment)] }}
-          SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.setup.outputs.environment)] }}
+          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.env.outputs.environment)] }}
         run: |
           docker build -f frontend/Dockerfile.prod \
             -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" \
@@ -61,8 +67,8 @@ jobs:
       - name: Deploy to Cloud Run
         id: deploy
         env:
-          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.setup.outputs.environment)] }}
-          SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.setup.outputs.environment)] }}
+          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.env.outputs.environment)] }}
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE }}

@@ -2,48 +2,19 @@ name: Setup GCP Auth + Docker
 description: Determine environment, authenticate with GCP, login to Artifact Registry
 
 inputs:
+  credentials_json:
+    required: true
   gar_location:
     required: true
-  target_env:
-    description: "Optional forced env: STAGING or PRODUCTION"
-    required: false
-  secrets: inherit
-
-outputs:
-  branch:
-    value: ${{ steps.branch.outputs.branch }}
-  environment:
-    value: ${{ steps.env.outputs.environment }}
 
 runs:
   using: "composite"
   steps:
-    - name: Extract branch name
-      id: branch
-      shell: bash
-      run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-
-    - name: Determine environment
-      id: env
-      shell: bash
-      run: |
-        # If target_env was provided, use it
-        if [[ -n "${{ inputs.target_env }}" ]]; then
-          echo "environment=${{ inputs.target_env }}" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-
-        # Otherwise infer from branch
-        if [[ "${{ steps.branch.outputs.branch }}" == "main" ]]; then
-          echo "environment=PRODUCTION" >> $GITHUB_OUTPUT
-        else
-          echo "environment=STAGING" >> $GITHUB_OUTPUT
-        fi
 
     - name: Google Auth
       uses: google-github-actions/auth@v2
       with:
-        credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.env.outputs.environment)] }}"
+        credentials_json: "${{ inputs.credentials_json }}"
         token_format: access_token
 
     - name: Docker Auth
@@ -51,4 +22,4 @@ runs:
       with:
         registry: ${{ inputs.gar_location }}-docker.pkg.dev
         username: _json_key
-        password: ${{ secrets[format('{0}_GCP_SA_KEY', steps.env.outputs.environment)] }}
+        password: ${{ inputs.credentials_json }}
