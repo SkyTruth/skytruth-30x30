@@ -15,7 +15,7 @@ on:
     - '.github/workflows/*'
 
 jobs:
-  deploy:
+  staging:
     uses: ./.github/workflows/deploy-services.yml
     secrets: inherit
     with:

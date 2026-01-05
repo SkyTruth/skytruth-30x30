@@ -31,7 +31,7 @@ jobs:
 
       - name: Determine Environment
         id: env
-        uses: ./.gitub/actions/determine-env
+        uses: ./.github/actions/determine-env
         with:
           target_env: ${{ inputs.target_env }}
 
