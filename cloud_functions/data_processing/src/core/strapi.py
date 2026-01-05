@@ -1,6 +1,7 @@
 """Class for managing API credentials and CRUD methods for the intenral strapi API"""
 
 import os
+import time
 from datetime import datetime
 
 import requests
@@ -24,7 +25,12 @@ class Strapi:
     # this inlcudes all PUT and POST endpoints
     def authenticate(self) -> str:
         """Authenticate with the 30x30 API and return the JWT token."""
+
+        attempt = 0
+        response = None
+        status = None
         try:
+            attempt += 1
             if not self.PASSWORD:
                 raise ValueError("No API password provided")
             response = requests.post(
@@ -32,16 +38,27 @@ class Strapi:
                 data={"identifier": self.USERNAME, "password": self.PASSWORD},
                 timeout=5,
             )
+            status = response.status_code
             response.raise_for_status()
             response_data = response.json()
             return response_data.get("jwt")
         except Exception as excep:
-            self.logger.error(
-                {
-                    "message": "Failed to authenticate with 30x30 API",
-                    "exception": str(excep),
-                }
-            )
+            if response is not None and attempt < 3 and status != 401:
+                self.logger.warning(
+                    {
+                        "message": "Error attempting to authenticate with 30x30 API, retrying...",
+                        "exception": str(excep),
+                    }
+                )
+                time.sleep(10)
+            else:
+                self.logger.error(
+                    {
+                        "message": "Failed to authenticate with 30x30 API",
+                        "exception": str(excep),
+                        "status_code": status,
+                    }
+                )
             raise excep
 
     def upsert_pas(self, pas: list[dict]) -> dict:
