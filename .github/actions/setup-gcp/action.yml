@@ -7,6 +7,7 @@ inputs:
   target_env:
     description: "Optional forced env: STAGING or PRODUCTION"
     required: false
+  secrets: inherit
 
 outputs:
   branch:
