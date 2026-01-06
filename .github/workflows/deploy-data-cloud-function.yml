@@ -52,6 +52,7 @@ jobs:
 
   deploy_data_cloud_functions:
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: test_data_cloud_function
     runs-on: ubuntu-latest
 
     steps:
