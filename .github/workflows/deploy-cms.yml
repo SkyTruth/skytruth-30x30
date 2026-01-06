@@ -22,30 +22,36 @@ env:
   REGION: ${{ secrets.GCP_REGION }}
 
 jobs:
-  deploy:
+  deploy_cms:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Determine Environment
+        id: env
+        uses: ./.github/actions/determine-env
+        with:
+          target_env: ${{ inputs.target_env }}
+
       - name: Setup GCP
         id: setup
         uses: ./.github/actions/setup-gcp
         with:
           gar_location: ${{ env.GAR_LOCATION }}
-          target_env: ${{ inputs.target_env }}
+          credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.env.outputs.environment)] }}"
 
       - name: Copy env variables to docker
         run: |
-          echo "${{ secrets[format('{0}_CMS_ENV', steps.setup.outputs.environment)] }}" > cms/.env
+          echo "${{ secrets[format('{0}_CMS_ENV', steps.env.outputs.environment)] }}" > cms/.env
           # append Terraform managed secrets
-          echo "${{ secrets[format('{0}_CMS_ENV_TF_MANAGED', steps.setup.outputs.environment)] }}" >> cms/.env
+          echo "${{ secrets[format('{0}_CMS_ENV_TF_MANAGED', steps.env.outputs.environment)] }}" >> cms/.env
 
       - name: Build and Push Container
         env:
-          REPOSITORY: ${{ secrets[format('{0}_CMS_REPOSITORY', steps.setup.outputs.environment)] }}
-          SERVICE: ${{ secrets[format('{0}_CMS_SERVICE', steps.setup.outputs.environment)] }}
+          REPOSITORY: ${{ secrets[format('{0}_CMS_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CMS_SERVICE', steps.env.outputs.environment)] }}
         run: |-
           docker build -f cms/Dockerfile.prod -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" ./cms
           docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
@@ -55,8 +61,8 @@ jobs:
 
       - name: Deploy to Cloud Run
         env:
-          REPOSITORY: ${{ secrets[format('{0}_CMS_REPOSITORY', steps.setup.outputs.environment)] }}
-          SERVICE: ${{ secrets[format('{0}_CMS_SERVICE', steps.setup.outputs.environment)] }}
+          REPOSITORY: ${{ secrets[format('{0}_CMS_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CMS_SERVICE', steps.env.outputs.environment)] }}
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:

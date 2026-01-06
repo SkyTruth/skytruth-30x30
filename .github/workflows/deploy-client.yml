@@ -22,7 +22,7 @@ env:
   REGION: ${{ secrets.GCP_REGION }}
 
 jobs:
-  deploy:
+  deploy_client:
     runs-on: ubuntu-latest
 
     steps:

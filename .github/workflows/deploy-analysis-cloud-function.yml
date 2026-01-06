@@ -22,19 +22,25 @@ env:
   REGION: ${{ secrets.GCP_REGION }}
 
 jobs:
-  deploy:
+  deploy_analysis_cloud_function:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Determine Environment
+        id: env
+        uses: ./.github/actions/determine-env
+        with:
+          target_env: ${{ inputs.target_env }}
+
       - name: Setup GCP
         id: setup
         uses: ./.github/actions/setup-gcp
         with:
           gar_location: ${{ env.GAR_LOCATION }}
-          target_env: ${{ inputs.target_env }}
+          credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.env.outputs.environment)] }}"
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
@@ -44,7 +50,7 @@ jobs:
         run: 'gcloud info'
       - name: 'Deploy to gen2 cloud function'
         env:
-          CLOUD_FUNCTION_NAME: ${{ secrets[format('{0}_ANALYSIS_CF_NAME', steps.setup.outputs.environment)] }}
+          CLOUD_FUNCTION_NAME: ${{ secrets[format('{0}_ANALYSIS_CF_NAME', steps.env.outputs.environment)] }}
         run:  |
           gcloud functions deploy  ${{ env.CLOUD_FUNCTION_NAME }} \
           --gen2 \
