@@ -115,7 +115,7 @@ jobs:
       contents: read
       id-token: write
     needs: [staging_complete]
-    uses: ./.github/workflows/deploy-analysis-cloud-function.yml
+    uses: ./.github/workflows/deploy-data-cloud-function.yml
     secrets: inherit
     with:
       target_env: PRODUCTION
