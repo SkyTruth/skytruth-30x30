@@ -60,30 +60,6 @@ def get_connection(format: str = "psycopg"):
         )
 
 
-def split_by_grid(gdf_country, grid_gdf):
-    """
-    Split GeoDataFrame based on a grid for faster loading from PostgreSQL database
-    on Conservation Builder.
-
-    Parameters
-    ----------
-      gdf_country : gpd.GeoDataFrame
-        Country boundary.
-      grid_gdf : gpd.GeoDataFrame
-        Grid filtered to country.
-    """
-    # Do not split ABNJ
-    if gdf_country['location'].eq('ABNJ').any():
-        return gdf_country
-
-    # Clip geometries to grid
-    result = gpd.overlay(gdf_country, grid_gdf, how='intersection', keep_geom_type=False)
-    result.geometry = result.geometry.make_valid()
-    result = result[result.geometry.geom_type.isin(["MultiPolygon", "Polygon"])]
-    
-    return result
-
-
 def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     Update Conservation Builder table from GCS file.
@@ -112,47 +88,6 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
         )
         
-        if table_name == "gadm_minus_pa_v2":
-            # To save loading time, split into 2000km grid
-            grid_size = 2000000
-            if verbose:
-                logger.info({"message": f"Splitting into tiles."})
-
-            # Get list of unique country codes
-            countries = gdf["location"].unique().tolist()
-          
-            # Create grid
-            gdf = gdf.to_crs("EPSG:3857") # Meters
-            minx_m, miny_m, maxx_m, maxy_m = gdf.total_bounds
-            
-            x_coords = np.arange(np.floor(minx_m / grid_size) * grid_size, 
-                                np.ceil(maxx_m / grid_size) * grid_size, 
-                                grid_size)
-            y_coords = np.arange(np.floor(miny_m / grid_size) * grid_size,
-                                np.ceil(maxy_m / grid_size) * grid_size,
-                                grid_size)
-            grid_cells = [box(x, y, x + grid_size, y + grid_size) 
-                          for x in x_coords for y in y_coords]
-            grid_gdf = gpd.GeoDataFrame({'geometry': grid_cells}, crs='EPSG:3857')
-
-            # Find grids intersecting each country
-            country_grids = {}
-            for country in countries:
-                country_geom = gdf[gdf["location"] == country]
-                country_grids[country] = grid_gdf.iloc[
-                    list(grid_gdf.sindex.intersection(country_geom.total_bounds))
-                ]
-            
-            # Divide into grid in parallel
-            results = Parallel(n_jobs=-1, backend="loky")(
-                delayed(split_by_grid)(
-                    gdf[gdf["location"] == country].reset_index(drop=True),
-                    country_grids.get(country, gpd.GeoDataFrame())
-                )
-                for country in tqdm(countries)
-            )
-            gdf = pd.concat(results).reset_index(drop=True).to_crs('EPSG:4326')
-
         # Update geometry name for consistency in PostgreSQL database
         gdf = gdf.rename_geometry("the_geom")
 
@@ -168,6 +103,13 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             index_label="id",
             dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
         )
+        
+        # Create spatial index
+        conn.execute(f"""
+            CREATE INDEX gist_{table_name}_geom 
+            ON data.{table_name} USING GIST (the_geom);
+        """)
+        conn.commit()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
