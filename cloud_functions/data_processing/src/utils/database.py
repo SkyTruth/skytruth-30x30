@@ -1,13 +1,9 @@
 import os
-import geopandas as gpd
-import numpy as np
-import pandas as pd
+
 import psycopg
 from psycopg.rows import dict_row
-from shapely.geometry import MultiPolygon, Polygon, box
-from sqlalchemy import create_engine
-from joblib import Parallel, delayed
-from tqdm.auto import tqdm
+from shapely.geometry import MultiPolygon, Polygon
+from sqlalchemy import create_engine, text
 
 from src.core.params import BUCKET
 from src.utils.gcp import load_zipped_shapefile_from_gcs
@@ -87,7 +83,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
         gdf["geometry"] = gdf["geometry"].apply(
             lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
         )
-        
+
         # Update geometry name for consistency in PostgreSQL database
         gdf = gdf.rename_geometry("the_geom")
 
@@ -103,13 +99,14 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             index_label="id",
             dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
         )
-        
+
         # Create spatial index
-        conn.execute(f"""
-            CREATE INDEX gist_{table_name}_geom 
-            ON data.{table_name} USING GIST (the_geom);
-        """)
-        conn.commit()
+        with conn.connect() as connection:
+            connection.execute(text(f"""
+                CREATE INDEX IF NOT EXISTS gist_{table_name}_geom 
+                ON data.{table_name} USING GIST (the_geom);
+            """))
+            connection.commit()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
