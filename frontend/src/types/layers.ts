@@ -68,5 +68,5 @@ export type LayerTyped = Layer & {
 
 export type UserLayer = {
   name: string;
-  geoJSON: GeoJSON;
+  geoJSON?: GeoJSON;
 };

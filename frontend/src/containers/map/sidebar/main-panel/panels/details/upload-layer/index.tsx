@@ -3,12 +3,12 @@ import { ChangeEvent, ChangeEventHandler, useCallback, useState } from 'react';
 import { useAtom } from 'jotai';
 import { Upload } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+// import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SWITCH_LABEL_CLASSES } from '@/containers/map/sidebar/layers-panel/layers-group';
 import { userLayersAtom } from '@/containers/map/store';
-import { cn } from '@/lib/classnames';
+// import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 
 const UploadLayer = () => {
@@ -21,7 +21,6 @@ const UploadLayer = () => {
     (e) => {
       const handler = async (e: ChangeEvent<HTMLInputElement>) => {
         const { files } = e.currentTarget;
-
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
           setErrorMessage(null);
@@ -36,34 +35,33 @@ const UploadLayer = () => {
     [setUserLayers, userLayers]
   );
 
-  const BUTTON_CLASSES =
-    'font-mono text-xs font-semibold no-underline normal-case ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all px-0 text-left h-auto justify-start py-0';
+  // const BUTTON_CLASSES =
+  // 'font-mono text-xs font-semibold no-underline normal-case ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all px-0 text-left h-auto justify-start py-0';
 
   return (
-    <Button
-      className={cn({
-        [BUTTON_CLASSES]: true,
-      })}
-      type="button"
-      variant="text-link"
-      onClick={() => {}}
-    >
-      {/* <>  */}
-      <Label className={SWITCH_LABEL_CLASSES}>
-        <Upload className="" />
-        Upload layer
-      </Label>
+    //  <Button
+    //   className={cn({
+    //     [BUTTON_CLASSES]: true,
+    //   })}
+    //   type="button"
+    //   variant="text-link"
+    //   onClick={() => {}}
+    // >
+    //@ts-ignore
+    <Label htmlFor="upload-layer" className={SWITCH_LABEL_CLASSES}>
       <Input
+        id="upload-layer"
         type="file"
         multiple
         accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
         aria-label="Upload a geometry"
         aria-describedby="upload-notes upload-error"
-        // className="hidden"
+        className="hidden"
         onChange={onChange}
       />
-      {/* </> */}
-    </Button>
+      <Upload size={18} />
+    </Label>
+    // </Button>
   );
 };
 

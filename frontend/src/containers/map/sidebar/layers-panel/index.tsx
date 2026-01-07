@@ -13,7 +13,7 @@ import { FCWithMessages } from '@/types';
 import { DatasetUpdatedByData } from '@/types/generated/strapi.schemas';
 
 import { userLayersAtom } from '../../store';
-import UploadLayer from '../main-panel/panels/details/upload-layer';
+// import UploadLayer from '../main-panel/panels/details/upload-layer';
 
 import LayersGroup, { SWITCH_LABEL_CLASSES } from './layers-group';
 
@@ -94,12 +94,6 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
         showBottomBorder={false}
         extraActiveLayers={labels ? 1 : 0}
       >
-        <li className="flex items-start justify-between">
-          <span className="flex items-start gap-2">
-            <UploadLayer />
-          </span>
-        </li>
-
         <li className="flex items-start justify-between">
           <span className="flex items-start gap-2">
             <Switch
