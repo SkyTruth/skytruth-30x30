@@ -61,7 +61,8 @@ def get_locations_stats(
                     SELECT ST_GeomFromGeoJSON(:geometry) AS geom
                 ),
                 user_data_stats AS (
-                    SELECT *,
+                    SELECT
+                        geom,
                         round((st_area(st_transform(geom,
                         '+proj=longlat +datum=WGS84 +no_defs +type=crs',
                         '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
@@ -69,7 +70,7 @@ def get_locations_stats(
                     FROM user_data
                 )
             SELECT
-                location,
+                t.location,
                 round((st_area(st_transform(
                     st_makevalid(st_intersection(the_geom, user_data_stats.geom)),
                     '+proj=longlat +datum=WGS84 +no_defs +type=crs',
@@ -77,10 +78,10 @@ def get_locations_stats(
                     ) AS portion_area_km2,
                 user_data_stats.user_area_km2
             FROM
-                data.{table},
-                user_data_stats
-            WHERE
-                st_intersects(the_geom, user_data_stats.geom)
+                data.{table} AS t
+            JOIN
+                user_data_stats ON t.the_geom && user_data_stats.geom
+                AND st_intersects(t.the_geom, user_data_stats.geom)
             """
         )
         data_response = conn.execute(
