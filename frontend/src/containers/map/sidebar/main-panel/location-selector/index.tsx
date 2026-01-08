@@ -24,8 +24,6 @@ import {
   LocationListResponseDataItem,
 } from '@/types/generated/strapi.schemas';
 
-import UploadLayer from '../panels/details/upload-layer';
-
 import LocationDropdown from './location-dropdown';
 import LocationTypeToggle from './type-toggle';
 
@@ -280,7 +278,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
           />
         </PopoverContent>
       </Popover>
-      <UploadLayer />
       {locationCode !== 'GLOB' && (
         <Button
           className={cn({ [BUTTON_CLASSES]: true, 'col-start-1': isCustomRegionActive })}

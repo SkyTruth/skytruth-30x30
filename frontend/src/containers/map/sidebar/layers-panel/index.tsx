@@ -12,12 +12,19 @@ import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
 import { FCWithMessages } from '@/types';
 
 import { userLayersAtom } from '../../store';
-// import UploadLayer from '../main-panel/panels/details/upload-layer';
 
 import CustomLayersGroup from './custom-layers-group';
 import LayersGroup, { SWITCH_LABEL_CLASSES } from './layers-group';
 
-const LayersPanel: FCWithMessages = (): JSX.Element => {
+import { PANEL_TYPES } from '../main-panel/panels';
+
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
+
+type LayersPanelProps = {
+  type: (typeof PANEL_TYPES)[keyof typeof PANEL_TYPES];
+};
+
+const LayersPanel: FCWithMessages<LayersPanelProps> = ({type}): JSX.Element => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
   const [{ labels }, setMapSettings] = useSyncMapSettings();
   const [{ tab }] = useSyncMapContentSettings();
@@ -25,6 +32,8 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
   const [userLayers] = useAtom(userLayersAtom);
 
   const [datasets, { isLoading }] = useDatasetsByEnvironment();
+
+  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
   const handleLabelsChange = useCallback(
     (active: Parameters<ComponentProps<typeof Switch>['onCheckedChange']>[0]) => {
@@ -55,12 +64,17 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
       />
       {/*
           The labels and custom layers toggles don't come from the datasets in the database and have slightly 
-          functionality. It's not an ideal set up, but until custom layers are saved for accounts, we'll pass 
-          the layer options as children to be displayed alongside the other entries, much like in the other
+          different functionality. It's not an ideal set up, but until custom layers are saved for accounts, 
+          we'll pass the layer options as children to be displayed alongside the other entries, much like in the other
           implementations.
       */}
-      <CustomLayersGroup name="customn layers" layers={userLayers} isOpen={true} loading={false} />
 
+      {
+        // TODO: TECH-3372 remove feature flag check
+        type === PANEL_TYPES.conservation_builder && isCustomLayersActive ?
+          <CustomLayersGroup name="customn layers" layers={userLayers} isOpen={true} loading={false} />
+          : null
+      }
       <LayersGroup
         name={t('basemap')}
         datasets={datasets.basemap}

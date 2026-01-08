@@ -16,7 +16,7 @@ const LayerUploadControls: FC = () => {
   }
 
   return (
-    <Source id="user-layer" type="geojson" data={userLayers[0].geoJSON}>
+    <Source id="user-layer" type="geojson" data={userLayers[0].feature}>
       {DRAW_STYLES.filter((layer) => layer.type !== 'circle').map((layer) => (
         <Layer key={layer.id} {...layer} />
       ))}

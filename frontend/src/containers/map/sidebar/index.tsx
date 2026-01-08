@@ -71,7 +71,7 @@ const MapSidebar: FCWithMessages<MapSidebarProps> = ({ type }) => {
           >
             <CollapsibleContent className="relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
               <div className="h-full md:w-[280px]">
-                <LayersPanel />
+                <LayersPanel type={type}/>
               </div>
             </CollapsibleContent>
           </Collapsible>

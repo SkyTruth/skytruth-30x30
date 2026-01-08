@@ -11,6 +11,8 @@ import { userLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 
+import {maxBy} from 'lodash-es';
+
 const UploadLayer = () => {
   const [userLayers, setUserLayers] = useAtom(userLayersAtom);
   // Remove this
@@ -23,9 +25,12 @@ const UploadLayer = () => {
         const { files } = e.currentTarget;
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
+          let maxId = maxBy(userLayers, (layer) => layer.id) ?? 0;
+          console.log("Max ID", maxId)
           setErrorMessage(null);
-          setUserLayers([...userLayers, { name: files[0].name, geoJSON: geojson }]);
+          setUserLayers([...userLayers, { id: maxId++, name: files[0].name, feature: geojson, active: true }]);
         } catch (errorMessage) {
+          console.log("Converstion error", errorMessage)
           setErrorMessage(errorMessage as string);
         }
       };
@@ -35,19 +40,7 @@ const UploadLayer = () => {
     [setUserLayers, userLayers]
   );
 
-  // const BUTTON_CLASSES =
-  // 'font-mono text-xs font-semibold no-underline normal-case ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 transition-all px-0 text-left h-auto justify-start py-0';
-
   return (
-    //  <Button
-    //   className={cn({
-    //     [BUTTON_CLASSES]: true,
-    //   })}
-    //   type="button"
-    //   variant="text-link"
-    //   onClick={() => {}}
-    // >
-    //@ts-ignore
     <Label htmlFor="upload-layer" className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2')}>
       <Input
         id="upload-layer"
@@ -62,7 +55,6 @@ const UploadLayer = () => {
       <Upload size={18} />
       <span>Upload Layer</span>
     </Label>
-    // </Button>
   );
 };
 
