@@ -1,0 +1,34 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - 'cms/**'
+      - 'cloud_functions/**'
+      - '.github/workflows/*'
+      - '.github/actions/*'
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure workflow is run from main
+        shell: bash
+        run: |
+          echo "Running from: ${{ github.ref_name }}"
+          if [[ "${{ github.ref_name }}" != "main" ]]; then
+            echo "::error::Production deploy workflow may only be dispatched from main."
+            exit 1
+          fi
+
+  prod:
+    needs: guard
+    uses: ./.github/workflows/deploy-services.yml
+    secrets: inherit
+    with:
+      deploy_to_staging: true
+      deploy_to_prod: true
