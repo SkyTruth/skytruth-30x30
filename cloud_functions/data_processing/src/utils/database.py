@@ -100,12 +100,18 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
         )
 
-        # Create spatial index
+        # Add spatial index and metadata
         with conn.connect() as connection:
+            # Promote id column to primary key
+            connection.execute(text(f"ALTER TABLE data.{table_name} ADD PRIMARY KEY (id);"))
+            # Create the GIST index
             connection.execute(text(f"""
                 CREATE INDEX IF NOT EXISTS gist_{table_name}_geom 
                 ON data.{table_name} USING GIST (the_geom);
             """))
+            # Update metadata
+            connection.execute(text(f"ANALYZE data.{table_name};"))
+
             connection.commit()
 
     except Exception as excep:
