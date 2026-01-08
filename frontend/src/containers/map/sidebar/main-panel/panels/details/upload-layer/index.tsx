@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SWITCH_LABEL_CLASSES } from '@/containers/map/sidebar/layers-panel/layers-group';
 import { userLayersAtom } from '@/containers/map/store';
-// import { cn } from '@/lib/classnames';
+import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 
 const UploadLayer = () => {
@@ -48,7 +48,7 @@ const UploadLayer = () => {
     //   onClick={() => {}}
     // >
     //@ts-ignore
-    <Label htmlFor="upload-layer" className={SWITCH_LABEL_CLASSES}>
+    <Label htmlFor="upload-layer" className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2')}>
       <Input
         id="upload-layer"
         type="file"
@@ -60,6 +60,7 @@ const UploadLayer = () => {
         onChange={onChange}
       />
       <Upload size={18} />
+      <span>Upload Layer</span>
     </Label>
     // </Button>
   );

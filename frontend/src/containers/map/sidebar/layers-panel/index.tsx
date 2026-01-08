@@ -10,11 +10,11 @@ import { useSyncMapSettings } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
 import { FCWithMessages } from '@/types';
-import { DatasetUpdatedByData } from '@/types/generated/strapi.schemas';
 
 import { userLayersAtom } from '../../store';
 // import UploadLayer from '../main-panel/panels/details/upload-layer';
 
+import CustomLayersGroup from './custom-layers-group';
 import LayersGroup, { SWITCH_LABEL_CLASSES } from './layers-group';
 
 const LayersPanel: FCWithMessages = (): JSX.Element => {
@@ -35,24 +35,6 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
     },
     [setMapSettings]
   );
-
-  const renderCustomLayerItems = () => {
-    return userLayers.map((layer) => (
-      <li className="flex items-start justify-between" key={layer.name}>
-        <span className="flex items-start gap-2">
-          <Switch
-            id="labels-switch"
-            className="mt-px"
-            checked={true}
-            onCheckedChange={handleLabelsChange}
-          />
-          <Label htmlFor="labels-switch" className={SWITCH_LABEL_CLASSES}>
-            {layer.name}
-          </Label>
-        </span>
-      </li>
-    ));
-  };
 
   return (
     <div className="h-full overflow-auto px-4 text-xs">
@@ -77,14 +59,8 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
           the layer options as children to be displayed alongside the other entries, much like in the other
           implementations.
       */}
-      <LayersGroup
-        name={'Custom Layers'}
-        datasets={userLayers as DatasetUpdatedByData[]}
-        isOpen={false}
-        loading={false}
-      >
-        {renderCustomLayerItems()}
-      </LayersGroup>
+      <CustomLayersGroup name="customn layers" layers={userLayers} isOpen={true} loading={false} />
+
       <LayersGroup
         name={t('basemap')}
         datasets={datasets.basemap}
