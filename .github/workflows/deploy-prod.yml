@@ -13,6 +13,7 @@ on:
       - '.github/actions/*'
 
 jobs:
+  # Make sure deploy to prod is only running on main
   guard:
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +26,7 @@ jobs:
             exit 1
           fi
 
-  prod:
+  deploy:
     needs: guard
     uses: ./.github/workflows/deploy-services.yml
     secrets: inherit
