@@ -71,5 +71,5 @@ export type UserLayer = {
   name: string;
   feature: GeoJSON;
   active: boolean;
-  order?: number
+  order?: number;
 };

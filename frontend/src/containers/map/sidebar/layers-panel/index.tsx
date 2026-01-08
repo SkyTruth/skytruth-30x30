@@ -9,22 +9,20 @@ import { Switch } from '@/components/ui/switch';
 import { useSyncMapSettings } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { FCWithMessages } from '@/types';
 
 import { userLayersAtom } from '../../store';
+import { PANEL_TYPES } from '../main-panel/panels';
 
 import CustomLayersGroup from './custom-layers-group';
 import LayersGroup, { SWITCH_LABEL_CLASSES } from './layers-group';
-
-import { PANEL_TYPES } from '../main-panel/panels';
-
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 
 type LayersPanelProps = {
   type: (typeof PANEL_TYPES)[keyof typeof PANEL_TYPES];
 };
 
-const LayersPanel: FCWithMessages<LayersPanelProps> = ({type}): JSX.Element => {
+const LayersPanel: FCWithMessages<LayersPanelProps> = ({ type }): JSX.Element => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
   const [{ labels }, setMapSettings] = useSyncMapSettings();
   const [{ tab }] = useSyncMapContentSettings();
@@ -71,9 +69,14 @@ const LayersPanel: FCWithMessages<LayersPanelProps> = ({type}): JSX.Element => {
 
       {
         // TODO: TECH-3372 remove feature flag check
-        type === PANEL_TYPES.conservation_builder && isCustomLayersActive ?
-          <CustomLayersGroup name="customn layers" layers={userLayers} isOpen={true} loading={false} />
-          : null
+        type === PANEL_TYPES.conservation_builder && isCustomLayersActive ? (
+          <CustomLayersGroup
+            name="customn layers"
+            layers={userLayers}
+            isOpen={true}
+            loading={false}
+          />
+        ) : null
       }
       <LayersGroup
         name={t('basemap')}
