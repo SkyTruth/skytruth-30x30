@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Layer, useMap } from 'react-map-gl';
 
+import { useAtom } from 'jotai';
+
 import { DeckMapboxOverlayProvider } from '@/components/map/provider';
 import { CustomMapProps } from '@/components/map/types';
 import LayerManagerItem from '@/containers/map/content/map/layer-manager/item';
@@ -9,6 +11,9 @@ import {
   useSyncMapLayerSettings,
   useSyncMapLayers,
 } from '@/containers/map/content/map/sync-settings';
+import { customLayersAtom } from '@/containers/map/store';
+
+import CustomLayerManagerItem from './CustomLayerManagerItem';
 
 const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
   const { default: map } = useMap();
@@ -18,6 +23,17 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
   const [activeLayers] = useSyncMapLayers();
   const [layersSettings] = useSyncMapLayerSettings();
 
+  const [customLayers] = useAtom(customLayersAtom);
+
+  const [allActiveLayers, setAllActiveLayers] = useState([]);
+
+  useEffect(() => {
+    const customActiveLayers = customLayers.filter((layer) => !!layer.active);
+    const currentActiveLayers = [...activeLayers, ...customActiveLayers];
+
+    setAllActiveLayers(currentActiveLayers);
+  }, [activeLayers, customLayers]);
+
   const getSettings = useCallback(
     (slug: string) => ({
       ...(layersSettings[slug] ?? { opacity: 1, visibility: true }),
@@ -26,21 +42,28 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
     [layersSettings, zoom]
   );
 
-  const layerManagerItems = useMemo(
-    () =>
-      activeLayers.map((slug, idx) => {
-        const beforeId = idx === 0 ? 'custom-layers' : `${activeLayers[idx - 1]}-layer`;
+  const getLayerId = (layer: string | { id: number }) => {
+    return typeof layer === 'string' ? layer : String(layer.id);
+  };
+
+  const layerManagerItems = useMemo(() => {
+    return allActiveLayers.map((layer, idx) => {
+      const beforeId =
+        idx === 0 ? 'custom-layers' : `${getLayerId(allActiveLayers[idx - 1])}-layer`;
+
+      if (typeof layer === 'string') {
         return (
           <LayerManagerItem
-            key={slug}
-            slug={slug}
+            key={layer}
+            slug={layer}
             beforeId={beforeId}
-            settings={getSettings(slug)}
+            settings={getSettings(layer)}
           />
         );
-      }),
-    [activeLayers, getSettings]
-  );
+      }
+      return <CustomLayerManagerItem key={layer.id} layer={layer} />;
+    });
+  }, [allActiveLayers, getSettings]);
 
   useEffect(() => {
     const onZoom = () => {
@@ -61,12 +84,14 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
           Generate all transparent backgrounds to be able to sort by layers without an error
           - https://github.com/visgl/react-map-gl/issues/939#issuecomment-625290200
         */}
-        {activeLayers.map((slug, idx) => {
-          const beforeId = idx === 0 ? 'custom-layers' : `${activeLayers[idx - 1]}-layer`;
+        {allActiveLayers.map((layer, idx) => {
+          const beforeId =
+            idx === 0 ? 'custom-layers' : `${getLayerId(allActiveLayers[idx - 1])}-layer`;
+          const id = getLayerId(layer);
           return (
             <Layer
-              id={`${slug}-layer`}
-              key={slug}
+              id={`${id}-layer`}
+              key={id}
               type="background"
               layout={{ visibility: 'none' }}
               beforeId={beforeId}

@@ -12,7 +12,7 @@ import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { FCWithMessages } from '@/types';
 
-import { userLayersAtom } from '../../store';
+import { customLayersAtom } from '../../store';
 import { PANEL_TYPES } from '../main-panel/panels';
 
 import CustomLayersGroup from './custom-layers-group';
@@ -27,7 +27,7 @@ const LayersPanel: FCWithMessages<LayersPanelProps> = ({ type }): JSX.Element =>
   const [{ labels }, setMapSettings] = useSyncMapSettings();
   const [{ tab }] = useSyncMapContentSettings();
 
-  const [userLayers] = useAtom(userLayersAtom);
+  const [userLayers] = useAtom(customLayersAtom);
 
   const [datasets, { isLoading }] = useDatasetsByEnvironment();
 

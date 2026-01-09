@@ -8,12 +8,12 @@ import { Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SWITCH_LABEL_CLASSES } from '@/containers/map/sidebar/layers-panel/layers-group';
-import { userLayersAtom } from '@/containers/map/store';
+import { customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 
 const UploadLayer = () => {
-  const [userLayers, setUserLayers] = useAtom(userLayersAtom);
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   // Remove this
   // eslint-disable-next-line
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -24,11 +24,17 @@ const UploadLayer = () => {
         const { files } = e.currentTarget;
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
-          let maxId = maxBy(userLayers, (layer) => layer.id) ?? 0;
+          let newId = 0;
+
+          if (customLayers.length) {
+            const maxIdLayer = maxBy(customLayers, (layer) => layer.id);
+            newId = maxIdLayer.id + 1;
+          }
+
           setErrorMessage(null);
-          setUserLayers([
-            ...userLayers,
-            { id: maxId++, name: files[0].name, feature: geojson, active: true },
+          setCustomLayers([
+            ...customLayers,
+            { id: newId, name: files[0].name, feature: geojson, active: true },
           ]);
         } catch (errorMessage) {
           setErrorMessage(errorMessage as string);
@@ -37,7 +43,7 @@ const UploadLayer = () => {
 
       void handler(e);
     },
-    [setUserLayers, userLayers]
+    [setCustomLayers, customLayers]
   );
 
   return (

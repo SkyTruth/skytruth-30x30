@@ -6,10 +6,11 @@ import { useAtom } from 'jotai';
 
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { DRAW_STYLES } from '@/components/map/draw-controls/hooks';
-import { userLayersAtom } from '@/containers/map/store';
+import { customLayersAtom } from '@/containers/map/store';
 
 const LayerUploadControls: FC = () => {
-  const [userLayers] = useAtom(userLayersAtom);
+  const [userLayers] = useAtom(customLayersAtom);
+  return null;
 
   if (!userLayers.length) {
     return null;

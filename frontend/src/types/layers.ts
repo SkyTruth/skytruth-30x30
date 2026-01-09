@@ -66,7 +66,7 @@ export type LayerTyped = Layer & {
   metadata: Record<string, unknown>;
 };
 
-export type UserLayer = {
+export type CustomLayer = {
   id: number;
   name: string;
   feature: GeoJSON;

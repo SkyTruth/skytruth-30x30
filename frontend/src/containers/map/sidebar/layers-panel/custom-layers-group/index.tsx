@@ -12,7 +12,7 @@ import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { Layer } from '@/types/generated/strapi.schemas';
-import { UserLayer } from '@/types/layers';
+import { CustomLayer } from '@/types/layers';
 
 import UploadLayer from '../../main-panel/panels/details/upload-layer';
 
@@ -25,7 +25,7 @@ const COLLAPSIBLE_CONTENT_CLASSES =
 
 type CustomLayersGroupProps = PropsWithChildren<{
   name: string;
-  layers: UserLayer[];
+  layers: CustomLayer[];
   showDatasetsNames?: boolean;
   showBottomBorder?: boolean;
   isOpen?: boolean;
