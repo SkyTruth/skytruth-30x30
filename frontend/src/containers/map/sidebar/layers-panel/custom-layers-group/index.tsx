@@ -1,5 +1,7 @@
-import { PropsWithChildren, useCallback, useEffect, useState } from 'react';
+import { PropsWithChildren, useCallback, useState, useMemo } from 'react';
 
+import { useAtom } from 'jotai';
+import { findIndex } from 'lodash-es';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
@@ -7,11 +9,9 @@ import TooltipButton from '@/components/tooltip-button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
-import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
-import { Layer } from '@/types/generated/strapi.schemas';
 import { CustomLayer } from '@/types/layers';
 
 import UploadLayer from '../../main-panel/panels/details/upload-layer';
@@ -25,7 +25,6 @@ const COLLAPSIBLE_CONTENT_CLASSES =
 
 type CustomLayersGroupProps = PropsWithChildren<{
   name: string;
-  layers: CustomLayer[];
   showDatasetsNames?: boolean;
   showBottomBorder?: boolean;
   isOpen?: boolean;
@@ -36,49 +35,33 @@ type CustomLayersGroupProps = PropsWithChildren<{
 
 const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   name,
-  layers,
   showDatasetsNames = true,
   showBottomBorder = true,
   isOpen = true,
   loading = true,
+  extraActiveLayers = 0,
   children,
 }): JSX.Element => {
   const [open, setOpen] = useState(isOpen);
   const t = useTranslations('containers.map-sidebar-layers-panel');
 
-  const [activeLayers, setMapLayers] = useSyncMapLayers();
-  const [{ tab }] = useSyncMapContentSettings();
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
 
-  // const datasetsLayersIds = useMemo(() => {
-  //   return (
-  //     datasets?.map(({ attributes }) => attributes?.layers?.data?.map(({ id }) => id))?.flat() || []
-  //   );
-  // }, [datasets]);
-
-  // const numActiveDatasetsLayers = useMemo(() => {
-  //   return (
-  //     (datasetsLayersIds?.filter((id) => activeLayers?.includes(id))?.length ?? 0) +
-  //     extraActiveLayers
-  //   );
-  // }, [datasetsLayersIds, activeLayers, extraActiveLayers]);
+  const numActiveDatasetsLayers = useMemo(() => {
+    return (customLayers?.filter((layer) => layer?.active)?.length ?? 0) + extraActiveLayers;
+  }, [customLayers, extraActiveLayers]);
 
   const onToggleLayer = useCallback(
-    (layerSlug: Layer['slug'], isActive: boolean) => {
-      setMapLayers(
-        isActive
-          ? [...activeLayers, layerSlug]
-          : activeLayers.filter((activeSlug) => activeSlug !== layerSlug)
-      );
+    (toggled: CustomLayer) => {
+      const toggledIndex = findIndex(customLayers, (layer) => layer.id === toggled.id);
+      const updatedLayers = [...customLayers];
+      updatedLayers[toggledIndex].active = !updatedLayers[toggledIndex].active;
+      setCustomLayers(updatedLayers);
     },
-    [activeLayers, setMapLayers]
+    [customLayers, setCustomLayers]
   );
 
-  useEffect(() => {
-    setOpen(isOpen);
-  }, [isOpen, tab]);
-
-  // const displayNumActiveLayers = !open && numActiveDatasetsLayers > 0;
-  // const noData = !loading && !layers?.length;
+  const displayNumActiveLayers = !open && numActiveDatasetsLayers > 0;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -87,11 +70,11 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       >
         <span>
           {name}
-          {/* {displayNumActiveLayers && (
+          {displayNumActiveLayers && (
             <span className="ml-2 border border-black px-1 font-normal">
               {numActiveDatasetsLayers}
             </span>
-          )} */}
+          )}
         </span>
         <LuChevronDown
           className={`group-data-[state=closed]:block ${COLLAPSIBLE_TRIGGER_ICONS_CLASSES}`}
@@ -109,11 +92,9 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
           <UploadLayer />
           <div>
             <ul className={cn('my-3 flex flex-col space-y-3', { '-my-0': !showDatasetsNames })}>
-              {layers.map((layer) => {
-                const isActive = activeLayers?.includes(layer?.name);
-                const onCheckedChange = onToggleLayer.bind(null, layer?.name) as (
-                  isActive: boolean
-                ) => void;
+              {customLayers.map((layer) => {
+                const isActive = layer.active;
+                // const onCheckedChange = onToggleLayer.bind(null, layer)
                 // const metadata = layer?.attributes?.metadata;
                 // const sources = metadata?.citation
                 //   ? [{ id: layer?.id, title: metadata?.citation, url: metadata?.source }]
@@ -126,7 +107,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                         id={`${layer.name}-switch`}
                         className="mt-px"
                         checked={isActive}
-                        onCheckedChange={onCheckedChange}
+                        onCheckedChange={() => onToggleLayer(layer)}
                       />
                       <Label htmlFor={`${layer.name}-switch`} className={SWITCH_LABEL_CLASSES}>
                         {layer.name}

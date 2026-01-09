@@ -1,6 +1,5 @@
 import { ComponentProps, useCallback } from 'react';
 
-import { useAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 
 import TooltipButton from '@/components/tooltip-button';
@@ -12,7 +11,6 @@ import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { FCWithMessages } from '@/types';
 
-import { customLayersAtom } from '../../store';
 import { PANEL_TYPES } from '../main-panel/panels';
 
 import CustomLayersGroup from './custom-layers-group';
@@ -26,8 +24,6 @@ const LayersPanel: FCWithMessages<LayersPanelProps> = ({ type }): JSX.Element =>
   const t = useTranslations('containers.map-sidebar-layers-panel');
   const [{ labels }, setMapSettings] = useSyncMapSettings();
   const [{ tab }] = useSyncMapContentSettings();
-
-  const [userLayers] = useAtom(customLayersAtom);
 
   const [datasets, { isLoading }] = useDatasetsByEnvironment();
 
@@ -70,12 +66,7 @@ const LayersPanel: FCWithMessages<LayersPanelProps> = ({ type }): JSX.Element =>
       {
         // TODO: TECH-3372 remove feature flag check
         type === PANEL_TYPES.conservation_builder && isCustomLayersActive ? (
-          <CustomLayersGroup
-            name="customn layers"
-            layers={userLayers}
-            isOpen={true}
-            loading={false}
-          />
+          <CustomLayersGroup name="Custom Layers" isOpen={true} loading={false} />
         ) : null
       }
       <LayersGroup

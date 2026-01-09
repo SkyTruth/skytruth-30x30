@@ -51,18 +51,20 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
   const [activeLayers, setMapLayers] = useSyncMapLayers();
   const [{ tab }] = useSyncMapContentSettings();
 
-  const datasetsLayersIds = useMemo(() => {
+  const datasetsLayerSlugs = useMemo(() => {
     return (
-      datasets?.map(({ attributes }) => attributes?.layers?.data?.map(({ id }) => id))?.flat() || []
+      datasets
+        ?.map(({ attributes }) => attributes?.layers?.data?.map(({ slug }) => slug))
+        ?.flat() || []
     );
   }, [datasets]);
 
   const numActiveDatasetsLayers = useMemo(() => {
     return (
-      (datasetsLayersIds?.filter((id) => activeLayers?.includes(id))?.length ?? 0) +
+      (datasetsLayerSlugs?.filter((slug) => activeLayers?.includes(slug))?.length ?? 0) +
       extraActiveLayers
     );
-  }, [datasetsLayersIds, activeLayers, extraActiveLayers]);
+  }, [datasetsLayerSlugs, activeLayers, extraActiveLayers]);
 
   const onToggleLayer = useCallback(
     (layerSlug: Layer['slug'], isActive: boolean) => {
