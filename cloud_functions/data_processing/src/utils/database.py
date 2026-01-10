@@ -87,31 +87,73 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
         # Update geometry name for consistency in PostgreSQL database
         gdf = gdf.rename_geometry("the_geom")
 
-        # Write to PostgreSQL
-        if verbose:
-            logger.info({"message": f"Updating {table_name} in PostgreSQL..."})
-        gdf.to_postgis(
-            name=table_name,
-            schema="data",
-            con=conn,
-            if_exists="replace",
-            index=True,
-            index_label="id",
-            dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
-        )
-
-        # Add spatial index and metadata
+        # Write to PostgreSQL database
         with conn.connect() as connection:
-            # Promote id column to primary key
-            connection.execute(text(f"ALTER TABLE data.{table_name} ADD PRIMARY KEY (id);"))
-            # Create the GIST index
-            connection.execute(text(f"""
-                CREATE INDEX IF NOT EXISTS gist_{table_name}_geom 
-                ON data.{table_name} USING GIST (the_geom);
-            """))
-            # Update metadata
-            connection.execute(text(f"ANALYZE data.{table_name};"))
+            if table_name == "gadm_minus_pa_v2":
+                # Write temp table to PostgreSQL
+                if verbose:
+                    logger.info({"message": "Uploading data to PostgreSQL..."})
+                gdf.to_postgis(
+                    name=f"{table_name}_temp",
+                    schema="data",
+                    con=conn,
+                    if_exists="replace",
+                    dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
+                )
+                # Subdivide geometries and create spatial index for faster querying
+                if verbose:
+                    logger.info(
+                        {
+                            "message": f"Subdividing geometries and creating spatial index..."
+                        }
+                    )
+                sql_command = f"""
+                    DROP TABLE IF EXISTS data.{table_name};
 
+                    -- Subdivide into final table (max 255 vertices per row)
+                    CREATE TABLE data.{table_name} AS
+                        SELECT
+                            location,
+                            ST_Multi(ST_Subdivide(the_geom, 255)) AS the_geom
+                        FROM data.{table_name}_temp;
+
+                    -- Add primary key
+                    ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;
+
+                    -- Create GIST index for fast spatial querying
+                    CREATE INDEX gist_{table_name}_geom
+                        ON data.{table_name}
+                        USING GIST (the_geom);
+
+                    DROP TABLE data.{table_name}_temp;
+                    ANALYZE data.{table_name};
+                    """
+
+            elif table_name == "eez_minus_mpa_v2":
+                # Write to PostgreSQL
+                if verbose:
+                    logger.info({"message": "Uploading data to PostgreSQL..."})
+                gdf.to_postgis(
+                    name=table_name,
+                    schema="data",
+                    con=conn,
+                    if_exists="replace",
+                    dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
+                )
+                # Create spatial index for faster querying
+                sql_command = f"""
+                    -- Add primary key
+                    ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;
+
+                    -- Create GIST index for fast spatial querying
+                    CREATE INDEX gist_{table_name}_geom
+                        ON data.{table_name}
+                        USING GIST (the_geom);
+
+                    ANALYZE data.{table_name};
+                    """
+
+            connection.execute(text(sql_command))
             connection.commit()
 
     except Exception as excep:
