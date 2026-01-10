@@ -1,0 +1,25 @@
+name: Setup GCP Auth + Docker
+description: Determine environment, authenticate with GCP, login to Artifact Registry
+
+inputs:
+  credentials_json:
+    required: true
+  gar_location:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Google Auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: "${{ inputs.credentials_json }}"
+        token_format: access_token
+
+    - name: Docker Auth
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.gar_location }}-docker.pkg.dev
+        username: _json_key
+        password: ${{ inputs.credentials_json }}
