@@ -106,11 +106,11 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
                 sql_command = f"""
                     DROP TABLE IF EXISTS data.{table_name};
 
-                    -- Subdivide into final table (max 255 vertices per row)
+                    -- Subdivide into final table (max 400 vertices per row)
                     CREATE TABLE data.{table_name} AS
                         SELECT
                             location,
-                            ST_Multi(ST_Subdivide(ST_MakeValid(the_geom), 255)) AS the_geom
+                            ST_Multi(ST_Subdivide(ST_MakeValid(the_geom), 400)) AS the_geom
                         FROM data.{table_name}_temp;
 
                     -- Add primary key
