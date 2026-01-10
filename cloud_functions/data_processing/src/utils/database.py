@@ -102,11 +102,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
                 )
                 # Subdivide geometries and create spatial index for faster querying
                 if verbose:
-                    logger.info(
-                        {
-                            "message": f"Subdividing geometries and creating spatial index..."
-                        }
-                    )
+                    logger.info({"message": "Subdividing geometries and creating spatial index..."})
                 sql_command = f"""
                     DROP TABLE IF EXISTS data.{table_name};
 
@@ -114,7 +110,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
                     CREATE TABLE data.{table_name} AS
                         SELECT
                             location,
-                            ST_Multi(ST_Subdivide(the_geom, 255)) AS the_geom
+                            ST_Multi(ST_Subdivide(ST_MakeValid(the_geom), 255)) AS the_geom
                         FROM data.{table_name}_temp;
 
                     -- Add primary key
