@@ -136,14 +136,21 @@ def update_cb_tiling(table_name, verbose: bool = False):
             # Create temp table with subdivided geometries (max 2000 vertices each)
             connection.execute(text(f"""
                 CREATE TABLE data.{table_name}_temp AS
-                    SELECT
-                        location,
-                        ST_Multi(ST_Subdivide(ST_MakeValid(the_geom), 2000)) AS the_geom
-                    FROM data.{table_name};
+                SELECT
+                    location,
+                    ST_Multi(ST_Subdivide(
+                        CASE
+                            -- Buffer by 0 as a way to quickly fix invalid geometries
+                            WHEN ST_IsValid(the_geom) THEN the_geom
+                            ELSE ST_Buffer(the_geom, 0)
+                        END,
+                        2000
+                    )) AS the_geom
+                FROM data.{table_name};
             """))
 
             if verbose:
-                logger.info({"message": f"Tiling complete. Refactoring and creating spatial index..."})
+                logger.info({"message": "Tiling complete. Refactoring and creating spatial index..."})
 
             # Drop original table and rename temp table
             connection.execute(text(f"DROP TABLE data.{table_name};"))
