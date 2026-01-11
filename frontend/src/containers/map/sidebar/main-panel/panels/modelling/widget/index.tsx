@@ -139,7 +139,7 @@ const ModellingWidget: FCWithMessages = () => {
               : 0;
           }
 
-          const totalCustomAreas = modellingData.locations_area.reduce((acc, location) => {
+          const totalCustomAreas = (modellingData?.locations_area || []).reduce((acc, location) => {
             return acc + location.protected_area;
           }, 0);
 
