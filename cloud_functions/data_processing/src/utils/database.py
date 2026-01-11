@@ -106,12 +106,12 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
                 connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name};"))
 
-                # Subdivide into final table (max 500 vertices per row)
+                # Subdivide into final table (max 1000 vertices per row)
                 connection.execute(text(f"""
                     CREATE TABLE data.{table_name} AS
                         SELECT
                             location,
-                            ST_Multi(ST_Subdivide(the_geom, 500)) AS the_geom
+                            ST_Multi(ST_Subdivide(the_geom, 1000)) AS the_geom
                         FROM data.{table_name}_temp;
                 """))
 
