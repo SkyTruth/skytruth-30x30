@@ -76,85 +76,89 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             logger.info({"message": f"Loading {gcs_file}..."})
         gdf = load_zipped_shapefile_from_gcs(filename=gcs_file, bucket=BUCKET)
 
-        # Filter columns
-        gdf = gdf[["location", "geometry"]]
-
-        # Turn Polygon to MultiPolygon for consistency
-        gdf["geometry"] = gdf["geometry"].apply(
+        # Update geometry for consistency in PostgreSQL database
+        gdf = gdf.rename_geometry("the_geom")
+        gdf["the_geom"] = gdf["the_geom"].apply(
             lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
         )
+        gdf = gdf[["location", "the_geom"]]
 
-        # Update geometry name for consistency in PostgreSQL database
-        gdf = gdf.rename_geometry("the_geom")
+        # Upload data to PostgreSQL
+        if verbose:
+            logger.info({"message": "Uploading data to PostgreSQL..."})
+        gdf.to_postgis(
+            name=table_name,
+            schema="data",
+            con=conn,
+            if_exists="replace",
+            dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
+        )
 
-        # Write to PostgreSQL database
-        if table_name == "gadm_minus_pa_v2":
-            # Write temp table to PostgreSQL
+        # Update table in PostgreSQL
+        with conn.connect() as connection:
+            # Add primary key
+            connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
+
+            # Create GIST index for fast spatial querying
+            connection.execute(text(f"""
+                CREATE INDEX gist_{table_name}_geom
+                ON data.{table_name}
+                USING GIST (the_geom);
+            """))
+
+            connection.execute(text(f"ANALYZE data.{table_name};"))
+            connection.commit()
+
+    except Exception as excep:
+        logger.error({"message": "Failed to update table", "error": str(excep)})
+
+
+def update_cb_tiling(table_name, verbose: bool = False):
+    """
+    Update Conservation Builder table to have subdivisions for large geometries.
+    
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    verbose : bool
+      Whether to print progress messages.
+    """
+    try:
+        conn = get_connection(format="sqlalchemy")
+
+        with conn.connect() as connection:
             if verbose:
-                logger.info({"message": "Uploading data to PostgreSQL..."})
-            gdf.to_postgis(
-                name=f"{table_name}_temp",
-                schema="data",
-                con=conn,
-                if_exists="replace",
-                dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
-            )
+                logger.info({"message": f"Updating tiling for {table_name}..."})
 
-            with conn.connect() as connection:
-                if verbose:
-                    logger.info({"message": "Subdividing geometries and creating spatial index..."})
+            connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name}_temp;"))
 
-                connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name};"))
+            # Create temp table with subdivided geometries (max 2000 vertices each)
+            connection.execute(text(f"""
+                CREATE TABLE data.{table_name}_temp AS
+                    SELECT
+                        location,
+                        ST_Multi(ST_Subdivide(ST_MakeValid(the_geom), 2000)) AS the_geom
+                    FROM data.{table_name};
+            """))
 
-                # Subdivide into final table (max 1000 vertices per row)
-                connection.execute(text(f"""
-                    CREATE TABLE data.{table_name} AS
-                        SELECT
-                            location,
-                            ST_Multi(ST_Subdivide(ST_MakeValid(the_geom), 1000)) AS the_geom
-                        FROM data.{table_name}_temp;
-                """))
-
-                # Add primary key
-                connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
-
-                # Create GIST index for fast spatial querying
-                connection.execute(text(f"""
-                    CREATE INDEX gist_{table_name}_geom
-                        ON data.{table_name}
-                        USING GIST (the_geom);
-                """))
-
-                connection.execute(text(f"DROP TABLE data.{table_name}_temp;"))
-                connection.execute(text(f"ANALYZE data.{table_name};"))
-
-                connection.commit()
-
-        elif table_name == "eez_minus_mpa_v2":
-            # Write to PostgreSQL
             if verbose:
-                logger.info({"message": "Uploading data to PostgreSQL..."})
-            gdf.to_postgis(
-                name=table_name,
-                schema="data",
-                con=conn,
-                if_exists="replace",
-                dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
-            )
+                logger.info({"message": f"Tiling complete. Refactoring and creating spatial index..."})
 
-            with conn.connect() as connection:
-                # Add primary key
-                connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
+            # Drop original table and rename temp table
+            connection.execute(text(f"DROP TABLE data.{table_name};"))
+            connection.execute(text(f"ALTER TABLE data.{table_name}_temp RENAME TO {table_name};"))
 
-                # Create GIST index for fast spatial querying
-                connection.execute(text(f"""
-                    CREATE INDEX gist_{table_name}_geom
-                        ON data.{table_name}
-                        USING GIST (the_geom);
-                """))
+            # Add primary key and GIST index
+            connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
+            connection.execute(text(f"""
+                CREATE INDEX gist_{table_name}_geom
+                ON data.{table_name}
+                USING GIST (the_geom);
+            """))
 
-                connection.execute(text(f"ANALYZE data.{table_name};"))
-                connection.commit()
+            connection.execute(text(f"ANALYZE data.{table_name};"))
+            connection.commit()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
