@@ -129,20 +129,19 @@ def update_cb_tiling(table_name, verbose: bool = False):
 
         with conn.connect() as connection:
             if verbose:
-                logger.info({"message": f"Updating tiling for {table_name}..."})
+                logger.info({"message": "Validating and subdividing geometries..."})
 
             connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name}_temp;"))
 
-            # Create temp table with subdivided geometries (max 2000 vertices each)
+            # Subdivide geometries (max 2000 vertices each)
             connection.execute(text(f"""
                 CREATE TABLE data.{table_name}_temp AS
                 SELECT
                     location,
                     ST_Multi(ST_Subdivide(
                         CASE
-                            -- Buffer by 0 as a way to quickly fix invalid geometries
                             WHEN ST_IsValid(the_geom) THEN the_geom
-                            ELSE ST_Buffer(the_geom, 0)
+                            ELSE ST_MakeValid(the_geom, 'method=structure')
                         END,
                         2000
                     )) AS the_geom
@@ -150,21 +149,21 @@ def update_cb_tiling(table_name, verbose: bool = False):
             """))
 
             if verbose:
-                logger.info({"message": "Tiling complete. Refactoring and creating spatial index..."})
+                logger.info({"message": "Subdivision complete. Refactoring and creating spatial index..."})
 
             # Drop original table and rename temp table
             connection.execute(text(f"DROP TABLE data.{table_name};"))
             connection.execute(text(f"ALTER TABLE data.{table_name}_temp RENAME TO {table_name};"))
 
-            # Add primary key and GIST index
+            # Add primary id and GIST index
             connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
             connection.execute(text(f"""
-                CREATE INDEX gist_{table_name}_geom
-                ON data.{table_name}
-                USING GIST (the_geom);
+                                    CREATE INDEX gist_{table_name}_geom 
+                                    ON data.{table_name}
+                                    USING GIST (the_geom);
             """))
-
             connection.execute(text(f"ANALYZE data.{table_name};"))
+
             connection.commit()
 
     except Exception as excep:
