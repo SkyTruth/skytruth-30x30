@@ -1,33 +1,21 @@
 import { useCallback, useMemo } from 'react';
 
+import { useAtom } from 'jotai';
 import { useLocale, useTranslations } from 'next-intl';
-import { HiEye, HiEyeOff } from 'react-icons/hi';
 
-import { Button } from '@/components/ui/button';
-import Icon from '@/components/ui/icon';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Slider } from '@/components/ui/slider';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   useSyncMapLayerSettings,
   useSyncMapLayers,
 } from '@/containers/map/content/map/sync-settings';
-import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
-import ArrowDownIcon from '@/styles/icons/arrow-down.svg';
-import ArrowTopIcon from '@/styles/icons/arrow-top.svg';
-import CloseIcon from '@/styles/icons/close.svg';
-import OpacityIcon from '@/styles/icons/opacity.svg';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
-import {
-  LayerListResponseDataItem,
-  LayerResponseDataObject,
-} from '@/types/generated/strapi.schemas';
+import { LayerListResponseDataItem } from '@/types/generated/strapi.schemas';
 import { LayerTyped, ParamsConfig } from '@/types/layers';
 
 import LegendItem from './item';
+import LegendItemHeader from './item-header';
 
 const Legend: FCWithMessages = () => {
   const t = useTranslations('containers.map');
@@ -35,7 +23,9 @@ const Legend: FCWithMessages = () => {
 
   const [activeLayers, setMapLayers] = useSyncMapLayers();
   const [layerSettings, setLayerSettings] = useSyncMapLayerSettings();
-  const [{ tab }] = useSyncMapContentSettings();
+
+  const [customLayers] = useAtom(customLayersAtom);
+  const [allActiveLayers] = useAtom(allActiveLayersAtom);
 
   const layersQuery = useGetLayers<LayerListResponseDataItem[]>(
     {
@@ -54,17 +44,6 @@ const Legend: FCWithMessages = () => {
         environment: {
           fields: ['slug'],
         },
-      },
-      filters: {
-        ...(tab !== 'summary'
-          ? {
-              environment: {
-                slug: {
-                  $in: tab,
-                },
-              },
-            }
-          : {}),
       },
     },
     {
@@ -85,7 +64,7 @@ const Legend: FCWithMessages = () => {
   );
 
   const onRemoveLayer = useCallback(
-    (layerSlug: LayerResponseDataObject['attributes']['slug']) =>
+    (layerSlug: string) =>
       setMapLayers((currentLayers) => {
         return currentLayers.filter((slug) => slug !== layerSlug);
       }),
@@ -93,7 +72,7 @@ const Legend: FCWithMessages = () => {
   );
 
   const onToggleLayerVisibility = useCallback(
-    (layerSlug: LayerResponseDataObject['attributes']['slug'], isVisible: boolean) => {
+    (layerSlug: string, isVisible: boolean) => {
       setLayerSettings((prev) => ({
         ...prev,
         [layerSlug]: {
@@ -106,7 +85,7 @@ const Legend: FCWithMessages = () => {
   );
 
   const onChangeLayerOpacity = useCallback(
-    (layerSlug: LayerResponseDataObject['attributes']['slug'], opacity: number) => {
+    (layerSlug: string, opacity: number) => {
       setLayerSettings((prev) => ({
         ...prev,
         [layerSlug]: {
@@ -119,7 +98,7 @@ const Legend: FCWithMessages = () => {
   );
 
   const onMoveLayerDown = useCallback(
-    (layerSlug: LayerResponseDataObject['attributes']['slug']) => {
+    (layerSlug: string) => {
       const layerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
       if (layerIndex === -1) {
         return;
@@ -133,7 +112,7 @@ const Legend: FCWithMessages = () => {
   );
 
   const onMoveLayerUp = useCallback(
-    (layerSlug: LayerResponseDataObject['attributes']['slug']) => {
+    (layerSlug: string) => {
       const layerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
       if (layerIndex === -1) {
         return;
@@ -153,136 +132,82 @@ const Legend: FCWithMessages = () => {
 
     return (
       <div>
-        {layersQuery.data?.map(
-          ({ attributes: { title, legend_config, params_config, slug } }, index) => {
-            const isFirst = index === 0;
-            const isLast = index + 1 === layersQuery.data.length;
+        {allActiveLayers.map((slug, index) => {
+          const isFirst = index === 0;
+          const isLast = index + 1 === allActiveLayers.length;
 
-            const isVisible = layerSettings[slug]?.visibility !== false;
-            const opacity = layerSettings[slug]?.opacity ?? 1;
+          let opacity = 1;
+          let isVisible = true;
+          let title;
+          let legend_config;
+          let params_config;
+          if (!customLayers[slug] && layersQuery.data?.length) {
+            const layer = layersQuery.data.filter((layer) => layer.attributes.slug === slug)[0];
+            legend_config = layer.attributes.legend_config;
+            params_config = layer.attributes.params_config;
 
-            return (
-              <div
-                key={slug}
-                className={cn({
-                  'pb-3': index + 1 < activeLayers.length,
-                  'pt-2': index > 0,
-                })}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs font-bold ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 [&_svg]:aria-[expanded=true]:rotate-180">
-                          {title}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>{title}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <div className="flex shrink-0 items-center">
-                      <Tooltip delayDuration={0}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={isFirst}
-                            onClick={() => onMoveLayerUp(slug)}
-                          >
-                            <span className="sr-only">{t('move-up')}</span>
-                            <Icon icon={ArrowTopIcon} className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t('move-up')}</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={isLast}
-                            onClick={() => onMoveLayerDown(slug)}
-                          >
-                            <span className="sr-only">{t('move-down')}</span>
-                            <Icon icon={ArrowDownIcon} className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t('move-down')}</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <Popover>
-                          <TooltipTrigger asChild>
-                            <PopoverTrigger asChild>
-                              <Button type="button" variant="ghost" size="icon-sm">
-                                <span className="sr-only">{t('change-opacity')}</span>
-                                <Icon icon={OpacityIcon} className="h-3.5 w-3.5" />
-                              </Button>
-                            </PopoverTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>{t('change-opacity')}</TooltipContent>
-                          <PopoverContent className="w-48">
-                            <Label className="mb-2 block text-xs">{t('opacity')}</Label>
-                            <Slider
-                              thumbLabel={t('opacity')}
-                              defaultValue={[opacity]}
-                              max={1}
-                              step={0.1}
-                              onValueCommit={([value]) => onChangeLayerOpacity(slug, value)}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => onToggleLayerVisibility(slug, !isVisible)}
-                          >
-                            <span className="sr-only">{isVisible ? t('hide') : t('show')}</span>
-                            {isVisible && <HiEye className="h-4 w-4" aria-hidden />}
-                            {!isVisible && <HiEyeOff className="h-4 w-4" aria-hidden />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{isVisible ? t('hide') : t('show')}</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => {
-                              onRemoveLayer(slug);
-                            }}
-                          >
-                            <span className="sr-only">{t('remove')}</span>
-                            <Icon icon={CloseIcon} className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{t('remove')}</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </TooltipProvider>
-                </div>
-                <div className="pt-1.5">
-                  <LegendItem
-                    config={legend_config as LayerTyped['legend_config']}
-                    paramsConfig={params_config as ParamsConfig}
-                  />
-                </div>
-              </div>
-            );
+            title = layer.attributes.title;
+            isVisible = layerSettings[slug]?.visibility !== false;
+            opacity = layerSettings[slug]?.opacity ?? 1;
+          } else {
+            title = customLayers[slug].name;
+            isVisible = customLayers[slug].isVisible;
+            legend_config = {
+              id: +slug,
+              type: 'icon',
+              items: [
+                {
+                  color: '#000000',
+                  description: null,
+                  icon: 'circle-with-fill',
+                  value: title,
+                },
+              ],
+            };
+
+            params_config = [
+              {
+                key: 'opacity',
+                default: 1,
+              },
+            ];
           }
-        )}
+
+          return (
+            <div
+              key={slug}
+              className={cn({
+                'pb-3': index + 1 < allActiveLayers.length,
+                'pt-2': index > 0,
+              })}
+            >
+              <LegendItemHeader
+                title={title}
+                isFirst={isFirst}
+                isLast={isLast}
+                onMoveLayerDown={onMoveLayerDown}
+                onMoveLayerUp={onMoveLayerUp}
+                slug={slug}
+                isVisible={isVisible}
+                onChangeLayerOpacity={onChangeLayerOpacity}
+                onRemoveLayer={onRemoveLayer}
+                onToggleLayerVisibility={onToggleLayerVisibility}
+                opacity={opacity}
+              />
+              <div className="pt-1.5">
+                <LegendItem
+                  config={legend_config as LayerTyped['legend_config']}
+                  paramsConfig={params_config as ParamsConfig}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }, [
-    activeLayers.length,
+    allActiveLayers,
+    customLayers,
     layerSettings,
     layersQuery.data,
     onChangeLayerOpacity,
@@ -290,7 +215,6 @@ const Legend: FCWithMessages = () => {
     onMoveLayerUp,
     onRemoveLayer,
     onToggleLayerVisibility,
-    t,
   ]);
 
   return (
@@ -307,6 +231,6 @@ const Legend: FCWithMessages = () => {
   );
 };
 
-Legend.messages = ['containers.map', ...LegendItem.messages];
+Legend.messages = ['containers.map', ...LegendItem.messages, ...LegendItemHeader.messages];
 
 export default Legend;

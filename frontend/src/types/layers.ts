@@ -67,9 +67,11 @@ export type LayerTyped = Layer & {
 };
 
 export type CustomLayer = {
-  id: number;
+  id: string;
   name: string;
   feature: GeoJSON;
-  active: boolean;
+  isActive: boolean;
+  isVisible: boolean;
   order?: number;
+  style?: Record<string, unknown>;
 };

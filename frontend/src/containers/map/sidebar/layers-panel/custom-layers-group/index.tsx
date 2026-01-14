@@ -1,7 +1,6 @@
 import { PropsWithChildren, useCallback, useState, useMemo } from 'react';
 
 import { useAtom } from 'jotai';
-import { findIndex } from 'lodash-es';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
@@ -9,7 +8,7 @@ import TooltipButton from '@/components/tooltip-button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { customLayersAtom } from '@/containers/map/store';
+import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { CustomLayer } from '@/types/layers';
@@ -46,19 +45,28 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   const t = useTranslations('containers.map-sidebar-layers-panel');
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
+  const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
 
   const numActiveDatasetsLayers = useMemo(() => {
-    return (customLayers?.filter((layer) => layer?.active)?.length ?? 0) + extraActiveLayers;
+    return Object.keys(customLayers).length + extraActiveLayers;
   }, [customLayers, extraActiveLayers]);
 
   const onToggleLayer = useCallback(
-    (toggled: CustomLayer) => {
-      const toggledIndex = findIndex(customLayers, (layer) => layer.id === toggled.id);
-      const updatedLayers = [...customLayers];
-      updatedLayers[toggledIndex].active = !updatedLayers[toggledIndex].active;
+    (toggled: CustomLayer, checked: boolean) => {
+      const updatedLayers = { ...customLayers };
+      let updatedActiveLayers = [...allActiveLayers];
+      updatedLayers[toggled.id].isActive = checked;
+
+      if (checked) {
+        updatedActiveLayers.unshift(toggled.id);
+      } else {
+        updatedActiveLayers = updatedActiveLayers.filter((id) => id !== toggled.id);
+      }
+
       setCustomLayers(updatedLayers);
+      setAllActiveLayers(updatedActiveLayers);
     },
-    [customLayers, setCustomLayers]
+    [allActiveLayers, customLayers, setAllActiveLayers, setCustomLayers]
   );
 
   const displayNumActiveLayers = !open && numActiveDatasetsLayers > 0;
@@ -88,17 +96,12 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       >
         <div>
           {loading && <span className="font-mono text-xs">{t('loading')}</span>}
-          {/* {noData && <span className="font-mono text-xs">{t('no-data-available')}</span>} */}
           <UploadLayer />
           <div>
             <ul className={cn('my-3 flex flex-col space-y-3', { '-my-0': !showDatasetsNames })}>
-              {customLayers.map((layer) => {
-                const isActive = layer.active;
-                // const onCheckedChange = onToggleLayer.bind(null, layer)
-                // const metadata = layer?.attributes?.metadata;
-                // const sources = metadata?.citation
-                //   ? [{ id: layer?.id, title: metadata?.citation, url: metadata?.source }]
-                //   : null;
+              {Object.keys(customLayers).map((slug) => {
+                const layer = customLayers[slug];
+                const isActive = layer.isActive;
 
                 return (
                   <li key={layer.name} className="flex items-start justify-between">
@@ -107,7 +110,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                         id={`${layer.name}-switch`}
                         className="mt-px"
                         checked={isActive}
-                        onCheckedChange={() => onToggleLayer(layer)}
+                        onCheckedChange={() => onToggleLayer(layer, !isActive)}
                       />
                       <Label htmlFor={`${layer.name}-switch`} className={SWITCH_LABEL_CLASSES}>
                         {layer.name}

@@ -45,6 +45,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
 
   const [, setLayersInteractive] = useAtom(layersInteractiveAtom);
   const [, setLayersInteractiveIds] = useAtom(layersInteractiveIdsAtom);
+
   const { locationCode = 'GLOB' } = useParams();
   const [customRegionLocations] = useSyncCustomRegion();
 

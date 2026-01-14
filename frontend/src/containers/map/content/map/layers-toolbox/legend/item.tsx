@@ -51,6 +51,7 @@ const LegendItem: FCWithMessages<LegendItemsProps> = ({ config, paramsConfig }) 
   );
 
   const resolvedParamsConfig = useResolvedParamsConfig(paramsConfig, resolvedParamsConfigParams);
+
   const dynamicLegendConfig = useMemo(
     () =>
       resolvedParamsConfig?.find(({ key }) => key === 'legend_config')?.default as

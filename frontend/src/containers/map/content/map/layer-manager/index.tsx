@@ -7,32 +7,20 @@ import { useAtom } from 'jotai';
 import { DeckMapboxOverlayProvider } from '@/components/map/provider';
 import { CustomMapProps } from '@/components/map/types';
 import LayerManagerItem from '@/containers/map/content/map/layer-manager/item';
-import {
-  useSyncMapLayerSettings,
-  useSyncMapLayers,
-} from '@/containers/map/content/map/sync-settings';
-import { customLayersAtom } from '@/containers/map/store';
+import { useSyncMapLayerSettings } from '@/containers/map/content/map/sync-settings';
+import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
 
-import CustomLayerManagerItem from './CustomLayerManagerItem';
+import CustomLayerManagerItem from './custom-layer-manager-item';
 
 const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
   const { default: map } = useMap();
 
   const [zoom, setZoom] = useState(map?.getZoom() ?? 1);
 
-  const [activeLayers] = useSyncMapLayers();
   const [layersSettings] = useSyncMapLayerSettings();
 
+  const [allActiveLayers] = useAtom(allActiveLayersAtom);
   const [customLayers] = useAtom(customLayersAtom);
-
-  const [allActiveLayers, setAllActiveLayers] = useState([]);
-
-  useEffect(() => {
-    const customActiveLayers = customLayers.filter((layer) => !!layer.active);
-    const currentActiveLayers = [...activeLayers, ...customActiveLayers];
-
-    setAllActiveLayers(currentActiveLayers);
-  }, [activeLayers, customLayers]);
 
   const getSettings = useCallback(
     (slug: string) => ({
@@ -51,7 +39,7 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
       const beforeId =
         idx === 0 ? 'custom-layers' : `${getLayerId(allActiveLayers[idx - 1])}-layer`;
 
-      if (typeof layer === 'string') {
+      if (!customLayers[layer]) {
         return (
           <LayerManagerItem
             key={layer}
@@ -61,9 +49,9 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
           />
         );
       }
-      return <CustomLayerManagerItem key={layer.id} layer={layer} />;
+      return <CustomLayerManagerItem key={layer} slug={layer} />;
     });
-  }, [allActiveLayers, getSettings]);
+  }, [allActiveLayers, customLayers, getSettings]);
 
   useEffect(() => {
     const onZoom = () => {

@@ -4,16 +4,16 @@ import { useAtom } from 'jotai';
 import { maxBy } from 'lodash-es';
 import { Upload } from 'lucide-react';
 
-// import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SWITCH_LABEL_CLASSES } from '@/containers/map/sidebar/layers-panel/layers-group';
-import { customLayersAtom } from '@/containers/map/store';
+import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 
 const UploadLayer = () => {
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
+  const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
   // Remove this
   // eslint-disable-next-line
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -24,18 +24,29 @@ const UploadLayer = () => {
         const { files } = e.currentTarget;
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
-          let newId = 0;
+          let newId = '0';
+          const customLayerIds = Object.keys(customLayers);
 
-          if (customLayers.length) {
-            const maxIdLayer = maxBy(customLayers, (layer) => layer.id);
-            newId = maxIdLayer.id + 1;
+          if (customLayerIds.length) {
+            const maxIdLayer = maxBy(customLayerIds, (id) => +id);
+            newId = (+maxIdLayer + 1).toString();
           }
 
           setErrorMessage(null);
-          setCustomLayers([
+          setCustomLayers({
             ...customLayers,
-            { id: newId, name: files[0].name, feature: geojson, active: true },
-          ]);
+            [newId]: {
+              id: newId,
+              name: files[0].name,
+              feature: geojson,
+              isVisible: true,
+              isActive: true,
+              order: allActiveLayers.length - 1,
+            },
+          });
+
+          // New layers get activated and at the top of the stack
+          setAllActiveLayers([newId, ...allActiveLayers]);
         } catch (errorMessage) {
           setErrorMessage(errorMessage as string);
         }
@@ -43,7 +54,7 @@ const UploadLayer = () => {
 
       void handler(e);
     },
-    [setCustomLayers, customLayers]
+    [allActiveLayers, customLayers, setAllActiveLayers, setCustomLayers]
   );
 
   return (

@@ -8,12 +8,14 @@ import { CustomMapProps } from '@/components/map/types';
 import type { SharedMarineAreaCountries } from '@/types';
 import type { Layer } from '@/types/generated/strapi.schemas';
 import type { CustomLayer } from '@/types/layers';
+import { MapTypes } from '@/types/map';
 import type { ModellingData } from '@/types/modelling';
 
 export const sidebarAtom = atom(true);
 export const layersAtom = atom(false);
 
 // ? Map state
+export const mapTypeAtom = atom<MapTypes>(MapTypes.ProgressTracker);
 export const layersInteractiveAtom = atom<Layer['slug'][]>([]);
 export const layersInteractiveIdsAtom = atom<string[]>([]);
 export const bboxLocationAtom = atomWithReset<CustomMapProps['bounds']['bbox']>([
@@ -29,7 +31,9 @@ export const drawStateAtom = atomWithReset<{
   status: 'idle',
   feature: null,
 });
-export const customLayersAtom = atom<CustomLayer[]>([]);
+export const allActiveLayersAtom = atom<Array<string>>([]);
+export const customLayersAtom = atom<{ [key: string]: CustomLayer }>({});
+
 export const sharedMarineAreaCountriesAtom = atom<SharedMarineAreaCountries>([]);
 
 // ? modelling state
