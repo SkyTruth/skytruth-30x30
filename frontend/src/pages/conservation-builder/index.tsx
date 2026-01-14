@@ -8,6 +8,7 @@ import MapLayout from '@/layouts/map';
 import { fetchTranslations } from '@/lib/i18n';
 import mapParamsToSearchParams from '@/lib/mapparams-to-searchparams';
 import { FCWithMessages } from '@/types';
+import { MapTypes } from '@/types/map';
 
 import { LayoutProps } from '../_app';
 
@@ -21,7 +22,7 @@ ConservationBuilderPage.layout = {
   Component: MapLayout,
   props: {
     title: '',
-    type: 'conservation-builder',
+    type: MapTypes.ConservationBuilder,
   },
 };
 
