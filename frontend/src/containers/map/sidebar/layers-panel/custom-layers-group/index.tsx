@@ -1,7 +1,7 @@
-import { PropsWithChildren, useCallback, useState, useMemo } from 'react';
+import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAtom } from 'jotai';
-import { Trash } from 'lucide-react';
+import { Pencil, Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
@@ -42,13 +42,25 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   extraActiveLayers = 0,
   children,
 }): JSX.Element => {
-  const [open, setOpen] = useState(isOpen);
   const t = useTranslations('containers.map-sidebar-layers-panel');
+
+  const [open, setOpen] = useState(isOpen);
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState<string>('');
+
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
 
-  const numActiveDatasetsLayers = useMemo(() => {
+  useEffect(() => {
+    if (editingSlug) {
+      requestAnimationFrame(() => inputRef.current?.focus());
+      // inputRef.current?.focus()
+    }
+  }, [editingSlug]);
+
+  const numCustomLayers = useMemo(() => {
     return Object.keys(customLayers).length + extraActiveLayers;
   }, [customLayers, extraActiveLayers]);
 
@@ -80,7 +92,39 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
     [customLayers, setCustomLayers]
   );
 
-  const displayNumActiveLayers = !open && numActiveDatasetsLayers > 0;
+  const onRenameLayer = useCallback(
+    (slug: string, newName: string) => {
+      setCustomLayers((prev) => {
+        prev[slug].name = newName;
+        return {
+          ...prev,
+        };
+      });
+    },
+    [setCustomLayers]
+  );
+
+  const beginEdit = (slug: string, currentName: string) => {
+    setEditingSlug(slug);
+    setDraftName(currentName);
+  };
+
+  const cancelEdit = () => {
+    setEditingSlug(null);
+    setDraftName('');
+  };
+
+  const commitEdit = (slug: string) => {
+    const next = draftName.trim();
+    if (next.length === 0) return cancelEdit();
+
+    if (customLayers[slug]?.name !== next) {
+      onRenameLayer(slug, next);
+    }
+    cancelEdit();
+  };
+
+  const displayNumLayers = open && numCustomLayers > 0;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -89,10 +133,8 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       >
         <span>
           {name}
-          {displayNumActiveLayers && (
-            <span className="ml-2 border border-black px-1 font-normal">
-              {numActiveDatasetsLayers}
-            </span>
+          {displayNumLayers && (
+            <span className="ml-2 border border-black px-1 font-normal">{numCustomLayers}</span>
           )}
         </span>
         <LuChevronDown
@@ -113,33 +155,61 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
               {Object.keys(customLayers).map((slug) => {
                 const layer = customLayers[slug];
                 const isActive = layer.isActive;
+                const isEditing = editingSlug === slug;
 
                 return (
-                  <li key={layer.name} className="flex items-start justify-between">
-                    <span className="flex items-start gap-2">
+                  <li key={slug} className="flex items-start justify-between gap-3">
+                    <span className="flex min-w-0 flex-1 items-start gap-2">
                       <Switch
                         id={`${layer.name}-switch`}
                         className="mt-px"
                         checked={isActive}
                         onCheckedChange={() => onToggleLayer(layer, !isActive)}
                       />
-                      <Label htmlFor={`${layer.name}-switch`} className={SWITCH_LABEL_CLASSES}>
-                        {layer.name}
-                      </Label>
+
+                      <div className="min-w-0 flex-1">
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              ref={inputRef}
+                              value={draftName}
+                              onChange={(e) => setDraftName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') commitEdit(slug);
+                                if (e.key === 'Escape') cancelEdit();
+                              }}
+                              onBlur={() => commitEdit(slug)}
+                              aria-label={t('edit-layer-name', { layer: layer.name })}
+                              className={cn(
+                                'w-full rounded-md border border-black bg-white px-2 py-1 text-sm',
+                                'focus:outline-none focus:ring-2 focus:ring-black/30'
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <Label htmlFor={`${layer.name}-switch`} className={SWITCH_LABEL_CLASSES}>
+                            {layer.name}
+                          </Label>
+                        )}
+                      </div>
                     </span>
+
                     <button
+                      type="button"
+                      aria-label={t('edit-layer-name')}
+                      onClick={() => (isEditing ? commitEdit(slug) : beginEdit(slug, layer.name))}
+                      className={cn(isEditing ? 'border border-black bg-black/5' : '')}
+                    >
+                      <Pencil size={16} />
+                    </button>
+
+                    <button
+                      type="button"
                       aria-label={t('delete-layer', { layer: layer.name })}
                       onClick={() => onDeleteLayer(slug)}
                     >
                       <Trash size={16} />
                     </button>
-                    {/* {metadata?.description && (
-                          <TooltipButton
-                            className="mt-px"
-                            text={metadata?.description}
-                            sources={sources}
-                          />
-                        )} */}
                   </li>
                 );
               })}
