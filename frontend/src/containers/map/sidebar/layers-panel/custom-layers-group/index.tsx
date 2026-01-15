@@ -23,6 +23,9 @@ const COLLAPSIBLE_TRIGGER_CLASSES =
 const COLLAPSIBLE_CONTENT_CLASSES =
   'data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down border-black';
 
+const MAX_CUSTOM_LAYERS = 5;
+export const MAX_CUSTOM_LAYER_SIZE = '5mb';
+
 type CustomLayersGroupProps = PropsWithChildren<{
   name: string;
   showDatasetsNames?: boolean;
@@ -124,6 +127,10 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
     cancelEdit();
   };
 
+  const isUploadDisabled = useMemo(() => {
+    return Object.keys(customLayers).length >= MAX_CUSTOM_LAYERS;
+  }, [customLayers]);
+
   const displayNumLayers = open && numCustomLayers > 0;
 
   return (
@@ -149,7 +156,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       >
         <div>
           {loading && <span className="font-mono text-xs">{t('loading')}</span>}
-          <UploadLayer />
+          <UploadLayer isDisabled={isUploadDisabled} />
           <div>
             <ul className={cn('my-3 flex flex-col space-y-3', { '-my-0': !showDatasetsNames })}>
               {Object.keys(customLayers).map((slug) => {
@@ -225,6 +232,10 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   );
 };
 
-CustomLayersGroup.messages = ['containers.map-sidebar-layers-panel', ...TooltipButton.messages, ...UploadLayer.messages];
+CustomLayersGroup.messages = [
+  'containers.map-sidebar-layers-panel',
+  ...TooltipButton.messages,
+  ...UploadLayer.messages,
+];
 
 export default CustomLayersGroup;

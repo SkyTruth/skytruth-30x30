@@ -1,6 +1,5 @@
-import { ChangeEvent, ChangeEventHandler, useCallback, useMemo, useState } from 'react';
+import { ChangeEvent, ChangeEventHandler, useCallback, useState } from 'react';
 
-import { maxBy } from 'lodash-es';
 import { useAtom } from 'jotai';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -15,9 +14,9 @@ import { FCWithMessages } from '@/types';
 
 type UploadLayerProps = {
   isDisabled: boolean;
-}
+};
 
-const UploadLayer: FCWithMessages<UploadLayerProps> = ({isDisabled}) => {
+const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
@@ -31,13 +30,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({isDisabled}) => {
         const { files } = e.currentTarget;
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
-          let newId = '0';
-          const customLayerIds = Object.keys(customLayers);
-
-          if (customLayerIds.length) {
-            const maxIdLayer = maxBy(customLayerIds, (id) => +id);
-            newId = (+maxIdLayer + 1).toString();
-          }
+          const newId = window.crypto.randomUUID();
 
           setErrorMessage(null);
           setCustomLayers({
@@ -65,7 +58,12 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({isDisabled}) => {
   );
 
   return (
-    <Label htmlFor="upload-layer" className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2 pb-2')}>
+    <Label
+      htmlFor="upload-layer"
+      className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2 pb-2', {
+        'text-gray-500': isDisabled,
+      })}
+    >
       <Input
         id="upload-layer"
         type="file"
@@ -73,6 +71,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({isDisabled}) => {
         accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
         className="sr-only"
         onChange={onChange}
+        disabled={isDisabled}
       />
       <button
         type="button"
@@ -87,6 +86,6 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({isDisabled}) => {
   );
 };
 
-UploadLayer.messages = ['containers.map-sidebar-layers-panel']
+UploadLayer.messages = ['containers.map-sidebar-layers-panel'];
 
 export default UploadLayer;
