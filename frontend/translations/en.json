@@ -213,7 +213,8 @@
       "marine-data": "Marine Data",
       "terrestrial-data": "Terrestrial Data",
       "loading": "Loading data...",
-      "no-data-available": "No data available"
+      "no-data-available": "No data available",
+      "delete-layer": "Delete {layer} layer"
     },
     "map": {
       "loading": "Loading...",
