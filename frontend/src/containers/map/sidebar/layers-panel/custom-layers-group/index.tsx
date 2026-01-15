@@ -1,9 +1,9 @@
 import { PropsWithChildren, useCallback, useState, useMemo } from 'react';
 
 import { useAtom } from 'jotai';
+import { Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
-import { Trash } from 'lucide-react';
 
 import TooltipButton from '@/components/tooltip-button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -13,7 +13,6 @@ import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { CustomLayer } from '@/types/layers';
-import { Button } from '@/components/ui/button';
 
 import UploadLayer from '../../main-panel/panels/details/upload-layer';
 
@@ -71,12 +70,15 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
     [allActiveLayers, customLayers, setAllActiveLayers, setCustomLayers]
   );
 
-  const onDeleteLayer = useCallback((slug: string) => {
-    const updatedLayers = {...customLayers};
-    delete updatedLayers[slug];
+  const onDeleteLayer = useCallback(
+    (slug: string) => {
+      const updatedLayers = { ...customLayers };
+      delete updatedLayers[slug];
 
-    setCustomLayers(updatedLayers);
-  }, [customLayers, setCustomLayers])
+      setCustomLayers(updatedLayers);
+    },
+    [customLayers, setCustomLayers]
+  );
 
   const displayNumActiveLayers = !open && numActiveDatasetsLayers > 0;
 
@@ -125,9 +127,9 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                         {layer.name}
                       </Label>
                     </span>
-                    <button 
-                      aria-label={t('delete-layer', {layer: layer.name})}
-                      onClick={() => onDeleteLayer(slug)}  
+                    <button
+                      aria-label={t('delete-layer', { layer: layer.name })}
+                      onClick={() => onDeleteLayer(slug)}
                     >
                       <Trash size={16} />
                     </button>
