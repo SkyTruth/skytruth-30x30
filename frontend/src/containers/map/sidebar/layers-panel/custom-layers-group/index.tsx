@@ -159,7 +159,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
 
                 return (
                   <li key={slug} className="flex items-start justify-between gap-3">
-                    <span className="flex min-w-0 flex-1 items-start gap-2">
+                    <span className="flex min-w-0 flex-1 items-start gap-2 overflow-x-hidden">
                       <Switch
                         id={`${layer.name}-switch`}
                         className="mt-px"
@@ -187,7 +187,10 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                             />
                           </div>
                         ) : (
-                          <Label htmlFor={`${layer.name}-switch`} className={SWITCH_LABEL_CLASSES}>
+                          <Label
+                            htmlFor={`${layer.name}-switch`}
+                            className={cn(SWITCH_LABEL_CLASSES, 'overflow-x-hidden')}
+                          >
                             {layer.name}
                           </Label>
                         )}

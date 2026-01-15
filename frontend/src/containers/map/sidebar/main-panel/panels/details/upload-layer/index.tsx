@@ -66,11 +66,17 @@ const UploadLayer = () => {
         accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
         aria-label="Upload a geometry"
         aria-describedby="upload-notes upload-error"
-        className="hidden"
+        className="sr-only"
         onChange={onChange}
       />
-      <Upload size={18} />
-      <span>Upload Layer</span>
+      <button
+        type="button"
+        onClick={() => document.getElementById('upload-layer')?.click()}
+        className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2')}
+      >
+        <Upload size={18} />
+        <span>Upload Layer</span>
+      </button>
     </Label>
   );
 };

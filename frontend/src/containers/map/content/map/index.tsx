@@ -29,8 +29,6 @@ import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped } from '@/types/layers';
 
-import LayerUploadControls from './layer-upload-controls';
-
 const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-manager'), {
   ssr: false,
 });
@@ -270,7 +268,6 @@ const MainMap: FCWithMessages = () => {
           <LayersToolbox />
           <ZoomControls />
           <DrawControls />
-          <LayerUploadControls />
           <LayerManager cursor={cursor} />
           <Modelling />
           <Attributions />
