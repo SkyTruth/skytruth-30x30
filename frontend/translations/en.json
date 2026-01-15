@@ -215,7 +215,8 @@
       "loading": "Loading data...",
       "no-data-available": "No data available",
       "delete-layer": "Delete {layer} layer",
-      "edit-layer-name": "Edit Layer Name"
+      "edit-layer-name": "Edit Layer Name",
+      "upload-layer": "Upload Layer"
     },
     "map": {
       "loading": "Loading...",

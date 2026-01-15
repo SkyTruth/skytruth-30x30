@@ -19,7 +19,7 @@ import UploadLayer from '../../main-panel/panels/details/upload-layer';
 export const SWITCH_LABEL_CLASSES = '-mb-px cursor-pointer pt-px font-mono text-xs font-normal';
 const COLLAPSIBLE_TRIGGER_ICONS_CLASSES = 'w-5 h-5 hidden';
 const COLLAPSIBLE_TRIGGER_CLASSES =
-  'group flex w-full items-center justify-between py-2 text-xs font-bold';
+  'group flex w-full items-center justify-between py-1 text-xs font-bold';
 const COLLAPSIBLE_CONTENT_CLASSES =
   'data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down border-black';
 
@@ -225,6 +225,6 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   );
 };
 
-CustomLayersGroup.messages = ['containers.map-sidebar-layers-panel', ...TooltipButton.messages];
+CustomLayersGroup.messages = ['containers.map-sidebar-layers-panel', ...TooltipButton.messages, ...UploadLayer.messages];
 
 export default CustomLayersGroup;
