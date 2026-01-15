@@ -21,11 +21,11 @@ const Legend: FCWithMessages = () => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
 
-  const [activeLayers, setMapLayers] = useSyncMapLayers();
+  const [activeLayers, setPredefinedMapLayers] = useSyncMapLayers();
   const [layerSettings, setLayerSettings] = useSyncMapLayerSettings();
 
-  const [customLayers] = useAtom(customLayersAtom);
-  const [allActiveLayers] = useAtom(allActiveLayersAtom);
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
+  const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
 
   const layersQuery = useGetLayers<LayerListResponseDataItem[]>(
     {
@@ -64,24 +64,40 @@ const Legend: FCWithMessages = () => {
   );
 
   const onRemoveLayer = useCallback(
-    (layerSlug: string) =>
-      setMapLayers((currentLayers) => {
+    (layerSlug: string) => {
+      if (!customLayers[layerSlug]) {
+        setPredefinedMapLayers((currentLayers) => {
+          return currentLayers.filter((slug) => slug !== layerSlug);
+        });
+      } else {
+        const updatedCustomLayers = { ...customLayers };
+        updatedCustomLayers[layerSlug].isActive = false;
+        setCustomLayers(updatedCustomLayers);
+      }
+      setAllActiveLayers((currentLayers) => {
         return currentLayers.filter((slug) => slug !== layerSlug);
-      }),
-    [setMapLayers]
+      });
+    },
+    [customLayers, setAllActiveLayers, setCustomLayers, setPredefinedMapLayers]
   );
 
   const onToggleLayerVisibility = useCallback(
     (layerSlug: string, isVisible: boolean) => {
-      setLayerSettings((prev) => ({
-        ...prev,
-        [layerSlug]: {
-          ...prev[layerSlug],
-          visibility: isVisible,
-        },
-      }));
+      if (!customLayers[layerSlug]) {
+        setLayerSettings((prev) => ({
+          ...prev,
+          [layerSlug]: {
+            ...prev[layerSlug],
+            visibility: isVisible,
+          },
+        }));
+      } else {
+        const updatedCustomLayers = { ...customLayers };
+        updatedCustomLayers[layerSlug].isVisible = !updatedCustomLayers[layerSlug].isVisible;
+        setCustomLayers(updatedCustomLayers);
+      }
     },
-    [setLayerSettings]
+    [customLayers, setCustomLayers, setLayerSettings]
   );
 
   const onChangeLayerOpacity = useCallback(
@@ -97,32 +113,42 @@ const Legend: FCWithMessages = () => {
     [setLayerSettings]
   );
 
-  const onMoveLayerDown = useCallback(
-    (layerSlug: string) => {
-      const layerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
+  const moveLayer = useCallback(
+    (layerSlug: string, direction: 'up' | 'down') => {
+      const layerIndex = allActiveLayers.findIndex((slug) => slug === layerSlug);
       if (layerIndex === -1) {
         return;
       }
+      const delta = direction === 'up' ? -1 : 1;
 
-      setMapLayers((prev) => {
-        return prev.toSpliced(layerIndex, 1).toSpliced(layerIndex + 1, 0, layerSlug);
-      });
+      if (!customLayers[layerSlug]) {
+        const predfinedLayerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
+        setPredefinedMapLayers((prev) => {
+          return prev
+            .toSpliced(predfinedLayerIndex, 1)
+            .toSpliced(predfinedLayerIndex + delta, 0, layerSlug);
+        });
+      }
+
+      setAllActiveLayers((prev) =>
+        prev.toSpliced(layerIndex, 1).toSpliced(layerIndex + delta, 0, layerSlug)
+      );
     },
-    [activeLayers, setMapLayers]
+    [allActiveLayers, activeLayers, customLayers, setAllActiveLayers, setPredefinedMapLayers]
+  );
+
+  const onMoveLayerDown = useCallback(
+    (layerSlug: string) => {
+      moveLayer(layerSlug, 'down');
+    },
+    [moveLayer]
   );
 
   const onMoveLayerUp = useCallback(
     (layerSlug: string) => {
-      const layerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
-      if (layerIndex === -1) {
-        return;
-      }
-
-      setMapLayers((prev) => {
-        return prev.toSpliced(layerIndex, 1).toSpliced(layerIndex - 1, 0, layerSlug);
-      });
+      moveLayer(layerSlug, 'up');
     },
-    [activeLayers, setMapLayers]
+    [moveLayer]
   );
 
   const legendItems = useMemo(() => {
@@ -143,6 +169,11 @@ const Legend: FCWithMessages = () => {
           let params_config;
           if (!customLayers[slug] && layersQuery.data?.length) {
             const layer = layersQuery.data.filter((layer) => layer.attributes.slug === slug)[0];
+
+            // Short circuit to catch when allActiveLayers state updates and the layersQuery
+            // hasn't yet returned the corresponding data
+            if (!layer) return null;
+
             legend_config = layer.attributes.legend_config;
             params_config = layer.attributes.params_config;
 

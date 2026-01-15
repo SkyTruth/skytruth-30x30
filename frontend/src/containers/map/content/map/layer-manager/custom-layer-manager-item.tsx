@@ -15,6 +15,7 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
   const config = new GeoJsonLayer({
     id: `${layer.id}-layer`,
     data: layer.feature,
+    visible: layer.isVisible,
 
     // Polygon fill
     filled: true,
