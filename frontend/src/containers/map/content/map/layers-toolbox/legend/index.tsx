@@ -11,7 +11,7 @@ import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
-import { LayerListResponseDataItem } from '@/types/generated/strapi.schemas';
+import { LayerListResponseDataItem, LegendLegendComponent } from '@/types/generated/strapi.schemas';
 import { LayerTyped, ParamsConfig } from '@/types/layers';
 
 import LegendItem from './item';
@@ -164,9 +164,10 @@ const Legend: FCWithMessages = () => {
 
           let opacity = 1;
           let isVisible = true;
-          let title;
-          let legend_config;
+          let title: string;
+          let legend_config: LegendLegendComponent;
           let params_config;
+
           if (!customLayers[slug] && layersQuery.data?.length) {
             const layer = layersQuery.data.filter((layer) => layer.attributes.slug === slug)[0];
 
@@ -181,14 +182,15 @@ const Legend: FCWithMessages = () => {
             isVisible = layerSettings[slug]?.visibility !== false;
             opacity = layerSettings[slug]?.opacity ?? 1;
           } else {
-            title = customLayers[slug].name;
-            isVisible = customLayers[slug].isVisible;
+            const layer = customLayers[slug];
+
+            title = layer.name;
+            isVisible = layer.isVisible;
             legend_config = {
-              id: +slug,
               type: 'icon',
               items: [
                 {
-                  color: '#000000',
+                  color: layer.style.fillColor,
                   description: null,
                   icon: 'circle-with-fill',
                   value: title,

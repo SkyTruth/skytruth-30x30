@@ -20,6 +20,12 @@ type UploadLayerProps = {
   isDisabled: boolean;
 };
 
+const DEFAULT_LAYER_STYLE = {
+  opacity: 0.5,
+  fillColor: '#5278d1',
+  lineColor: '#000000',
+};
+
 const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
@@ -45,7 +51,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
               feature: geojson,
               isVisible: true,
               isActive: true,
-              order: allActiveLayers.length - 1,
+              style: { ...DEFAULT_LAYER_STYLE },
             },
           });
 

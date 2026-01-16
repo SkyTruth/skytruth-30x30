@@ -208,7 +208,7 @@
       "terrestrial-data": "Terrestrial Data",
       "loading": "Loading data...",
       "no-data-available": "No data available",
-      "delete-layer": "Delete {layer} layer",
+      "delete-layer": "Delete layer",
       "edit-layer-name": "Edit Layer Name",
       "upload-layer": "Upload Layer",
       "generic-upload-error": "Unable to validate the file.",

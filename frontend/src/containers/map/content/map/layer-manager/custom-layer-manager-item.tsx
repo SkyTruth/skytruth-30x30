@@ -16,14 +16,21 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
     id: `${layer.id}-layer`,
     data: layer.feature,
     visible: layer.isVisible,
+    opacity: 0.5,
 
     // Polygon fill
     filled: true,
-    getFillColor: [0, 0, 255, 70],
+    getFillColor: () => {
+      const hex = layer.style.fillColor;
+      return hex.match(/[0-9a-f]{2}/g).map((x) => parseInt(x, 16));
+    },
 
     // Polygon outline
     stroked: true,
-    getLineColor: [0, 0, 255, 255],
+    getLineColor: () => {
+      const hex = layer.style.lineColor;
+      return hex.match(/[0-9a-f]{2}/g).map((x) => parseInt(x, 16));
+    },
     getLineWidth: 2,
 
     // Make line width reliable
@@ -39,9 +46,8 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
     pointRadiusMinPixels: 2,
     pointRadiusMaxPixels: 15,
 
-    // Quality improvements
     parameters: {
-      depthTest: false, // ensures lines aren't hidden by fill depth
+      depthTest: false,
     },
 
     pickable: true,

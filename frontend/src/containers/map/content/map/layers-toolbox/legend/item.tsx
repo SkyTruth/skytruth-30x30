@@ -100,24 +100,26 @@ const LegendItem: FCWithMessages<LegendItemsProps> = ({ config, paramsConfig }) 
     case 'icon':
       return (
         <ul className="flex w-full flex-col">
-          {items.map(({ value, icon, description, color }) => (
-            <li key={`${value}`} className="flex items-start space-x-2 p-1">
-              <span className="h-[18px] w-[18px] shrink-0">
-                <Icon
-                  icon={ICONS_MAPPING[icon]}
-                  className={cn({
-                    'h-full w-full': true,
-                    'rounded-full border border-black': icon.startsWith('establishment'),
-                  })}
-                  style={color ? { color } : undefined}
-                />
-              </span>
-              <span className="text-xs">
-                <span className="font-mono">{value}</span>
-                {description && <TooltipButton className="align-bottom" text={description} />}
-              </span>
-            </li>
-          ))}
+          {items.map(({ value, icon, description, color }) => {
+            return (
+              <li key={`${value}`} className="flex items-start space-x-2 p-1">
+                <span className="h-[18px] w-[18px] shrink-0">
+                  <Icon
+                    icon={ICONS_MAPPING[icon]}
+                    className={cn({
+                      'h-full w-full': true,
+                      'rounded-full border border-black': icon.startsWith('establishment'),
+                    })}
+                    style={color ? { color } : undefined}
+                  />
+                </span>
+                <span className="text-xs">
+                  <span className="font-mono">{value}</span>
+                  {description && <TooltipButton className="align-bottom" text={description} />}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       );
 

@@ -66,12 +66,17 @@ export type LayerTyped = Layer & {
   metadata: Record<string, unknown>;
 };
 
+type LayerStyle = {
+  opacity: number;
+  fillColor: string;
+  lineColor: string;
+};
+
 export type CustomLayer = {
   id: string;
   name: string;
   feature: GeoJSON;
   isActive: boolean;
   isVisible: boolean;
-  order?: number;
-  style?: Record<string, unknown>;
+  style: LayerStyle;
 };
