@@ -16,16 +16,14 @@ import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { CustomLayer } from '@/types/layers';
 
-import UploadLayer from '../../main-panel/panels/details/upload-layer';
 import {
-  SWITCH_LABEL_CLASSES,
   COLLAPSIBLE_TRIGGER_ICONS_CLASSES,
   COLLAPSIBLE_TRIGGER_CLASSES,
   COLLAPSIBLE_CONTENT_CLASSES,
-} from '../layers-group';
-
-const MAX_CUSTOM_LAYERS = 5;
-export const MAX_CUSTOM_LAYER_SIZE = '5mb';
+  SWITCH_LABEL_CLASSES,
+  MAX_CUSTOM_LAYERS,
+} from '../constants';
+import UploadLayer from '../upload-layer';
 
 type CustomLayersGroupProps = PropsWithChildren<{
   name: string;
@@ -130,11 +128,10 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger
-        className={cn(COLLAPSIBLE_TRIGGER_CLASSES,
-          {
-            'border-b border-black': !open,
-            'py-0': true
-          })}
+        className={cn(COLLAPSIBLE_TRIGGER_CLASSES, {
+          'border-b border-black': !open,
+          'py-0': true,
+        })}
       >
         <span>
           {name}
