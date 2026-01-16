@@ -39,7 +39,6 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
     pointRadiusMinPixels: 2,
     pointRadiusMaxPixels: 15,
 
-
     // Quality improvements
     parameters: {
       depthTest: false, // ensures lines aren't hidden by fill depth

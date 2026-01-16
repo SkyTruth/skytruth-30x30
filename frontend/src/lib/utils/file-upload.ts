@@ -4,7 +4,6 @@ import { Loader } from '@loaders.gl/loader-utils';
 import { ShapefileLoader } from '@loaders.gl/shapefile';
 import { ZipLoader } from '@loaders.gl/zip';
 import { featureCollection, GeoJSONObject, Geometries, MultiPolygon, Polygon } from '@turf/turf';
-import { is } from 'date-fns/locale';
 import type { Feature, FeatureCollection, GeometryCollection } from 'geojson';
 
 export type ValidGeometryType = Polygon | MultiPolygon | GeometryCollection;
@@ -24,11 +23,11 @@ export const supportedFileformats = [
 ];
 
 const isFeatureCollection = (
-    geoJSON: GeoJSONObject
-  ): geoJSON is FeatureCollection<Geometries, unknown> => geoJSON.type === 'FeatureCollection';
+  geoJSON: GeoJSONObject
+): geoJSON is FeatureCollection<Geometries, unknown> => geoJSON.type === 'FeatureCollection';
 
 const isFeature = (geoJSON: GeoJSONObject): geoJSON is Feature<Geometries, unknown> =>
-    geoJSON.type === 'Feature';
+  geoJSON.type === 'Feature';
 
 /**
  * Return the text content of a file
@@ -198,20 +197,18 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
   } else {
     const feature = content as GeoJSONObject;
     if (isFeature(feature)) {
-       parsed = featureCollection([feature]);
+      parsed = featureCollection([feature]);
     } else {
       parsed = content as FeatureCollection;
     }
   }
 
   return parsed;
-
 }
 
 // Currently unused, but left as an export since it iwll be helpful with uplaoding geometries
 // to Conservation Builder
 export function cleanupGeoJSON(geoJSON: GeoJSONObject): Feature<ValidGeometryType> {
-
   let collection: FeatureCollection;
   if (isFeature(geoJSON)) {
     collection = featureCollection([geoJSON]);

@@ -9,9 +9,12 @@ import { Label } from '@/components/ui/label';
 import { SWITCH_LABEL_CLASSES } from '@/containers/map/sidebar/layers-panel/layers-group';
 import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
-import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
+import {
+  convertFilesToGeojson,
+  supportedFileformats,
+  UploadErrorType,
+} from '@/lib/utils/file-upload';
 import { FCWithMessages } from '@/types';
-import { UploadErrorType } from '@/lib/utils/file-upload';
 
 type UploadLayerProps = {
   isDisabled: boolean;
@@ -31,7 +34,6 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
         const { files } = e.currentTarget;
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
-          console.log("returnjson", geojson)
           const newId = window.crypto.randomUUID();
 
           setErrorMessage(null);
@@ -50,7 +52,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
           // New layers get activated and at the top of the stack
           setAllActiveLayers([newId, ...allActiveLayers]);
         } catch (error) {
-          switch(error) {             
+          switch (error) {
             case UploadErrorType.InvalidXMLSyntax:
               setErrorMessage(t('xml-syntax-error'));
               break;
@@ -61,45 +63,45 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
               setErrorMessage(t('unsupported-file-error'));
               break;
             default:
-               setErrorMessage(t("generic-upload-error"));
-               break;
+              setErrorMessage(t('generic-upload-error'));
+              break;
           }
         }
       };
 
       void handler(e);
     },
-    [allActiveLayers, customLayers, setAllActiveLayers, setCustomLayers]
+    [allActiveLayers, customLayers, setAllActiveLayers, setCustomLayers, t]
   );
 
   return (
     <>
-    <Label
-      htmlFor="upload-layer"
-      className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2 pb-2', {
-        'text-gray-500': isDisabled,
-      })}
-    >
-      <Input
-        id="upload-layer"
-        type="file"
-        multiple
-        accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
-        className="sr-only"
-        onChange={onChange}
-        disabled={isDisabled}
-      />
-      <button
-        type="button"
-        onClick={() => document.getElementById('upload-layer')?.click()}
-        className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2')}
-        disabled={isDisabled}
+      <Label
+        htmlFor="upload-layer"
+        className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2 pb-2', {
+          'text-gray-500': isDisabled,
+        })}
       >
-        <Upload size={18} />
-        <span>{t('upload-layer')}</span>
-      </button>
-    </Label>
-    <p className='text-error'>{errorMessage}</p>
+        <Input
+          id="upload-layer"
+          type="file"
+          multiple
+          accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
+          className="sr-only"
+          onChange={onChange}
+          disabled={isDisabled}
+        />
+        <button
+          type="button"
+          onClick={() => document.getElementById('upload-layer')?.click()}
+          className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2')}
+          disabled={isDisabled}
+        >
+          <Upload size={18} />
+          <span>{t('upload-layer')}</span>
+        </button>
+      </Label>
+      <p className="text-error">{errorMessage}</p>
     </>
   );
 };
