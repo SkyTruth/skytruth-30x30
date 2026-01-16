@@ -30,26 +30,21 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
     [layersSettings, zoom]
   );
 
-  const getLayerId = (layer: string | { id: number }) => {
-    return typeof layer === 'string' ? layer : String(layer.id);
-  };
-
   const layerManagerItems = useMemo(() => {
-    return allActiveLayers.map((layer, idx) => {
-      const beforeId =
-        idx === 0 ? 'custom-layers' : `${getLayerId(allActiveLayers[idx - 1])}-layer`;
+    return allActiveLayers.map((slug, idx) => {
+      const beforeId = idx === 0 ? 'custom-layers' : `${allActiveLayers[idx - 1]}-layer`;
 
-      if (!customLayers[layer]) {
+      if (!customLayers[slug]) {
         return (
           <LayerManagerItem
-            key={layer}
-            slug={layer}
+            key={slug}
+            slug={slug}
             beforeId={beforeId}
-            settings={getSettings(layer)}
+            settings={getSettings(slug)}
           />
         );
       }
-      return <CustomLayerManagerItem key={layer} slug={layer} />;
+      return <CustomLayerManagerItem key={slug} slug={slug} />;
     });
   }, [allActiveLayers, customLayers, getSettings]);
 
@@ -72,14 +67,13 @@ const LayerManager = ({}: { cursor: CustomMapProps['cursor'] }) => {
           Generate all transparent backgrounds to be able to sort by layers without an error
           - https://github.com/visgl/react-map-gl/issues/939#issuecomment-625290200
         */}
-        {allActiveLayers.map((layer, idx) => {
-          const beforeId =
-            idx === 0 ? 'custom-layers' : `${getLayerId(allActiveLayers[idx - 1])}-layer`;
-          const id = getLayerId(layer);
+        {allActiveLayers.map((slug, idx) => {
+          const beforeId = idx === 0 ? 'custom-layers' : `${allActiveLayers[idx - 1]}-layer`;
+
           return (
             <Layer
-              id={`${id}-layer`}
-              key={id}
+              id={`${slug}-layer`}
+              key={slug}
               type="background"
               layout={{ visibility: 'none' }}
               beforeId={beforeId}

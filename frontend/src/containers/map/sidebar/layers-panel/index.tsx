@@ -15,9 +15,9 @@ import { MapTypes } from '@/types/map';
 
 import { mapTypeAtom } from '../../store';
 
+import { SWITCH_LABEL_CLASSES } from './constants';
 import CustomLayersGroup from './custom-layers-group';
 import LayersGroup from './layers-group';
-import { SWITCH_LABEL_CLASSES } from './constants';
 
 const LayersPanel: FCWithMessages = (): JSX.Element => {
   const t = useTranslations('containers.map-sidebar-layers-panel');

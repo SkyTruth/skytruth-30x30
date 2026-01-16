@@ -51,7 +51,6 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   useEffect(() => {
     if (editingSlug) {
       requestAnimationFrame(() => inputRef.current?.focus());
-      // inputRef.current?.focus()
     }
   }, [editingSlug]);
 
