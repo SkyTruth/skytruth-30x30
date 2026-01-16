@@ -128,10 +128,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger
-        className={cn(COLLAPSIBLE_TRIGGER_CLASSES, {
-          'border-b border-black': !open,
-          'py-0': true,
-        })}
+        className={cn(COLLAPSIBLE_TRIGGER_CLASSES, { 'border-b border-black': !open })}
       >
         <span>
           {name}
@@ -147,7 +144,10 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
         />
       </CollapsibleTrigger>
       <CollapsibleContent
-        className={cn(COLLAPSIBLE_CONTENT_CLASSES, { 'border-b': showBottomBorder })}
+        className={cn(COLLAPSIBLE_CONTENT_CLASSES, {
+          'border-b': showBottomBorder,
+          'py-0': true,
+        })}
       >
         <div>
           <UploadLayer isDisabled={isUploadDisabled} />
