@@ -1,10 +1,4 @@
 {
-  "upload": {
-    "generic-error": "Unable to validate the file.",
-    "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
-    "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and eventually .prj files all at once.",
-    "unsupported-file-error": "Unable to parse the file. Please try uploading a different format."
-  },
   "layouts": {
     "error": {
       "go-to-homepage": "Go to homepage"
@@ -216,7 +210,12 @@
       "no-data-available": "No data available",
       "delete-layer": "Delete {layer} layer",
       "edit-layer-name": "Edit Layer Name",
-      "upload-layer": "Upload Layer"
+      "upload-layer": "Upload Layer",
+      "generic-upload-error": "Unable to validate the file.",
+      "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
+      "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and eventually .prj files all at once.",
+      "unsupported-file-error": "Unable to parse the file. Please try uploading a different format."
+
     },
     "map": {
       "loading": "Loading...",

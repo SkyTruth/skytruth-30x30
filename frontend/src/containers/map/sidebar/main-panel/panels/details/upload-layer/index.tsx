@@ -11,6 +11,7 @@ import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 import { FCWithMessages } from '@/types';
+import { UploadErrorType } from '@/lib/utils/file-upload';
 
 type UploadLayerProps = {
   isDisabled: boolean;
@@ -30,6 +31,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
         const { files } = e.currentTarget;
         try {
           const geojson = await convertFilesToGeojson(Array.from(files));
+          console.log("returnjson", geojson)
           const newId = window.crypto.randomUUID();
 
           setErrorMessage(null);
@@ -47,8 +49,21 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
 
           // New layers get activated and at the top of the stack
           setAllActiveLayers([newId, ...allActiveLayers]);
-        } catch (errorMessage) {
-          setErrorMessage(errorMessage as string);
+        } catch (error) {
+          switch(error) {             
+            case UploadErrorType.InvalidXMLSyntax:
+              setErrorMessage(t('xml-syntax-error'));
+              break;
+            case UploadErrorType.SHPMissingFile:
+              setErrorMessage(t('shp-missing-files-error'));
+              break;
+            case UploadErrorType.UnsupportedFile:
+              setErrorMessage(t('unsupported-file-error'));
+              break;
+            default:
+               setErrorMessage(t("generic-upload-error"));
+               break;
+          }
         }
       };
 
@@ -58,6 +73,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   );
 
   return (
+    <>
     <Label
       htmlFor="upload-layer"
       className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2 pb-2', {
@@ -83,6 +99,8 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
         <span>{t('upload-layer')}</span>
       </button>
     </Label>
+    <p className='text-error'>{errorMessage}</p>
+    </>
   );
 };
 

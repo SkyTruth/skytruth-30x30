@@ -19,7 +19,7 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
 
     // Polygon fill
     filled: true,
-    getFillColor: [0, 0, 0, 70],
+    getFillColor: [0, 0, 255, 70],
 
     // Polygon outline
     stroked: true,
@@ -30,6 +30,15 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
     lineWidthUnits: 'pixels',
     lineWidthMinPixels: 1,
     lineWidthMaxPixels: 10,
+
+    // Points
+    pointType: 'circle',
+    getPointRadius: 4,
+    pointRadiusUnits: 'pixels',
+    pointRadiusScale: 1,
+    pointRadiusMinPixels: 2,
+    pointRadiusMaxPixels: 15,
+
 
     // Quality improvements
     parameters: {
