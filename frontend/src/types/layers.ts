@@ -1,5 +1,6 @@
 import type { AnyLayer, AnySource } from 'react-map-gl';
 
+import { GeoJSON } from 'geojson';
 import { z } from 'zod';
 
 import { FormatProps } from '@/lib/utils/formats';
@@ -63,4 +64,19 @@ export type LayerTyped = Layer & {
   legend_config: LegendConfig;
   interaction_config: InteractionConfig;
   metadata: Record<string, unknown>;
+};
+
+type LayerStyle = {
+  opacity: number;
+  fillColor: string;
+  lineColor: string;
+};
+
+export type CustomLayer = {
+  id: string;
+  name: string;
+  feature: GeoJSON;
+  isActive: boolean;
+  isVisible: boolean;
+  style: LayerStyle;
 };

@@ -8,6 +8,7 @@ import mapParamsToSearchParams from '@/lib/mapparams-to-searchparams';
 import { FCWithMessages } from '@/types';
 import { getGetLocationsQueryKey, getGetLocationsQueryOptions } from '@/types/generated/location';
 import { LocationListResponse } from '@/types/generated/strapi.schemas';
+import { MapTypes } from '@/types/map';
 
 import { LayoutProps } from '../_app';
 
@@ -33,7 +34,7 @@ ProgressTrackerPage.layout = {
 
     return {
       title: location?.[locationNameField],
-      type: 'progress-tracker',
+      type: MapTypes.ProgressTracker,
     };
   },
 };

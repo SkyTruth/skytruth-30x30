@@ -1,10 +1,4 @@
 {
-  "upload": {
-    "generic-error": "Unable to validate the file.",
-    "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
-    "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and eventually .prj files all at once.",
-    "unsupported-file-error": "Unable to parse the file. Please try uploading a different format."
-  },
   "layouts": {
     "error": {
       "go-to-homepage": "Go to homepage"
@@ -213,7 +207,16 @@
       "marine-data": "Marine Data",
       "terrestrial-data": "Terrestrial Data",
       "loading": "Loading data...",
-      "no-data-available": "No data available"
+      "no-data-available": "No data available",
+      "delete-layer": "Delete layer",
+      "edit-layer-name": "Edit Layer Name",
+      "upload-layer": "Upload Layer",
+      "generic-upload-error": "Unable to validate the file.",
+      "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
+      "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and eventually .prj files all at once.",
+      "unsupported-file-error": "Unable to parse the file. Please try uploading a different format.",
+      "file-too-large-error": "This file is too large. Maximum file size is {size}"
+
     },
     "map": {
       "loading": "Loading...",
