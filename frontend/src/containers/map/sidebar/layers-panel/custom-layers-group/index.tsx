@@ -159,7 +159,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
 
                 return (
                   <li key={slug} className="flex items-start justify-between">
-                    <span className="flex items-start gap-2">
+                    <span className="flex items-start gap-2 overflow-x-hidden text-nowrap">
                       <Switch
                         id={`${layer.name}-switch`}
                         aria-label={layer.name}
@@ -168,7 +168,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                         onCheckedChange={() => onToggleLayer(layer, !isActive)}
                       />
 
-                      <div className="min-w-0 flex-1">
+                      <div className="max-w-full">
                         {isEditing ? (
                           <div className="flex items-center gap-2">
                             <input
@@ -190,7 +190,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                         ) : (
                           <Label
                             htmlFor={`${layer.name}-switch`}
-                            className={cn(SWITCH_LABEL_CLASSES, 'overflow-x-hidden')}
+                            className={cn(SWITCH_LABEL_CLASSES)}
                           >
                             <button
                               type="button"
