@@ -73,7 +73,7 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
-from src.utils.database import update_cb
+from src.utils.database import update_cb, update_cb_tiling
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm, release_memory
@@ -91,6 +91,7 @@ LONG_RUNNING_TASKS = [
     "generate_dissolved_terrestrial_pa",
     "generate_gadm_minus_pa",
     "generate_protected_areas_table",
+    "update_gadm_minus_pa_tiling"
 ]
 
 
@@ -410,6 +411,13 @@ def main(request: Request) -> tuple[str, int]:
                 update_cb(
                     table_name="gadm_minus_pa_v2",
                     gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                    verbose=verbose,
+                )
+                step_list = ["update_gadm_minus_pa_tiling"]
+
+            case "update_gadm_minus_pa_tiling":
+                update_cb_tiling(
+                    table_name="gadm_minus_pa_v2",
                     verbose=verbose,
                 )
 

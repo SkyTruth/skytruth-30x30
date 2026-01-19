@@ -1,0 +1,79 @@
+name: Deploy Client
+
+on:
+  workflow_call:
+    inputs:
+      target_env:
+        type: string
+        required: true
+    secrets:
+      GCP_PROJECT_ID:
+        required: true
+      GCP_REGION:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: ${{ secrets.GCP_REGION }}
+  REGION: ${{ secrets.GCP_REGION }}
+
+jobs:
+  deploy_client:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine Environment
+        id: env
+        uses: ./.github/actions/determine-env
+        with:
+          target_env: ${{ inputs.target_env }}
+
+      - name: Setup GCP
+        id: setup
+        uses: ./.github/actions/setup-gcp
+        with:
+          gar_location: ${{ env.GAR_LOCATION }}
+          credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.env.outputs.environment)] }}"
+
+      - name: Copy env variables to docker
+        run: |
+          echo "${{ secrets[format('{0}_CLIENT_ENV', steps.env.outputs.environment)] }}" > frontend/.env.local
+          echo "${{ secrets[format('{0}_CLIENT_ENV_TF_MANAGED', steps.env.outputs.environment)] }}" >> frontend/.env.local
+
+      - name: Build and Push Container
+        env:
+          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.env.outputs.environment)] }}
+        run: |
+          docker build -f frontend/Dockerfile.prod \
+            -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" \
+            ./frontend
+
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}"
+
+          docker tag \
+            "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" \
+            "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:latest"
+
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:latest"
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        env:
+          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.env.outputs.environment)] }}
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
+
+      - name: Show Output
+        run: echo "${{ steps.deploy.outputs.url }}"
