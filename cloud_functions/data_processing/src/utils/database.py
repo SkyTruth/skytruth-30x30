@@ -133,17 +133,14 @@ def update_cb_tiling(table_name, verbose: bool = False):
 
             connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name}_temp;"))
 
-            # Subdivide geometries (max 2000 vertices each)
+            # Subdivide geometries (max 50,000 vertices each)
             connection.execute(text(f"""
                 CREATE TABLE data.{table_name}_temp AS
                 SELECT
                     location,
                     ST_Multi(ST_Subdivide(
-                        CASE
-                            WHEN ST_IsValid(the_geom) THEN the_geom
-                            ELSE ST_MakeValid(the_geom, 'method=structure')
-                        END,
-                        2000
+                        the_geom,
+                        50000
                     )) AS the_geom
                 FROM data.{table_name};
             """))
