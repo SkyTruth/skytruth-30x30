@@ -11,8 +11,8 @@ variable "job_name" {
 }
 
 variable "image" {
-  type    = string
-  default = "gcr.io/cloudrun/hello"
+  type        = string
+  description = "Full container image URI in Artifact Registry (immutable tag preferred)"
 }
 
 variable "service_account_name" {

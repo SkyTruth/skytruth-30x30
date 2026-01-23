@@ -376,6 +376,7 @@ module "data_pipes_cloudrun_jobs" {
   job_name                         = "${var.project_name}-data-cloudrun-job"
   env                              = local.data_processing_env
   secrets                          = local.data_processing_secrets
+  image                            = var.cloudrun_jobs_image
   timeout_seconds                  = var.cloudrun_jobs_timeout_seconds
   cpu                              = var.cloudrun_jobs_available_cpu
   memory                           = var.cloudrun_jobs_available_memory

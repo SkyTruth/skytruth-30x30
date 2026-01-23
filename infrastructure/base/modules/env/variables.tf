@@ -218,6 +218,10 @@ variable "cloudrun_jobs_max_instance_request_concurrency" {
   description = "Max instance request concurrency for the data processing function"
 }
 
+variable "cloudrun_jobs_image" {
+  type = string
+}
+
 variable "scheduler_invoker_sa" {
   type        = string
   default     = null
