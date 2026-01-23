@@ -131,7 +131,7 @@ def long_running_tasks(payload, timeout=5, verbose=True):
             {"message": "Error triggering Cloud Run Job", "error": str(e), "job": job_resource_name}
         )
 
-    return ("OK", 200)
+    return "OK", 200
 
 
 def create_task(
