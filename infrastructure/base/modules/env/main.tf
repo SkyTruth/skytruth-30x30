@@ -472,6 +472,7 @@ module "data_pipes_scheduler" {
     METHOD              = "publisher",
     TRIGGER_NEXT        = true,
     QUEUE_NAME          = module.monthly_job_queue.queue_name,
+    JOB_NAME            = module.data_pipes_cloudrun_jobs.name,
     TARGET_URL          = module.data_pipes_cloud_function.function_uri,
     INVOKER_SA          = google_service_account.cloudtasks_invoker.email
   })

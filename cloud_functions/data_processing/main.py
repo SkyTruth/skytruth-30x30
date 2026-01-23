@@ -164,6 +164,7 @@ def main(request: Request) -> tuple[str, int]:
             "PROJECT": project,
             "LOCATION": location,
             "QUEUE_NAME": data.get("QUEUE_NAME", ""),
+            "JOB_NAME": data.get("JOB_NAME", ""),
             "TARGET_URL": data.get("TARGET_URL", ""),
             "INVOKER_SA": data.get("INVOKER_SA", ""),
             "TOLERANCE": tolerance,
