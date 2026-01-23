@@ -304,7 +304,7 @@ resource "google_storage_bucket" "data_bucket" {
 }
 
 locals {
-  data_processing_cloud_function_env = {
+  data_processing_env = {
     BUCKET              = google_storage_bucket.data_bucket.name
     DATABASE_HOST       = module.database.database_host
     DATABASE_NAME       = module.database.database_name
@@ -317,7 +317,7 @@ locals {
     ENVIRONMENT         = var.environment
   }
 
-  data_processing_cloud_function_secrets = [{
+  data_processing_secrets = [{
     key        = "PP_API_KEY"
     project_id = var.gcp_project_id
     secret     = "protected-planet-api-key"
@@ -359,14 +359,29 @@ module "data_pipes_cloud_function" {
   source_dir                       = "${path.root}/../../cloud_functions/data_processing"
   runtime                          = "python313"
   entry_point                      = "main"
-  runtime_environment_variables    = local.data_processing_cloud_function_env
-  secrets                          = local.data_processing_cloud_function_secrets
+  runtime_environment_variables    = local.data_processing_env
+  secrets                          = local.data_processing_secrets
   timeout_seconds                  = var.data_processing_timeout_seconds
   available_memory                 = var.data_processing_available_memory
   available_cpu                    = var.data_processing_available_cpu
   max_instance_count               = var.data_processing_max_instance_count
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
 }
+
+
+module "data_pipes_cloudrun_jobs" {
+  source                           = "./cloudrun_job"
+  project_id                       = var.gcp_project_id
+  region                           = var.gcp_region
+  name                             = "${var.project_name}-data-cloudrun-job"
+  runtime_environment_variables    = local.data_processing_env
+  secrets                          = local.data_processing_secrets
+  timeout_seconds                  = var.cloudrun_jobs_timeout_seconds
+  cpu                              = var.cloudrun_jobs_available_cpu
+  memory                           = var.cloudrun_jobs_available_memory
+  use_hello_world_image            = var.use_hello_world_image
+}
+
 
 resource "google_storage_bucket_iam_member" "function_writer" {
   bucket = google_storage_bucket.data_bucket.name
