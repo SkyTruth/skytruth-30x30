@@ -2,7 +2,8 @@ import json
 from datetime import UTC, datetime, timedelta
 
 import requests
-from google.cloud import tasks_v2
+from google.api_core import exceptions as gax_exceptions
+from google.cloud import run_v2, tasks_v2
 from google.protobuf import timestamp_pb2
 
 from src.core.params import TOLERANCES
@@ -11,20 +12,76 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
-def long_running_tasks(payload, timeout=1, verbose=True):
+# def long_running_tasks(payload, timeout=1, verbose=True):
+#     if verbose:
+#         method = payload.get("METHOD", "")
+#         logger.info(
+#             {"message": f"Launching Long-Running Cloudfunction: {method}: {json.dumps(payload)}"}
+#         )
+#     try:
+#         requests.post(payload["TARGET_URL"], json=payload, timeout=timeout)
+#     except requests.exceptions.Timeout:
+#         pass
+#     except Exception as e:
+#         logger.error({"message": "Error triggering long-running CF", "error": str(e)})
+
+#     return ("OK", 200)
+
+
+def long_running_tasks(payload, timeout=5, verbose=True):
+
     if verbose:
         method = payload.get("METHOD", "")
         logger.info(
             {"message": f"Launching Long-Running Cloudfunction: {method}: {json.dumps(payload)}"}
         )
+
+    client = run_v2.JobsClient()
+    
+    project_id = payload.get("PROJECT_ID")
+    location   = payload.get("LOCATION")
+    job_name   = payload.get("JOB_NAME")
+
+    run_payload = json.dumps(payload)
+    job_resource_name = f"projects/{project_id}/locations/{location}/jobs/{job_name}"
+
+    request = run_v2.RunJobRequest(
+        name=job_resource_name,
+        overrides=run_v2.RunJobRequest.Overrides(
+            container_overrides=[
+                run_v2.RunJobRequest.Overrides.ContainerOverride(
+                    env=[
+                        run_v2.EnvVar(name="PAYLOAD", value=run_payload),
+                        run_v2.EnvVar(name="METHOD", value=payload.get("METHOD", "")),
+                    ]
+                )
+            ]
+        ),
+    )
+
+
     try:
-        requests.post(payload["TARGET_URL"], json=payload, timeout=timeout)
-    except requests.exceptions.Timeout:
+        # Start the job execution
+        operation = client.run_job(request=request, timeout=timeout)
+
+        op_name = getattr(operation, "operation", None)
+        op_name = getattr(op_name, "name", None) if op_name else None
+        logger.info(
+            {
+                "message": "Cloud Run Job execution started",
+                "job": job_resource_name,
+                "operation": op_name,
+            }
+        )
+
+    except gax_exceptions.DeadlineExceeded:
+        # Don't wait for completion, and don't error if timeout
         pass
     except Exception as e:
-        logger.error({"message": "Error triggering long-running CF", "error": str(e)})
+        logger.error({"message": "Error triggering Cloud Run Job", "error": str(e), "job": job_resource_name})
 
     return ("OK", 200)
+
 
 
 def create_task(
