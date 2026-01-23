@@ -370,16 +370,15 @@ module "data_pipes_cloud_function" {
 
 
 module "data_pipes_cloudrun_jobs" {
-  source                           = "./cloudrun_job"
+  source                           = "../cloudrun_job"
   project_id                       = var.gcp_project_id
   region                           = var.gcp_region
-  name                             = "${var.project_name}-data-cloudrun-job"
-  runtime_environment_variables    = local.data_processing_env
+  job_name                         = "${var.project_name}-data-cloudrun-job"
+  env                              = local.data_processing_env
   secrets                          = local.data_processing_secrets
   timeout_seconds                  = var.cloudrun_jobs_timeout_seconds
   cpu                              = var.cloudrun_jobs_available_cpu
   memory                           = var.cloudrun_jobs_available_memory
-  use_hello_world_image            = var.use_hello_world_image
 }
 
 
@@ -472,7 +471,7 @@ module "data_pipes_scheduler" {
     METHOD              = "publisher",
     TRIGGER_NEXT        = true,
     QUEUE_NAME          = module.monthly_job_queue.queue_name,
-    JOB_NAME            = module.data_pipes_cloudrun_jobs.name,
+    JOB_NAME            = module.data_pipes_cloudrun_jobs.job_name,
     TARGET_URL          = module.data_pipes_cloud_function.function_uri,
     INVOKER_SA          = google_service_account.cloudtasks_invoker.email
   })

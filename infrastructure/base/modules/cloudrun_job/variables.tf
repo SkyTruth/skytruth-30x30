@@ -6,8 +6,13 @@ variable "region" {
   type = string
 }
 
-variable "name" {
+variable "job_name" {
   type = string
+}
+
+variable "image" {
+  type    = string
+  default = "gcr.io/cloudrun/hello"
 }
 
 variable "service_account_name" {
@@ -51,4 +56,16 @@ variable "additional_sa_roles" {
   type        = list(string)
   default     = []
   description = "Extra project-level IAM roles to grant the job SA (e.g., roles/storage.objectCreator)"
+}
+
+
+variable "secrets" {
+  type = list(object({
+    key        = string
+    project_id = string
+    secret     = string
+    version    = string
+  }))
+  description = "List of secrets to make available to the container"
+  default     = []
 }

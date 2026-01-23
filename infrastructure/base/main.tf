@@ -72,6 +72,13 @@ module "production" {
   data_processing_timeout_seconds                    = 3600
   data_processing_available_memory                   = "32G"
   data_processing_available_cpu                      = 8
+  data_processing_max_instance_count                 = 2
+  data_processing_max_instance_request_concurrency   = 5
+  cloudrun_jobs_timeout_seconds                      = 10800 # 3 hours
+  cloudrun_jobs_available_memory                     = "32G"
+  cloudrun_jobs_available_cpu                        = 8
+  cloudrun_jobs_max_instance_count                   = 2
+  cloudrun_jobs_max_instance_request_concurrency     = 10
   mapbox_user                                        = "skytruth"
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "production"
