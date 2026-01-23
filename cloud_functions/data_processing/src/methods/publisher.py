@@ -101,8 +101,7 @@ def long_running_tasks(payload, timeout=5, verbose=True):
             container_overrides=[
                 run_v2.RunJobRequest.Overrides.ContainerOverride(
                     env=[
-                        run_v2.EnvVar(name="PAYLOAD", value=run_payload),
-                        run_v2.EnvVar(name="METHOD", value=payload.get("METHOD", "")),
+                        run_v2.EnvVar(name="RUN_PAYLOAD", value=run_payload),
                     ]
                 )
             ]
