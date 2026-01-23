@@ -54,9 +54,7 @@ def get_connection(format: str = "psycopg"):
         )
 
 
-def update_cb(
-    table_name, gcs_file, verbose: bool = False
-):
+def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     Update Conservation Builder table from GCS file.
 

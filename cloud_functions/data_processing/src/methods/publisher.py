@@ -1,7 +1,6 @@
 import json
 from datetime import UTC, datetime, timedelta
 
-import requests
 from google.api_core import exceptions as gax_exceptions
 from google.cloud import run_v2, tasks_v2
 from google.protobuf import timestamp_pb2
@@ -29,7 +28,6 @@ logger = Logger()
 
 
 def long_running_tasks(payload, timeout=5, verbose=True):
-
     if verbose:
         method = payload.get("METHOD", "")
         logger.info(
@@ -37,10 +35,10 @@ def long_running_tasks(payload, timeout=5, verbose=True):
         )
 
     client = run_v2.JobsClient()
-    
+
     project_id = payload.get("PROJECT_ID")
-    location   = payload.get("LOCATION")
-    job_name   = payload.get("JOB_NAME")
+    location = payload.get("LOCATION")
+    job_name = payload.get("JOB_NAME")
 
     run_payload = json.dumps(payload)
     job_resource_name = f"projects/{project_id}/locations/{location}/jobs/{job_name}"
@@ -58,7 +56,6 @@ def long_running_tasks(payload, timeout=5, verbose=True):
             ]
         ),
     )
-
 
     try:
         # Start the job execution
@@ -78,10 +75,11 @@ def long_running_tasks(payload, timeout=5, verbose=True):
         # Don't wait for completion, and don't error if timeout
         pass
     except Exception as e:
-        logger.error({"message": "Error triggering Cloud Run Job", "error": str(e), "job": job_resource_name})
+        logger.error(
+            {"message": "Error triggering Cloud Run Job", "error": str(e), "job": job_resource_name}
+        )
 
     return ("OK", 200)
-
 
 
 def create_task(
