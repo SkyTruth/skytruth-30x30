@@ -43,7 +43,7 @@ RUN pip install --upgrade pip && \
 
 # Copy shared code (src) and the job entrypoint
 COPY cloud_functions/data_processing/src/ ./src/
-COPY cloudrun_jobs/data_processing_job/main.py ./main.py
+COPY cloudrun_jobs/data_processing/main.py ./main.py
 
 # Ensure Python can import from /app/src
 ENV PYTHONPATH="/app/src"

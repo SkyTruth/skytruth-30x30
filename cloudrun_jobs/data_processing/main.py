@@ -4,15 +4,17 @@ import sys
 import signal
 
 from src.methods.publisher import run_from_payload
+from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm
+
+logger = Logger()
 
 signal.signal(signal.SIGTERM, handle_sigterm)
 
 def main() -> int:
     raw = os.environ.get("RUN_PAYLOAD", "")
     if not raw:
-        # You could support PAYLOAD_GCS_URI later if needed
-        print("Missing RUN_PAYLOAD env var")
+        logger.info({"message": "Missing RUN_PAYLOAD env var"})
         return 2
 
     data = json.loads(raw)
