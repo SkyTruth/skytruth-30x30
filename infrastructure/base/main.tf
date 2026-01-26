@@ -7,6 +7,10 @@ terraform {
   }
 }
 
+locals {
+  cloudrun_jobs_image = "gcr.io/cloudrun/hello"
+}
+
 module "staging" {
   source                                             = "./modules/env"
   gcp_project_id                                     = var.gcp_project_id
@@ -39,6 +43,7 @@ module "staging" {
   cloudrun_jobs_available_cpu                        = 8
   cloudrun_jobs_max_instance_count                   = 2
   cloudrun_jobs_max_instance_request_concurrency     = 10
+  cloudrun_jobs_image                                = local.cloudrun_jobs_image
   mapbox_user                                        = "skytruth"
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "staging"
@@ -79,6 +84,7 @@ module "production" {
   cloudrun_jobs_available_cpu                        = 8
   cloudrun_jobs_max_instance_count                   = 2
   cloudrun_jobs_max_instance_request_concurrency     = 10
+  cloudrun_jobs_image                                = local.cloudrun_jobs_image
   mapbox_user                                        = "skytruth"
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "production"

@@ -482,5 +482,5 @@ module "artifact_registry" {
   source        = "../artifact_registry"
   project_id    = var.gcp_project_id
   region        = var.gcp_region
-  repository_id = "${var.project_name}-docker"
+  repository_id = "${var.project_name}-data-pipes"
 }
