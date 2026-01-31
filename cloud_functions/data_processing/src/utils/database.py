@@ -3,7 +3,7 @@ import os
 import psycopg
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from src.core.params import BUCKET
 from src.utils.gcp import load_zipped_shapefile_from_gcs
@@ -16,8 +16,10 @@ def get_connection(format: str = "psycopg"):
     """
     Establish a connection to the database
 
-    Input:
-    format (str): Method used to connect to database ('psycopg' or 'sqlalchemy')
+    Parameter
+    ----------
+    format : str
+      Method used to connect to database ('psycopg' or 'sqlalchemy')
     """
     try:
         DATABASE_USERNAME = os.environ.get("DATABASE_USERNAME", None)
@@ -54,16 +56,18 @@ def get_connection(format: str = "psycopg"):
         )
 
 
-def update_cb(
-    table_name, gcs_file, verbose: bool = False
-):
+def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     Update Conservation Builder table from GCS file.
 
-    Inputs:
-    table_name (str): Name of the table to update (either 'gadm_minus_pa' or 'eez_minus_mpa')
-    gcs_file (str): GCS file path to load the shapefile from
-    verbose (bool): Whether to print progress messages
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    gcs_file : str
+      GCS path of the file.
+    verbose : bool
+      Whether to print progress messages.
     """
     try:
         conn = get_connection(format="sqlalchemy")
@@ -72,27 +76,92 @@ def update_cb(
             logger.info({"message": f"Loading {gcs_file}..."})
         gdf = load_zipped_shapefile_from_gcs(filename=gcs_file, bucket=BUCKET)
 
-        # Filter columns
-        gdf = gdf[["location", "geometry"]]
-
-        # Turn Polygon to MultiPolygon for consistency
-        gdf["geometry"] = gdf["geometry"].apply(
+        # Update geometry for consistency in PostgreSQL database
+        gdf = gdf.rename_geometry("the_geom")
+        gdf["the_geom"] = gdf["the_geom"].apply(
             lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
         )
-        gdf = gdf.rename_geometry("the_geom")
+        gdf = gdf[["location", "the_geom"]]
 
-        # Write to PostgreSQL
+        # Upload data to PostgreSQL
         if verbose:
-            logger.info({"message": f"Updating {table_name} in PostgreSQL..."})
+            logger.info({"message": "Uploading data to PostgreSQL..."})
         gdf.to_postgis(
             name=table_name,
             schema="data",
             con=conn,
             if_exists="replace",
-            index=True,
-            index_label="id",
             dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
         )
+
+        # Update table in PostgreSQL
+        with conn.connect() as connection:
+            # Add primary key
+            connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
+
+            # Create GIST index for fast spatial querying
+            connection.execute(text(f"""
+                CREATE INDEX gist_{table_name}_geom
+                ON data.{table_name}
+                USING GIST (the_geom);
+            """))
+
+            connection.execute(text(f"ANALYZE data.{table_name};"))
+            connection.commit()
+
+    except Exception as excep:
+        logger.error({"message": "Failed to update table", "error": str(excep)})
+
+
+def update_cb_tiling(table_name, verbose: bool = False):
+    """
+    Update Conservation Builder table to have subdivisions for large geometries.
+    
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    verbose : bool
+      Whether to print progress messages.
+    """
+    try:
+        conn = get_connection(format="sqlalchemy")
+
+        with conn.connect() as connection:
+            if verbose:
+                logger.info({"message": "Validating and subdividing geometries..."})
+
+            connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name}_temp;"))
+
+            # Subdivide geometries (max 50,000 vertices each)
+            connection.execute(text(f"""
+                CREATE TABLE data.{table_name}_temp AS
+                SELECT
+                    location,
+                    ST_Multi(ST_Subdivide(
+                        the_geom,
+                        50000
+                    )) AS the_geom
+                FROM data.{table_name};
+            """))
+
+            if verbose:
+                logger.info({"message": "Subdivision complete. Refactoring and creating spatial index..."})
+
+            # Drop original table and rename temp table
+            connection.execute(text(f"DROP TABLE data.{table_name};"))
+            connection.execute(text(f"ALTER TABLE data.{table_name}_temp RENAME TO {table_name};"))
+
+            # Add primary id and GIST index
+            connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
+            connection.execute(text(f"""
+                                    CREATE INDEX gist_{table_name}_geom 
+                                    ON data.{table_name}
+                                    USING GIST (the_geom);
+            """))
+            connection.execute(text(f"ANALYZE data.{table_name};"))
+
+            connection.commit()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
