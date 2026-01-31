@@ -105,6 +105,11 @@ def dissolve_geometries(
         verbose=verbose,
     )
 
+    # Create one row per country
+    pa["ISO3"] = pa["ISO3"].str.split(";")
+    pa = pa.explode("ISO3")
+    pa["ISO3"] = pa["ISO3"].str.strip()
+
     # Clean and dissolve geometries by country
     dissolved = process_pas(pa)
     if verbose:

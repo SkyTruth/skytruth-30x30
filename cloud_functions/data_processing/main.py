@@ -427,6 +427,13 @@ def main(request: Request) -> tuple[str, int]:
                     gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
                     verbose=verbose,
                 )
+                step_list = ["update_eez_minus_mpa_tiling"]
+
+            case "update_eez_minus_mpa_tiling":
+                update_cb_tiling(
+                    table_name="eez_minus_mpa_v2",
+                    verbose=verbose,
+                )
 
             # ------------------
             #   Map Tilesets Updates
