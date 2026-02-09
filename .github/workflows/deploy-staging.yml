@@ -1,0 +1,20 @@
+name: Deploy Staging
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+    - 'frontend/**'
+    - 'cms/**'
+    - 'cloud_functions/**'
+    - '.github/workflows/*'
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-services.yml
+    secrets: inherit
+    with:
+      deploy_to_staging: true
+      deploy_to_prod: false
