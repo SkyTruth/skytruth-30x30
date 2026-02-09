@@ -13,13 +13,9 @@ import { FCWithMessages } from '@/types';
 import { useSyncMapContentSettings } from '../sync-settings';
 
 import LayersPanel from './layers-panel';
-import MainPanel, { PANEL_TYPES } from './main-panel/panels';
+import MainPanel from './main-panel/panels';
 
-type MapSidebarProps = {
-  type: (typeof PANEL_TYPES)[keyof typeof PANEL_TYPES];
-};
-
-const MapSidebar: FCWithMessages<MapSidebarProps> = ({ type }) => {
+const MapSidebar: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar');
 
   const [{ showDetails }] = useSyncMapContentSettings();
@@ -50,7 +46,7 @@ const MapSidebar: FCWithMessages<MapSidebarProps> = ({ type }) => {
           >
             <CollapsibleContent className="relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
               <div className="h-full md:w-[460px]">
-                <MainPanel type={type} />
+                <MainPanel />
               </div>
             </CollapsibleContent>
           </Collapsible>

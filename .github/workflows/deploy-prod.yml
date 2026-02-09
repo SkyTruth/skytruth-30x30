@@ -26,6 +26,10 @@ jobs:
             exit 1
           fi
 
+  upload_locallazy:
+    uses: ./.github/workflows/localazy-release.yml
+    secrets: inherit
+  
   deploy:
     needs: guard
     uses: ./.github/workflows/deploy-services.yml

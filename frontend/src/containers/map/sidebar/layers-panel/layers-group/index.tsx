@@ -17,12 +17,12 @@ import {
   LayerResponseDataObject,
 } from '@/types/generated/strapi.schemas';
 
-export const SWITCH_LABEL_CLASSES = '-mb-px cursor-pointer pt-px font-mono text-xs font-normal';
-const COLLAPSIBLE_TRIGGER_ICONS_CLASSES = 'w-5 h-5 hidden';
-const COLLAPSIBLE_TRIGGER_CLASSES =
-  'group flex w-full items-center justify-between py-2 text-xs font-bold';
-const COLLAPSIBLE_CONTENT_CLASSES =
-  'data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down border-black py-2';
+import {
+  COLLAPSIBLE_TRIGGER_ICONS_CLASSES,
+  COLLAPSIBLE_TRIGGER_CLASSES,
+  COLLAPSIBLE_CONTENT_CLASSES,
+  SWITCH_LABEL_CLASSES,
+} from '../constants';
 
 type LayersGroupProps = PropsWithChildren<{
   name: string;
@@ -51,24 +51,26 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
   const [activeLayers, setMapLayers] = useSyncMapLayers();
   const [{ tab }] = useSyncMapContentSettings();
 
-  const datasetsLayersIds = useMemo(() => {
+  const datasetsLayerSlugs = useMemo(() => {
     return (
-      datasets?.map(({ attributes }) => attributes?.layers?.data?.map(({ id }) => id))?.flat() || []
+      datasets
+        ?.map(({ attributes }) => attributes?.layers?.data?.map(({ slug }) => slug))
+        ?.flat() || []
     );
   }, [datasets]);
 
   const numActiveDatasetsLayers = useMemo(() => {
     return (
-      (datasetsLayersIds?.filter((id) => activeLayers?.includes(id))?.length ?? 0) +
+      (datasetsLayerSlugs?.filter((slug) => activeLayers?.includes(slug))?.length ?? 0) +
       extraActiveLayers
     );
-  }, [datasetsLayersIds, activeLayers, extraActiveLayers]);
+  }, [datasetsLayerSlugs, activeLayers, extraActiveLayers]);
 
   const onToggleLayer = useCallback(
     (layerSlug: Layer['slug'], isActive: boolean) => {
       setMapLayers(
         isActive
-          ? [...activeLayers, layerSlug]
+          ? [layerSlug, ...activeLayers]
           : activeLayers.filter((activeSlug) => activeSlug !== layerSlug)
       );
     },
