@@ -12,6 +12,10 @@ on:
     - '.github/workflows/*'
 
 jobs:
+  upload_locallazy:
+    uses: ./.github/workflows/localazy-upload.yml
+    secrets: inherit
+
   deploy:
     uses: ./.github/workflows/deploy-services.yml
     secrets: inherit
