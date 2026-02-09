@@ -50,6 +50,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     if (runAsOf) {
       searchParams += `&run-as-of=${runAsOf}`;
     }
+
     const target = `/${context.locale}/${PAGES.progressTracker}/${location}?${searchParams}`;
 
     return {

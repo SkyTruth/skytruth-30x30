@@ -74,11 +74,8 @@ const Legend: FCWithMessages = () => {
         updatedCustomLayers[layerSlug].isActive = false;
         setCustomLayers(updatedCustomLayers);
       }
-      setAllActiveLayers((currentLayers) => {
-        return currentLayers.filter((slug) => slug !== layerSlug);
-      });
     },
-    [customLayers, setAllActiveLayers, setCustomLayers, setPredefinedMapLayers]
+    [customLayers, setCustomLayers, setPredefinedMapLayers]
   );
 
   const onToggleLayerVisibility = useCallback(
@@ -123,11 +120,17 @@ const Legend: FCWithMessages = () => {
 
       if (!customLayers[layerSlug]) {
         const predfinedLayerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
-        setPredefinedMapLayers((prev) => {
-          return prev
-            .toSpliced(predfinedLayerIndex, 1)
-            .toSpliced(predfinedLayerIndex + delta, 0, layerSlug);
-        });
+
+        if (
+          (direction === 'up' && predfinedLayerIndex !== 0) ||
+          (direction === 'down' && predfinedLayerIndex !== activeLayers.length - 1)
+        ) {
+          setPredefinedMapLayers((prev) => {
+            return prev
+              .toSpliced(predfinedLayerIndex, 1)
+              .toSpliced(predfinedLayerIndex + delta, 0, layerSlug);
+          });
+        }
       }
 
       setAllActiveLayers((prev) =>

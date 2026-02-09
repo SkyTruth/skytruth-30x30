@@ -10,6 +10,7 @@ import useDatasetsByEnvironment from './use-datasets-by-environment';
 export default function useMapDefaultLayers() {
   const [, setMapLayers] = useSyncMapLayers();
   const [{ tab }] = useSyncMapContentSettings();
+
   const previousTab = usePreviousImmediate(tab);
 
   const [datasets] = useDatasetsByEnvironment();

@@ -25,11 +25,11 @@ export const LAYOUT_TYPES = {
   conservation_builder: 'conservation-builder',
 };
 
-export interface MapLayoutProps {
+export type MapLayoutProps = {
   title?: string;
   description?: string;
   type: MapTypes;
-}
+};
 
 const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
   title,

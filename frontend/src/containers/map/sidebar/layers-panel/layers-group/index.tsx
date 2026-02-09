@@ -1,6 +1,5 @@
 import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
@@ -9,7 +8,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
-import { allActiveLayersAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
@@ -51,7 +49,6 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
   const t = useTranslations('containers.map-sidebar-layers-panel');
 
   const [activeLayers, setMapLayers] = useSyncMapLayers();
-  const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
   const [{ tab }] = useSyncMapContentSettings();
 
   const datasetsLayerSlugs = useMemo(() => {
@@ -76,13 +73,8 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
           ? [layerSlug, ...activeLayers]
           : activeLayers.filter((activeSlug) => activeSlug !== layerSlug)
       );
-      setAllActiveLayers(
-        isActive
-          ? [layerSlug, ...allActiveLayers]
-          : allActiveLayers.filter((activeSlug) => activeSlug !== layerSlug)
-      );
     },
-    [activeLayers, allActiveLayers, setAllActiveLayers, setMapLayers]
+    [activeLayers, setMapLayers]
   );
 
   useEffect(() => {

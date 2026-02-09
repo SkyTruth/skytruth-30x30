@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { useSyncMapSettings } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FCWithMessages } from '@/types';
 import { MapTypes } from '@/types/map';
 
@@ -21,6 +21,7 @@ import LayersGroup from './layers-group';
 
 const LayersPanel: FCWithMessages = (): JSX.Element => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
+
   const [{ labels }, setMapSettings] = useSyncMapSettings();
   const [{ tab }] = useSyncMapContentSettings();
 
@@ -28,6 +29,7 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
 
   const [mapType] = useAtom(mapTypeAtom);
 
+  // TECH-3372: tear down
   const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
   const handleLabelsChange = useCallback(

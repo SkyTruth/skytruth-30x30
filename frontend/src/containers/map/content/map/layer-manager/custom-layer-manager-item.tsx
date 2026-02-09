@@ -4,9 +4,9 @@ import { useAtom } from 'jotai';
 import DeckJsonLayer from '@/components/map/layers/deck-json-layer';
 import { customLayersAtom } from '@/containers/map/store';
 
-interface CustomLayerManagerItemProps {
+type CustomLayerManagerItemProps = {
   slug: string;
-}
+};
 
 const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
   const [customLayers] = useAtom(customLayersAtom);

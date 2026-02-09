@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
+import { customLayersAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import {
   convertFilesToGeojson,
@@ -37,14 +37,13 @@ class FileTooLargeError extends Error {
 const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
-  const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const onChange: ChangeEventHandler<HTMLInputElement> = useCallback(
-    (e) => {
-      const handler = async (e: ChangeEvent<HTMLInputElement>) => {
-        const { files } = e.currentTarget;
+    (event) => {
+      const handler = async (event: ChangeEvent<HTMLInputElement>) => {
+        const { files } = event.currentTarget;
 
         let totalSize = 0;
         for (const file of files) {
@@ -73,7 +72,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
           });
 
           // New layers get activated and at the top of the stack
-          setAllActiveLayers([newId, ...allActiveLayers]);
+          // setAllActiveLayers([newId, ...allActiveLayers]);
         } catch (error) {
           if (error instanceof FileTooLargeError) {
             setErrorMessage(
@@ -98,9 +97,9 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
         }
       };
 
-      void handler(e);
+      void handler(event);
     },
-    [allActiveLayers, customLayers, setAllActiveLayers, setCustomLayers, t]
+    [customLayers, setCustomLayers, t]
   );
 
   return (

@@ -46,7 +46,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
-  const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
+  const [allActiveLayers] = useAtom(allActiveLayersAtom);
 
   useEffect(() => {
     if (editingSlug) {
@@ -71,9 +71,8 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       }
 
       setCustomLayers(updatedLayers);
-      setAllActiveLayers(updatedActiveLayers);
     },
-    [allActiveLayers, customLayers, setAllActiveLayers, setCustomLayers]
+    [allActiveLayers, customLayers, setCustomLayers]
   );
 
   const onDeleteLayer = useCallback(
