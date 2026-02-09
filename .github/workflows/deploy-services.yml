@@ -15,6 +15,8 @@ on:
 # -----------------------------
 jobs:
   upload_localazy:
+    if: |
+      inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/localazy-upload.yml
     secrets: inherit
 
@@ -78,6 +80,8 @@ jobs:
 # (runs only after staging_complete succeeds)
 # -----------------------------
   release_localazy:
+    if: |
+      inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/localazy-release.yml
     secrets: inherit
 
