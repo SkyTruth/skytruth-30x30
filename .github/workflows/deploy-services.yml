@@ -84,6 +84,7 @@ jobs:
       inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/localazy-release.yml
     secrets: inherit
+    needs: [staging_complete]
 
   prod_client:
     if: |
