@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { useAtom } from 'jotai';
 
@@ -18,8 +18,14 @@ import { MapTypes } from '@/types/map';
 const useSyncAllLayers = (type: MapTypes) => {
   const [activeLayers] = useSyncMapLayers();
 
-  const [, setAllActiveLayers] = useAtom(allActiveLayersAtom);
+  const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
   const [customLayers] = useAtom(customLayersAtom);
+
+  const allActiveLayersRef = useRef(allActiveLayers);
+
+  useEffect(() => {
+    allActiveLayersRef.current = allActiveLayers;
+  }, [allActiveLayers]);
 
   useEffect(() => {
     let currentActiveLayers = [...activeLayers];
@@ -29,11 +35,21 @@ const useSyncAllLayers = (type: MapTypes) => {
         (layer) => customLayers[layer].isActive
       );
 
-      currentActiveLayers = [...activeCustomLayers, ...activeLayers];
+      const activeCustomLayersSet = new Set(activeCustomLayers);
+      const activeLayersSet = new Set(activeLayers);
+
+      const preservedActiveLayers = allActiveLayersRef.current.filter(
+        (layer) => activeCustomLayersSet.has(layer) || activeLayersSet.has(layer)
+      );
+
+      const newActiveLayers = [...activeLayers, ...activeCustomLayers].filter(
+        (key) => !preservedActiveLayers.includes(key)
+      );
+      currentActiveLayers = [...newActiveLayers, ...preservedActiveLayers];
     }
 
     setAllActiveLayers(currentActiveLayers);
-  }, [type, setAllActiveLayers, activeLayers, customLayers]);
+  }, [type, setAllActiveLayers, activeLayers, customLayers, allActiveLayersRef]);
 };
 
 export default useSyncAllLayers;
