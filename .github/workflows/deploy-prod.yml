@@ -25,10 +25,6 @@ jobs:
             echo "::error::Production deploy workflow may only be dispatched from main."
             exit 1
           fi
-
-  upload_locallazy:
-    uses: ./.github/workflows/localazy-release.yml
-    secrets: inherit
   
   deploy:
     needs: guard
