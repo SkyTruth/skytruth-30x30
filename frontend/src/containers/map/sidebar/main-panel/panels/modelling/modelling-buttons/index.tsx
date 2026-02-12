@@ -28,6 +28,7 @@ type ModellingButtonsProps = {
 
 const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
+  const tUploads = useTranslations('services.uploads');
   const getUploadErrorMessage = useUploadErrorMessage({
     maxFileSize: MAX_CUSTOM_LAYER_SIZE,
   });
@@ -38,12 +39,14 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const [{ active, status, source }, setDrawState] = useAtom(drawStateAtom);
 
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
+  const [uploadInfoMessage, setUploadInfoMessage] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const onClickClearModelling = useCallback(() => {
     resetDrawState();
     resetModelling();
     setUploadErrorMessage(null);
+    setUploadInfoMessage(null);
   }, [resetModelling, resetDrawState]);
 
   const onClickRedraw = useCallback(() => {
@@ -57,6 +60,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
     setModelling((prevState) => ({ ...prevState, active: true }));
     setUploadErrorMessage(null);
+    setUploadInfoMessage(null);
   }, [resetModelling, resetDrawState, setModelling, setDrawState]);
 
   const onUploadChange: ChangeEventHandler<HTMLInputElement> = useCallback(
@@ -79,7 +83,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
 
           const geojson = await convertFilesToGeojson(files);
-          const { feature } = extractPolygons(geojson);
+          const { feature, removed } = extractPolygons(geojson);
 
           if (!feature) {
             throw new Error('No valid geometry found');
@@ -94,14 +98,23 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
           setModelling((prevState) => ({ ...prevState, active: true }));
           setUploadErrorMessage(null);
+          setUploadInfoMessage(removed.any ? tUploads('features-excluded-info') : null);
         } catch (error) {
+          setUploadInfoMessage(null);
           setUploadErrorMessage(getUploadErrorMessage(error));
         } finally {
           input.value = '';
         }
       })();
     },
-    [setDrawState, setModelling, getUploadErrorMessage, setUploadErrorMessage]
+    [
+      setDrawState,
+      setModelling,
+      getUploadErrorMessage,
+      setUploadErrorMessage,
+      setUploadInfoMessage,
+      tUploads,
+    ]
   );
 
   const onOpenUploadPicker = useCallback(() => {
@@ -109,9 +122,15 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   }, []);
 
   const isUploadDisabled = active || status === 'drawing' || modellingStatus === 'running';
+  const ariaDescribedBy = [
+    uploadErrorMessage ? 'upload-shape-error' : null,
+    !uploadErrorMessage && uploadInfoMessage ? 'upload-shape-info' : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <div className={cn('flex font-mono', className)}>
+    <div className={cn('flex w-full flex-col font-mono', className)}>
       <label htmlFor="upload-shape" className="sr-only">
         {t('upload-shape')}
       </label>
@@ -124,7 +143,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
         className="hidden"
         onChange={onUploadChange}
         disabled={isUploadDisabled}
-        aria-describedby="upload-shape-error"
+        aria-describedby={ariaDescribedBy || undefined}
         aria-invalid={Boolean(uploadErrorMessage)}
       />
 
@@ -136,6 +155,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               size="full"
               onClick={() => {
                 setUploadErrorMessage(null);
+                setUploadInfoMessage(null);
                 setDrawState((prevState) => ({ ...prevState, active: true }));
               }}
             >
@@ -153,11 +173,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               {t('upload-shape')}
             </Button>
           </div>
-          {uploadErrorMessage && (
-            <p id="upload-shape-error" className="text-error" role="alert">
-              {uploadErrorMessage}
-            </p>
-          )}
         </div>
       )}
       {(status === 'drawing' || status === 'success') && (
@@ -178,6 +193,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             onClick={() => {
               if (source === 'upload') {
                 setUploadErrorMessage(null);
+                setUploadInfoMessage(null);
                 onOpenUploadPicker();
                 return;
               }
@@ -190,6 +206,23 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           </Button>
         </div>
       )}
+      <div className="mt-2 w-full">
+        {uploadErrorMessage && (
+          <p id="upload-shape-error" className="text-[11px] leading-4 text-error" role="alert">
+            {uploadErrorMessage}
+          </p>
+        )}
+        {!uploadErrorMessage && uploadInfoMessage && (
+          <p
+            id="upload-shape-info"
+            className="text-[11px] leading-4 text-black"
+            role="status"
+            aria-live="polite"
+          >
+            {uploadInfoMessage}
+          </p>
+        )}
+      </div>
     </div>
   );
 };
