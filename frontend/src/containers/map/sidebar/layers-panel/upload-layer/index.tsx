@@ -1,4 +1,4 @@
-import { ChangeEvent, ChangeEventHandler, useCallback, useState } from 'react';
+import { ChangeEventHandler, useCallback, useState } from 'react';
 
 import { useAtom } from 'jotai';
 import { Upload } from 'lucide-react';
@@ -43,8 +43,12 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
 
   const onChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
-      const handler = async (event: ChangeEvent<HTMLInputElement>) => {
-        const { files } = event.currentTarget;
+      const input = event.currentTarget;
+      const files = Array.from(input.files ?? []);
+      void (async () => {
+        if (files.length === 0) {
+          return;
+        }
 
         let totalSize = 0;
         for (const file of files) {
@@ -56,7 +60,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
             throw new FileTooLargeError();
           }
 
-          const geojson = await convertFilesToGeojson(Array.from(files));
+          const geojson = await convertFilesToGeojson(files);
           const newId = window.crypto.randomUUID();
 
           setErrorMessage(null);
@@ -64,7 +68,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
             ...customLayers,
             [newId]: {
               id: newId,
-              name: files[0].name,
+              name: files[0]?.name ?? '',
               feature: geojson,
               isVisible: true,
               isActive: true,
@@ -94,10 +98,10 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
                 break;
             }
           }
+        } finally {
+          input.value = '';
         }
-      };
-
-      void handler(event);
+      })();
     },
     [customLayers, setCustomLayers, tUploads]
   );
