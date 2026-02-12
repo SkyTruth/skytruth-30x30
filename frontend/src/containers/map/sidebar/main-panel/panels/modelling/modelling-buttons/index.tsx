@@ -13,7 +13,7 @@ import { modellingAtom, drawStateAtom } from '@/containers/map/store';
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
 import {
-  cleanupGeoJSON,
+  extractPolygons,
   convertFilesToGeojson,
   supportedFileformats,
 } from '@/lib/utils/file-upload';
@@ -79,7 +79,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
 
           const geojson = await convertFilesToGeojson(files);
-          const feature = cleanupGeoJSON(geojson);
+          const { feature } = extractPolygons(geojson);
 
           if (!feature) {
             throw new Error('No valid geometry found');
