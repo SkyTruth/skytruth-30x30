@@ -8,7 +8,6 @@ from flask import Request
 from src.methods.publisher import run_from_payload
 from src.utils.resource_handling import handle_sigterm
 
-
 # Register SIGTERM handler
 signal.signal(signal.SIGTERM, handle_sigterm)
 
