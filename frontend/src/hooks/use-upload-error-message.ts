@@ -31,6 +31,8 @@ export const useUploadErrorMessage = ({ maxFileSize }: UseUploadErrorMessagePara
           return t('shp-missing-files-error');
         case UploadErrorType.UnsupportedFile:
           return t('unsupported-file-error');
+        case UploadErrorType.NoPolygons:
+          return t('no-polygons-error');
         default:
           return t('generic-upload-error');
       }

@@ -13,6 +13,7 @@ export enum UploadErrorType {
   InvalidXMLSyntax,
   SHPMissingFile,
   UnsupportedFile,
+  NoPolygons,
 }
 
 export const supportedFileformats = [
@@ -206,31 +207,32 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
   return parsed;
 }
 
-// Currently unused, but left as an export since it iwll be helpful with uplaoding geometries
-// to Conservation Builder
 export function cleanupGeoJSON(geoJSON: GeoJSONObject): Feature<ValidGeometryType> {
-  let collection: FeatureCollection;
-  if (isFeature(geoJSON)) {
-    collection = featureCollection([geoJSON]);
-  } else if (isFeatureCollection(geoJSON)) {
-    collection = geoJSON;
-  } else {
-    return;
+  try {
+    let collection: FeatureCollection;
+    if (isFeature(geoJSON)) {
+      collection = featureCollection([geoJSON]);
+    } else if (isFeatureCollection(geoJSON)) {
+      collection = geoJSON;
+    } else {
+      throw new Error('Invalid GeoJSON');
+    }
+
+    const features: Feature<ValidGeometryType>[] = collection.features.filter(
+      (f) =>
+        f.geometry?.type === 'MultiPolygon' ||
+        f.geometry?.type === 'Polygon' ||
+        f.geometry?.type === 'GeometryCollection'
+    ) as Feature<ValidGeometryType>[];
+
+    // NOTE: Only the first feature is imported
+    const feature = features[0];
+    if (!feature) {
+      throw new Error('No polygon geometry found');
+    }
+
+    return feature;
+  } catch {
+    throw UploadErrorType.NoPolygons;
   }
-
-  const features: Feature<ValidGeometryType>[] = collection.features.filter(
-    (f) =>
-      f.geometry?.type === 'MultiPolygon' ||
-      f.geometry?.type === 'Polygon' ||
-      f.geometry?.type === 'GeometryCollection'
-  ) as Feature<ValidGeometryType>[];
-
-  // NOTE: Only the first feature is imported
-  const feature = features[0];
-  if (!feature) {
-    // No feature with polygon or multipolygon found in geojson
-    throw new Error();
-  }
-
-  return feature;
 }

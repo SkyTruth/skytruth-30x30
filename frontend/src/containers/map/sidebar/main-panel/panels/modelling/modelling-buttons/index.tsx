@@ -10,13 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MAX_CUSTOM_LAYER_SIZE } from '@/containers/map/sidebar/layers-panel/constants';
 import { modellingAtom, drawStateAtom } from '@/containers/map/store';
+import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
 import {
   cleanupGeoJSON,
   convertFilesToGeojson,
   supportedFileformats,
 } from '@/lib/utils/file-upload';
-import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { FCWithMessages } from '@/types';
 
 const COMMON_BUTTON_CLASSES =

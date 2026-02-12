@@ -7,12 +7,9 @@ import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { customLayersAtom } from '@/containers/map/store';
-import { cn } from '@/lib/classnames';
-import {
-  convertFilesToGeojson,
-  supportedFileformats,
-} from '@/lib/utils/file-upload';
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
+import { cn } from '@/lib/classnames';
+import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 import { FCWithMessages } from '@/types';
 
 import { MAX_CUSTOM_LAYER_SIZE, SWITCH_LABEL_CLASSES } from '../constants';
