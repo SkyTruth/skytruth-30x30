@@ -6,10 +6,7 @@ import functions_framework
 from flask import Request
 
 from src.methods.publisher import run_from_payload
-from src.utils.logger import Logger
 from src.utils.resource_handling import handle_sigterm
-
-logger = Logger()
 
 
 # Register SIGTERM handler

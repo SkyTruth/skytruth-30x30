@@ -258,6 +258,7 @@ def dispatch_publisher(
     method,
     task_config,
     data,
+    retry_config,
     trigger_next=False,
     env="staging",
     tolerance=TOLERANCES[0],
@@ -550,6 +551,8 @@ def dispatch_publisher(
     if trigger_next and cont and step_list:
         pipe_next_steps(step_list, task_config, LONG_RUNNING_TASKS, verbose=verbose)
 
+    return retry_config
+
 
 def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
     """
@@ -588,10 +591,11 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
 
         logger.info({"message": f"Starting METHOD: {method}"})
 
-        dispatch_publisher(
+        retry_config = dispatch_publisher(
             method,
             task_config,
             data,
+            retry_config,
             trigger_next=trigger_next,
             env=env,
             tolerance=tolerance,
