@@ -36,6 +36,7 @@ class FileTooLargeError extends Error {
 
 const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
+  const tUploads = useTranslations('services.uploads');
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -72,25 +73,24 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
           });
 
           // New layers get activated and at the top of the stack
-          // setAllActiveLayers([newId, ...allActiveLayers]);
         } catch (error) {
           if (error instanceof FileTooLargeError) {
             setErrorMessage(
-              t('file-too-large-error', { size: `${MAX_CUSTOM_LAYER_SIZE / 1000000}Mb` })
+              tUploads('file-too-large-error', { size: `${MAX_CUSTOM_LAYER_SIZE / 1000000}Mb` })
             );
           } else {
             switch (error) {
               case UploadErrorType.InvalidXMLSyntax:
-                setErrorMessage(t('xml-syntax-error'));
+                setErrorMessage(tUploads('xml-syntax-error'));
                 break;
               case UploadErrorType.SHPMissingFile:
-                setErrorMessage(t('shp-missing-files-error'));
+                setErrorMessage(tUploads('shp-missing-files-error'));
                 break;
               case UploadErrorType.UnsupportedFile:
-                setErrorMessage(t('unsupported-file-error'));
+                setErrorMessage(tUploads('unsupported-file-error'));
                 break;
               default:
-                setErrorMessage(t('generic-upload-error'));
+                setErrorMessage(tUploads('generic-upload-error'));
                 break;
             }
           }
@@ -99,7 +99,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
 
       void handler(event);
     },
-    [customLayers, setCustomLayers, t]
+    [customLayers, setCustomLayers, tUploads]
   );
 
   return (
@@ -134,6 +134,6 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   );
 };
 
-UploadLayer.messages = ['containers.map-sidebar-layers-panel'];
+UploadLayer.messages = ['containers.map-sidebar-layers-panel', 'services.uploads'];
 
 export default UploadLayer;

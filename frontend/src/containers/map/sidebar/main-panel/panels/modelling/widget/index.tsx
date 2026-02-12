@@ -123,6 +123,7 @@ const ModellingWidget: FCWithMessages = () => {
     },
     {
       query: {
+        queryKey: [modellingData, tab, locale],
         enabled: Boolean(modellingData?.locations_area) && ['marine', 'terrestrial'].includes(tab),
         select: ({ data }) => {
           if (!data) return null;

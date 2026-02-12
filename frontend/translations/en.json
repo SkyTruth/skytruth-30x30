@@ -154,6 +154,8 @@
       "custom-area-description": "Activate more layers for additional contextual information about your custom area conservation scenario.",
       "start-drawing-on-map": "Start drawing on the map",
       "draw-shape": "Draw a shape",
+      "upload-shape": "Upload shape",
+      "upload-new-shape": "Upload new shape",
       "clear-shape": "Clear shape",
       "re-draw": "Re-draw",
       "how-to-draw": "<b>How to draw a custom area</b> on the map, using the drawing functionality?",
@@ -210,13 +212,7 @@
       "no-data-available": "No data available",
       "delete-layer": "Delete layer",
       "edit-layer-name": "Edit Layer Name",
-      "upload-layer": "Upload Layer",
-      "generic-upload-error": "Unable to validate the file.",
-      "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
-      "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and eventually .prj files all at once.",
-      "unsupported-file-error": "Unable to parse the file. Please try uploading a different format.",
-      "file-too-large-error": "This file is too large. Maximum file size is {size}"
-
+      "upload-layer": "Upload Layer"
     },
     "map": {
       "loading": "Loading...",
@@ -358,6 +354,15 @@
       "spanish": "Spanish",
       "french": "French",
       "portuguese": "Portuguese"
+    }
+  },
+  "services": {
+    "uploads": {
+      "generic-upload-error": "Unable to validate the file.",
+      "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
+      "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and eventually .prj files all at once.",
+      "unsupported-file-error": "Unable to parse the file. Please try uploading a different format.",
+      "file-too-large-error": "This file is too large. Maximum file size is {size}"
     }
   }
 }

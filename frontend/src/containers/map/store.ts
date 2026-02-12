@@ -26,10 +26,12 @@ export const drawStateAtom = atomWithReset<{
   active: boolean;
   status: 'idle' | 'drawing' | 'success';
   feature: Feature;
+  source?: 'draw' | 'upload' | null;
 }>({
   active: false,
   status: 'idle',
   feature: null,
+  source: null,
 });
 export const allActiveLayersAtom = atom<Array<string>>([]);
 export const customLayersAtom = atom<{ [key: string]: CustomLayer }>({});
