@@ -11,8 +11,8 @@ import { cn } from '@/lib/classnames';
 import {
   convertFilesToGeojson,
   supportedFileformats,
-  UploadErrorType,
 } from '@/lib/utils/file-upload';
+import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { FCWithMessages } from '@/types';
 
 import { MAX_CUSTOM_LAYER_SIZE, SWITCH_LABEL_CLASSES } from '../constants';
@@ -27,16 +27,11 @@ const DEFAULT_LAYER_STYLE = {
   lineColor: '#000000',
 };
 
-class FileTooLargeError extends Error {
-  constructor(message?: string) {
-    super(message ?? 'File too Large');
-    this.name = 'FileTooLargeError';
-  }
-}
-
 const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
-  const tUploads = useTranslations('services.uploads');
+  const getUploadErrorMessage = useUploadErrorMessage({
+    maxFileSize: MAX_CUSTOM_LAYER_SIZE,
+  });
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -78,32 +73,13 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
 
           // New layers get activated and at the top of the stack
         } catch (error) {
-          if (error instanceof FileTooLargeError) {
-            setErrorMessage(
-              tUploads('file-too-large-error', { size: `${MAX_CUSTOM_LAYER_SIZE / 1000000}Mb` })
-            );
-          } else {
-            switch (error) {
-              case UploadErrorType.InvalidXMLSyntax:
-                setErrorMessage(tUploads('xml-syntax-error'));
-                break;
-              case UploadErrorType.SHPMissingFile:
-                setErrorMessage(tUploads('shp-missing-files-error'));
-                break;
-              case UploadErrorType.UnsupportedFile:
-                setErrorMessage(tUploads('unsupported-file-error'));
-                break;
-              default:
-                setErrorMessage(tUploads('generic-upload-error'));
-                break;
-            }
-          }
+          setErrorMessage(getUploadErrorMessage(error));
         } finally {
           input.value = '';
         }
       })();
     },
-    [customLayers, setCustomLayers, tUploads]
+    [customLayers, setCustomLayers, getUploadErrorMessage]
   );
 
   return (

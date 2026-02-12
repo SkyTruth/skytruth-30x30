@@ -15,8 +15,8 @@ import {
   cleanupGeoJSON,
   convertFilesToGeojson,
   supportedFileformats,
-  UploadErrorType,
 } from '@/lib/utils/file-upload';
+import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { FCWithMessages } from '@/types';
 
 const COMMON_BUTTON_CLASSES =
@@ -26,16 +26,11 @@ type ModellingButtonsProps = {
   className?: HTMLDivElement['className'];
 };
 
-class FileTooLargeError extends Error {
-  constructor(message?: string) {
-    super(message ?? 'File too Large');
-    this.name = 'FileTooLargeError';
-  }
-}
-
 const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const tUploads = useTranslations('services.uploads');
+  const getUploadErrorMessage = useUploadErrorMessage({
+    maxFileSize: MAX_CUSTOM_LAYER_SIZE,
+  });
 
   const [{ status: modellingStatus }, setModelling] = useAtom(modellingAtom);
   const resetModelling = useResetAtom(modellingAtom);
@@ -100,32 +95,13 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           setModelling((prevState) => ({ ...prevState, active: true }));
           setUploadErrorMessage(null);
         } catch (error) {
-          if (error instanceof FileTooLargeError) {
-            setUploadErrorMessage(
-              tUploads('file-too-large-error', { size: `${MAX_CUSTOM_LAYER_SIZE / 1000000}Mb` })
-            );
-          } else {
-            switch (error) {
-              case UploadErrorType.InvalidXMLSyntax:
-                setUploadErrorMessage(tUploads('xml-syntax-error'));
-                break;
-              case UploadErrorType.SHPMissingFile:
-                setUploadErrorMessage(tUploads('shp-missing-files-error'));
-                break;
-              case UploadErrorType.UnsupportedFile:
-                setUploadErrorMessage(tUploads('unsupported-file-error'));
-                break;
-              default:
-                setUploadErrorMessage(tUploads('generic-upload-error'));
-                break;
-            }
-          }
+          setUploadErrorMessage(getUploadErrorMessage(error));
         } finally {
           input.value = '';
         }
       })();
     },
-    [setDrawState, setModelling, tUploads, setUploadErrorMessage]
+    [setDrawState, setModelling, getUploadErrorMessage, setUploadErrorMessage]
   );
 
   const onOpenUploadPicker = useCallback(() => {
