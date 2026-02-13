@@ -1,5 +1,6 @@
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # import main
 import src.methods.publisher as main
@@ -69,6 +70,7 @@ def patched_all(monkeypatch, call_log):
     )
 
     return call_log
+
 
 # @pytest.fixture(autouse=True)
 # def mock_create_task():
@@ -243,7 +245,6 @@ def _patch_upload_stats_to_recorder(monkeypatch, recorder):
 
 def _patch_create_task(monkeypatch):
     def mock_create_task():
-
         fake_response = MagicMock()
         fake_response.name = "tasks/fake123"
         return fake_response

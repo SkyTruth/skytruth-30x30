@@ -143,8 +143,8 @@ def create_task(
     project_id = payload.get("PROJECT", "")
     location = payload.get("LOCATION", "")
     queue = payload.get("QUEUE_NAME", "")
-    target_url =payload.get("TARGET_URL", "")
-    service_account_email =payload.get("INVOKER_SA", "")
+    target_url = payload.get("TARGET_URL", "")
+    service_account_email = payload.get("INVOKER_SA", "")
 
     task = {
         "http_request": {
@@ -571,7 +571,6 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
     attempt = data.get("attempt", 1)
 
     try:
-
         task_config = {
             "PROJECT": project,
             "LOCATION": location,
