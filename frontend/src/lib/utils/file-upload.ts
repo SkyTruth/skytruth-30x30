@@ -6,7 +6,11 @@ import { ZipLoader } from '@loaders.gl/zip';
 import { featureCollection, GeoJSONObject, MultiPolygon } from '@turf/turf';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 
-import { isFeature, isFeatureCollection, isStructurallyValidPolygonCoordinates } from '@/lib/utils/geo';
+import {
+  isFeature,
+  isFeatureCollection,
+  isStructurallyValidPolygonCoordinates,
+} from '@/lib/utils/geo';
 
 export enum UploadErrorType {
   Generic,

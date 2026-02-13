@@ -1,16 +1,15 @@
 import { useEffect } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
 import axios, { isAxiosError } from 'axios';
 import type { Feature } from 'geojson';
 import { useAtomValue, useSetAtom } from 'jotai';
+import { useTranslations } from 'next-intl';
 
 import { modellingAtom, drawStateAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { ModellingData } from '@/types/modelling';
-
 import { FCWithMessages } from '@/types';
+import { ModellingData } from '@/types/modelling';
 
 const fetchModelling = async (tab: string, feature: Feature) => {
   return axios.post<ModellingData>(process.env.NEXT_PUBLIC_ANALYSIS_CF_URL, {
@@ -28,11 +27,11 @@ const Modelling: FCWithMessages = () => {
   const [{ tab }] = useSyncMapContentSettings();
 
   const getErrorMessage = (error) => {
-    if (error.includes("Invalid input geometry")){
-      return t('invalid-geometry')
+    if (error.includes('Invalid input geometry')) {
+      return t('invalid-geometry');
     }
     return error;
-  }
+  };
 
   const { isFetching, isSuccess, data } = useQuery(
     ['modelling', tab, revision, feature],
@@ -47,7 +46,8 @@ const Modelling: FCWithMessages = () => {
           setModellingState((prevState) => ({
             ...prevState,
             status: 'error',
-            errorMessage: req.response?.status === 400 ? getErrorMessage(req.response?.data.error) : undefined,
+            errorMessage:
+              req.response?.status === 400 ? getErrorMessage(req.response?.data.error) : undefined,
           }));
         } else {
           setModellingState((prevState) => ({
@@ -71,6 +71,6 @@ const Modelling: FCWithMessages = () => {
   return null;
 };
 
-Modelling.messages = ['components.widget']
+Modelling.messages = ['components.widget'];
 
 export default Modelling;
