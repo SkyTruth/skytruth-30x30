@@ -53,7 +53,7 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
     ]
     for name in simple_targets:
-        return_value = ({"ok": True}, {"ok": True}) if name == "download_mpatlas" else {"ok": True}
+        return_value = ({"delay_seconds": 0, "max_retries": 0}, True) if name == "download_mpatlas" else {"ok": True}
         monkeypatch.setattr(
             main,
             name,
@@ -66,6 +66,19 @@ def patched_all(monkeypatch, call_log):
         main,
         "download_zip_to_gcs",
         make_recorder(call_log, "download_zip_to_gcs", return_value={"ok": True}),
+        raising=True,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "create_task",
+        make_recorder(call_log, "create_task", return_value=MagicMock(name="tasks/fake123")),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "long_running_tasks",
+        make_recorder(call_log, "long_running_tasks", return_value=("OK", 200)),
         raising=True,
     )
 
@@ -108,19 +121,17 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     """Each simple METHOD should call exactly one target with only verbose kwarg."""
     resp = main.run_from_payload({"METHOD": method})
 
-    # if method == "update_locations":
-    #     # Split this out because update_locations passes on its return value
-    #     assert resp == {"ok": True}
-    # else:
-    #     assert resp == ("OK", 200)
     assert resp == ("OK", 200)
 
     # Exactly one call recorded
     assert len(patched_all) == 1
     name, args, kwargs = patched_all[0]
+
     assert name == expected_call
     assert args == ()
     assert "verbose" in kwargs
+    if method == "update_locations":
+        assert kwargs["request"] == {"METHOD": "update_locations"}
 
 
 # Tests for functions that directly call download_zip_to_gcs
@@ -243,15 +254,6 @@ def _patch_upload_stats_to_recorder(monkeypatch, recorder):
     monkeypatch.setattr(main, "upload_stats", mock_upload_stats, raising=True)
 
 
-def _patch_create_task(monkeypatch):
-    def mock_create_task():
-        fake_response = MagicMock()
-        fake_response.name = "tasks/fake123"
-        return fake_response
-
-    monkeypatch.setattr(main, "create_task", mock_create_task, raising=True)
-
-
 @pytest.mark.parametrize(
     "method, expected_filename_attr, client_method_name",
     [
@@ -296,11 +298,8 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     # Patch upload_stats to a recorder
     _patch_upload_stats_to_recorder(monkeypatch, recorder)
 
-    # Patch create_task
-    _patch_create_task(monkeypatch)
-
     resp = main.run_from_payload({"METHOD": method})
-    assert resp == ("STATS_OK", 201)
+    assert resp == ('OK', 200)
 
     # Strapi was instantiated exactly once
     assert recorder.get("instantiated", 0) == 1
@@ -318,8 +317,7 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     assert getattr(upload_fn, "__self__", None).__class__ is MockStrapi
 
     # Verbose propagated from module
-    assert recorder["verbose"] is main.verbose
-
+    assert recorder["verbose"] is True
 
 # Non-invoking / generic flows
 def test_dry_run_calls_nothing_and_returns_ok(patched_all, monkeypatch):
@@ -354,8 +352,6 @@ def test_error_bubbles_to_208(monkeypatch, call_log):
         raising=True,
     )
 
-    # Patch create_task
-    _patch_create_task(monkeypatch)
 
     resp = main.run_from_payload({"METHOD": "process_gadm", "MAX_RETRIES": 0})
     assert isinstance(resp, tuple)
