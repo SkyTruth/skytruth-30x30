@@ -307,7 +307,7 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     _patch_upload_stats_to_recorder(monkeypatch, recorder)
 
     resp = main.run_from_payload({"METHOD": method})
-    assert resp == ('STATS_OK', 201)
+    assert resp == ("STATS_OK", 201)
 
     # Strapi was instantiated exactly once
     assert recorder.get("instantiated", 0) == 1
