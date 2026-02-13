@@ -99,12 +99,11 @@ jobs:
 
       - name: Build and Push Container
         env:
-          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.env.outputs.environment)] }}
           SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.env.outputs.environment)] }}
         run: |
           IMAGE_TAG="${{ github.sha }}"
-          IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${SERVICE}:${IMAGE_TAG}"
-
+          IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.DATA_PIPES_REPO }}/${SERVICE}:${IMAGE_TAG}"
+          
           docker build -f cloudrun_jobs/data_processing/Dockerfile -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
 
