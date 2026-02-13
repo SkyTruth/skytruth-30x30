@@ -9,8 +9,8 @@ import { Label } from '@/components/ui/label';
 import { bboxLocationAtom, customLayersAtom } from '@/containers/map/store';
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
-import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
+import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
 
 import { MAX_CUSTOM_LAYER_SIZE, SWITCH_LABEL_CLASSES } from '../constants';

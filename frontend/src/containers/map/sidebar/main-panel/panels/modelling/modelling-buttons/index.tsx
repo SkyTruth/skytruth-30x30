@@ -14,12 +14,12 @@ import { bboxLocationAtom, modellingAtom, drawStateAtom } from '@/containers/map
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
-import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import {
   extractPolygons,
   convertFilesToGeojson,
   supportedFileformats,
 } from '@/lib/utils/file-upload';
+import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
 
 const COMMON_BUTTON_CLASSES =
