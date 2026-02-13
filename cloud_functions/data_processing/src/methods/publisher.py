@@ -140,15 +140,11 @@ def create_task(
 ):
     """Create a single Cloud Task to POST JSON to a Cloud Function."""
 
-    project_id = payload["PROJECT"]
-    location = payload["LOCATION"]
-    queue = payload["QUEUE_NAME"]
-    target_url = payload["TARGET_URL"]
-    service_account_email = payload["INVOKER_SA"]
-
-    client = tasks_v2.CloudTasksClient()
-
-    parent = client.queue_path(project_id, location, queue)
+    project_id = payload.get("PROJECT", "")
+    location = payload.get("LOCATION", "")
+    queue = payload.get("QUEUE_NAME", "")
+    target_url =payload.get("TARGET_URL", "")
+    service_account_email =payload.get("INVOKER_SA", "")
 
     task = {
         "http_request": {
@@ -167,6 +163,8 @@ def create_task(
         task["schedule_time"] = timestamp
 
     try:
+        client = tasks_v2.CloudTasksClient()
+        parent = client.queue_path(project_id, location, queue)
         response = client.create_task(request={"parent": parent, "task": task})
         if verbose:
             logger.info({"message": f"Created task: {response.name}: {json.dumps(payload)}"})
@@ -566,13 +564,13 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
     env = os.environ.get("ENVIRONMENT", "")
     location = os.environ.get("LOCATION", "")
     webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
+    method = data.get("METHOD", "dry_run")
+    trigger_next = data.get("TRIGGER_NEXT", False)
+    tolerance = data.get("TOLERANCE", TOLERANCES[0])
+    max_retries = data.get("MAX_RETRIES", 0)
+    attempt = data.get("attempt", 1)
 
     try:
-        method = data.get("METHOD", "dry_run")
-        trigger_next = data.get("TRIGGER_NEXT", False)
-        tolerance = data.get("TOLERANCE", TOLERANCES[0])
-        max_retries = data.get("MAX_RETRIES", 0)
-        attempt = data.get("attempt", 1)
 
         task_config = {
             "PROJECT": project,
