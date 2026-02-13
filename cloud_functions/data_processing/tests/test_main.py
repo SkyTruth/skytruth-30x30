@@ -53,7 +53,11 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
     ]
     for name in simple_targets:
-        return_value = ({"delay_seconds": 0, "max_retries": 0}, True) if name == "download_mpatlas" else {"ok": True}
+        return_value = (
+            ({"delay_seconds": 0, "max_retries": 0}, True)
+            if name == "download_mpatlas"
+            else {"ok": True}
+        )
         monkeypatch.setattr(
             main,
             name,
@@ -121,7 +125,11 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     """Each simple METHOD should call exactly one target with only verbose kwarg."""
     resp = main.run_from_payload({"METHOD": method})
 
-    assert resp == ("OK", 200)
+    if method == "update_locations":
+        # Split this out because update_locations passes on its return value
+        assert resp == {"ok": True}
+    else:
+        assert resp == ("OK", 200)
 
     # Exactly one call recorded
     assert len(patched_all) == 1
@@ -299,7 +307,7 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     _patch_upload_stats_to_recorder(monkeypatch, recorder)
 
     resp = main.run_from_payload({"METHOD": method})
-    assert resp == ('OK', 200)
+    assert resp == ('STATS_OK', 201)
 
     # Strapi was instantiated exactly once
     assert recorder.get("instantiated", 0) == 1
@@ -318,6 +326,7 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
 
     # Verbose propagated from module
     assert recorder["verbose"] is True
+
 
 # Non-invoking / generic flows
 def test_dry_run_calls_nothing_and_returns_ok(patched_all, monkeypatch):
@@ -351,7 +360,6 @@ def test_error_bubbles_to_208(monkeypatch, call_log):
         make_recorder(call_log, "process_gadm_geoms", side_effect=RuntimeError("boom")),
         raising=True,
     )
-
 
     resp = main.run_from_payload({"METHOD": "process_gadm", "MAX_RETRIES": 0})
     assert isinstance(resp, tuple)

@@ -453,7 +453,8 @@ def dispatch_publisher(
         # ------------------
 
         case "update_locations":
-            return upload_locations(request=data, verbose=verbose)
+            resp = upload_locations(request=data, verbose=verbose)
+            return resp, retry_config
 
         case "update_protection_coverage_stats":
             client = Strapi()
@@ -461,7 +462,7 @@ def dispatch_publisher(
                 filename=PROTECTION_COVERAGE_FILE_NAME,
                 upload_function=client.upsert_protection_coverage_stats,
                 verbose=verbose,
-            )
+            ), retry_config
 
         case "update_mpaa_protection_level_stats":
             client = Strapi()
@@ -469,7 +470,7 @@ def dispatch_publisher(
                 filename=PROTECTION_LEVEL_FILE_NAME,
                 upload_function=client.upsert_mpaa_protection_level_stats,
                 verbose=verbose,
-            )
+            ), retry_config
 
         case "update_fishing_protection_stats":
             client = Strapi()
@@ -477,7 +478,7 @@ def dispatch_publisher(
                 filename=FISHING_PROTECTION_FILE_NAME,
                 upload_function=client.upsert_fishing_protection_level_stats,
                 verbose=verbose,
-            )
+            ), retry_config
 
         case "update_habitat_protection_stats":
             client = Strapi()
@@ -485,7 +486,7 @@ def dispatch_publisher(
                 filename=HABITAT_PROTECTION_FILE_NAME,
                 upload_function=client.upsert_habitat_stats,
                 verbose=verbose,
-            )
+            ), retry_config
 
         case "update_protected_areas":
             update_segment = data.get("UPDATE_SEGMENT", "all")
@@ -549,7 +550,7 @@ def dispatch_publisher(
     if trigger_next and cont and step_list:
         pipe_next_steps(step_list, task_config, LONG_RUNNING_TASKS, verbose=verbose)
 
-    return retry_config
+    return ("OK", 200), retry_config
 
 
 def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
@@ -588,7 +589,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
 
         logger.info({"message": f"Starting METHOD: {method}"})
 
-        retry_config = dispatch_publisher(
+        resp, retry_config = dispatch_publisher(
             method,
             task_config,
             data,
@@ -600,7 +601,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
         )
 
         logger.info({"message": f"METHOD: {method} complete!"})
-        return "OK", 200
+        return resp
 
     except Exception as e:
         retries = retry_config["max_retries"]
