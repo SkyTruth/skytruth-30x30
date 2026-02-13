@@ -88,3 +88,42 @@ jobs:
           --gen2 \
           --region=${{ env.REGION }} \
           --source=./cloud_functions/data_processing \
+
+      - name: Set Artifact Registry repo for environment
+        run: |
+          if [ "${{ steps.env.outputs.environment }}" = "prod" ]; then
+            echo "DATA_PIPES_REPO=x30-prod-data-pipes" >> $GITHUB_ENV
+          else
+            echo "DATA_PIPES_REPO=x30-dev-data-pipes" >> $GITHUB_ENV
+          fi
+
+      - name: Build and Push Container
+        env:
+          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.env.outputs.environment)] }}
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${SERVICE}:${IMAGE_TAG}"
+
+          docker build -f cloudrun_jobs/data_processing/Dockerfile -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
+
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Resolve digest and update Cloud Run Job to digest
+        env:
+          JOB_NAME: ${{ secrets[format('{0}_CLIENT_JOB_NAME', steps.env.outputs.environment)] }}
+          REPOSITORY: ${{ secrets[format('{0}_CLIENT_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CLIENT_SERVICE', steps.env.outputs.environment)] }}
+        run: |
+          DIGEST="$(gcloud artifacts docker images describe "${{ env.IMAGE_URI }}" \
+            --format='get(image_summary.digest)')"
+
+          IMAGE_BY_DIGEST="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${SERVICE}@${DIGEST}"
+
+          echo "Deploying image: ${IMAGE_BY_DIGEST}"
+          gcloud run jobs update "${JOB_NAME}" \
+            --region="${{ env.REGION }}" \
+            --image="${IMAGE_BY_DIGEST}"
+
