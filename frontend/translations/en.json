@@ -309,7 +309,8 @@
     "widget": {
       "updated-on": "Updated on {date}",
       "no-data-available": "No data available",
-      "not-visible-due-to-error": "The current widget is not visible due to an error"
+      "not-visible-due-to-error": "The current widget is not visible due to an error",
+      "invalid-geometry": "Invalid geometry. The uploaded shape likely contains an intersection."
     },
     "chart-conservation": {
       "year-value": "Year: {value}",
@@ -365,7 +366,7 @@
       "unsupported-file-error": "Unable to parse the file. Please try uploading a different format.",
       "file-too-large-error": "This file is too large. Maximum file size is {size}",
       "no-polygons-error": "File must contain at least one polygon or multipolygon",
-      "features-excluded-info": "One or more features were excluded because they were not polygons or were invalid polygons."
+      "features-excluded-info": "One or more features were excluded because they were not polygons."
     }
   }
 }

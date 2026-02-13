@@ -1,5 +1,4 @@
 import { BBox } from '@turf/helpers';
-import kinks from '@turf/kinks';
 import { GeoJSONObject, Geometries } from '@turf/turf';
 import type { Feature, FeatureCollection, Polygon } from 'geojson';
 
@@ -81,31 +80,7 @@ const isValidLinearRing = (ring: unknown): ring is number[][] =>
  * @param coordinates polygon coordinates candidate
  * @returns true when all rings are valid linear rings
  */
-const isStructurallyValidPolygonCoordinates = (
+export const isStructurallyValidPolygonCoordinates = (
   coordinates: unknown
 ): coordinates is Polygon['coordinates'] =>
   Array.isArray(coordinates) && coordinates.length > 0 && coordinates.every(isValidLinearRing);
-
-/**
- * Checks whether polygon coordinates are topologically valid (no self-intersections).
- * @param coordinates polygon coordinates
- * @returns true when no kinks are detected
- */
-const isTopologicallyValidPolygonCoordinates = (coordinates: Polygon['coordinates']) => {
-  try {
-    return kinks({ type: 'Polygon', coordinates }).features.length === 0;
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Checks whether polygon coordinates are both structurally and topologically valid.
- * @param coordinates polygon coordinates candidate
- * @returns true when coordinates pass all polygon validation checks
- */
-export const isValidPolygonCoordinates = (
-  coordinates: unknown
-): coordinates is Polygon['coordinates'] =>
-  isStructurallyValidPolygonCoordinates(coordinates) &&
-  isTopologicallyValidPolygonCoordinates(coordinates);

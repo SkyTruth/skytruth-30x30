@@ -12,6 +12,23 @@ curl '{url}' \
 
 ```
 
+### Invalid topology test
+
+Use a self-intersecting polygon (bow-tie) to validate topology preflight behavior:
+
+```bash
+curl '{url}' \
+  -H 'content-type: application/json' \
+  --data-raw '{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[0,0],[2,2],[0,2],[2,0],[0,0]]]}}' \
+  --compressed
+```
+
+Expected response is HTTP `400` with a message like:
+
+```json
+{"error":"Invalid input geometry: Self-intersection[...]"}
+```
+
 service: `https://30x30.skytruth.org/functions/analysis/`
 locally: `http://0.0.0.0:3001`
 

@@ -12,6 +12,37 @@ def get_geojson(geojson: JSON) -> dict:
     else:
         return geojson
 
+
+def validate_geometry_topology(
+    conn: sqlalchemy.engine.Connection, geometry: dict
+) -> None:
+    stmt = sqlalchemy.text(
+        """
+        WITH g AS (
+            SELECT ST_SetSRID(ST_GeomFromGeoJSON(:geometry), 4326) AS geom
+        )
+        SELECT
+            ST_GeometryType(geom) AS geom_type,
+            ST_IsEmpty(geom) AS is_empty,
+            ST_IsValid(geom) AS is_valid,
+            ST_IsValidReason(geom) AS invalid_reason
+        FROM g
+        """
+    )
+    try:
+        validation = conn.execute(stmt, parameters={"geometry": geometry}).mappings().one()
+    except sqlalchemy.exc.SQLAlchemyError as exc:
+        raise ValueError("Unable to parse input geometry") from exc
+
+    if validation["is_empty"]:
+        raise ValueError("Input geometry is empty")
+
+    if validation["geom_type"] not in {"ST_Polygon", "ST_MultiPolygon"}:
+        raise ValueError("Input geometry must be a Polygon or MultiPolygon")
+
+    if not validation["is_valid"]:
+        raise ValueError(f"Invalid input geometry: {validation['invalid_reason']}")
+
 ### Marine
 
 
@@ -53,11 +84,13 @@ def serialize_response_marine(data: dict) -> dict:
 def get_locations_stats_marine(
     db: sqlalchemy.engine.base.Engine, geojson: JSON
 ) -> dict:
+    geometry = get_geojson(geojson)
     with db.connect() as conn:
+        validate_geometry_topology(conn, geometry)
         stmt = sqlalchemy.text(
             """
         with user_data as (select ST_GeomFromGeoJSON(:geometry) as geom),
-	            user_data_stats as (select *, round((st_area(st_transform(geom,'+proj=longlat +datum=WGS84 +no_defs +type=crs', '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)) user_area_km2 from user_data)
+                    user_data_stats as (select *, round((st_area(st_transform(geom,'+proj=longlat +datum=WGS84 +no_defs +type=crs', '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)) user_area_km2 from user_data)
             select area_km2, iso_sov1, iso_sov2, iso_sov3, 
                 round((st_area(st_transform(st_makevalid(st_intersection(ST_Subdivide(the_geom, 20000), user_data_stats.geom)),'+proj=longlat +datum=WGS84 +no_defs +type=crs', '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)) portion_area_km2, 
                 user_data_stats.user_area_km2 
@@ -65,9 +98,7 @@ def get_locations_stats_marine(
             where st_intersects(the_geom, user_data_stats.geom)
             """
         )
-        data_response = conn.execute(
-            stmt, parameters={"geometry": get_geojson(geojson)}
-        ).all()
+        data_response = conn.execute(stmt, parameters={"geometry": geometry}).all()
 
     return serialize_response_marine(data_response)
 
@@ -111,11 +142,13 @@ def serialize_response_terrestrial(data: dict) -> dict:
 def get_locations_stats_terrestrial(
     db: sqlalchemy.engine.base.Engine, geojson: JSON
 ) -> dict:
+    geometry = get_geojson(geojson)
     with db.connect() as conn:
+        validate_geometry_topology(conn, geometry)
         stmt = sqlalchemy.text(
             """
         with user_data as (select ST_GeomFromGeoJSON(:geometry) as geom),
-	            user_data_stats as (select *, round((st_area(st_transform(geom,'+proj=longlat +datum=WGS84 +no_defs +type=crs', '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)) user_area_km2 from user_data), 
+                    user_data_stats as (select *, round((st_area(st_transform(geom,'+proj=longlat +datum=WGS84 +no_defs +type=crs', '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)) user_area_km2 from user_data), 
 	          stats as (select area_km2,gid_0, round((st_area(st_transform(st_makevalid(st_intersection(the_geom, user_data_stats.geom)),'+proj=longlat +datum=WGS84 +no_defs +type=crs', '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)) portion_area_km2,
 	          user_data_stats.user_area_km2
 	          from data.gadm_minus_pa gmp , user_data_stats
@@ -123,8 +156,6 @@ def get_locations_stats_terrestrial(
       select avg(area_km2) as area_km2, gid_0, sum(portion_area_km2) as portion_area_km2, avg(user_area_km2) as user_area_km2 from stats group  by gid_0
             """
         )
-        data_response = conn.execute(
-            stmt, parameters={"geometry": get_geojson(geojson)}
-        ).all()
+        data_response = conn.execute(stmt, parameters={"geometry": geometry}).all()
 
     return serialize_response_terrestrial(data_response)

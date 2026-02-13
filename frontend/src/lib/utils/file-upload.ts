@@ -6,7 +6,7 @@ import { ZipLoader } from '@loaders.gl/zip';
 import { featureCollection, GeoJSONObject, MultiPolygon } from '@turf/turf';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 
-import { isFeature, isFeatureCollection, isValidPolygonCoordinates } from '@/lib/utils/geo';
+import { isFeature, isFeatureCollection, isStructurallyValidPolygonCoordinates } from '@/lib/utils/geo';
 
 export enum UploadErrorType {
   Generic,
@@ -223,7 +223,7 @@ const appendPolygonCoordinates = (
 
   switch (geometry.type) {
     case 'Polygon': {
-      if (isValidPolygonCoordinates(geometry.coordinates)) {
+      if (isStructurallyValidPolygonCoordinates(geometry.coordinates)) {
         coordinates.push(geometry.coordinates);
       } else {
         removed.invalidPolygon += 1;
@@ -232,7 +232,7 @@ const appendPolygonCoordinates = (
     }
     case 'MultiPolygon': {
       geometry.coordinates.forEach((polygonCoordinates) => {
-        if (isValidPolygonCoordinates(polygonCoordinates)) {
+        if (isStructurallyValidPolygonCoordinates(polygonCoordinates)) {
           coordinates.push(polygonCoordinates);
         } else {
           removed.invalidPolygon += 1;
