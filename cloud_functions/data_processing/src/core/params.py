@@ -216,4 +216,5 @@ LONG_RUNNING_TASKS = [
     "generate_dissolved_terrestrial_pa",
     "generate_gadm_minus_pa",
     "generate_protected_areas_table",
+    "test_long_running_tasks"
 ]

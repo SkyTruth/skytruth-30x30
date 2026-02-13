@@ -273,6 +273,9 @@ def dispatch_publisher(
         case "dry_run":
             logger.info({"message": "Dry Run Complete!"})
 
+        case "test_long_running_tasks":
+            logger.info({"message": "Long Tasks Dry Run Complete!"})
+
         case "publisher":
             monthly_job_publisher(
                 task_config, long_running_task_list=LONG_RUNNING_TASKS, verbose=verbose
