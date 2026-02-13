@@ -9,6 +9,7 @@ on:
       - 'frontend/**'
       - 'cms/**'
       - 'cloud_functions/**'
+      - 'cloudrun_jobs/**'
       - '.github/workflows/*'
       - '.github/actions/*'
 
