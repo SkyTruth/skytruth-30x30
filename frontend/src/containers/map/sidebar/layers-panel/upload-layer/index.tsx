@@ -1,14 +1,15 @@
 import { ChangeEventHandler, useCallback, useState } from 'react';
 
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { customLayersAtom } from '@/containers/map/store';
+import { bboxLocationAtom, customLayersAtom } from '@/containers/map/store';
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
+import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 import { FCWithMessages } from '@/types';
 
@@ -29,6 +30,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   const getUploadErrorMessage = useUploadErrorMessage({
     maxFileSize: MAX_CUSTOM_LAYER_SIZE,
   });
+  const setBboxLocation = useSetAtom(bboxLocationAtom);
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -67,6 +69,10 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
               style: { ...DEFAULT_LAYER_STYLE },
             },
           });
+          const bounds = getGeoJSONBoundingBox(geojson);
+          if (bounds) {
+            setBboxLocation([...bounds] as [number, number, number, number]);
+          }
 
           // New layers get activated and at the top of the stack
         } catch (error) {
@@ -76,7 +82,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
         }
       })();
     },
-    [customLayers, setCustomLayers, getUploadErrorMessage]
+    [customLayers, setBboxLocation, setCustomLayers, getUploadErrorMessage]
   );
 
   return (

@@ -1,6 +1,6 @@
 import { ChangeEventHandler, useCallback, useRef, useState } from 'react';
 
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -10,10 +10,11 @@ import { RxTransform } from 'react-icons/rx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MAX_CUSTOM_LAYER_SIZE } from '@/containers/map/sidebar/layers-panel/constants';
-import { modellingAtom, drawStateAtom } from '@/containers/map/store';
+import { bboxLocationAtom, modellingAtom, drawStateAtom } from '@/containers/map/store';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
+import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import {
   extractPolygons,
   convertFilesToGeojson,
@@ -39,6 +40,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
   const [modellingState, setModelling] = useAtom(modellingAtom);
   const { status: modellingStatus } = modellingState;
+  const setBboxLocation = useSetAtom(bboxLocationAtom);
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
   const [drawState, setDrawState] = useAtom(drawStateAtom);
@@ -113,6 +115,10 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }));
 
           setModelling((prevState) => ({ ...prevState, active: true }));
+          const bounds = getGeoJSONBoundingBox(feature);
+          if (bounds) {
+            setBboxLocation([...bounds] as [number, number, number, number]);
+          }
           setUploadErrorMessage(null);
           setUploadInfoMessage(removed.any ? tUploads('features-excluded-info') : null);
         } catch (error) {
@@ -128,6 +134,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       drawState,
       setDrawState,
       setModelling,
+      setBboxLocation,
       getUploadErrorMessage,
       setUploadErrorMessage,
       setUploadInfoMessage,

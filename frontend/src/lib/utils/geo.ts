@@ -1,5 +1,5 @@
 import { BBox } from '@turf/helpers';
-import { GeoJSONObject, Geometries } from '@turf/turf';
+import { bbox as turfBBox, GeoJSONObject, Geometries } from '@turf/turf';
 import type { Feature, FeatureCollection, Polygon } from 'geojson';
 
 /**
@@ -84,3 +84,22 @@ export const isStructurallyValidPolygonCoordinates = (
   coordinates: unknown
 ): coordinates is Polygon['coordinates'] =>
   Array.isArray(coordinates) && coordinates.length > 0 && coordinates.every(isValidLinearRing);
+
+/**
+ * Computes a bounding box for a GeoJSON object.
+ * @param geoJSON GeoJSON object to compute bounds from
+ * @returns bounds in [minLon, minLat, maxLon, maxLat] format, or null if unavailable
+ */
+export const getGeoJSONBoundingBox = (geoJSON: GeoJSONObject): BBox | null => {
+  try {
+    const bounds = turfBBox(geoJSON) as BBox;
+
+    if (bounds.length !== 4 || bounds.some((value) => !Number.isFinite(value))) {
+      return null;
+    }
+
+    return bounds;
+  } catch {
+    return null;
+  }
+};
