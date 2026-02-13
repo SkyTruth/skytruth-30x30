@@ -395,6 +395,19 @@ resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
+
+resource "google_storage_bucket_iam_member" "job_writer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
+resource "google_storage_bucket_iam_member" "job_bucket_viewer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
 resource "google_project_iam_member" "google_cloudtasks_iam_member" {
   count = length(var.cloud_tasks_roles)
 
