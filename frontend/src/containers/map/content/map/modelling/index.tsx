@@ -17,13 +17,13 @@ const fetchModelling = async (tab: string, feature: Feature) => {
 };
 
 const Modelling = () => {
-  const { feature } = useAtomValue(drawStateAtom);
+  const { feature, revision } = useAtomValue(drawStateAtom);
   const setModellingState = useSetAtom(modellingAtom);
 
   const [{ tab }] = useSyncMapContentSettings();
 
   const { isFetching, isSuccess, data } = useQuery(
-    ['modelling', tab, feature],
+    ['modelling', tab, revision, feature],
     () => fetchModelling(tab, feature),
     {
       enabled: Boolean(feature) && ['marine', 'terrestrial'].includes(tab),

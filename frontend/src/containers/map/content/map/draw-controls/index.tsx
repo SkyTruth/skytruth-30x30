@@ -22,6 +22,7 @@ const DrawControls: FC = () => {
         active: false,
         status: 'success',
         feature: features[0],
+        revision: prevState.revision + 1,
         source: 'draw',
       }));
     },

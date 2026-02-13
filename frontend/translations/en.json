@@ -156,6 +156,8 @@
       "draw-shape": "Draw a shape",
       "upload-shape": "Upload shape",
       "upload-new-shape": "Upload new shape",
+      "uploading-shape-to-map": "Uploading shape to map...",
+      "loading-data": "Loading data...",
       "clear-shape": "Clear shape",
       "re-draw": "Re-draw",
       "how-to-draw": "<b>How to draw a custom area</b> on the map, using the drawing functionality?",
@@ -306,7 +308,6 @@
     },
     "widget": {
       "updated-on": "Updated on {date}",
-      "loading-data": "Loading data...",
       "no-data-available": "No data available",
       "not-visible-due-to-error": "The current widget is not visible due to an error"
     },

@@ -9,7 +9,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import StackedHorizontalBarChart from '@/components/charts/stacked-horizontal-bar-chart';
 import TooltipButton from '@/components/tooltip-button';
 import Widget from '@/components/widget';
-import { modellingAtom } from '@/containers/map/store';
+import { drawStateAtom, modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useNameField from '@/hooks/use-name-field';
 import { cn } from '@/lib/classnames';
@@ -82,6 +82,7 @@ const ModellingWidget: FCWithMessages = () => {
     data: modellingData,
     errorMessage,
   } = useAtomValue(modellingAtom);
+  const { status: drawStatus } = useAtomValue(drawStateAtom);
 
   // Tooltips with mapping
   const tooltips = useTooltips();
@@ -258,8 +259,10 @@ const ModellingWidget: FCWithMessages = () => {
     ),
   });
 
-  const loading = modellingStatus === 'running';
+  const loading = modellingStatus === 'running' || drawStatus === 'uploading';
   const error = modellingStatus === 'error';
+  const loadingMessage =
+    drawStatus === 'uploading' ? t('uploading-shape-to-map') : t('loading-data');
 
   // @ts-expect-error will check later
   const nationalLevelContributions: {
@@ -294,6 +297,7 @@ const ModellingWidget: FCWithMessages = () => {
       className="border-b border-black py-0"
       noData={!nationalLevelContributions}
       loading={loading}
+      loadingMessage={loadingMessage}
       error={error}
       errorMessage={errorMessage}
     >

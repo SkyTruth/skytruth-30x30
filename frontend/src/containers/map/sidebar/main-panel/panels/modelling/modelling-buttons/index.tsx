@@ -2,6 +2,7 @@ import { ChangeEventHandler, useCallback, useRef, useState } from 'react';
 
 import { useAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
+import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LuTrash2 } from 'react-icons/lu';
 import { RxTransform } from 'react-icons/rx';
@@ -33,10 +34,12 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
     maxFileSize: MAX_CUSTOM_LAYER_SIZE,
   });
 
-  const [{ status: modellingStatus }, setModelling] = useAtom(modellingAtom);
+  const [modellingState, setModelling] = useAtom(modellingAtom);
+  const { status: modellingStatus } = modellingState;
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
-  const [{ active, status, source }, setDrawState] = useAtom(drawStateAtom);
+  const [drawState, setDrawState] = useAtom(drawStateAtom);
+  const { active, status, source } = drawState;
 
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
   const [uploadInfoMessage, setUploadInfoMessage] = useState<string | null>(null);
@@ -50,27 +53,35 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   }, [resetModelling, resetDrawState]);
 
   const onClickRedraw = useCallback(() => {
-    resetDrawState();
     resetModelling();
-    setDrawState({
+    setDrawState((prevState) => ({
+      ...prevState,
       active: true,
       status: 'drawing',
       feature: null,
-    });
+      source: 'draw',
+    }));
 
     setModelling((prevState) => ({ ...prevState, active: true }));
     setUploadErrorMessage(null);
     setUploadInfoMessage(null);
-  }, [resetModelling, resetDrawState, setModelling, setDrawState]);
+  }, [resetModelling, setModelling, setDrawState]);
 
   const onUploadChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
       const input = event.currentTarget;
       const files = Array.from(input.files ?? []);
+      const previousDrawState = drawState;
       void (async () => {
         if (files.length === 0) {
           return;
         }
+
+        setDrawState((prevState) => ({
+          ...prevState,
+          active: false,
+          status: 'uploading',
+        }));
 
         let totalSize = 0;
         for (const file of files) {
@@ -89,17 +100,20 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             throw new Error('No valid geometry found');
           }
 
-          setDrawState({
+          setDrawState((prevState) => ({
+            ...prevState,
             active: false,
             status: 'success',
             feature,
+            revision: prevState.revision + 1,
             source: 'upload',
-          });
+          }));
 
           setModelling((prevState) => ({ ...prevState, active: true }));
           setUploadErrorMessage(null);
           setUploadInfoMessage(removed.any ? tUploads('features-excluded-info') : null);
         } catch (error) {
+          setDrawState(previousDrawState);
           setUploadInfoMessage(null);
           setUploadErrorMessage(getUploadErrorMessage(error));
         } finally {
@@ -108,6 +122,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       })();
     },
     [
+      drawState,
       setDrawState,
       setModelling,
       getUploadErrorMessage,
@@ -121,7 +136,10 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
     uploadInputRef.current?.click();
   }, []);
 
-  const isUploadDisabled = active || status === 'drawing' || modellingStatus === 'running';
+  const isUploadProcessing = status === 'uploading';
+  const isUploadDisabled =
+    active || status === 'drawing' || status === 'uploading' || modellingStatus === 'running';
+  const isDrawDisabled = isUploadProcessing;
   const ariaDescribedBy = [
     uploadErrorMessage ? 'upload-shape-error' : null,
     !uploadErrorMessage && uploadInfoMessage ? 'upload-shape-info' : null,
@@ -153,6 +171,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             <Button
               className={COMMON_BUTTON_CLASSES}
               size="full"
+              disabled={isDrawDisabled}
               onClick={() => {
                 setUploadErrorMessage(null);
                 setUploadInfoMessage(null);
@@ -170,6 +189,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               disabled={isUploadDisabled}
               aria-controls="upload-shape"
             >
+              <Upload className="mr-3 h-4 w-4" aria-hidden />
               {t('upload-shape')}
             </Button>
           </div>
@@ -181,6 +201,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             variant="blue"
             className={COMMON_BUTTON_CLASSES}
             size="full"
+            disabled={isUploadProcessing}
             onClick={onClickClearModelling}
           >
             <LuTrash2 className="mr-3 h-4 w-4" aria-hidden />
@@ -190,6 +211,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             variant="blue"
             className={COMMON_BUTTON_CLASSES}
             size="full"
+            disabled={isUploadProcessing}
             onClick={() => {
               if (source === 'upload') {
                 setUploadErrorMessage(null);
@@ -201,7 +223,11 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               onClickRedraw();
             }}
           >
-            <RxTransform className="mr-3 h-4 w-4" aria-hidden />
+            {source === 'upload' ? (
+              <Upload className="mr-3 h-4 w-4" aria-hidden />
+            ) : (
+              <RxTransform className="mr-3 h-4 w-4" aria-hidden />
+            )}
             {source === 'upload' ? t('upload-new-shape') : t('re-draw')}
           </Button>
         </div>

@@ -24,13 +24,15 @@ export const bboxLocationAtom = atomWithReset<CustomMapProps['bounds']['bbox']>(
 export const popupAtom = atom<Partial<MapLayerMouseEvent | null>>({});
 export const drawStateAtom = atomWithReset<{
   active: boolean;
-  status: 'idle' | 'drawing' | 'success';
+  status: 'idle' | 'drawing' | 'uploading' | 'success';
   feature: Feature;
+  revision: number;
   source?: 'draw' | 'upload' | null;
 }>({
   active: false,
   status: 'idle',
   feature: null,
+  revision: 0,
   source: null,
 });
 export const allActiveLayersAtom = atom<Array<string>>([]);
