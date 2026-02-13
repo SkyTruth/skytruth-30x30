@@ -1,4 +1,4 @@
-name: Deploy Analysis Cloud Run Job
+name: Deploy Data Pipes Cloud Run Job
 
 on:
   workflow_call:
@@ -23,18 +23,52 @@ env:
   IMAGE_NAME: data-processing-job
 
 jobs:
+
+  deploy_data_jobs:
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine Environment
+        id: env
+        uses: ./.github/actions/determine-env
+        with:
+          target_env: ${{ inputs.target_env }}
+
+      - name: Setup GCP
+        id: setup
+        uses: ./.github/actions/setup-gcp
+        with:
+          gar_location: ${{ env.GAR_LOCATION }}
+          credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.env.outputs.environment)] }}"
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 516.0.0'
+          
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
+
+      - name: Configure Docker auth for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${{ env.GAR_LOCATION }}-docker.pkg.dev" --quiet
+
       - name: Build and Push Container
         env:
           REPOSITORY: ${{ secrets[format('{0}_DATA_REPOSITORY', steps.env.outputs.environment)] }}
         run: |
           IMAGE_TAG="${{ github.sha }}"
-          IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
+          IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
 
           docker build -f cloudrun_jobs/data_processing/Dockerfile -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
 
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
 
       - name: Resolve digest and update Cloud Run Job to digest
         env:
@@ -44,10 +78,9 @@ jobs:
           DIGEST="$(gcloud artifacts docker images describe "${{ env.IMAGE_URI }}" \
             --format='get(image_summary.digest)')"
 
-          IMAGE_BY_DIGEST="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${IMAGE_NAME}@${DIGEST}"
+          IMAGE_BY_DIGEST="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${{ env.IMAGE_NAME }}@${DIGEST}"
 
           echo "Deploying image: ${IMAGE_BY_DIGEST}"
           gcloud run jobs update "${JOB_NAME}" \
             --region="${{ env.REGION }}" \
             --image="${IMAGE_BY_DIGEST}"
-
