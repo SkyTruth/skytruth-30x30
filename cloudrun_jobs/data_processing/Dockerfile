@@ -26,8 +26,13 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-RUN poetry self add poetry-plugin-export
+ARG POETRY_VERSION=2.2.1
+ARG POETRY_EXPORT_VERSION=1.9.0
+
+RUN python -m pip install --upgrade pip \
+ && python -m pip install "poetry==${POETRY_VERSION}" "poetry-plugin-export==${POETRY_EXPORT_VERSION}" \
+ && poetry --version
+
 
 # Set working directory
 WORKDIR /app
@@ -36,7 +41,7 @@ WORKDIR /app
 COPY cloud_functions/data_processing/poetry.lock cloud_functions/data_processing/pyproject.toml ./
 
 # Export requirements and install
-RUN poetry export -f requirements.txt --without-hashes > requirements.txt
+RUN poetry export -f requirements.txt --without-hashes -o requirements.txt
 
 RUN pip install --upgrade pip && \
     pip install -r ./requirements.txt
