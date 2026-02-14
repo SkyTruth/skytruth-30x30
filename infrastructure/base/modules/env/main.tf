@@ -440,6 +440,16 @@ resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
   depends_on = [google_service_account.cloudtasks_invoker]
 }
 
+# Allow the Data Pipes Cloud Function SA to run the Cloud Run Job
+resource "google_cloud_run_v2_job_iam_member" "data_function_can_run_job" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+  name     = module.data_pipes_cloudrun_jobs.job_name
+
+  role   = "roles/run.developer"
+  member = "serviceAccount:${module.data_pipes_cloud_function.runtime_service_account_email}"
+}
+
 module "monthly_job_queue" {
   source = "../cloudtasks"
 
