@@ -592,7 +592,8 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
 
         logger.info({"message": f"Starting METHOD: {method}"})
 
-        if method in LONG_RUNNING_TASKS:
+        is_job = bool(os.environ.get("RUN_PAYLOAD"))
+        if (not is_job) and method in LONG_RUNNING_TASKS:
             payload = {"METHOD": method, **task_config, **data}
             resp = long_running_tasks(payload, timeout=5, verbose=verbose)
             logger.info({"message": f"METHOD: {method} triggered as long-running task"})
