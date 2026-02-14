@@ -86,13 +86,7 @@ def patched_all(monkeypatch, call_log):
         raising=True,
     )
 
-    monkeypatch.setattr(
-        main, 
-        "LONG_RUNNING_TASKS", 
-        [], 
-        raising=False
-    )
-
+    monkeypatch.setattr(main, "LONG_RUNNING_TASKS", [], raising=False)
 
     return call_log
 
