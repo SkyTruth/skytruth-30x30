@@ -86,16 +86,15 @@ def patched_all(monkeypatch, call_log):
         raising=True,
     )
 
+    monkeypatch.setattr(
+        main, 
+        "LONG_RUNNING_TASKS", 
+        [], 
+        raising=False
+    )
+
+
     return call_log
-
-
-# @pytest.fixture(autouse=True)
-# def mock_create_task():
-#     with patch("src.methods.publisher.create_task") as mock:
-#         fake_response = MagicMock()
-#         fake_response.name = "tasks/fake123"
-#         mock.return_value = fake_response
-#         yield mock
 
 
 # Single function call methods
