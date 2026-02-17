@@ -1,5 +1,6 @@
 import { ComponentProps, useCallback } from 'react';
 
+import { useAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 
 import TooltipButton from '@/components/tooltip-button';
@@ -8,16 +9,28 @@ import { Switch } from '@/components/ui/switch';
 import { useSyncMapSettings } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FCWithMessages } from '@/types';
+import { MapTypes } from '@/types/map';
 
-import LayersGroup, { SWITCH_LABEL_CLASSES } from './layers-group';
+import { mapTypeAtom } from '../../store';
+
+import { SWITCH_LABEL_CLASSES } from './constants';
+import CustomLayersGroup from './custom-layers-group';
+import LayersGroup from './layers-group';
 
 const LayersPanel: FCWithMessages = (): JSX.Element => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
+
   const [{ labels }, setMapSettings] = useSyncMapSettings();
   const [{ tab }] = useSyncMapContentSettings();
 
   const [datasets, { isLoading }] = useDatasetsByEnvironment();
+
+  const [mapType] = useAtom(mapTypeAtom);
+
+  // TECH-3372: tear down
+  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
   const handleLabelsChange = useCallback(
     (active: Parameters<ComponentProps<typeof Switch>['onCheckedChange']>[0]) => {
@@ -46,6 +59,19 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
         isOpen={['summary', 'marine'].includes(tab)}
         loading={isLoading}
       />
+      {/*
+          The labels and custom layers toggles don't come from the datasets in the database and have slightly 
+          different functionality. It's not an ideal set up, but until custom layers are saved for accounts, 
+          we'll pass the layer options as children to be displayed alongside the other entries, much like in the other
+          implementations.
+      */}
+
+      {
+        // TODO: TECH-3372 remove feature flag check
+        mapType === MapTypes.ConservationBuilder && isCustomLayersActive ? (
+          <CustomLayersGroup name="Custom Layers" isOpen={true} />
+        ) : null
+      }
       <LayersGroup
         name={t('basemap')}
         datasets={datasets.basemap}
@@ -55,11 +81,6 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
         showBottomBorder={false}
         extraActiveLayers={labels ? 1 : 0}
       >
-        {/*
-          The labels toggle doesn't come from the basemap dataset and has slightly functionality implemented.
-          Not ideal, but given it's a one-off, we'll pass the entry as a child to be displayed alongside the
-          other entries, much like in the previous implementation.
-        */}
         <li className="flex items-start justify-between">
           <span className="flex items-start gap-2">
             <Switch
