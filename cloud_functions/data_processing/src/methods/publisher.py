@@ -610,10 +610,14 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
             tolerance=tolerance,
             verbose=verbose,
         )
-        logger.debug({"message": resp})
 
         logger.info({"message": f"METHOD: {method} complete!"})
-        return resp
+
+        
+        if isinstance(resp, tuple) and len(resp) == 2 and isinstance(resp[1], int):
+            return resp
+        
+        return json.dumps(resp), 200
 
     except Exception as e:
         retries = retry_config["max_retries"]
