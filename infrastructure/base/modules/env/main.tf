@@ -424,6 +424,16 @@ resource "google_project_iam_member" "job_cloudtasks_iam_member" {
   member  = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
 }
 
+resource "google_cloud_run_v2_job_iam_member" "caller_job_can_run_target_job" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+
+  name     = module.data_pipes_cloudrun_jobs.job_name
+
+  role   = "roles/run.developer"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
 variable "cloud_tasks_roles" {
   description = "List of roles to grant to the Data Pipes Service Account"
   type        = list(string)
