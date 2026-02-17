@@ -137,7 +137,11 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
                   <>
                     <div>
                       <Label className="mb-2 block text-xs">{t('fill-color')}</Label>
-                      <div role="radiogroup" aria-label={t('fill-color')} className="grid grid-cols-5 gap-2">
+                      <div
+                        role="radiogroup"
+                        aria-label={t('fill-color')}
+                        className="grid grid-cols-5 gap-2"
+                      >
                         {LAYER_STYLE_COLORS.map((color) => (
                           <button
                             key={`fill-${color}`}
@@ -160,7 +164,11 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
                     </div>
                     <div>
                       <Label className="mb-2 block text-xs">{t('line-color')}</Label>
-                      <div role="radiogroup" aria-label={t('line-color')} className="grid grid-cols-5 gap-2">
+                      <div
+                        role="radiogroup"
+                        aria-label={t('line-color')}
+                        className="grid grid-cols-5 gap-2"
+                      >
                         {LAYER_STYLE_COLORS.map((color) => (
                           <button
                             key={`line-${color}`}
