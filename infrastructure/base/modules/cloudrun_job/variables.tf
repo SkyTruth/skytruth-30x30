@@ -69,3 +69,9 @@ variable "secrets" {
   description = "List of secrets to make available to the container"
   default     = []
 }
+
+variable "vpc_connector_name" {
+  description = "Serverless VPC Access connector name"
+  type        = string
+  default     = null
+}

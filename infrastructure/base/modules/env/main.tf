@@ -380,6 +380,7 @@ module "data_pipes_cloudrun_jobs" {
   timeout_seconds                  = var.cloudrun_jobs_timeout_seconds
   cpu                              = var.cloudrun_jobs_available_cpu
   memory                           = var.cloudrun_jobs_available_memory
+  vpc_connector_name               = module.network.vpc_access_connector_name
 }
 
 

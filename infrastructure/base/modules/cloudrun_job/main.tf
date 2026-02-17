@@ -39,6 +39,13 @@ resource "google_cloud_run_v2_job" "default" {
 
       service_account = google_service_account.job_sa.email
 
+      dynamic "vpc_access" {
+        for_each = var.vpc_connector_name == null ? [] : [1]
+        content {
+            connector = "projects/${var.project_id}/locations/${var.region}/connectors/${var.vpc_connector_name}"
+        }
+      }
+
       containers {
         image = var.image
 
