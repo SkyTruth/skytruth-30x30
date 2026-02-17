@@ -610,6 +610,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
             tolerance=tolerance,
             verbose=verbose,
         )
+        logger.debug({"message": resp})
 
         logger.info({"message": f"METHOD: {method} complete!"})
         return resp

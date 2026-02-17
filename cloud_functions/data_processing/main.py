@@ -7,9 +7,8 @@ import functions_framework
 from flask import Request
 
 from src.methods.publisher import run_from_payload
-from src.utils.resource_handling import handle_sigterm
-
 from src.utils.logger import Logger
+from src.utils.resource_handling import handle_sigterm
 
 logger = Logger()
 
@@ -18,7 +17,6 @@ signal.signal(signal.SIGTERM, handle_sigterm)
 
 
 @functions_framework.http
-
 def main(request: Request) -> tuple[str, int]:
     try:
         data = request.get_json(silent=True) or {}
@@ -40,7 +38,7 @@ def main(request: Request) -> tuple[str, int]:
                 "message": "Unhandled exception in main",
                 "error": str(e),
                 "traceback": traceback.format_exc(),
-                "method": method
+                "method": method,
             }
         )
         return "Internal Server Error", 500
