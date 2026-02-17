@@ -12,13 +12,16 @@ def get_geojson(geojson: JSON) -> dict:
     else:
         return geojson
 
-def serialize_response(data: dict) -> dict:
+def serialize_response(
+    environment: str,
+    data: dict
+) -> dict:
     """Converts the data from the database
     into a Dict {locations_area:{"code":<location_iso>, "protected_area": <area>}, "total_area":<total_area>} response
     """
     if not data or len(data) == 0:
         raise ValueError(
-            "No data found, this is likely due to a geometry that does not intersect with a marine area."
+            f"No data found. This is likely because your custom area does not intersect with a {environment} area."
         )
 
     result = {"total_area": data[0][2]}
@@ -95,4 +98,4 @@ def get_locations_stats(
             stmt, parameters={"geometry": get_geojson(geojson)}
         ).all()
 
-    return serialize_response(data_response)
+    return serialize_response(environment, data_response)
