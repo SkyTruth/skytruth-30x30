@@ -56,6 +56,20 @@ resource "google_cloud_run_v2_job" "default" {
             value = env.value
           }
         }
+
+        # Secret environment variables (list of objects/maps)
+        dynamic "env" {
+          for_each = { for s in var.secrets : s.key => s }
+          content {
+            name = env.value.key
+            value_source {
+              secret_key_ref {
+                secret  = env.value.secret
+                version = env.value.version
+              }
+            }
+          }
+        }
       }
     }
   }

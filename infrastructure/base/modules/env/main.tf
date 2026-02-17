@@ -416,6 +416,14 @@ resource "google_project_iam_member" "google_cloudtasks_iam_member" {
   member  = "serviceAccount:${module.data_pipes_cloud_function.runtime_service_account_email}"
 }
 
+resource "google_project_iam_member" "job_cloudtasks_iam_member" {
+  count = length(var.cloud_tasks_roles)
+
+  project = var.gcp_project_id
+  role    = var.cloud_tasks_roles[count.index]
+  member  = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
 variable "cloud_tasks_roles" {
   description = "List of roles to grant to the Data Pipes Service Account"
   type        = list(string)
