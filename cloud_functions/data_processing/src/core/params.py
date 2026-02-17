@@ -217,5 +217,5 @@ LONG_RUNNING_TASKS = [
     "generate_gadm_minus_pa",
     "generate_protected_areas_table",
     "test_long_running_tasks",
-    "update_gadm_minus_pa"
+    "update_gadm_minus_pa",
 ]
