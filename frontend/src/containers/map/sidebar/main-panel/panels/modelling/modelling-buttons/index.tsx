@@ -35,19 +35,23 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const getUploadErrorMessage = useUploadErrorMessage({
     maxFileSize: MAX_CUSTOM_LAYER_SIZE,
   });
+
   // TECH-3372: tear down
   const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
   const [modellingState, setModelling] = useAtom(modellingAtom);
   const { status: modellingStatus } = modellingState;
-  const setBboxLocation = useSetAtom(bboxLocationAtom);
-  const resetModelling = useResetAtom(modellingAtom);
-  const resetDrawState = useResetAtom(drawStateAtom);
+
   const [drawState, setDrawState] = useAtom(drawStateAtom);
   const { active, status, source } = drawState;
 
+  const setBboxLocation = useSetAtom(bboxLocationAtom);
+  const resetModelling = useResetAtom(modellingAtom);
+  const resetDrawState = useResetAtom(drawStateAtom);
+
   const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
   const [uploadInfoMessage, setUploadInfoMessage] = useState<string | null>(null);
+
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const onClickClearModelling = useCallback(() => {
@@ -115,10 +119,12 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }));
 
           setModelling((prevState) => ({ ...prevState, active: true }));
+
           const bounds = getGeoJSONBoundingBox(feature);
           if (bounds) {
             setBboxLocation([...bounds] as [number, number, number, number]);
           }
+
           setUploadErrorMessage(null);
           setUploadInfoMessage(removed.any ? tUploads('features-excluded-info') : null);
         } catch (error) {
@@ -126,6 +132,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           setUploadInfoMessage(null);
           setUploadErrorMessage(getUploadErrorMessage(error));
         } finally {
+          // Rest input value so uplaoding the same file again triggers onChange
           input.value = '';
         }
       })();
@@ -149,6 +156,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const isUploadProcessing = status === 'uploading';
   const isUploadDisabled =
     active || status === 'drawing' || status === 'uploading' || modellingStatus === 'running';
+
   const isDrawDisabled = isUploadProcessing;
   const ariaDescribedBy = [
     uploadErrorMessage ? 'upload-shape-error' : null,
