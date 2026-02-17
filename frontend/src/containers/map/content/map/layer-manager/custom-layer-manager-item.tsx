@@ -8,9 +8,43 @@ type CustomLayerManagerItemProps = {
   slug: string;
 };
 
+const FILL_ALPHA = 175;
+const FULL_ALPHA = 255;
+
+/**
+ * Parses a hex color to RGBA for deck.gl color props.
+ * Falls back to black if the provided value cannot be parsed.
+ */
+const hexToRgba = (hexColor: string, alpha = FULL_ALPHA): [number, number, number, number] => {
+  const trimmed = hexColor.trim();
+  const withoutHash = trimmed.startsWith('#') ? trimmed.slice(1) : trimmed;
+  const normalized =
+    withoutHash.length === 3
+      ? withoutHash
+          .split('')
+          .map((char) => `${char}${char}`)
+          .join('')
+      : withoutHash;
+
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return [0, 0, 0, alpha];
+  }
+
+  return [
+    parseInt(normalized.slice(0, 2), 16),
+    parseInt(normalized.slice(2, 4), 16),
+    parseInt(normalized.slice(4, 6), 16),
+    alpha,
+  ];
+};
+
 const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
   const [customLayers] = useAtom(customLayersAtom);
   const layer = customLayers[slug];
+  const defaultFillColor = hexToRgba(layer.style.fillColor, FULL_ALPHA);
+  const polygonFillColor = hexToRgba(layer.style.fillColor, FILL_ALPHA);
+  const polygonOutlineColor = hexToRgba(layer.style.fillColor, FULL_ALPHA);
+  const lineColor = hexToRgba(layer.style.lineColor, FULL_ALPHA);
 
   const config = new GeoJsonLayer({
     id: `${layer.id}-layer`,
@@ -20,16 +54,30 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
 
     // Polygon fill
     filled: true,
-    getFillColor: () => {
-      const hex = layer.style.fillColor;
-      return hex.match(/[0-9a-f]{2}/g).map((x) => parseInt(x, 16));
+    getFillColor: (feature) => {
+      const geometryType = feature?.geometry?.type;
+
+      if (geometryType === 'Polygon' || geometryType === 'MultiPolygon') {
+        return polygonFillColor;
+      }
+
+      return defaultFillColor;
     },
 
     // Polygon outline
     stroked: true,
-    getLineColor: () => {
-      const hex = layer.style.lineColor;
-      return hex.match(/[0-9a-f]{2}/g).map((x) => parseInt(x, 16));
+    getLineColor: (feature) => {
+      const geometryType = feature?.geometry?.type;
+
+      if (geometryType === 'Polygon' || geometryType === 'MultiPolygon') {
+        return polygonOutlineColor;
+      }
+
+      if (geometryType === 'LineString' || geometryType === 'MultiLineString') {
+        return lineColor;
+      }
+
+      return lineColor;
     },
     getLineWidth: 2,
 
@@ -52,6 +100,11 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
 
     pickable: true,
     autoHighlight: true,
+
+    updateTriggers: {
+      getFillColor: [defaultFillColor, polygonFillColor],
+      getLineColor: [lineColor, polygonOutlineColor],
+    },
   });
 
   return <DeckJsonLayer id={`${layer.id}-layer`} beforeId={`${layer.id}-layer`} config={config} />;

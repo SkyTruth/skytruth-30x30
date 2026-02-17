@@ -22,7 +22,7 @@ type UploadLayerProps = {
 const DEFAULT_LAYER_STYLE = {
   opacity: 0.5,
   fillColor: '#5278d1',
-  lineColor: '#000000',
+  lineColor: '#5278d1',
 };
 
 const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {

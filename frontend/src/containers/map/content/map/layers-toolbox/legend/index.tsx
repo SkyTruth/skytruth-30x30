@@ -128,8 +128,8 @@ const Legend: FCWithMessages = () => {
     [customLayers, setCustomLayers, setLayerSettings]
   );
 
-  const onChangeLayerFillColor = useCallback(
-    (layerSlug: string, fillColor: string) => {
+  const onChangeLayerColor = useCallback(
+    (layerSlug: string, color: string) => {
       setCustomLayers((prev) => ({
         ...prev,
         ...(prev[layerSlug]
@@ -138,27 +138,8 @@ const Legend: FCWithMessages = () => {
                 ...prev[layerSlug],
                 style: {
                   ...prev[layerSlug].style,
-                  fillColor,
-                },
-              },
-            }
-          : {}),
-      }));
-    },
-    [setCustomLayers]
-  );
-
-  const onChangeLayerLineColor = useCallback(
-    (layerSlug: string, lineColor: string) => {
-      setCustomLayers((prev) => ({
-        ...prev,
-        ...(prev[layerSlug]
-          ? {
-              [layerSlug]: {
-                ...prev[layerSlug],
-                style: {
-                  ...prev[layerSlug].style,
-                  lineColor,
+                  fillColor: color,
+                  lineColor: color,
                 },
               },
             }
@@ -224,10 +205,9 @@ const Legend: FCWithMessages = () => {
           const isLast = index + 1 === allActiveLayers.length;
 
           let opacity = 1;
-          let fillColor: string | undefined;
+          let color: string | undefined;
           let isVisible = true;
           let isCustomLayer = false;
-          let lineColor: string | undefined;
           let title: string;
           let legend_config: LegendLegendComponent;
           let params_config;
@@ -252,8 +232,7 @@ const Legend: FCWithMessages = () => {
             title = layer.name;
             isVisible = layer.isVisible;
             opacity = layer.style.opacity ?? 0.5;
-            fillColor = layer.style.fillColor;
-            lineColor = layer.style.lineColor;
+            color = layer.style.fillColor ?? layer.style.lineColor;
             legend_config = {
               type: 'icon',
               items: [
@@ -291,14 +270,12 @@ const Legend: FCWithMessages = () => {
                 slug={slug}
                 isVisible={isVisible}
                 onChangeLayerOpacity={onChangeLayerOpacity}
-                onChangeLayerFillColor={onChangeLayerFillColor}
-                onChangeLayerLineColor={onChangeLayerLineColor}
+                onChangeLayerColor={onChangeLayerColor}
                 onRemoveLayer={onRemoveLayer}
                 onToggleLayerVisibility={onToggleLayerVisibility}
                 opacity={opacity}
                 isCustomLayer={isCustomLayer}
-                fillColor={fillColor}
-                lineColor={lineColor}
+                color={color}
               />
               <div className="pt-1.5">
                 <LegendItem
@@ -317,8 +294,7 @@ const Legend: FCWithMessages = () => {
     layerSettings,
     layersQuery.data,
     onChangeLayerOpacity,
-    onChangeLayerFillColor,
-    onChangeLayerLineColor,
+    onChangeLayerColor,
     onMoveLayerDown,
     onMoveLayerUp,
     onRemoveLayer,

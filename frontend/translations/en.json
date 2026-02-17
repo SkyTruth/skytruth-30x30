@@ -237,6 +237,7 @@
       "move-down": "Move down",
       "change-opacity": "Change opacity",
       "change-layer-style": "Change layer style",
+      "color": "Color",
       "opacity": "Opacity",
       "fill-color": "Fill color",
       "line-color": "Line color",

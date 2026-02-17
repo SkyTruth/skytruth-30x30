@@ -15,10 +15,10 @@ import OpacityIcon from '@/styles/icons/opacity.svg';
 import { FCWithMessages } from '@/types';
 
 const LAYER_STYLE_COLORS = [
+  '#000000',
   '#e61919',
   '#e68f19',
   '#c8e619',
-  '#52e619',
   '#19e68f',
   '#19e6e6',
   '#1970e6',
@@ -28,14 +28,12 @@ const LAYER_STYLE_COLORS = [
 ];
 
 type LegendItemHeaderProps = {
-  fillColor?: string;
+  color?: string;
   isCustomLayer?: boolean;
   isFirst: boolean;
   isLast: boolean;
   isVisible: boolean;
-  lineColor?: string;
-  onChangeLayerFillColor?: (slug: string, color: string) => void;
-  onChangeLayerLineColor?: (slug: string, color: string) => void;
+  onChangeLayerColor?: (slug: string, color: string) => void;
   onChangeLayerOpacity: (slug: string, opacity: number) => void;
   onMoveLayerDown: (slug: string) => void;
   onMoveLayerUp: (slug: string) => void;
@@ -47,14 +45,12 @@ type LegendItemHeaderProps = {
 };
 
 const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
-  fillColor,
+  color,
   isCustomLayer = false,
   isFirst,
   isLast,
   isVisible,
-  lineColor,
-  onChangeLayerFillColor,
-  onChangeLayerLineColor,
+  onChangeLayerColor,
   onChangeLayerOpacity,
   onMoveLayerDown,
   onMoveLayerUp,
@@ -134,62 +130,29 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
                   />
                 </div>
                 {isCustomLayer && (
-                  <>
-                    <div>
-                      <Label className="mb-2 block text-xs">{t('fill-color')}</Label>
-                      <div
-                        role="radiogroup"
-                        aria-label={t('fill-color')}
-                        className="grid grid-cols-5 gap-2"
-                      >
-                        {LAYER_STYLE_COLORS.map((color) => (
-                          <button
-                            key={`fill-${color}`}
-                            type="button"
-                            role="radio"
-                            aria-checked={fillColor === color}
-                            aria-label={t('color-option', { color })}
-                            className={cn(
-                              'h-5 w-5 rounded-full border border-black',
-                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1',
-                              {
-                                'ring-2 ring-black ring-offset-1': fillColor === color,
-                              }
-                            )}
-                            style={{ backgroundColor: color }}
-                            onClick={() => onChangeLayerFillColor?.(slug, color)}
-                          />
-                        ))}
-                      </div>
+                  <div>
+                    <Label className="mb-2 block text-xs">{t('color')}</Label>
+                    <div role="radiogroup" aria-label={t('color')} className="grid grid-cols-5 gap-2">
+                      {LAYER_STYLE_COLORS.map((colorOption) => (
+                        <button
+                          key={`color-${colorOption}`}
+                          type="button"
+                          role="radio"
+                          aria-checked={color === colorOption}
+                          aria-label={t('color-option', { color: colorOption })}
+                          className={cn(
+                            'h-5 w-5 rounded-full border border-black',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1',
+                            {
+                              'ring-2 ring-black ring-offset-1': color === colorOption,
+                            }
+                          )}
+                          style={{ backgroundColor: colorOption }}
+                          onClick={() => onChangeLayerColor?.(slug, colorOption)}
+                        />
+                      ))}
                     </div>
-                    <div>
-                      <Label className="mb-2 block text-xs">{t('line-color')}</Label>
-                      <div
-                        role="radiogroup"
-                        aria-label={t('line-color')}
-                        className="grid grid-cols-5 gap-2"
-                      >
-                        {LAYER_STYLE_COLORS.map((color) => (
-                          <button
-                            key={`line-${color}`}
-                            type="button"
-                            role="radio"
-                            aria-checked={lineColor === color}
-                            aria-label={t('color-option', { color })}
-                            className={cn(
-                              'h-5 w-5 rounded-full border border-black',
-                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1',
-                              {
-                                'ring-2 ring-black ring-offset-1': lineColor === color,
-                              }
-                            )}
-                            style={{ backgroundColor: color }}
-                            onClick={() => onChangeLayerLineColor?.(slug, color)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </>
+                  </div>
                 )}
               </PopoverContent>
             </Popover>
