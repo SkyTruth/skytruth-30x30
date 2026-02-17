@@ -150,6 +150,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   );
 
   const onOpenUploadPicker = useCallback(() => {
+    setUploadErrorMessage(null);
+    setUploadInfoMessage(null);
     uploadInputRef.current?.click();
   }, []);
 
@@ -244,8 +246,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             disabled={isUploadProcessing}
             onClick={() => {
               if (source === 'upload' && isCustomLayersActive) {
-                setUploadErrorMessage(null);
-                setUploadInfoMessage(null);
                 onOpenUploadPicker();
                 return;
               }
