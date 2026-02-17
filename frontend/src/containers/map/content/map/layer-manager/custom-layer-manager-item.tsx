@@ -16,7 +16,7 @@ const CustomLayerManagerItem = ({ slug }: CustomLayerManagerItemProps) => {
     id: `${layer.id}-layer`,
     data: layer.feature,
     visible: layer.isVisible,
-    opacity: 0.5,
+    opacity: layer.style.opacity ?? 0.5,
 
     // Polygon fill
     filled: true,
