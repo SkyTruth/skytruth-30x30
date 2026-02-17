@@ -88,7 +88,7 @@ def long_running_tasks(payload, timeout=5, verbose=True):
 
     client = run_v2.JobsClient()
 
-    project_id = payload.get("PROJECT_ID")
+    project_id = payload.get("PROJECT")
     location = payload.get("LOCATION")
     job_name = payload.get("JOB_NAME")
 
