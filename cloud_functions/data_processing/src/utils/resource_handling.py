@@ -23,7 +23,11 @@ def show_mem(label: str = ""):
     """
     process = psutil.Process(os.getpid())
     rss = process.memory_info().rss / 1e6  # in MB
-    print(f"[{label}] Memory: {rss:.1f} MB")
+    logger.info(
+        {
+            "message": f"[{label}] Memory: {rss:.1f} MB"
+        }
+    )
 
 
 def show_container_mem(label: str = ""):
@@ -51,11 +55,20 @@ def show_container_mem(label: str = ""):
             with open(v2_path) as f:
                 usage_bytes = int(f.read().strip())
         except FileNotFoundError:
-            print(f"[{label}] Could not read container memory usage.")
+            logger.info(
+                {
+                    "message": f"[{label}] Could not read container memory usage."
+                }
+            )
             return
 
     usage_gb = usage_bytes / 1e9
-    print(f"[{label}] Container memory: {usage_gb:.1f} GB")
+
+    logger.info(
+        {
+            "message": f"[{label}] Container memory: {usage_gb:.1f} GB"
+        }
+    )
 
 
 def print_peak_memory_allocation(func, *args, **kwargs):
@@ -65,7 +78,11 @@ def print_peak_memory_allocation(func, *args, **kwargs):
         _, peak = tracemalloc.get_traced_memory()
     finally:
         tracemalloc.stop()
-    print(f"max allocated memory: {peak / (1024**3):.3f} GB")
+    logger.info(
+        {
+            "message": f"max allocated memory: {peak / (1024**3):.3f} GB"
+        }
+    )
     return out
 
 
