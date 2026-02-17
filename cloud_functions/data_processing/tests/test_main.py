@@ -120,7 +120,7 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
 
     if method == "update_locations":
         # Split this out because update_locations passes on its return value
-        assert resp == {"ok": True}
+        assert resp == ('{"ok": true}', 200)
     else:
         assert resp == ("OK", 200)
 
