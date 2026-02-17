@@ -127,7 +127,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
 
         const bounds = getGeoJSONBoundingBox(feature);
         if (bounds) {
-          setBboxLocation([...bounds] as [number, number, number, number]);
+          setBboxLocation(bounds as [number, number, number, number]);
         }
       } catch {
         // Invalid/non-polygon custom layers cannot be used for modelling.
