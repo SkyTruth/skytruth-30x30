@@ -132,7 +132,11 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
                 {isCustomLayer && (
                   <div>
                     <Label className="mb-2 block text-xs">{t('color')}</Label>
-                    <div role="radiogroup" aria-label={t('color')} className="grid grid-cols-5 gap-2">
+                    <div
+                      role="radiogroup"
+                      aria-label={t('color')}
+                      className="grid grid-cols-5 gap-2"
+                    >
                       {LAYER_STYLE_COLORS.map((colorOption) => (
                         <button
                           key={`color-${colorOption}`}
