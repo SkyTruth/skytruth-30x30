@@ -2,7 +2,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# import main
 import src.methods.publisher as main
 
 
