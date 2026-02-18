@@ -265,8 +265,8 @@ def dispatch_publisher(
     # By default, do not continue onto the next step
     step_list = None
 
-    # By default, if there is a step_list continue to next steps - default to True, 
-    # but will be reset to False if method fails and retries are being handled with a 
+    # By default, if there is a step_list continue to next steps - default to True,
+    # but will be reset to False if method fails and retries are being handled with a
     # scheduled task
     cont = True
 
