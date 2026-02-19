@@ -29,6 +29,7 @@ const useSyncAllLayers = (type: MapTypes) => {
     allActiveLayersRef.current = allActiveLayers;
   }, [allActiveLayers]);
 
+  // Add layers that have been saved to browser into state
   useEffect(() => {
     if (
       type !== MapTypes.ConservationBuilder ||
@@ -53,6 +54,8 @@ const useSyncAllLayers = (type: MapTypes) => {
     });
   }, [type, hasLoadedSavedLayers, savedLayers, setCustomLayers]);
 
+  // keep allActiveLayers synchronized and stable in order while reacting to 
+  // predefined/custom layer activation changes.
   useEffect(() => {
     let currentActiveLayers = [...activeLayers];
 
@@ -69,7 +72,7 @@ const useSyncAllLayers = (type: MapTypes) => {
       );
 
       const newActiveLayers = [...activeLayers, ...activeCustomLayers].filter(
-        (key) => !preservedActiveLayers.includes(key)
+        (layer) => !preservedActiveLayers.includes(layer)
       );
       currentActiveLayers = [...newActiveLayers, ...preservedActiveLayers];
     }
