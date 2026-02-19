@@ -19,8 +19,8 @@ import {
   drawStateAtom,
   modellingAtom,
 } from '@/containers/map/store';
+import useCustomLayersIndexedDB from '@/hooks/use-custom-layers-indexed-db';
 import { cn } from '@/lib/classnames';
-import { saveCustomLayer } from '@/lib/indexed-db';
 import { extractPolygons } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
@@ -53,7 +53,6 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   const [open, setOpen] = useState(isOpen);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [draftName, setDraftName] = useState<string>('');
-  const [savedLayerSnapshots, setSavedLayerSnapshots] = useState<Record<CustomLayer['id'], string>>({});
   const [savingLayerIds, setSavingLayerIds] = useState<Record<CustomLayer['id'], boolean>>({});
 
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -63,12 +62,32 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   const setDrawState = useSetAtom(drawStateAtom);
   const setModellingState = useSetAtom(modellingAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
+  const { savedLayers, hasLoadedSavedLayers, isIndexedDBAvailable, saveLayer, deleteLayer } =
+    useCustomLayersIndexedDB();
 
   useEffect(() => {
     if (editingSlug) {
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [editingSlug]);
+
+  useEffect(() => {
+    if (!hasLoadedSavedLayers || savedLayers.length === 0) return;
+
+    setCustomLayers((prev) => {
+      const next = { ...prev };
+      let hasChanges = false;
+
+      savedLayers.forEach((layer) => {
+        if (!next[layer.id]) {
+          next[layer.id] = layer;
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? next : prev;
+    });
+  }, [hasLoadedSavedLayers, savedLayers, setCustomLayers]);
 
   const numCustomLayers = useMemo(() => {
     return Object.keys(customLayers).length;
@@ -97,18 +116,16 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       delete updatedLayers[slug];
 
       setCustomLayers(updatedLayers);
-      setSavedLayerSnapshots((prev) => {
-        const next = { ...prev };
-        delete next[slug];
-        return next;
-      });
       setSavingLayerIds((prev) => {
         const next = { ...prev };
         delete next[slug];
         return next;
       });
+      void deleteLayer(slug).catch(() => {
+        // Delete failures should not block layer interactions.
+      });
     },
-    [customLayers, setCustomLayers, setSavedLayerSnapshots]
+    [customLayers, deleteLayer, setCustomLayers]
   );
 
   const onRenameLayer = useCallback(
@@ -155,7 +172,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   );
 
   const onSaveLayer = useCallback(async (layer: CustomLayer) => {
-    const layerSnapshot = JSON.stringify(layer);
+    if (!isIndexedDBAvailable) return;
 
     setSavingLayerIds((prev) => ({
       ...prev,
@@ -163,12 +180,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
     }));
 
     try {
-      await saveCustomLayer(layer);
-
-      setSavedLayerSnapshots((prev) => ({
-        ...prev,
-        [layer.id]: layerSnapshot,
-      }));
+      await saveLayer(layer);
     } catch {
       // Save failures should not block layer interactions.
     } finally {
@@ -178,7 +190,19 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
         return next;
       });
     }
-  }, []);
+  }, [isIndexedDBAvailable, saveLayer]);
+
+  const savedLayerSnapshots = useMemo(
+    () =>
+      savedLayers.reduce(
+        (acc, layer) => {
+          acc[layer.id] = JSON.stringify(layer);
+          return acc;
+        },
+        {} as Record<CustomLayer['id'], string>
+      ),
+    [savedLayers]
+  );
 
   const beginEdit = (slug: string, currentName: string) => {
     setEditingSlug(slug);
@@ -241,7 +265,12 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                 const layerSnapshot = JSON.stringify(layer);
                 const isLayerSaved = savedLayerSnapshots[slug] === layerSnapshot;
                 const isLayerSaving = Boolean(savingLayerIds[slug]);
+                const isSaveUnavailable = !isIndexedDBAvailable;
+                const isSaveDisabled = isLayerSaved || isLayerSaving || isSaveUnavailable;
                 const saveLayerLabel = isLayerSaved ? t('layer-saved') : t('save-layer');
+                const saveTooltipLabel = isSaveUnavailable
+                  ? t('save-layer-unavailable')
+                  : saveLayerLabel;
 
                 return (
                   <li key={slug} className="flex items-start justify-between">
@@ -295,19 +324,21 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                       <div className="flex items-center">
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger asChild>
-                            <Button
-                              className="h-auto w-auto pl-1.5"
-                              type="button"
-                              size="icon-sm"
-                              variant="ghost"
-                              disabled={isLayerSaved || isLayerSaving}
-                              onClick={() => void onSaveLayer(layer)}
-                            >
-                              <span className="sr-only">{saveLayerLabel}</span>
-                              <Save size={16} />
-                            </Button>
+                            <span className="inline-flex">
+                              <Button
+                                className="h-auto w-auto pl-1.5"
+                                type="button"
+                                size="icon-sm"
+                                variant="ghost"
+                                disabled={isSaveDisabled}
+                                onClick={() => void onSaveLayer(layer)}
+                              >
+                                <span className="sr-only">{saveTooltipLabel}</span>
+                                <Save size={16} />
+                              </Button>
+                            </span>
                           </TooltipTrigger>
-                          <TooltipContent>{saveLayerLabel}</TooltipContent>
+                          <TooltipContent>{saveTooltipLabel}</TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger asChild>

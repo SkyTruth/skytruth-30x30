@@ -215,6 +215,7 @@
       "delete-layer": "Delete layer",
       "save-layer": "Save layer",
       "layer-saved": "Layer saved",
+      "save-layer-unavailable": "Save layer is not available at this time",
       "edit-layer-name": "Edit Layer Name",
       "use-layer-for-modelling": "Use layer for modelling",
       "upload-layer": "Upload Layer"
