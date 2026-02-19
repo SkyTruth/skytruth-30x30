@@ -1,7 +1,8 @@
 import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useAtom } from 'jotai';
-import { Trash } from 'lucide-react';
+import type { GeoJSONObject } from '@turf/turf';
+import { useAtom, useSetAtom } from 'jotai';
+import { BarChartHorizontal, Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
@@ -11,8 +12,16 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
+import {
+  allActiveLayersAtom,
+  bboxLocationAtom,
+  customLayersAtom,
+  drawStateAtom,
+  modellingAtom,
+} from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
+import { extractPolygons } from '@/lib/utils/file-upload';
+import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
 import { CustomLayer } from '@/types/layers';
 
@@ -38,6 +47,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   children,
 }): JSX.Element => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
+  const tUploads = useTranslations('services.uploads');
 
   const [open, setOpen] = useState(isOpen);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
@@ -47,6 +57,9 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers] = useAtom(allActiveLayersAtom);
+  const setDrawState = useSetAtom(drawStateAtom);
+  const setModellingState = useSetAtom(modellingAtom);
+  const setBboxLocation = useSetAtom(bboxLocationAtom);
 
   useEffect(() => {
     if (editingSlug) {
@@ -95,6 +108,37 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       });
     },
     [setCustomLayers]
+  );
+
+  const onUseLayerForModelling = useCallback(
+    (layer: CustomLayer) => {
+      try {
+        const { feature } = extractPolygons(layer.feature as GeoJSONObject);
+
+        setDrawState((prevState) => ({
+          ...prevState,
+          active: false,
+          status: 'success',
+          feature,
+          revision: prevState.revision + 1,
+          source: 'upload',
+        }));
+        setModellingState((prevState) => ({ ...prevState, active: true }));
+
+        const bounds = getGeoJSONBoundingBox(feature);
+        if (bounds) {
+          setBboxLocation(bounds as [number, number, number, number]);
+        }
+      } catch {
+        // Invalid/non-polygon custom layers cannot be used for modelling.
+        setModellingState((prevState) => ({
+          ...prevState,
+          status: 'error',
+          errorMessage: tUploads('no-polygons-error'),
+        }));
+      }
+    },
+    [setBboxLocation, setDrawState, setModellingState, tUploads]
   );
 
   const beginEdit = (slug: string, currentName: string) => {
@@ -213,6 +257,21 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                               type="button"
                               size="icon-sm"
                               variant="ghost"
+                              onClick={() => onUseLayerForModelling(layer)}
+                            >
+                              <span className="sr-only">{t('use-layer-for-modelling')}</span>
+                              <BarChartHorizontal size={16} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('use-layer-for-modelling')}</TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              className="h-auto w-auto pl-1.5"
+                              type="button"
+                              size="icon-sm"
+                              variant="ghost"
                               onClick={() => onDeleteLayer(slug)}
                             >
                               <span className="sr-only">{t('delete-layer')}</span>
@@ -237,6 +296,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
 
 CustomLayersGroup.messages = [
   'containers.map-sidebar-layers-panel',
+  'services.uploads',
   ...TooltipButton.messages,
   ...UploadLayer.messages,
 ];

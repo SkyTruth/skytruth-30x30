@@ -12,9 +12,6 @@ curl '{url}' \
 
 ```
 
-service: `https://30x30.skytruth.org/functions/analysis/`
-locally: `http://0.0.0.0:3001`
-
 ### Output Response
 
 ```json
