@@ -8,7 +8,7 @@ type CustomLayerManagerItemProps = {
   slug: string;
 };
 
-const FILL_ALPHA = 175;
+const FILL_ALPHA = 200;
 const FULL_ALPHA = 255;
 
 /**
