@@ -53,6 +53,8 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   const [open, setOpen] = useState(isOpen);
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [draftName, setDraftName] = useState<string>('');
+  const [savedLayerSnapshots, setSavedLayerSnapshots] = useState<Record<CustomLayer['id'], string>>({});
+  const [savingLayerIds, setSavingLayerIds] = useState<Record<CustomLayer['id'], boolean>>({});
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -95,8 +97,18 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       delete updatedLayers[slug];
 
       setCustomLayers(updatedLayers);
+      setSavedLayerSnapshots((prev) => {
+        const next = { ...prev };
+        delete next[slug];
+        return next;
+      });
+      setSavingLayerIds((prev) => {
+        const next = { ...prev };
+        delete next[slug];
+        return next;
+      });
     },
-    [customLayers, setCustomLayers]
+    [customLayers, setCustomLayers, setSavedLayerSnapshots]
   );
 
   const onRenameLayer = useCallback(
@@ -143,10 +155,28 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   );
 
   const onSaveLayer = useCallback(async (layer: CustomLayer) => {
+    const layerSnapshot = JSON.stringify(layer);
+
+    setSavingLayerIds((prev) => ({
+      ...prev,
+      [layer.id]: true,
+    }));
+
     try {
       await saveCustomLayer(layer);
+
+      setSavedLayerSnapshots((prev) => ({
+        ...prev,
+        [layer.id]: layerSnapshot,
+      }));
     } catch {
       // Save failures should not block layer interactions.
+    } finally {
+      setSavingLayerIds((prev) => {
+        const next = { ...prev };
+        delete next[layer.id];
+        return next;
+      });
     }
   }, []);
 
@@ -208,6 +238,10 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                 const layer = customLayers[slug];
                 const isActive = layer.isActive;
                 const isEditing = editingSlug === slug;
+                const layerSnapshot = JSON.stringify(layer);
+                const isLayerSaved = savedLayerSnapshots[slug] === layerSnapshot;
+                const isLayerSaving = Boolean(savingLayerIds[slug]);
+                const saveLayerLabel = isLayerSaved ? t('layer-saved') : t('save-layer');
 
                 return (
                   <li key={slug} className="flex items-start justify-between">
@@ -226,10 +260,10 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                             <input
                               ref={inputRef}
                               value={draftName}
-                              onChange={(e) => setDraftName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') commitEdit(slug);
-                                if (e.key === 'Escape') cancelEdit();
+                              onChange={(event) => setDraftName(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') commitEdit(slug);
+                                if (event.key === 'Escape') cancelEdit();
                               }}
                               onBlur={() => commitEdit(slug)}
                               aria-label={t('edit-layer-name', { layer: layer.name })}
@@ -266,13 +300,14 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                               type="button"
                               size="icon-sm"
                               variant="ghost"
+                              disabled={isLayerSaved || isLayerSaving}
                               onClick={() => void onSaveLayer(layer)}
                             >
-                              <span className="sr-only">{t('save-layer')}</span>
+                              <span className="sr-only">{saveLayerLabel}</span>
                               <Save size={16} />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>{t('save-layer')}</TooltipContent>
+                          <TooltipContent>{saveLayerLabel}</TooltipContent>
                         </Tooltip>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger asChild>
