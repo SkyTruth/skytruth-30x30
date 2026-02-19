@@ -54,6 +54,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [draftName, setDraftName] = useState<string>('');
   const [savingLayerIds, setSavingLayerIds] = useState<Record<CustomLayer['id'], boolean>>({});
+  const [persistActionError, setPersistActionError] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -111,21 +112,25 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   );
 
   const onDeleteLayer = useCallback(
-    (slug: string) => {
+    async (slug: string) => {
       const updatedLayers = { ...customLayers };
       delete updatedLayers[slug];
 
+      setPersistActionError(null);
       setCustomLayers(updatedLayers);
       setSavingLayerIds((prev) => {
         const next = { ...prev };
         delete next[slug];
         return next;
       });
-      void deleteLayer(slug).catch(() => {
-        // Delete failures should not block layer interactions.
-      });
+
+      try {
+        await deleteLayer(slug);
+      } catch {
+        setPersistActionError(t('delete-layer-error'));
+      }
     },
-    [customLayers, deleteLayer, setCustomLayers]
+    [customLayers, deleteLayer, setCustomLayers, t]
   );
 
   const onRenameLayer = useCallback(
@@ -175,6 +180,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
     async (layer: CustomLayer) => {
       if (!isIndexedDBAvailable) return;
 
+      setPersistActionError(null);
       setSavingLayerIds((prev) => ({
         ...prev,
         [layer.id]: true,
@@ -183,7 +189,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       try {
         await saveLayer(layer);
       } catch {
-        // Save failures should not block layer interactions.
+        setPersistActionError(t('save-layer-error'));
       } finally {
         setSavingLayerIds((prev) => {
           const next = { ...prev };
@@ -192,7 +198,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
         });
       }
     },
-    [isIndexedDBAvailable, saveLayer]
+    [isIndexedDBAvailable, saveLayer, t]
   );
 
   const savedLayerSnapshots = useMemo(
@@ -259,6 +265,11 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
       >
         <div>
           <UploadLayer isDisabled={isUploadDisabled} />
+          {persistActionError && (
+            <p className="px-2 pt-2 text-xs text-error" role="alert">
+              {persistActionError}
+            </p>
+          )}
           <div className="pt3">
             <ul className={'my-3 flex flex-col space-y-3'}>
               {Object.keys(customLayers).map((slug) => {
@@ -365,7 +376,7 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
                               type="button"
                               size="icon-sm"
                               variant="ghost"
-                              onClick={() => onDeleteLayer(slug)}
+                              onClick={() => void onDeleteLayer(slug)}
                             >
                               <span className="sr-only">{t('delete-layer')}</span>
                               <Trash size={16} />

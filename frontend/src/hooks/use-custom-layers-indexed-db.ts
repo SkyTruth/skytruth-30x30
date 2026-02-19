@@ -21,7 +21,7 @@ const useCustomLayersIndexedDB = () => {
         throw new Error('IndexedDB is not available');
       }
 
-      await indexedDB.layers.put(layer);
+      await indexedDB.layers.upsert(layer.id, layer);
     },
     [isIndexedDBAvailable]
   );
