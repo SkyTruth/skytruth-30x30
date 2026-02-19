@@ -55,7 +55,9 @@ const useSyncAllLayers = (type: MapTypes) => {
   }, [type, hasLoadedSavedLayers, savedLayers, setCustomLayers]);
 
   // keep allActiveLayers synchronized and stable in order while reacting to
-  // predefined/custom layer activation changes.
+  // predefined/custom layer activation changes. This is mostly helpful when switching
+  // between conservation builder and progress tracker and needing to sync the different 
+  // sources of which layers are active
   useEffect(() => {
     let currentActiveLayers = [...activeLayers];
 
