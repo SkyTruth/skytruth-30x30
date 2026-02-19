@@ -1,7 +1,8 @@
+from unittest.mock import MagicMock
+
 import pytest
 
-import main
-from tests.fixtures.utils.util_mocks import MockRequest
+import src.methods.publisher as main
 
 
 @pytest.fixture
@@ -51,7 +52,11 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
     ]
     for name in simple_targets:
-        return_value = ({"ok": True}, {"ok": True}) if name == "download_mpatlas" else {"ok": True}
+        return_value = (
+            ({"delay_seconds": 0, "max_retries": 0}, True)
+            if name == "download_mpatlas"
+            else {"ok": True}
+        )
         monkeypatch.setattr(
             main,
             name,
@@ -66,6 +71,21 @@ def patched_all(monkeypatch, call_log):
         make_recorder(call_log, "download_zip_to_gcs", return_value={"ok": True}),
         raising=True,
     )
+
+    monkeypatch.setattr(
+        main,
+        "create_task",
+        make_recorder(call_log, "create_task", return_value=MagicMock(name="tasks/fake123")),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "long_running_tasks",
+        make_recorder(call_log, "long_running_tasks", return_value=("OK", 200)),
+        raising=True,
+    )
+
+    monkeypatch.setattr(main, "LONG_RUNNING_TASKS", [], raising=False)
 
     return call_log
 
@@ -95,20 +115,23 @@ def patched_all(monkeypatch, call_log):
 )
 def test_single_call_methods_route_and_pass_verbose(patched_all, method, expected_call):
     """Each simple METHOD should call exactly one target with only verbose kwarg."""
-    resp = main.main(MockRequest({"METHOD": method}))
+    resp = main.run_from_payload({"METHOD": method})
 
     if method == "update_locations":
         # Split this out because update_locations passes on its return value
-        assert resp == {"ok": True}
+        assert resp == ('{"ok": true}', 200)
     else:
         assert resp == ("OK", 200)
 
     # Exactly one call recorded
     assert len(patched_all) == 1
     name, args, kwargs = patched_all[0]
+
     assert name == expected_call
     assert args == ()
     assert "verbose" in kwargs
+    if method == "update_locations":
+        assert kwargs["request"] == {"METHOD": "update_locations"}
 
 
 # Tests for functions that directly call download_zip_to_gcs
@@ -180,7 +203,7 @@ def test_downloader_zip_routes(patched_all, method, expected, extra):
     Each downloader METHOD must call download_zip_to_gcs keyword-only with the right values.
     Using lambdas defers constant lookup to runtime so imports/fixtures don't break collection.
     """
-    resp = main.main(MockRequest({"METHOD": method}))
+    resp = main.run_from_payload({"METHOD": method})
     assert resp == ("OK", 200)
     assert len(patched_all) == 1
 
@@ -275,7 +298,7 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     # Patch upload_stats to a recorder
     _patch_upload_stats_to_recorder(monkeypatch, recorder)
 
-    resp = main.main(MockRequest({"METHOD": method}))
+    resp = main.run_from_payload({"METHOD": method})
     assert resp == ("STATS_OK", 201)
 
     # Strapi was instantiated exactly once
@@ -294,20 +317,20 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     assert getattr(upload_fn, "__self__", None).__class__ is MockStrapi
 
     # Verbose propagated from module
-    assert recorder["verbose"] is main.verbose
+    assert recorder["verbose"] is True
 
 
 # Non-invoking / generic flows
 def test_dry_run_calls_nothing_and_returns_ok(patched_all, monkeypatch):
     """dry_run should print and return OK without calling any target."""
-    resp = main.main(MockRequest({"METHOD": "dry_run"}))
+    resp = main.run_from_payload({"METHOD": "dry_run"})
     assert resp == ("OK", 200)
     assert patched_all == []  # no calls made
 
 
 def test_unknown_method_returns_ok_and_calls_nothing(patched_all):
     """Unknown methods should not call anything; handler still returns OK, 200."""
-    resp = main.main(MockRequest({"METHOD": "totally_unknown"}))
+    resp = main.run_from_payload({"METHOD": "totally_unknown"})
     assert resp == ("OK", 200)
     assert patched_all == []
 
@@ -329,7 +352,8 @@ def test_error_bubbles_to_208(monkeypatch, call_log):
         make_recorder(call_log, "process_gadm_geoms", side_effect=RuntimeError("boom")),
         raising=True,
     )
-    resp = main.main(MockRequest({"METHOD": "process_gadm", "MAX_RETRIES": 0}))
+
+    resp = main.run_from_payload({"METHOD": "process_gadm", "MAX_RETRIES": 0})
     assert isinstance(resp, tuple)
     body, status = resp
     assert status == 208
