@@ -7,8 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { CustomLayer } from '@/types/layers';
+
+// Taken from this SVG in Lucide React https://lucide.dev/icons/pencil
+const PENCIL_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'/><path d='m15 5 4 4'/></svg>"
+)}") 2 16, pointer`;
 
 type CustomLayerItemProps = {
   slug: string;
@@ -79,7 +85,8 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
 
   return (
     <li className="flex items-start justify-between">
-      <span className="flex items-start gap-2 overflow-x-hidden text-nowrap">
+      <TooltipProvider>
+      <span className="flex min-w-0 flex-1 items-start gap-2 overflow-x-hidden text-nowrap">
         <Switch
           id={`${layer.name}-switch`}
           aria-label={layer.name}
@@ -88,7 +95,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
           onCheckedChange={() => onToggleLayer(layer, !isActive)}
         />
 
-        <div className="max-w-full">
+        <div className="min-w-0 flex-1">
           {isEditing ? (
             <div className="flex items-center gap-2">
               <input
@@ -105,21 +112,28 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
               />
             </div>
           ) : (
-            <Label htmlFor={`${layer.name}-switch`} className={switchLabelClassName}>
-              <button
-                type="button"
-                className="hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
-                onClick={beginEdit}
-              >
-                <span className="sr-only">{t('edit-layer-name')}</span>
-                {layer.name}
-              </button>
+            <Label htmlFor={`${layer.name}-switch`} className={cn(switchLabelClassName, 'block min-w-0')}>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
+                    style={{ cursor: PENCIL_CURSOR }}
+                    onClick={beginEdit}
+                  >
+                    <span className="sr-only">{t('edit-layer-name')}</span>
+                    {layer.name}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent align="start" className="max-w-[var(--radix-tooltip-trigger-width)]">
+                  {t('edit')}
+                </TooltipContent>
+              </Tooltip>
             </Label>
           )}
         </div>
       </span>
 
-      <TooltipProvider>
         <div className="flex items-center">
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
