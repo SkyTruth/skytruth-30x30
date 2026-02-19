@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
@@ -46,12 +46,8 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
   const tUploads = useTranslations('services.uploads');
 
   const [open, setOpen] = useState(isOpen);
-  const [editingSlug, setEditingSlug] = useState<string | null>(null);
-  const [draftName, setDraftName] = useState<string>('');
   const [savingLayerIds, setSavingLayerIds] = useState<Record<CustomLayer['id'], boolean>>({});
   const [persistActionError, setPersistActionError] = useState<string | null>(null);
-
-  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers] = useAtom(allActiveLayersAtom);
@@ -59,12 +55,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
   const setModellingState = useSetAtom(modellingAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
   const { savedLayers, isIndexedDBAvailable, saveLayer, deleteLayer } = useCustomLayersIndexedDB();
-
-  useEffect(() => {
-    if (editingSlug) {
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
-  }, [editingSlug]);
 
   const numCustomLayers = useMemo(() => Object.keys(customLayers).length, [customLayers]);
 
@@ -107,12 +97,16 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
     [customLayers, deleteLayer, setCustomLayers, t]
   );
 
-  const onRenameLayer = useCallback(
+  const onCommitEdit = useCallback(
     (slug: string, newName: string) => {
       setCustomLayers((prev) => {
-        prev[slug].name = newName;
+        if (!prev[slug]) return prev;
         return {
           ...prev,
+          [slug]: {
+            ...prev[slug],
+            name: newName,
+          },
         };
       });
     },
@@ -186,29 +180,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
     [savedLayers]
   );
 
-  const beginEdit = useCallback((slug: string, currentName: string) => {
-    setEditingSlug(slug);
-    setDraftName(currentName);
-  }, []);
-
-  const cancelEdit = useCallback(() => {
-    setEditingSlug(null);
-    setDraftName('');
-  }, []);
-
-  const commitEdit = useCallback(
-    (slug: string) => {
-      const next = draftName.trim();
-      if (next.length === 0) return cancelEdit();
-
-      if (customLayers[slug]?.name !== next) {
-        onRenameLayer(slug, next);
-      }
-      cancelEdit();
-    },
-    [cancelEdit, customLayers, draftName, onRenameLayer]
-  );
-
   const isUploadDisabled = useMemo(
     () => Object.keys(customLayers).length >= MAX_CUSTOM_LAYERS,
     [customLayers]
@@ -252,7 +223,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
               {Object.keys(customLayers).map((slug) => {
                 const layer = customLayers[slug];
                 const isActive = layer.isActive;
-                const isEditing = editingSlug === slug;
                 const layerSnapshot = JSON.stringify(layer);
                 const isLayerSaved = savedLayerSnapshots[slug] === layerSnapshot;
                 const isLayerSaving = Boolean(savingLayerIds[slug]);
@@ -269,17 +239,11 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
                     slug={slug}
                     layer={layer}
                     isActive={isActive}
-                    isEditing={isEditing}
-                    draftName={draftName}
-                    inputRef={inputRef}
                     switchLabelClassName={SWITCH_LABEL_CLASSES}
                     saveTooltipLabel={saveTooltipLabel}
                     isSaveDisabled={isSaveDisabled}
                     onToggleLayer={onToggleLayer}
-                    onBeginEdit={beginEdit}
-                    onDraftNameChange={setDraftName}
-                    onCommitEdit={commitEdit}
-                    onCancelEdit={cancelEdit}
+                    onCommitEdit={onCommitEdit}
                     onSaveLayer={onSaveLayer}
                     onUseLayerForModelling={onUseLayerForModelling}
                     onDeleteLayer={onDeleteLayer}

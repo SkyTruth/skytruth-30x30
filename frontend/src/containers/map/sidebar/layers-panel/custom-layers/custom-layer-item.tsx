@@ -1,4 +1,4 @@
-import { RefObject } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { BarChartHorizontal, Save, Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -14,17 +14,11 @@ type CustomLayerItemProps = {
   slug: string;
   layer: CustomLayer;
   isActive: boolean;
-  isEditing: boolean;
-  draftName: string;
-  inputRef: RefObject<HTMLInputElement | null>;
   switchLabelClassName: string;
   saveTooltipLabel: string;
   isSaveDisabled: boolean;
   onToggleLayer: (layer: CustomLayer, checked: boolean) => void;
-  onBeginEdit: (slug: string, currentName: string) => void;
-  onDraftNameChange: (value: string) => void;
-  onCommitEdit: (slug: string) => void;
-  onCancelEdit: () => void;
+  onCommitEdit: (slug: string, newName: string) => void;
   onSaveLayer: (layer: CustomLayer) => Promise<void> | void;
   onUseLayerForModelling: (layer: CustomLayer) => void;
   onDeleteLayer: (slug: string) => Promise<void> | void;
@@ -34,22 +28,54 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   slug,
   layer,
   isActive,
-  isEditing,
-  draftName,
-  inputRef,
   switchLabelClassName,
   saveTooltipLabel,
   isSaveDisabled,
   onToggleLayer,
-  onBeginEdit,
-  onDraftNameChange,
   onCommitEdit,
-  onCancelEdit,
   onSaveLayer,
   onUseLayerForModelling,
   onDeleteLayer,
 }) => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftName, setDraftName] = useState(layer.name);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraftName(layer.name);
+    }
+  }, [isEditing, layer.name]);
+
+  const beginEdit = () => {
+    setDraftName(layer.name);
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setDraftName(layer.name);
+  };
+
+  const commitEdit = () => {
+    const next = draftName.trim();
+    if (next.length === 0) {
+      cancelEdit();
+      return;
+    }
+
+    if (next !== layer.name) {
+      onCommitEdit(slug, next);
+    }
+    setIsEditing(false);
+  };
 
   return (
     <li className="flex items-start justify-between">
@@ -68,12 +94,12 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
               <input
                 ref={inputRef}
                 value={draftName}
-                onChange={(event) => onDraftNameChange(event.target.value)}
+                onChange={(event) => setDraftName(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') onCommitEdit(slug);
-                  if (event.key === 'Escape') onCancelEdit();
+                  if (event.key === 'Enter') commitEdit();
+                  if (event.key === 'Escape') cancelEdit();
                 }}
-                onBlur={() => onCommitEdit(slug)}
+                onBlur={commitEdit}
                 aria-label={t('edit-layer-name', { layer: layer.name })}
                 className="w-full rounded-md border border-black bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-black/30"
               />
@@ -83,7 +109,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
               <button
                 type="button"
                 className="hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
-                onClick={() => onBeginEdit(slug, layer.name)}
+                onClick={beginEdit}
               >
                 <span className="sr-only">{t('edit-layer-name')}</span>
                 {layer.name}
