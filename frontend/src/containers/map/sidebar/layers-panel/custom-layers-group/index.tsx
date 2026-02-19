@@ -171,26 +171,29 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
     [setBboxLocation, setDrawState, setModellingState, tUploads]
   );
 
-  const onSaveLayer = useCallback(async (layer: CustomLayer) => {
-    if (!isIndexedDBAvailable) return;
+  const onSaveLayer = useCallback(
+    async (layer: CustomLayer) => {
+      if (!isIndexedDBAvailable) return;
 
-    setSavingLayerIds((prev) => ({
-      ...prev,
-      [layer.id]: true,
-    }));
+      setSavingLayerIds((prev) => ({
+        ...prev,
+        [layer.id]: true,
+      }));
 
-    try {
-      await saveLayer(layer);
-    } catch {
-      // Save failures should not block layer interactions.
-    } finally {
-      setSavingLayerIds((prev) => {
-        const next = { ...prev };
-        delete next[layer.id];
-        return next;
-      });
-    }
-  }, [isIndexedDBAvailable, saveLayer]);
+      try {
+        await saveLayer(layer);
+      } catch {
+        // Save failures should not block layer interactions.
+      } finally {
+        setSavingLayerIds((prev) => {
+          const next = { ...prev };
+          delete next[layer.id];
+          return next;
+        });
+      }
+    },
+    [isIndexedDBAvailable, saveLayer]
+  );
 
   const savedLayerSnapshots = useMemo(
     () =>

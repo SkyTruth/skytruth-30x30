@@ -15,21 +15,27 @@ const useCustomLayersIndexedDB = () => {
     return indexedDB.layers.toArray();
   }, [isIndexedDBAvailable]);
 
-  const saveLayer = useCallback(async (layer: CustomLayer): Promise<void> => {
-    if (!isIndexedDBAvailable) {
-      throw new Error('IndexedDB is not available');
-    }
+  const saveLayer = useCallback(
+    async (layer: CustomLayer): Promise<void> => {
+      if (!isIndexedDBAvailable) {
+        throw new Error('IndexedDB is not available');
+      }
 
-    await indexedDB.layers.put(layer);
-  }, [isIndexedDBAvailable]);
+      await indexedDB.layers.put(layer);
+    },
+    [isIndexedDBAvailable]
+  );
 
-  const deleteLayer = useCallback(async (id: CustomLayer['id']): Promise<void> => {
-    if (!isIndexedDBAvailable) {
-      throw new Error('IndexedDB is not available');
-    }
+  const deleteLayer = useCallback(
+    async (id: CustomLayer['id']): Promise<void> => {
+      if (!isIndexedDBAvailable) {
+        throw new Error('IndexedDB is not available');
+      }
 
-    await indexedDB.layers.delete(id);
-  }, [isIndexedDBAvailable]);
+      await indexedDB.layers.delete(id);
+    },
+    [isIndexedDBAvailable]
+  );
 
   return {
     savedLayers: savedLayers ?? [],
