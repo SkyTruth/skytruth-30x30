@@ -2,7 +2,7 @@ import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } 
 
 import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
-import { BarChartHorizontal, Trash } from 'lucide-react';
+import { BarChartHorizontal, Save, Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
@@ -20,6 +20,7 @@ import {
   modellingAtom,
 } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
+import { saveCustomLayer } from '@/lib/indexed-db';
 import { extractPolygons } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
@@ -141,6 +142,14 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
     [setBboxLocation, setDrawState, setModellingState, tUploads]
   );
 
+  const onSaveLayer = useCallback(async (layer: CustomLayer) => {
+    try {
+      await saveCustomLayer(layer);
+    } catch {
+      // Save failures should not block layer interactions.
+    }
+  }, []);
+
   const beginEdit = (slug: string, currentName: string) => {
     setEditingSlug(slug);
     setDraftName(currentName);
@@ -250,6 +259,21 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
 
                     <TooltipProvider>
                       <div className="flex items-center">
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              className="h-auto w-auto pl-1.5"
+                              type="button"
+                              size="icon-sm"
+                              variant="ghost"
+                              onClick={() => void onSaveLayer(layer)}
+                            >
+                              <span className="sr-only">{t('save-layer')}</span>
+                              <Save size={16} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('save-layer')}</TooltipContent>
+                        </Tooltip>
                         <Tooltip delayDuration={0}>
                           <TooltipTrigger asChild>
                             <Button

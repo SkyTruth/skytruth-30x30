@@ -213,6 +213,7 @@
       "loading": "Loading data...",
       "no-data-available": "No data available",
       "delete-layer": "Delete layer",
+      "save-layer": "Save layer",
       "edit-layer-name": "Edit Layer Name",
       "use-layer-for-modelling": "Use layer for modelling",
       "upload-layer": "Upload Layer"
