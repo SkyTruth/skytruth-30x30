@@ -4,6 +4,7 @@ import { useAtom } from 'jotai';
 
 import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
+import useCustomLayersIndexedDB from '@/hooks/use-custom-layers-indexed-db';
 import { MapTypes } from '@/types/map';
 
 /**
@@ -19,13 +20,34 @@ const useSyncAllLayers = (type: MapTypes) => {
   const [activeLayers] = useSyncMapLayers();
 
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
-  const [customLayers] = useAtom(customLayersAtom);
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
+  const { savedLayers, hasLoadedSavedLayers } = useCustomLayersIndexedDB();
 
   const allActiveLayersRef = useRef(allActiveLayers);
 
   useEffect(() => {
     allActiveLayersRef.current = allActiveLayers;
   }, [allActiveLayers]);
+
+  useEffect(() => {
+    if (type !== MapTypes.ConservationBuilder || !hasLoadedSavedLayers || savedLayers.length === 0) {
+      return;
+    }
+
+    setCustomLayers((prev) => {
+      const next = { ...prev };
+      let hasChanges = false;
+
+      savedLayers.forEach((layer) => {
+        if (!next[layer.id]) {
+          next[layer.id] = layer;
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? next : prev;
+    });
+  }, [type, hasLoadedSavedLayers, savedLayers, setCustomLayers]);
 
   useEffect(() => {
     let currentActiveLayers = [...activeLayers];

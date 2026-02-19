@@ -63,32 +63,13 @@ const CustomLayersGroup: FCWithMessages<CustomLayersGroupProps> = ({
   const setDrawState = useSetAtom(drawStateAtom);
   const setModellingState = useSetAtom(modellingAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
-  const { savedLayers, hasLoadedSavedLayers, isIndexedDBAvailable, saveLayer, deleteLayer } =
-    useCustomLayersIndexedDB();
+  const { savedLayers, isIndexedDBAvailable, saveLayer, deleteLayer } = useCustomLayersIndexedDB();
 
   useEffect(() => {
     if (editingSlug) {
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [editingSlug]);
-
-  useEffect(() => {
-    if (!hasLoadedSavedLayers || savedLayers.length === 0) return;
-
-    setCustomLayers((prev) => {
-      const next = { ...prev };
-      let hasChanges = false;
-
-      savedLayers.forEach((layer) => {
-        if (!next[layer.id]) {
-          next[layer.id] = layer;
-          hasChanges = true;
-        }
-      });
-
-      return hasChanges ? next : prev;
-    });
-  }, [hasLoadedSavedLayers, savedLayers, setCustomLayers]);
 
   const numCustomLayers = useMemo(() => {
     return Object.keys(customLayers).length;
