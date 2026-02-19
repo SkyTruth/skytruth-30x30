@@ -54,7 +54,7 @@ const useSyncAllLayers = (type: MapTypes) => {
     });
   }, [type, hasLoadedSavedLayers, savedLayers, setCustomLayers]);
 
-  // keep allActiveLayers synchronized and stable in order while reacting to 
+  // keep allActiveLayers synchronized and stable in order while reacting to
   // predefined/custom layer activation changes.
   useEffect(() => {
     let currentActiveLayers = [...activeLayers];

@@ -73,7 +73,6 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
           if (bounds) {
             setBboxLocation(bounds as [number, number, number, number]);
           }
-
         } catch (error) {
           setErrorMessage(getUploadErrorMessage(error));
         } finally {
