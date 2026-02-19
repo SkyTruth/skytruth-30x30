@@ -30,7 +30,11 @@ const useSyncAllLayers = (type: MapTypes) => {
   }, [allActiveLayers]);
 
   useEffect(() => {
-    if (type !== MapTypes.ConservationBuilder || !hasLoadedSavedLayers || savedLayers.length === 0) {
+    if (
+      type !== MapTypes.ConservationBuilder ||
+      !hasLoadedSavedLayers ||
+      savedLayers.length === 0
+    ) {
       return;
     }
 
