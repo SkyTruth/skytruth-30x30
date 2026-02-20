@@ -4,6 +4,7 @@ import { useSetAtom } from 'jotai';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import TooltipButton from '@/components/tooltip-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CUSTOM_LAYER_STYLE_COLORS } from '@/constants/custom-layer-style-colors';
@@ -98,36 +99,39 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
 
   return (
     <>
-      <Label
-        htmlFor="upload-layer"
-        className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2 pb-2', {
-          'text-gray-500': isDisabled,
-        })}
-      >
-        <Input
-          id="upload-layer"
-          type="file"
-          multiple
-          accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
-          className="hidden"
-          onChange={onChange}
-          disabled={isDisabled}
-        />
-        <button
-          type="button"
-          onClick={() => document.getElementById('upload-layer')?.click()}
-          className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2')}
-          disabled={isDisabled}
+      <div className="flex items-start justify-between">
+        <Label
+          htmlFor="upload-layer"
+          className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2 pb-2', {
+            'text-gray-500': isDisabled,
+          })}
         >
-          <Upload size={18} />
-          <span>{t('upload-layer')}</span>
-        </button>
-      </Label>
+          <Input
+            id="upload-layer"
+            type="file"
+            multiple
+            accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
+            className="hidden"
+            onChange={onChange}
+            disabled={isDisabled}
+          />
+          <button
+            type="button"
+            onClick={() => document.getElementById('upload-layer')?.click()}
+            className={cn(SWITCH_LABEL_CLASSES, 'flex items-center gap-2')}
+            disabled={isDisabled}
+          >
+            <Upload size={18} />
+            <span>{t('upload-layer')}</span>
+          </button>
+        </Label>
+        <TooltipButton className="ml-auto mt-px" text={t('upload-directions')} />
+      </div>
       <p className="text-error">{errorMessage}</p>
     </>
   );
 };
 
-UploadLayer.messages = ['containers.map-sidebar-layers-panel', 'services.uploads'];
+UploadLayer.messages = ['containers.map-sidebar-layers-panel'];
 
 export default UploadLayer;
