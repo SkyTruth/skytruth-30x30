@@ -1,17 +1,19 @@
 import { ChangeEventHandler, useCallback, useState } from 'react';
 
-import { useAtom, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CUSTOM_LAYER_STYLE_COLORS } from '@/constants/custom-layer-style-colors';
 import { bboxLocationAtom, customLayersAtom } from '@/containers/map/store';
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
+import { CustomLayer } from '@/types/layers';
 
 import { MAX_CUSTOM_LAYER_SIZE, SWITCH_LABEL_CLASSES } from '../constants';
 
@@ -21,8 +23,11 @@ type UploadLayerProps = {
 
 const DEFAULT_LAYER_STYLE = {
   opacity: 0.5,
-  fillColor: '#86a6f0',
-  lineColor: '#86a6f0',
+};
+
+const getNextCustomLayerColor = (layers: Record<string, CustomLayer>): string => {
+  const nextColorIndex = Object.keys(layers).length % CUSTOM_LAYER_STYLE_COLORS.length;
+  return CUSTOM_LAYER_STYLE_COLORS[nextColorIndex].value;
 };
 
 const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
@@ -31,7 +36,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
     maxFileSize: MAX_CUSTOM_LAYER_SIZE,
   });
   const setBboxLocation = useSetAtom(bboxLocationAtom);
-  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
+  const setCustomLayers = useSetAtom(customLayersAtom);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -58,16 +63,24 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
           const newId = window.crypto.randomUUID();
 
           setErrorMessage(null);
-          setCustomLayers({
-            ...customLayers,
-            [newId]: {
-              id: newId,
-              name: files[0]?.name ?? '',
-              feature: geojson,
-              isVisible: true,
-              isActive: true,
-              style: { ...DEFAULT_LAYER_STYLE },
-            },
+          setCustomLayers((prev) => {
+            const color = getNextCustomLayerColor(prev);
+
+            return {
+              ...prev,
+              [newId]: {
+                id: newId,
+                name: files[0]?.name ?? '',
+                feature: geojson,
+                isVisible: true,
+                isActive: true,
+                style: {
+                  ...DEFAULT_LAYER_STYLE,
+                  fillColor: color,
+                  lineColor: color,
+                },
+              },
+            };
           });
           const bounds = getGeoJSONBoundingBox(geojson);
           if (bounds) {
@@ -80,7 +93,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
         }
       })();
     },
-    [customLayers, setBboxLocation, setCustomLayers, getUploadErrorMessage]
+    [setBboxLocation, setCustomLayers, getUploadErrorMessage]
   );
 
   return (
