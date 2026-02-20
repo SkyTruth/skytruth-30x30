@@ -71,10 +71,8 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
           });
           const bounds = getGeoJSONBoundingBox(geojson);
           if (bounds) {
-            setBboxLocation([...bounds] as [number, number, number, number]);
+            setBboxLocation(bounds as [number, number, number, number]);
           }
-
-          // New layers get activated and at the top of the stack
         } catch (error) {
           setErrorMessage(getUploadErrorMessage(error));
         } finally {

@@ -6934,6 +6934,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dexie-react-hooks@npm:^4.2.0":
+  version: 4.2.0
+  resolution: "dexie-react-hooks@npm:4.2.0"
+  peerDependencies:
+    "@types/react": ">=16"
+    dexie: ">=4.2.0-alpha.1 <5.0.0"
+    react: ">=16"
+  checksum: 430805c5ae9e2ec8fd896857f00f76f4f4cd90d9798276f088a8ab79d502f2505b14229aa264ba475ed79e0404c522ef517f7864c3fbe51886a4ce9d1f9da20e
+  languageName: node
+  linkType: hard
+
+"dexie@npm:^4.3.0":
+  version: 4.3.0
+  resolution: "dexie@npm:4.3.0"
+  checksum: 22586d802c7c9b02efe81cb7d155d911b78536a1aaf68f4ea3516403066bc113a6d6c69a52dd1af336092cc4b0d89f4f98fd29af7b31ce7f2fa6e620c00e3b10
+  languageName: node
+  linkType: hard
+
 "didyoumean@npm:^1.2.2":
   version: 1.2.2
   resolution: "didyoumean@npm:1.2.2"
@@ -13170,6 +13188,8 @@ __metadata:
     date-fns: ^2.30.0
     deck.gl: 8.9.31
     deepmerge: ^4.3.1
+    dexie: ^4.3.0
+    dexie-react-hooks: ^4.2.0
     embla-carousel-react: 8.0.0
     eslint: 8.57.0
     eslint-config-next: 14.2.15
