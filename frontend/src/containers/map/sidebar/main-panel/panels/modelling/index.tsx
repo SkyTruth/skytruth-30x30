@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import { FCWithMessages } from '@/types';
 
 import LocationSelector from '../../location-selector';
@@ -26,6 +27,9 @@ const SidebarModelling: FCWithMessages = () => {
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
   const showIntro = useMemo(() => modellingStatus === 'idle', [modellingStatus]);
+
+  // Keep default map layers in sync with selected tab/environment.
+  useMapDefaultLayers();
 
   const handleTabChange = useCallback(
     (tab: string) => setSettings((prevSettings) => ({ ...prevSettings, tab })),

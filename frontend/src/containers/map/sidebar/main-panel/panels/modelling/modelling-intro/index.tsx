@@ -87,14 +87,6 @@ const ModellingIntro: FCWithMessages = () => {
         <CarouselContent>
           <CarouselItem>
             <div className="space-y-2">
-              <Image
-                className="w-full"
-                src="/images/drawing-steps/01.webp"
-                alt={t('step-1-alt')}
-                quality={100}
-                width={375}
-                height={143}
-              />
               <p>
                 {t.rich('step-1-description', {
                   b: (chunks) => <span className="font-bold">{chunks}</span>,

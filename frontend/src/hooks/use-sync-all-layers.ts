@@ -67,16 +67,30 @@ const useSyncAllLayers = (type: MapTypes) => {
       );
 
       const activeCustomLayersSet = new Set(activeCustomLayers);
-      const activeLayersSet = new Set(activeLayers);
+      const activePredefinedLayersSet = new Set(activeLayers);
 
-      const preservedActiveLayers = allActiveLayersRef.current.filter(
-        (layer) => activeCustomLayersSet.has(layer) || activeLayersSet.has(layer)
+      const preservedCustomLayers = allActiveLayersRef.current.filter((layer) =>
+        activeCustomLayersSet.has(layer)
+      );
+      const preservedCustomLayersSet = new Set(preservedCustomLayers);
+      const newCustomLayers = activeCustomLayers.filter(
+        (layer) => !preservedCustomLayersSet.has(layer)
       );
 
-      const newActiveLayers = [...activeLayers, ...activeCustomLayers].filter(
-        (layer) => !preservedActiveLayers.includes(layer)
+      const preservedPredefinedLayers = allActiveLayersRef.current.filter((layer) =>
+        activePredefinedLayersSet.has(layer)
       );
-      currentActiveLayers = [...newActiveLayers, ...preservedActiveLayers];
+      const preservedPredefinedLayersSet = new Set(preservedPredefinedLayers);
+      const newPredefinedLayers = activeLayers.filter(
+        (layer) => !preservedPredefinedLayersSet.has(layer)
+      );
+
+      currentActiveLayers = [
+        ...newCustomLayers,
+        ...preservedCustomLayers,
+        ...newPredefinedLayers,
+        ...preservedPredefinedLayers,
+      ];
     }
 
     setAllActiveLayers(currentActiveLayers);

@@ -10,7 +10,12 @@ import { RxTransform } from 'react-icons/rx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MAX_CUSTOM_LAYER_SIZE } from '@/containers/map/sidebar/layers-panel/constants';
-import { bboxLocationAtom, modellingAtom, drawStateAtom } from '@/containers/map/store';
+import {
+  bboxLocationAtom,
+  modellingAtom,
+  modellingCustomLayerIdAtom,
+  drawStateAtom,
+} from '@/containers/map/store';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
@@ -46,6 +51,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const { active, status, source } = drawState;
 
   const setBboxLocation = useSetAtom(bboxLocationAtom);
+  const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
 
@@ -57,12 +63,14 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const onClickClearModelling = useCallback(() => {
     resetDrawState();
     resetModelling();
+    setModellingCustomLayerId(null);
     setUploadErrorMessage(null);
     setUploadInfoMessage(null);
-  }, [resetModelling, resetDrawState]);
+  }, [resetModelling, resetDrawState, setModellingCustomLayerId]);
 
   const onClickRedraw = useCallback(() => {
     resetModelling();
+    setModellingCustomLayerId(null);
     setDrawState((prevState) => ({
       ...prevState,
       active: true,
@@ -74,7 +82,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
     setModelling((prevState) => ({ ...prevState, active: true }));
     setUploadErrorMessage(null);
     setUploadInfoMessage(null);
-  }, [resetModelling, setModelling, setDrawState]);
+  }, [resetModelling, setModelling, setDrawState, setModellingCustomLayerId]);
 
   const onUploadChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
@@ -119,6 +127,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }));
 
           setModelling((prevState) => ({ ...prevState, active: true }));
+          setModellingCustomLayerId(null);
 
           const bounds = getGeoJSONBoundingBox(feature);
           if (bounds) {
@@ -141,6 +150,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       drawState,
       setDrawState,
       setModelling,
+      setModellingCustomLayerId,
       setBboxLocation,
       getUploadErrorMessage,
       setUploadErrorMessage,
@@ -202,6 +212,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               onClick={() => {
                 setUploadErrorMessage(null);
                 setUploadInfoMessage(null);
+                setModellingCustomLayerId(null);
                 setDrawState((prevState) => ({ ...prevState, active: true }));
               }}
             >

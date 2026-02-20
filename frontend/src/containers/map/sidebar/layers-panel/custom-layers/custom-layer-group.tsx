@@ -11,6 +11,8 @@ import {
   bboxLocationAtom,
   customLayersAtom,
   drawStateAtom,
+  modellingCustomLayerIdAtom,
+  sidebarAtom,
   modellingAtom,
 } from '@/containers/map/store';
 import useCustomLayersIndexedDB from '@/hooks/use-custom-layers-indexed-db';
@@ -51,8 +53,10 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers] = useAtom(allActiveLayersAtom);
+  const [modellingCustomLayerId, setModellingCustomLayerId] = useAtom(modellingCustomLayerIdAtom);
   const setDrawState = useSetAtom(drawStateAtom);
   const setModellingState = useSetAtom(modellingAtom);
+  const setSidebarOpen = useSetAtom(sidebarAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
   const { savedLayers, isIndexedDBAvailable, saveLayer, deleteLayer } = useCustomLayersIndexedDB();
 
@@ -87,6 +91,9 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         delete next[slug];
         return next;
       });
+      if (modellingCustomLayerId === slug) {
+        setModellingCustomLayerId(null);
+      }
 
       try {
         await deleteLayer(slug);
@@ -94,7 +101,14 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         setPersistActionError(t('delete-layer-error'));
       }
     },
-    [customLayers, deleteLayer, setCustomLayers, t]
+    [
+      customLayers,
+      deleteLayer,
+      modellingCustomLayerId,
+      setCustomLayers,
+      setModellingCustomLayerId,
+      t,
+    ]
   );
 
   const onCommitEdit = useCallback(
@@ -115,6 +129,8 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
 
   const onUseLayerForModelling = useCallback(
     (layer: CustomLayer) => {
+      setSidebarOpen(true);
+
       try {
         const { feature } = extractPolygons(layer.feature as GeoJSONObject);
 
@@ -127,6 +143,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
           source: 'upload',
         }));
         setModellingState((prevState) => ({ ...prevState, active: true }));
+        setModellingCustomLayerId(layer.id);
 
         const bounds = getGeoJSONBoundingBox(feature);
         if (bounds) {
@@ -140,7 +157,14 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         }));
       }
     },
-    [setBboxLocation, setDrawState, setModellingState, tUploads]
+    [
+      setBboxLocation,
+      setDrawState,
+      setModellingCustomLayerId,
+      setModellingState,
+      setSidebarOpen,
+      tUploads,
+    ]
   );
 
   const onSaveLayer = useCallback(
@@ -242,6 +266,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
                     switchLabelClassName={SWITCH_LABEL_CLASSES}
                     saveTooltipLabel={saveTooltipLabel}
                     isSaveDisabled={isSaveDisabled}
+                    isUseForModellingDisabled={modellingCustomLayerId === slug}
                     onToggleLayer={onToggleLayer}
                     onCommitEdit={onCommitEdit}
                     onSaveLayer={onSaveLayer}

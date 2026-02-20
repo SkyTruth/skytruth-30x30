@@ -9,20 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CUSTOM_LAYER_STYLE_COLORS } from '@/constants/custom-layer-style-colors';
 import { cn } from '@/lib/classnames';
 import ArrowDownIcon from '@/styles/icons/arrow-down.svg';
 import ArrowTopIcon from '@/styles/icons/arrow-top.svg';
 import CloseIcon from '@/styles/icons/close.svg';
 import OpacityIcon from '@/styles/icons/opacity.svg';
 import { FCWithMessages } from '@/types';
-
-const LAYER_STYLE_COLORS = [
-  { value: '#86a6f0', nameKey: 'soft-blue' },
-  { value: '#a9db93', nameKey: 'soft-green' },
-  { value: '#dde44f', nameKey: 'soft-lime' },
-  { value: '#d55d55', nameKey: 'muted-red' },
-  { value: '#c95aa8', nameKey: 'muted-pink' },
-] as const;
 
 type LegendItemHeaderProps = {
   color?: string;
@@ -160,7 +153,7 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
                       aria-label={colorGroupLabel}
                       className="grid grid-cols-5 gap-2"
                     >
-                      {LAYER_STYLE_COLORS.map(({ value, nameKey }) => (
+                      {CUSTOM_LAYER_STYLE_COLORS.map(({ value, nameKey }) => (
                         <button
                           key={`color-${value}`}
                           type="button"

@@ -2,7 +2,7 @@ import { FC, useCallback, useMemo } from 'react';
 
 import { Layer, Source } from 'react-map-gl';
 
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import {
@@ -10,13 +10,15 @@ import {
   useMapboxDraw,
   UseMapboxDrawProps,
 } from '@/components/map/draw-controls/hooks';
-import { drawStateAtom } from '@/containers/map/store';
+import { drawStateAtom, modellingCustomLayerIdAtom } from '@/containers/map/store';
 
 const DrawControls: FC = () => {
   const [{ active, feature }, setDrawState] = useAtom(drawStateAtom);
+  const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
 
   const onCreate: UseMapboxDrawProps['onCreate'] = useCallback(
     ({ features }) => {
+      setModellingCustomLayerId(null);
       setDrawState((prevState) => ({
         ...prevState,
         active: false,
@@ -26,7 +28,7 @@ const DrawControls: FC = () => {
         source: 'draw',
       }));
     },
-    [setDrawState]
+    [setDrawState, setModellingCustomLayerId]
   );
 
   const onClick: UseMapboxDrawProps['onClick'] = useCallback(() => {
