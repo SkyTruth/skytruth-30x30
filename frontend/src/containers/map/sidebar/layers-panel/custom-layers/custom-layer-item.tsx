@@ -23,6 +23,7 @@ type CustomLayerItemProps = {
   switchLabelClassName: string;
   saveTooltipLabel: string;
   isSaveDisabled: boolean;
+  isUseForModellingDisabled: boolean;
   onToggleLayer: (layer: CustomLayer, checked: boolean) => void;
   onCommitEdit: (slug: string, newName: string) => void;
   onSaveLayer: (layer: CustomLayer) => Promise<void> | void;
@@ -37,6 +38,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   switchLabelClassName,
   saveTooltipLabel,
   isSaveDisabled,
+  isUseForModellingDisabled,
   onToggleLayer,
   onCommitEdit,
   onSaveLayer,
@@ -47,6 +49,9 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [draftName, setDraftName] = useState(layer.name);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const useForModellingLabel = isUseForModellingDisabled
+    ? t('layer-used-in-modelling')
+    : t('use-layer-for-modelling');
 
   useEffect(() => {
     if (isEditing) {
@@ -161,18 +166,21 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
           </Tooltip>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <Button
-                className="h-auto w-auto pl-1.5"
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                onClick={() => onUseLayerForModelling(layer)}
-              >
-                <span className="sr-only">{t('use-layer-for-modelling')}</span>
-                <BarChartHorizontal size={16} />
-              </Button>
+              <span className="inline-flex">
+                <Button
+                  className="h-auto w-auto pl-1.5"
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  disabled={isUseForModellingDisabled}
+                  onClick={() => onUseLayerForModelling(layer)}
+                >
+                  <span className="sr-only">{useForModellingLabel}</span>
+                  <BarChartHorizontal size={16} />
+                </Button>
+              </span>
             </TooltipTrigger>
-            <TooltipContent>{t('use-layer-for-modelling')}</TooltipContent>
+            <TooltipContent>{useForModellingLabel}</TooltipContent>
           </Tooltip>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>

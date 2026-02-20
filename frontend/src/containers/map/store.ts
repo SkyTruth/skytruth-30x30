@@ -37,6 +37,7 @@ export const drawStateAtom = atomWithReset<{
 });
 export const allActiveLayersAtom = atom<Array<string>>([]);
 export const customLayersAtom = atom<{ [key: string]: CustomLayer }>({});
+export const modellingCustomLayerIdAtom = atomWithReset<CustomLayer['id'] | null>(null);
 
 export const sharedMarineAreaCountriesAtom = atom<SharedMarineAreaCountries>([]);
 

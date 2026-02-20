@@ -221,6 +221,7 @@
       "edit": "Edit",
       "edit-layer-name": "Edit Layer Name",
       "use-layer-for-modelling": "Use layer for modelling",
+      "layer-used-in-modelling": "Layer used in modelling",
       "upload-layer": "Upload Layer"
     },
     "map": {
