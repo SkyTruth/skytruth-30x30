@@ -86,53 +86,59 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   return (
     <li className="flex items-start justify-between">
       <TooltipProvider>
-      <span className="flex min-w-0 flex-1 items-start gap-2 overflow-x-hidden text-nowrap">
-        <Switch
-          id={`${layer.name}-switch`}
-          aria-label={layer.name}
-          className="mt-px"
-          checked={isActive}
-          onCheckedChange={() => onToggleLayer(layer, !isActive)}
-        />
+        <span className="flex min-w-0 flex-1 items-start gap-2 overflow-x-hidden text-nowrap">
+          <Switch
+            id={`${layer.name}-switch`}
+            aria-label={layer.name}
+            className="mt-px"
+            checked={isActive}
+            onCheckedChange={() => onToggleLayer(layer, !isActive)}
+          />
 
-        <div className="min-w-0 flex-1">
-          {isEditing ? (
-            <div className="flex items-center gap-2">
-              <input
-                ref={inputRef}
-                value={draftName}
-                onChange={(event) => setDraftName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') commitEdit();
-                  if (event.key === 'Escape') cancelEdit();
-                }}
-                onBlur={commitEdit}
-                aria-label={t('edit-layer-name', { layer: layer.name })}
-                className="w-full rounded-md border border-black bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-black/30"
-              />
-            </div>
-          ) : (
-            <Label htmlFor={`${layer.name}-switch`} className={cn(switchLabelClassName, 'block min-w-0')}>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
-                    style={{ cursor: PENCIL_CURSOR }}
-                    onClick={beginEdit}
+          <div className="min-w-0 flex-1">
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  ref={inputRef}
+                  value={draftName}
+                  onChange={(event) => setDraftName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') commitEdit();
+                    if (event.key === 'Escape') cancelEdit();
+                  }}
+                  onBlur={commitEdit}
+                  aria-label={t('edit-layer-name', { layer: layer.name })}
+                  className="w-full rounded-md border border-black bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-black/30"
+                />
+              </div>
+            ) : (
+              <Label
+                htmlFor={`${layer.name}-switch`}
+                className={cn(switchLabelClassName, 'block min-w-0')}
+              >
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
+                      style={{ cursor: PENCIL_CURSOR }}
+                      onClick={beginEdit}
+                    >
+                      <span className="sr-only">{t('edit-layer-name')}</span>
+                      {layer.name}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    align="start"
+                    className="max-w-[var(--radix-tooltip-trigger-width)]"
                   >
-                    <span className="sr-only">{t('edit-layer-name')}</span>
-                    {layer.name}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent align="start" className="max-w-[var(--radix-tooltip-trigger-width)]">
-                  {t('edit')}
-                </TooltipContent>
-              </Tooltip>
-            </Label>
-          )}
-        </div>
-      </span>
+                    {t('edit')}
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+            )}
+          </div>
+        </span>
 
         <div className="flex items-center">
           <Tooltip delayDuration={0}>
