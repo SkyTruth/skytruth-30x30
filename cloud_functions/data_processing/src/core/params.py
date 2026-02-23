@@ -205,3 +205,17 @@ REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 DISSOLVED_TERRESTRIAL_PA = f"conservation_builder/terrestrial_wdpa_dissolved_{today_formatted}.zip"
 CONSERVATION_BUILDER_MARINE_DATA = f"conservation_builder/eez_minus_mpa_{today_formatted}.zip"
 CONSERVATION_BUILDER_TERRESTRIAL_DATA = f"conservation_builder/gadm_minus_pa_{today_formatted}.zip"
+
+# ------------------------------------------------------------
+#                     Workflow Parameters
+# ------------------------------------------------------------
+LONG_RUNNING_TASKS = [
+    "download_protected_planet_pas",
+    "generate_terrestrial_biome_stats",
+    "update_protected_areas",
+    "generate_dissolved_terrestrial_pa",
+    "generate_gadm_minus_pa",
+    "generate_protected_areas_table",
+    "test_long_running_tasks",
+    "update_gadm_minus_pa",
+]
