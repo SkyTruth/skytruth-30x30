@@ -3,16 +3,21 @@ import { KMLLoader } from '@loaders.gl/kml';
 import { Loader } from '@loaders.gl/loader-utils';
 import { ShapefileLoader } from '@loaders.gl/shapefile';
 import { ZipLoader } from '@loaders.gl/zip';
-import { featureCollection, GeoJSONObject, Geometries, MultiPolygon, Polygon } from '@turf/turf';
-import type { Feature, FeatureCollection, GeometryCollection } from 'geojson';
+import { featureCollection, GeoJSONObject, MultiPolygon } from '@turf/turf';
+import type { Feature, FeatureCollection, Geometry } from 'geojson';
 
-export type ValidGeometryType = Polygon | MultiPolygon | GeometryCollection;
+import {
+  isFeature,
+  isFeatureCollection,
+  isStructurallyValidPolygonCoordinates,
+} from '@/lib/utils/geo';
 
 export enum UploadErrorType {
   Generic,
   InvalidXMLSyntax,
   SHPMissingFile,
   UnsupportedFile,
+  NoPolygons,
 }
 
 export const supportedFileformats = [
@@ -21,13 +26,6 @@ export const supportedFileformats = [
   ...['shp', 'prj', 'shx', 'dbf', 'cfg'],
   ...['geojson'],
 ];
-
-const isFeatureCollection = (
-  geoJSON: GeoJSONObject
-): geoJSON is FeatureCollection<Geometries, unknown> => geoJSON.type === 'FeatureCollection';
-
-const isFeature = (geoJSON: GeoJSONObject): geoJSON is Feature<Geometries, unknown> =>
-  geoJSON.type === 'Feature';
 
 /**
  * Return the text content of a file
@@ -206,31 +204,109 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
   return parsed;
 }
 
-// Currently unused, but left as an export since it iwll be helpful with uplaoding geometries
-// to Conservation Builder
-export function cleanupGeoJSON(geoJSON: GeoJSONObject): Feature<ValidGeometryType> {
-  let collection: FeatureCollection;
-  if (isFeature(geoJSON)) {
-    collection = featureCollection([geoJSON]);
-  } else if (isFeatureCollection(geoJSON)) {
-    collection = geoJSON;
-  } else {
+/**
+ * Appends valid polygon coordinates from polygon, multipolygon and geometry collection
+ * geometry types into a shared multipolygon coordinates array.
+ * @param geometry geometry to inspect
+ * @param coordinates target multipolygon coordinates accumulator
+ * @param removed counters for geometries that are excluded
+ * @returns void
+ */
+const appendPolygonCoordinates = (
+  geometry: Geometry | null | undefined,
+  coordinates: MultiPolygon['coordinates'],
+  removed: {
+    nonPolygon: number;
+    invalidPolygon: number;
+  }
+) => {
+  if (!geometry) {
+    removed.nonPolygon += 1;
     return;
   }
 
-  const features: Feature<ValidGeometryType>[] = collection.features.filter(
-    (f) =>
-      f.geometry?.type === 'MultiPolygon' ||
-      f.geometry?.type === 'Polygon' ||
-      f.geometry?.type === 'GeometryCollection'
-  ) as Feature<ValidGeometryType>[];
-
-  // NOTE: Only the first feature is imported
-  const feature = features[0];
-  if (!feature) {
-    // No feature with polygon or multipolygon found in geojson
-    throw new Error();
+  switch (geometry.type) {
+    case 'Polygon': {
+      if (isStructurallyValidPolygonCoordinates(geometry.coordinates)) {
+        coordinates.push(geometry.coordinates);
+      } else {
+        removed.invalidPolygon += 1;
+      }
+      break;
+    }
+    case 'MultiPolygon': {
+      geometry.coordinates.forEach((polygonCoordinates) => {
+        if (isStructurallyValidPolygonCoordinates(polygonCoordinates)) {
+          coordinates.push(polygonCoordinates);
+        } else {
+          removed.invalidPolygon += 1;
+        }
+      });
+      break;
+    }
+    case 'GeometryCollection':
+      geometry.geometries.forEach((innerGeometry) =>
+        appendPolygonCoordinates(innerGeometry as Geometry, coordinates, removed)
+      );
+      break;
+    default:
+      removed.nonPolygon += 1;
+      break;
   }
+};
 
-  return feature;
+export type ExtractPolygonsResult = {
+  feature: Feature<MultiPolygon>;
+  removed: {
+    any: boolean;
+    nonPolygon: number;
+    invalidPolygon: number;
+  };
+};
+
+/**
+ * Extracts valid polygon and multipolygon geometries from GeoJSON and combines them into one multipolygon.
+ * @param geoJSON input GeoJSON to extract from
+ * @returns combined multipolygon feature and removal metadata
+ */
+export function extractPolygons(geoJSON: GeoJSONObject): ExtractPolygonsResult {
+  try {
+    const coordinates: MultiPolygon['coordinates'] = [];
+    const removed = {
+      nonPolygon: 0,
+      invalidPolygon: 0,
+    };
+
+    if (isFeatureCollection(geoJSON)) {
+      geoJSON.features.forEach((feature) =>
+        appendPolygonCoordinates(feature.geometry as Geometry, coordinates, removed)
+      );
+    } else if (isFeature(geoJSON)) {
+      appendPolygonCoordinates(geoJSON.geometry as Geometry, coordinates, removed);
+    } else {
+      appendPolygonCoordinates(geoJSON as Geometry, coordinates, removed);
+    }
+
+    if (coordinates.length === 0) {
+      throw new Error('No polygon geometry found');
+    }
+
+    return {
+      feature: {
+        type: 'Feature',
+        properties: null,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates,
+        },
+      },
+      removed: {
+        any: removed.nonPolygon > 0 || removed.invalidPolygon > 0,
+        nonPolygon: removed.nonPolygon,
+        invalidPolygon: removed.invalidPolygon,
+      },
+    };
+  } catch {
+    throw UploadErrorType.NoPolygons;
+  }
 }

@@ -27,6 +27,7 @@ type WidgetProps = {
   noDataMessage?: ComponentProps<typeof NoData>['message'];
   noDataClassName?: string;
   loading?: boolean;
+  loadingMessage?: ComponentProps<typeof Loading>['message'];
   error?: boolean;
   errorMessage?: ComponentProps<typeof NoData>['message'];
   info?: ComponentProps<typeof TooltipButton>['text'];
@@ -49,6 +50,7 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
   noDataMessage = undefined,
   noDataClassName,
   loading = false,
+  loadingMessage = undefined,
   error = false,
   errorMessage = undefined,
   info,
@@ -86,7 +88,7 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
           <span className="text-xs">{t('updated-on', { date: formattedLastUpdated })}</span>
         )}
       </div>
-      {loading && <Loading />}
+      {loading && <Loading message={loadingMessage} />}
       {!loading && error && (
         <NoData error={error} message={errorMessage} className={noDataClassName} />
       )}
@@ -98,6 +100,6 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
   );
 };
 
-Widget.messages = ['components.widget', ...Loading.messages, ...NoData.messages];
+Widget.messages = ['components.widget', ...NoData.messages];
 
 export default Widget;

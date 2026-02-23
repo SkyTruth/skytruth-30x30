@@ -4,6 +4,7 @@ import { useAtom } from 'jotai';
 
 import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
+import useCustomLayersIndexedDB from '@/hooks/use-custom-layers-indexed-db';
 import { MapTypes } from '@/types/map';
 
 /**
@@ -19,7 +20,8 @@ const useSyncAllLayers = (type: MapTypes) => {
   const [activeLayers] = useSyncMapLayers();
 
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
-  const [customLayers] = useAtom(customLayersAtom);
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
+  const { savedLayers, hasLoadedSavedLayers } = useCustomLayersIndexedDB();
 
   const allActiveLayersRef = useRef(allActiveLayers);
 
@@ -27,6 +29,35 @@ const useSyncAllLayers = (type: MapTypes) => {
     allActiveLayersRef.current = allActiveLayers;
   }, [allActiveLayers]);
 
+  // Add layers that have been saved to browser into state
+  useEffect(() => {
+    if (
+      type !== MapTypes.ConservationBuilder ||
+      !hasLoadedSavedLayers ||
+      savedLayers.length === 0
+    ) {
+      return;
+    }
+
+    setCustomLayers((prev) => {
+      const next = { ...prev };
+      let hasChanges = false;
+
+      savedLayers.forEach((layer) => {
+        if (!next[layer.id]) {
+          next[layer.id] = layer;
+          hasChanges = true;
+        }
+      });
+
+      return hasChanges ? next : prev;
+    });
+  }, [type, hasLoadedSavedLayers, savedLayers, setCustomLayers]);
+
+  // keep allActiveLayers synchronized and stable in order while reacting to
+  // predefined/custom layer activation changes. This is mostly helpful when switching
+  // between conservation builder and progress tracker and needing to sync the different
+  // sources of which layers are active
   useEffect(() => {
     let currentActiveLayers = [...activeLayers];
 
@@ -43,7 +74,7 @@ const useSyncAllLayers = (type: MapTypes) => {
       );
 
       const newActiveLayers = [...activeLayers, ...activeCustomLayers].filter(
-        (key) => !preservedActiveLayers.includes(key)
+        (layer) => !preservedActiveLayers.includes(layer)
       );
       currentActiveLayers = [...newActiveLayers, ...preservedActiveLayers];
     }

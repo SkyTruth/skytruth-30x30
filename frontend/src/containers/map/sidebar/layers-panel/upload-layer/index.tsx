@@ -1,18 +1,16 @@
-import { ChangeEvent, ChangeEventHandler, useCallback, useState } from 'react';
+import { ChangeEventHandler, useCallback, useState } from 'react';
 
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { customLayersAtom } from '@/containers/map/store';
+import { bboxLocationAtom, customLayersAtom } from '@/containers/map/store';
+import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
-import {
-  convertFilesToGeojson,
-  supportedFileformats,
-  UploadErrorType,
-} from '@/lib/utils/file-upload';
+import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
+import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
 
 import { MAX_CUSTOM_LAYER_SIZE, SWITCH_LABEL_CLASSES } from '../constants';
@@ -23,27 +21,28 @@ type UploadLayerProps = {
 
 const DEFAULT_LAYER_STYLE = {
   opacity: 0.5,
-  fillColor: '#5278d1',
-  lineColor: '#000000',
+  fillColor: '#86a6f0',
+  lineColor: '#86a6f0',
 };
-
-class FileTooLargeError extends Error {
-  constructor(message?: string) {
-    super(message ?? 'File too Large');
-    this.name = 'FileTooLargeError';
-  }
-}
 
 const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
+  const getUploadErrorMessage = useUploadErrorMessage({
+    maxFileSize: MAX_CUSTOM_LAYER_SIZE,
+  });
+  const setBboxLocation = useSetAtom(bboxLocationAtom);
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const onChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
-      const handler = async (event: ChangeEvent<HTMLInputElement>) => {
-        const { files } = event.currentTarget;
+      const input = event.currentTarget;
+      const files = Array.from(input.files ?? []);
+      void (async () => {
+        if (files.length === 0) {
+          return;
+        }
 
         let totalSize = 0;
         for (const file of files) {
@@ -55,7 +54,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
             throw new FileTooLargeError();
           }
 
-          const geojson = await convertFilesToGeojson(Array.from(files));
+          const geojson = await convertFilesToGeojson(files);
           const newId = window.crypto.randomUUID();
 
           setErrorMessage(null);
@@ -63,43 +62,25 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
             ...customLayers,
             [newId]: {
               id: newId,
-              name: files[0].name,
+              name: files[0]?.name ?? '',
               feature: geojson,
               isVisible: true,
               isActive: true,
               style: { ...DEFAULT_LAYER_STYLE },
             },
           });
-
-          // New layers get activated and at the top of the stack
-          // setAllActiveLayers([newId, ...allActiveLayers]);
-        } catch (error) {
-          if (error instanceof FileTooLargeError) {
-            setErrorMessage(
-              t('file-too-large-error', { size: `${MAX_CUSTOM_LAYER_SIZE / 1000000}Mb` })
-            );
-          } else {
-            switch (error) {
-              case UploadErrorType.InvalidXMLSyntax:
-                setErrorMessage(t('xml-syntax-error'));
-                break;
-              case UploadErrorType.SHPMissingFile:
-                setErrorMessage(t('shp-missing-files-error'));
-                break;
-              case UploadErrorType.UnsupportedFile:
-                setErrorMessage(t('unsupported-file-error'));
-                break;
-              default:
-                setErrorMessage(t('generic-upload-error'));
-                break;
-            }
+          const bounds = getGeoJSONBoundingBox(geojson);
+          if (bounds) {
+            setBboxLocation(bounds as [number, number, number, number]);
           }
+        } catch (error) {
+          setErrorMessage(getUploadErrorMessage(error));
+        } finally {
+          input.value = '';
         }
-      };
-
-      void handler(event);
+      })();
     },
-    [customLayers, setCustomLayers, t]
+    [customLayers, setBboxLocation, setCustomLayers, getUploadErrorMessage]
   );
 
   return (
@@ -134,6 +115,6 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   );
 };
 
-UploadLayer.messages = ['containers.map-sidebar-layers-panel'];
+UploadLayer.messages = ['containers.map-sidebar-layers-panel', 'services.uploads'];
 
 export default UploadLayer;

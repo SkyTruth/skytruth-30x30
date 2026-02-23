@@ -16,7 +16,7 @@ import { MapTypes } from '@/types/map';
 import { mapTypeAtom } from '../../store';
 
 import { SWITCH_LABEL_CLASSES } from './constants';
-import CustomLayersGroup from './custom-layers-group';
+import CustomLayerGroup from './custom-layers/custom-layer-group';
 import LayersGroup from './layers-group';
 
 const LayersPanel: FCWithMessages = (): JSX.Element => {
@@ -69,7 +69,7 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
       {
         // TODO: TECH-3372 remove feature flag check
         mapType === MapTypes.ConservationBuilder && isCustomLayersActive ? (
-          <CustomLayersGroup name="Custom Layers" isOpen={true} />
+          <CustomLayerGroup name="Custom Layers" isOpen={true} />
         ) : null
       }
       <LayersGroup
