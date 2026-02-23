@@ -87,4 +87,8 @@ resource "google_cloud_run_v2_job" "default" {
       template[0].template[0].containers[0].image
     ]
   }
+
+  depends_on = [
+    google_secret_manager_secret_iam_member.secret_access
+  ]
 }
