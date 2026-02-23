@@ -14,16 +14,12 @@ from src.utils.gcp import (
     read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
     upload_gdf_zip,  # Saves a GeoDataFrame to GCS as a zipped file
 )
-
 from src.utils.logger import Logger
 
 logger = Logger()
 
 
-def process_country(
-        country_area: gpd.GeoDataFrame,
-        country_pa: gpd.GeoDataFrame
-    ):
+def process_country(country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame):
     """
     Subtracts protected areas from total area for a country.
 
@@ -74,7 +70,7 @@ def dissolve_geometries(
     gdf_file: str = WDPA_TERRESTRIAL_FILE_NAME,
     out_file: str = DISSOLVED_TERRESTRIAL_PA,
     tolerance: float = TOLERANCES[0],
-    verbose: bool = True
+    verbose: bool = True,
 ):
     """
     Loads a GeoDataFrame from GCS, dissolves geometries by country,
