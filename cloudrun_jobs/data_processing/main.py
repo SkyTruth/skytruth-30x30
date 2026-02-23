@@ -18,7 +18,7 @@ def main() -> int:
         raw = os.environ.get("RUN_PAYLOAD", "")
         if not raw:
             logger.error({"message": "Missing RUN_PAYLOAD env var"})
-            return 2
+            return 3
 
         try:
             data = json.loads(raw)
@@ -30,7 +30,7 @@ def main() -> int:
                     "traceback": traceback.format_exc(),
                 }
             )
-            return 2
+            return 3
 
         result = run_from_payload(data)
         method = data.get("METHOD", "UNKNOWN")
@@ -45,13 +45,13 @@ def main() -> int:
                     "method": method
                 }
             )
-            return 1
+            return 71
 
         msg, code = result
 
         if code in (200, 202):
             return 0
-        return 1
+        return 71
 
     except Exception as e:
         logger.error(
@@ -62,7 +62,7 @@ def main() -> int:
                 "method": method
             }
         )
-        return 1
+        return 71
 
 if __name__ == "__main__":
     sys.exit(main())

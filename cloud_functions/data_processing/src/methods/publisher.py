@@ -267,7 +267,8 @@ def dispatch_publisher(
 
     # By default, if there is a step_list continue to next steps - default to True,
     # but will be reset to False if method fails and retries are being handled with a
-    # scheduled task
+    # scheduled task. This is so that if a process fails, cont will be set to false
+    # so the following steps are stopped.
     cont = True
 
     match method:
@@ -593,6 +594,14 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
 
         logger.info({"message": f"Starting METHOD: {method}"})
 
+        # Determine whether we are running inside a Cloud Run Job (RUN_PAYLOAD set)
+        # or in the Cloud Function entrypoint.
+
+        # For long-running methods:
+        # - If called from the Cloud Function, launch a Cloud Run Job and return.
+        # - If already inside a Job, execute normally.
+
+        # This prevents long-running tasks from being launched recursively.
         is_job = bool(os.environ.get("RUN_PAYLOAD"))
         if (not is_job) and method in LONG_RUNNING_TASKS:
             payload = {"METHOD": method, **task_config, **data}
