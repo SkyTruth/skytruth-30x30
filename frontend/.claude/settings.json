@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "ask": [
+      "Bash(gh pr create:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [
+      "Read(*.env)",
+      "Bash(rm:*)",
+      "Bash(curl:*)"
+    ],
+    "defaultMode": "default"
+  }
+}
