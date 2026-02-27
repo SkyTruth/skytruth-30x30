@@ -1,6 +1,6 @@
 {
   "name": "skytruth-30x30-frontend",
-  "version": "1.1.0",
+  "version": "1.5.0",
   "private": true,
   "scripts": {
     "dev": "yarn types && next dev",
@@ -56,6 +56,8 @@
     "date-fns": "^2.30.0",
     "deck.gl": "8.9.31",
     "deepmerge": "^4.3.1",
+    "dexie": "^4.3.0",
+    "dexie-react-hooks": "^4.2.0",
     "embla-carousel-react": "8.0.0",
     "jotai": "2.4.3",
     "lodash-es": "^4.17.21",

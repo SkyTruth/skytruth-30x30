@@ -304,7 +304,7 @@ resource "google_storage_bucket" "data_bucket" {
 }
 
 locals {
-  data_processing_cloud_function_env = {
+  data_processing_env = {
     BUCKET              = google_storage_bucket.data_bucket.name
     DATABASE_HOST       = module.database.database_host
     DATABASE_NAME       = module.database.database_name
@@ -317,7 +317,7 @@ locals {
     ENVIRONMENT         = var.environment
   }
 
-  data_processing_cloud_function_secrets = [{
+  data_processing_secrets = [{
     key        = "PP_API_KEY"
     project_id = var.gcp_project_id
     secret     = "protected-planet-api-key"
@@ -359,14 +359,30 @@ module "data_pipes_cloud_function" {
   source_dir                       = "${path.root}/../../cloud_functions/data_processing"
   runtime                          = "python313"
   entry_point                      = "main"
-  runtime_environment_variables    = local.data_processing_cloud_function_env
-  secrets                          = local.data_processing_cloud_function_secrets
+  runtime_environment_variables    = local.data_processing_env
+  secrets                          = local.data_processing_secrets
   timeout_seconds                  = var.data_processing_timeout_seconds
   available_memory                 = var.data_processing_available_memory
   available_cpu                    = var.data_processing_available_cpu
   max_instance_count               = var.data_processing_max_instance_count
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
 }
+
+
+module "data_pipes_cloudrun_jobs" {
+  source                           = "../cloudrun_job"
+  project_id                       = var.gcp_project_id
+  region                           = var.gcp_region
+  job_name                         = "${var.project_name}-data-cloudrun-job"
+  env                              = local.data_processing_env
+  secrets                          = local.data_processing_secrets
+  image                            = var.cloudrun_jobs_image
+  timeout_seconds                  = var.cloudrun_jobs_timeout_seconds
+  cpu                              = var.cloudrun_jobs_available_cpu
+  memory                           = var.cloudrun_jobs_available_memory
+  vpc_connector_name               = module.network.vpc_access_connector_name
+}
+
 
 resource "google_storage_bucket_iam_member" "function_writer" {
   bucket = google_storage_bucket.data_bucket.name
@@ -380,12 +396,43 @@ resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
+
+resource "google_storage_bucket_iam_member" "job_writer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
+resource "google_storage_bucket_iam_member" "job_bucket_viewer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
 resource "google_project_iam_member" "google_cloudtasks_iam_member" {
   count = length(var.cloud_tasks_roles)
 
   project = var.gcp_project_id
   role    = var.cloud_tasks_roles[count.index]
   member  = "serviceAccount:${module.data_pipes_cloud_function.runtime_service_account_email}"
+}
+
+resource "google_project_iam_member" "job_cloudtasks_iam_member" {
+  count = length(var.cloud_tasks_roles)
+
+  project = var.gcp_project_id
+  role    = var.cloud_tasks_roles[count.index]
+  member  = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
+resource "google_cloud_run_v2_job_iam_member" "caller_job_can_run_target_job" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+
+  name     = module.data_pipes_cloudrun_jobs.job_name
+
+  role   = "roles/run.developer"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
 }
 
 variable "cloud_tasks_roles" {
@@ -410,6 +457,16 @@ resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
   role           = "roles/cloudfunctions.invoker"
   member         = "serviceAccount:${google_service_account.cloudtasks_invoker.email}"
   depends_on = [google_service_account.cloudtasks_invoker]
+}
+
+# Allow the Data Pipes Cloud Function SA to run the Cloud Run Job
+resource "google_cloud_run_v2_job_iam_member" "data_function_can_run_job" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+  name     = module.data_pipes_cloudrun_jobs.job_name
+
+  role   = "roles/run.developer"
+  member = "serviceAccount:${module.data_pipes_cloud_function.runtime_service_account_email}"
 }
 
 module "monthly_job_queue" {
@@ -457,7 +514,15 @@ module "data_pipes_scheduler" {
     METHOD              = "publisher",
     TRIGGER_NEXT        = true,
     QUEUE_NAME          = module.monthly_job_queue.queue_name,
+    JOB_NAME            = module.data_pipes_cloudrun_jobs.job_name,
     TARGET_URL          = module.data_pipes_cloud_function.function_uri,
     INVOKER_SA          = google_service_account.cloudtasks_invoker.email
   })
+}
+
+module "artifact_registry" {
+  source        = "../artifact_registry"
+  project_id    = var.gcp_project_id
+  region        = var.gcp_region
+  repository_id = "${var.project_name}-data-pipes"
 }

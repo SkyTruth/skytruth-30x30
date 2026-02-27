@@ -14,6 +14,12 @@ on:
 # STAGING PHASE
 # -----------------------------
 jobs:
+  upload_localazy:
+    if: |
+      inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/localazy-upload.yml
+    secrets: inherit
+
   staging_client:
     if: |
       inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -57,6 +63,16 @@ jobs:
     with:
       target_env: STAGING
 
+  staging_data_cloud_job:
+    if: inputs.deploy_to_staging
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-data-cloud-job.yml
+    secrets: inherit
+    with:
+      target_env: STAGING
+
 
   # Barrier job: succeeds only when all staging jobs succeeded
   staging_complete:
@@ -65,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [staging_client, staging_cms, staging_analysis_cloud_functions, staging_data_cloud_functions]
+    needs: [staging_client, staging_cms, staging_analysis_cloud_functions, staging_data_cloud_functions, staging_data_cloud_job]
     steps:
       - run: echo "🎉 All staging deployments completed successfully."
 
@@ -73,6 +89,13 @@ jobs:
 # PRODUCTION PHASE
 # (runs only after staging_complete succeeds)
 # -----------------------------
+  release_localazy:
+    if: |
+      inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/localazy-release.yml
+    secrets: inherit
+    needs: [staging_complete]
+
   prod_client:
     if: |
       inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -116,6 +139,17 @@ jobs:
       id-token: write
     needs: [staging_complete]
     uses: ./.github/workflows/deploy-data-cloud-function.yml
+    secrets: inherit
+    with:
+      target_env: PRODUCTION
+
+  prod_data_cloud_job:
+    if: inputs.deploy_to_prod
+    permissions:
+      contents: read
+      id-token: write
+    needs: [staging_complete]
+    uses: ./.github/workflows/deploy-data-cloud-job.yml
     secrets: inherit
     with:
       target_env: PRODUCTION

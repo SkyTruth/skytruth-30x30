@@ -1,10 +1,4 @@
 {
-  "upload": {
-    "generic-error": "Unable to validate the file.",
-    "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
-    "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and eventually .prj files all at once.",
-    "unsupported-file-error": "Unable to parse the file. Please try uploading a different format."
-  },
   "layouts": {
     "error": {
       "go-to-homepage": "Go to homepage"
@@ -160,6 +154,10 @@
       "custom-area-description": "Activate more layers for additional contextual information about your custom area conservation scenario.",
       "start-drawing-on-map": "Start drawing on the map",
       "draw-shape": "Draw a shape",
+      "upload-shape": "Upload a shape",
+      "upload-new-shape": "Upload a new shape",
+      "uploading-shape-to-map": "Uploading shape to map...",
+      "loading-data": "Loading data...",
       "clear-shape": "Clear shape",
       "re-draw": "Re-draw",
       "how-to-draw": "<b>How to draw a custom area</b> on the map, using the drawing functionality?",
@@ -213,7 +211,19 @@
       "marine-data": "Marine Data",
       "terrestrial-data": "Terrestrial Data",
       "loading": "Loading data...",
-      "no-data-available": "No data available"
+      "no-data-available": "No data available",
+      "delete-layer": "Delete layer",
+      "delete-layer-error": "Unable to delete layer right now.",
+      "save-layer": "Save layer",
+      "layer-saved": "Layer saved",
+      "save-layer-unavailable": "Save layer is not available at this time",
+      "save-layer-error": "Unable to save layer right now.",
+      "edit": "Edit",
+      "edit-layer-name": "Edit Layer Name",
+      "use-layer-for-modelling": "Use layer for modelling",
+      "layer-used-in-modelling": "Layer used in modelling",
+      "upload-layer": "Upload Layer",
+      "upload-directions": "Upload a vector map file to display your own data on the map. Supported formats: GeoJSON (.geojson), KML (.kml), KMZ (.kmz), or Shapefile (.shp). If uploading a Shapefile, include all required components: .shp, .shx, and .dbf (the .prj file is optional but recommended). Maximum file size: 5 MB."
     },
     "map": {
       "loading": "Loading...",
@@ -232,12 +242,33 @@
       "legend": "Legend",
       "open-layers-to-add-to-map": "Open <b>Layers</b> to add layers to the map",
       "move-up": "Move up",
+      "move-up-layer": "Move {layer} up",
       "move-down": "Move down",
+      "move-down-layer": "Move {layer} down",
       "change-opacity": "Change opacity",
+      "change-opacity-layer": "Change opacity for {layer}",
+      "change-layer-style": "Change layer style",
+      "change-layer-style-layer": "Change style for {layer}",
+      "color": "Color",
+      "color-layer": "Color options for {layer}",
       "opacity": "Opacity",
+      "opacity-layer": "Opacity for {layer}",
+      "fill-color": "Fill color",
+      "line-color": "Line color",
+      "change-color": "Change {layer} color to {color}",
+      "layer-style-color-options": {
+        "soft-blue": "soft blue",
+        "soft-green": "soft green",
+        "soft-lime": "soft lime",
+        "muted-red": "muted red",
+        "muted-pink": "muted pink"
+      },
       "hide": "Hide",
+      "hide-layer": "Hide {layer}",
       "show": "Show",
+      "show-layer": "Show {layer}",
       "remove": "Remove",
+      "remove-layer": "Remove {layer}",
       "close": "Close",
       "environmental-conservation-national-regional-levels": "Environmental Conservation at National and Regional Levels",
       "environmental-conservation-location": "Environmental Conservation for '{location'}",
@@ -307,9 +338,9 @@
     },
     "widget": {
       "updated-on": "Updated on {date}",
-      "loading-data": "Loading data...",
       "no-data-available": "No data available",
-      "not-visible-due-to-error": "The current widget is not visible due to an error"
+      "not-visible-due-to-error": "The current widget is not visible due to an error",
+      "invalid-geometry": "Invalid geometry. The uploaded shape likely contains an intersection."
     },
     "chart-conservation": {
       "year-value": "Year: {value}",
@@ -355,6 +386,17 @@
       "spanish": "Spanish",
       "french": "French",
       "portuguese": "Portuguese"
+    }
+  },
+  "services": {
+    "uploads": {
+      "generic-upload-error": "Unable to validate the file.",
+      "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
+      "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and, optionally, .prj files all at once.",
+      "unsupported-file-error": "Unable to parse the file. Please try uploading a different format.",
+      "file-too-large-error": "This file is too large. Maximum file size is {size}",
+      "no-polygons-error": "File must contain at least one polygon or multipolygon",
+      "features-excluded-info": "One or more features were excluded because they were not polygons."
     }
   }
 }

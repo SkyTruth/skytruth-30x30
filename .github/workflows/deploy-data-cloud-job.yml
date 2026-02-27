@@ -1,0 +1,78 @@
+name: Deploy Data Pipes Cloud Run Job
+
+on:
+  workflow_call:
+    inputs:
+      target_env:
+        type: string
+        required: true
+    secrets:
+      GCP_PROJECT_ID:
+        required: true
+      GCP_REGION:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: ${{ secrets.GCP_REGION }}
+  REGION: ${{ secrets.GCP_REGION }}
+  IMAGE_NAME: data-processing-job
+
+jobs:
+
+  deploy_data_jobs:
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine Environment
+        id: env
+        uses: ./.github/actions/determine-env
+        with:
+          target_env: ${{ inputs.target_env }}
+
+      - name: Setup GCP
+        id: setup
+        uses: ./.github/actions/setup-gcp
+        with:
+          gar_location: ${{ env.GAR_LOCATION }}
+          credentials_json: "${{ secrets[format('{0}_GCP_SA_KEY', steps.env.outputs.environment)] }}"
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 516.0.0'
+          
+      - name: 'Use gcloud CLI'
+        run: 'gcloud info'
+
+      - name: Configure Docker auth for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${{ env.GAR_LOCATION }}-docker.pkg.dev" --quiet
+
+      - name: Build and Push Container
+        env:
+          REPOSITORY: ${{ secrets[format('{0}_DATA_REPOSITORY', steps.env.outputs.environment)] }}
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+
+          docker build -f cloudrun_jobs/data_processing/Dockerfile -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
+
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+      - name: Deploy Cloud Run Job (by digest)
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          job: ${{ secrets[format('{0}_DATA_JOB_NAME', steps.env.outputs.environment)] }}
+          image: ${{ env.IMAGE_URI }}
+          region: ${{ env.REGION }}
+          project_id: ${{ env.PROJECT_ID }}

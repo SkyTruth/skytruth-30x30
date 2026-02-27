@@ -12,6 +12,38 @@ def get_geojson(geojson: JSON) -> dict:
     else:
         return geojson
 
+
+def validate_geometry_topology(
+    conn: sqlalchemy.engine.Connection, geometry: dict
+) -> None:
+    stmt = sqlalchemy.text(
+        """
+        WITH g AS (
+            SELECT ST_SetSRID(ST_GeomFromGeoJSON(:geometry), 4326) AS geom
+        )
+        SELECT
+            ST_GeometryType(geom) AS geom_type,
+            ST_IsEmpty(geom) AS is_empty,
+            ST_IsValid(geom) AS is_valid,
+            ST_IsValidReason(geom) AS invalid_reason
+        FROM g
+        """
+    )
+    try:
+        validation = conn.execute(stmt, parameters={"geometry": geometry}).mappings().one()
+    except sqlalchemy.exc.SQLAlchemyError as exc:
+        raise ValueError("Unable to parse input geometry") from exc
+
+    if validation["is_empty"]:
+        raise ValueError("Input geometry is empty")
+
+    if validation["geom_type"] not in {"ST_Polygon", "ST_MultiPolygon"}:
+        raise ValueError("Input geometry must be a Polygon or MultiPolygon")
+
+    if not validation["is_valid"]:
+        raise ValueError(f"Invalid input geometry: {validation['invalid_reason']}")
+
+
 def serialize_response(
     environment: str,
     data: dict
@@ -47,12 +79,15 @@ def serialize_response(
 
     return result
 
+
 def get_locations_stats(
     environment: str,
     db: sqlalchemy.engine.base.Engine, 
     geojson: JSON
 ) -> dict:
+    geometry = get_geojson(geojson)
     with db.connect() as conn:
+        validate_geometry_topology(conn, geometry)
         if environment == 'marine':
             table = 'eez_minus_mpa_v2'
         elif environment == 'terrestrial':
@@ -94,8 +129,6 @@ def get_locations_stats(
             GROUP BY location
             """
         )
-        data_response = conn.execute(
-            stmt, parameters={"geometry": get_geojson(geojson)}
-        ).all()
+        data_response = conn.execute(stmt, parameters={"geometry": geometry}).all()
 
     return serialize_response(environment, data_response)

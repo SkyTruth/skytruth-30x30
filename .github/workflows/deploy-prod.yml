@@ -9,6 +9,7 @@ on:
       - 'frontend/**'
       - 'cms/**'
       - 'cloud_functions/**'
+      - 'cloudrun_jobs/**'
       - '.github/workflows/*'
       - '.github/actions/*'
 
@@ -25,7 +26,7 @@ jobs:
             echo "::error::Production deploy workflow may only be dispatched from main."
             exit 1
           fi
-
+  
   deploy:
     needs: guard
     uses: ./.github/workflows/deploy-services.yml

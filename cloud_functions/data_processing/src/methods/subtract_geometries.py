@@ -2,15 +2,12 @@ import geopandas as gpd
 import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
-
 from src.core.params import BUCKET
 from src.utils.gcp import (
     read_json_df,                   # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
     upload_gdf                      # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
 )
-
 from src.utils.logger import Logger
-
 logger = Logger()
 
 

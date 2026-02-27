@@ -3,30 +3,28 @@ import { KMLLoader } from '@loaders.gl/kml';
 import { Loader } from '@loaders.gl/loader-utils';
 import { ShapefileLoader } from '@loaders.gl/shapefile';
 import { ZipLoader } from '@loaders.gl/zip';
-import {
-  Feature,
-  featureCollection,
-  FeatureCollection,
-  GeoJSONObject,
-  Geometries,
-  GeometryCollection,
-  MultiPolygon,
-  Polygon,
-} from '@turf/turf';
+import { featureCollection, GeoJSONObject, MultiPolygon } from '@turf/turf';
+import type { Feature, FeatureCollection, Geometry } from 'geojson';
 
-export type ValidGeometryType = Polygon | MultiPolygon | GeometryCollection;
+import {
+  isFeature,
+  isFeatureCollection,
+  isStructurallyValidPolygonCoordinates,
+} from '@/lib/utils/geo';
 
 export enum UploadErrorType {
   Generic,
   InvalidXMLSyntax,
   SHPMissingFile,
   UnsupportedFile,
+  NoPolygons,
 }
 
 export const supportedFileformats = [
   ...KMLLoader.extensions,
   ...['kmz'],
   ...['shp', 'prj', 'shx', 'dbf', 'cfg'],
+  ...['geojson'],
 ];
 
 /**
@@ -97,7 +95,7 @@ export const validateFile = async (
  * @param files Files to convert
  * @returns Error code if the convertion fails
  */
-export async function convertFilesToGeojson(files: File[]): Promise<Feature<ValidGeometryType>> {
+export async function convertFilesToGeojson(files: File[]): Promise<FeatureCollection> {
   // If multiple files are uploaded and one of them is a ShapeFile, this is the one we pass to the
   // loader because it is the one `ShapefileLoader` expects (out of the .prj, .shx, etc. other
   // Shapefile-related files). If the user uploaded files of a different extension, we just take the
@@ -156,6 +154,7 @@ export async function convertFilesToGeojson(files: File[]): Promise<Feature<Vali
         reproject: true,
       },
       shp: {
+        shape: 'geojson',
         // Shapefiles can hold up to 4 dimensions (XYZM). By default all dimensions are parsed;
         // when set to 2 only the X and Y dimensions are parsed. If not set, the resulting geometry
         // will not match the GeoJSON Specification (RFC 7946) and Google Maps will crash.
@@ -186,51 +185,128 @@ export async function convertFilesToGeojson(files: File[]): Promise<Feature<Vali
     return Promise.reject(UploadErrorType.UnsupportedFile);
   }
 
+  let parsed: FeatureCollection;
+
   if (loader === ShapefileLoader) {
-    content = (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>).data[0];
+    parsed = {
+      type: 'FeatureCollection',
+      features: (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>).data as Feature[],
+    };
+  } else {
+    const feature = content as GeoJSONObject;
+    if (isFeature(feature)) {
+      parsed = featureCollection([feature]);
+    } else {
+      parsed = content as FeatureCollection;
+    }
   }
 
-  let cleanedGeoJSON: Feature<ValidGeometryType>;
-
-  try {
-    cleanedGeoJSON = cleanupGeoJSON(content as GeoJSONObject);
-  } catch (e) {
-    return Promise.reject(UploadErrorType.UnsupportedFile);
-  }
-
-  return cleanedGeoJSON;
+  return parsed;
 }
 
-function cleanupGeoJSON(geoJSON: GeoJSONObject): Feature<ValidGeometryType> {
-  const isFeature = (geoJSON: GeoJSONObject): geoJSON is Feature<Geometries, unknown> =>
-    geoJSON.type === 'Feature';
-
-  const isFeatureCollection = (
-    geoJSON: GeoJSONObject
-  ): geoJSON is FeatureCollection<Geometries, unknown> => geoJSON.type === 'FeatureCollection';
-
-  let collection: FeatureCollection;
-  if (isFeature(geoJSON)) {
-    collection = featureCollection([geoJSON]);
-  } else if (isFeatureCollection(geoJSON)) {
-    collection = geoJSON;
-  } else {
+/**
+ * Appends valid polygon coordinates from polygon, multipolygon and geometry collection
+ * geometry types into a shared multipolygon coordinates array.
+ * @param geometry geometry to inspect
+ * @param coordinates target multipolygon coordinates accumulator
+ * @param removed counters for geometries that are excluded
+ * @returns void
+ */
+const appendPolygonCoordinates = (
+  geometry: Geometry | null | undefined,
+  coordinates: MultiPolygon['coordinates'],
+  removed: {
+    nonPolygon: number;
+    invalidPolygon: number;
+  }
+) => {
+  if (!geometry) {
+    removed.nonPolygon += 1;
     return;
   }
 
-  const features: Feature<ValidGeometryType>[] = collection.features.filter(
-    (f) =>
-      f.geometry?.type === 'MultiPolygon' ||
-      f.geometry?.type === 'Polygon' ||
-      f.geometry?.type === 'GeometryCollection'
-  ) as Feature<ValidGeometryType>[];
-
-  // NOTE: Only the first feature is imported
-  const feature = features[0];
-  if (!feature) {
-    // No feature with polygon or multipolygon found in geojson
-    throw new Error();
+  switch (geometry.type) {
+    case 'Polygon': {
+      if (isStructurallyValidPolygonCoordinates(geometry.coordinates)) {
+        coordinates.push(geometry.coordinates);
+      } else {
+        removed.invalidPolygon += 1;
+      }
+      break;
+    }
+    case 'MultiPolygon': {
+      geometry.coordinates.forEach((polygonCoordinates) => {
+        if (isStructurallyValidPolygonCoordinates(polygonCoordinates)) {
+          coordinates.push(polygonCoordinates);
+        } else {
+          removed.invalidPolygon += 1;
+        }
+      });
+      break;
+    }
+    case 'GeometryCollection':
+      geometry.geometries.forEach((innerGeometry) =>
+        appendPolygonCoordinates(innerGeometry as Geometry, coordinates, removed)
+      );
+      break;
+    default:
+      removed.nonPolygon += 1;
+      break;
   }
+};
 
-  return feature;
+export type ExtractPolygonsResult = {
+  feature: Feature<MultiPolygon>;
+  removed: {
+    any: boolean;
+    nonPolygon: number;
+    invalidPolygon: number;
+  };
+};
+
+/**
+ * Extracts valid polygon and multipolygon geometries from GeoJSON and combines them into one multipolygon.
+ * @param geoJSON input GeoJSON to extract from
+ * @returns combined multipolygon feature and removal metadata
+ */
+export function extractPolygons(geoJSON: GeoJSONObject): ExtractPolygonsResult {
+  try {
+    const coordinates: MultiPolygon['coordinates'] = [];
+    const removed = {
+      nonPolygon: 0,
+      invalidPolygon: 0,
+    };
+
+    if (isFeatureCollection(geoJSON)) {
+      geoJSON.features.forEach((feature) =>
+        appendPolygonCoordinates(feature.geometry as Geometry, coordinates, removed)
+      );
+    } else if (isFeature(geoJSON)) {
+      appendPolygonCoordinates(geoJSON.geometry as Geometry, coordinates, removed);
+    } else {
+      appendPolygonCoordinates(geoJSON as Geometry, coordinates, removed);
+    }
+
+    if (coordinates.length === 0) {
+      throw new Error('No polygon geometry found');
+    }
+
+    return {
+      feature: {
+        type: 'Feature',
+        properties: null,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates,
+        },
+      },
+      removed: {
+        any: removed.nonPolygon > 0 || removed.invalidPolygon > 0,
+        nonPolygon: removed.nonPolygon,
+        invalidPolygon: removed.invalidPolygon,
+      },
+    };
+  } catch {
+    throw UploadErrorType.NoPolygons;
+  }
 }
