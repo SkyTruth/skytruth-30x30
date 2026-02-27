@@ -11,10 +11,7 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
-def process_country(
-        country_area: gpd.GeoDataFrame,
-        country_pa: gpd.GeoDataFrame
-    ):
+def process_country(country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame):
     """
     Subtracts protected areas from total area for a country.
 
