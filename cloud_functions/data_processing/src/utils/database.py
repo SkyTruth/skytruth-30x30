@@ -6,7 +6,7 @@ from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import create_engine, text
 
 from src.core.params import BUCKET
-from src.utils.gcp import load_zipped_shapefile_from_gcs
+from src.utils.gcp import read_parquet_from_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -74,7 +74,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
         if verbose:
             logger.info({"message": f"Loading {gcs_file}..."})
-        gdf = load_zipped_shapefile_from_gcs(filename=gcs_file, bucket=BUCKET)
+        gdf = read_parquet_from_gcs(bucket_name=BUCKET, filename=gcs_file)
 
         # Update geometry for consistency in PostgreSQL database
         gdf = gdf.rename_geometry("the_geom")
@@ -85,7 +85,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
         # Upload data to PostgreSQL
         if verbose:
-            logger.info({"message": "Uploading data to PostgreSQL..."})
+            logger.info({"message": f"Uploading data to PostgreSQL at data.{table_name}..."})
         gdf.to_postgis(
             name=table_name,
             schema="data",
@@ -96,6 +96,24 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
         # Update table in PostgreSQL
         with conn.connect() as connection:
+            result = connection.execute(text(f"SELECT COUNT(*) FROM data.{table_name} WHERE ST_IsValid(the_geom) = FALSE;"))
+            invalid_count = result.scalar()
+            # Print the number of invalid geometries
+            logger.info({"message": f"Number of invalid geometries found: {invalid_count}"})
+
+            # Subdivide complex geometries (max 10,000 vertices each)
+            connection.execute(text(f"""
+            WITH complex_areas AS (
+                DELETE from data.{table_name}
+                WHERE ST_NPoints(the_geom) > 10000
+                RETURNING location, the_geom
+            )
+            INSERT INTO data.{table_name} (location, the_geom)
+                SELECT location,
+                      ST_Subdivide(the_geom, 10000) as the_geom
+                FROM complex_areas;
+            """))
+
             # Add primary key
             connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
 
@@ -107,60 +125,6 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             """))
 
             connection.execute(text(f"ANALYZE data.{table_name};"))
-            connection.commit()
-
-    except Exception as excep:
-        logger.error({"message": "Failed to update table", "error": str(excep)})
-
-
-def update_cb_tiling(table_name, verbose: bool = False):
-    """
-    Update Conservation Builder table to have subdivisions for large geometries.
-    
-    Parameters
-    ----------
-    table_name : str
-      Name of the table to update.
-    verbose : bool
-      Whether to print progress messages.
-    """
-    try:
-        conn = get_connection(format="sqlalchemy")
-
-        with conn.connect() as connection:
-            if verbose:
-                logger.info({"message": "Validating and subdividing geometries..."})
-
-            connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name}_temp;"))
-
-            # Subdivide geometries (max 50,000 vertices each)
-            connection.execute(text(f"""
-                CREATE TABLE data.{table_name}_temp AS
-                SELECT
-                    location,
-                    ST_Multi(ST_Subdivide(
-                        the_geom,
-                        50000
-                    )) AS the_geom
-                FROM data.{table_name};
-            """))
-
-            if verbose:
-                logger.info({"message": "Subdivision complete. Refactoring and creating spatial index..."})
-
-            # Drop original table and rename temp table
-            connection.execute(text(f"DROP TABLE data.{table_name};"))
-            connection.execute(text(f"ALTER TABLE data.{table_name}_temp RENAME TO {table_name};"))
-
-            # Add primary id and GIST index
-            connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
-            connection.execute(text(f"""
-                                    CREATE INDEX gist_{table_name}_geom 
-                                    ON data.{table_name}
-                                    USING GIST (the_geom);
-            """))
-            connection.execute(text(f"ANALYZE data.{table_name};"))
-
             connection.commit()
 
     except Exception as excep:
