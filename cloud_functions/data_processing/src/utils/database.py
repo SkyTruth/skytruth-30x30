@@ -105,7 +105,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             )
             INSERT INTO data.{table_name} (location, the_geom)
                 SELECT location,
-                      ST_Subdivide(the_geom, 10000) as the_geom
+                    ST_Multi(ST_Subdivide(the_geom, 10000)) as the_geom
                 FROM complex_areas;
             """))
 
