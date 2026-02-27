@@ -14,7 +14,8 @@ from src.core.params import (
     CHUNK_SIZE,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-    DISSOLVED_TERRESTRIAL_PA,
+    ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
+    ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     EEZ_FILE_NAME,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
@@ -62,7 +63,7 @@ from src.methods.static_processes import (
     process_mangroves,
     process_terrestrial_biome_raster,
 )
-from src.methods.subtract_geometries import dissolve_geometries, generate_total_area_minus_pa
+from src.methods.subtract_geometries import generate_total_area_minus_pa
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.tileset_processes import (
     create_and_update_country_tileset,
@@ -383,7 +384,6 @@ def dispatch_publisher(
                 step_list = [
                     "generate_protected_areas_table",
                     "generate_terrestrial_biome_stats",
-                    "generate_dissolved_terrestrial_pa",
                     "generate_eez_minus_mpa",
                 ]
 
@@ -427,16 +427,12 @@ def dispatch_publisher(
                         ]
                     )
 
-        case "generate_dissolved_terrestrial_pa":
-            dissolve_geometries(tolerance=tolerance, verbose=verbose)
-            step_list = ["generate_gadm_minus_pa"]
-
         case "generate_gadm_minus_pa":
             generate_total_area_minus_pa(
                 total_area_file=GADM_FILE_NAME,
-                pa_file=DISSOLVED_TERRESTRIAL_PA,
-                is_processed=True,
+                pa_file=WDPA_TERRESTRIAL_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                archive_out_file=ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                 tolerance=tolerance,
                 verbose=verbose,
             )
@@ -446,8 +442,8 @@ def dispatch_publisher(
             generate_total_area_minus_pa(
                 total_area_file=EEZ_FILE_NAME,
                 pa_file=WDPA_MARINE_FILE_NAME,
-                is_processed=False,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
+                archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
                 tolerance=tolerance,
                 verbose=verbose,
             )

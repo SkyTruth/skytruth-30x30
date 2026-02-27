@@ -96,11 +96,6 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
         # Update table in PostgreSQL
         with conn.connect() as connection:
-            result = connection.execute(text(f"SELECT COUNT(*) FROM data.{table_name} WHERE ST_IsValid(the_geom) = FALSE;"))
-            invalid_count = result.scalar()
-            # Print the number of invalid geometries
-            logger.info({"message": f"Number of invalid geometries found: {invalid_count}"})
-
             # Subdivide complex geometries (max 10,000 vertices each)
             connection.execute(text(f"""
             WITH complex_areas AS (
