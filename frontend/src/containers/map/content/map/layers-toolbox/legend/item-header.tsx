@@ -72,17 +72,12 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
       aria-labelledby={layerTitleId}
     >
       <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              id={layerTitleId}
-              className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs font-bold ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 [&_svg]:aria-[expanded=true]:rotate-180"
-            >
-              {title}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>{title}</TooltipContent>
-        </Tooltip>
+        <div
+          id={layerTitleId}
+          className="cursor-default overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs font-bold ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 [&_svg]:aria-[expanded=true]:rotate-180"
+        >
+          {title}
+        </div>
       </TooltipProvider>
       <TooltipProvider>
         <div className="flex shrink-0 items-center">
