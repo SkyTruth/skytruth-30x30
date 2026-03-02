@@ -11,11 +11,6 @@ import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { CustomLayer } from '@/types/layers';
 
-// Taken from this SVG in Lucide React https://lucide.dev/icons/pencil
-const PENCIL_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
-  "<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'/><path d='m15 5 4 4'/></svg>"
-)}") 2 16, pointer`;
-
 type CustomLayerItemProps = {
   slug: string;
   layer: CustomLayer;
@@ -126,7 +121,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
                     <button
                       type="button"
                       className="block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
-                      style={{ cursor: PENCIL_CURSOR }}
+                      style={{ cursor: 'text' }}
                       onClick={beginEdit}
                     >
                       <span className="sr-only">{t('edit-layer-name')}</span>
