@@ -3,10 +3,10 @@ import os
 import psycopg
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from src.core.params import BUCKET
-from src.utils.gcp import load_zipped_shapefile_from_gcs
+from src.utils.gcp import read_parquet_from_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -16,8 +16,10 @@ def get_connection(format: str = "psycopg"):
     """
     Establish a connection to the database
 
-    Input:
-    format (str): Method used to connect to database ('psycopg' or 'sqlalchemy')
+    Parameter
+    ----------
+    format : str
+      Method used to connect to database ('psycopg' or 'sqlalchemy')
     """
     try:
         DATABASE_USERNAME = os.environ.get("DATABASE_USERNAME", None)
@@ -58,39 +60,67 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     Update Conservation Builder table from GCS file.
 
-    Inputs:
-    table_name (str): Name of the table to update (either 'gadm_minus_pa' or 'eez_minus_mpa')
-    gcs_file (str): GCS file path to load the shapefile from
-    verbose (bool): Whether to print progress messages
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    gcs_file : str
+      GCS path of the file.
+    verbose : bool
+      Whether to print progress messages.
     """
     try:
         conn = get_connection(format="sqlalchemy")
 
         if verbose:
             logger.info({"message": f"Loading {gcs_file}..."})
-        gdf = load_zipped_shapefile_from_gcs(filename=gcs_file, bucket=BUCKET)
+        gdf = read_parquet_from_gcs(bucket_name=BUCKET, filename=gcs_file)
 
-        # Filter columns
-        gdf = gdf[["location", "geometry"]]
-
-        # Turn Polygon to MultiPolygon for consistency
-        gdf["geometry"] = gdf["geometry"].apply(
+        # Update geometry for consistency in PostgreSQL database
+        gdf = gdf.rename_geometry("the_geom")
+        gdf["the_geom"] = gdf["the_geom"].apply(
             lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
         )
-        gdf = gdf.rename_geometry("the_geom")
+        gdf = gdf[["location", "the_geom"]]
 
-        # Write to PostgreSQL
+        # Upload data to PostgreSQL
         if verbose:
-            logger.info({"message": f"Updating {table_name} in PostgreSQL..."})
+            logger.info({"message": f"Uploading data to PostgreSQL at data.{table_name}..."})
         gdf.to_postgis(
             name=table_name,
             schema="data",
             con=conn,
             if_exists="replace",
-            index=True,
-            index_label="id",
             dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
         )
+
+        # Update table in PostgreSQL
+        with conn.connect() as connection:
+            # Subdivide complex geometries (max 10,000 vertices each)
+            connection.execute(text(f"""
+            WITH complex_areas AS (
+                DELETE from data.{table_name}
+                WHERE ST_NPoints(the_geom) > 10000
+                RETURNING location, the_geom
+            )
+            INSERT INTO data.{table_name} (location, the_geom)
+                SELECT location,
+                    ST_Multi(ST_Subdivide(the_geom, 10000)) as the_geom
+                FROM complex_areas;
+            """))
+
+            # Add primary key
+            connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
+
+            # Create GIST index for fast spatial querying
+            connection.execute(text(f"""
+                CREATE INDEX gist_{table_name}_geom
+                ON data.{table_name}
+                USING GIST (the_geom);
+            """))
+
+            connection.execute(text(f"ANALYZE data.{table_name};"))
+            connection.commit()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
