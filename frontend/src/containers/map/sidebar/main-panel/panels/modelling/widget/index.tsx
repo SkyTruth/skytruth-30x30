@@ -120,7 +120,7 @@ const ModellingWidget: FCWithMessages = () => {
       },
       'pagination[limit]': 1,
       // @ts-ignore
-      fields: ['protected_area'],
+      fields: ['protected_area', 'total_area'],
     },
     {
       query: {
@@ -129,28 +129,21 @@ const ModellingWidget: FCWithMessages = () => {
         select: ({ data }) => {
           if (!data) return null;
 
+          // ? existing global protected area
           const protectedArea = data?.[0].attributes.protected_area ?? 0;
-
-          const location = data?.[0].attributes?.location?.data?.attributes;
-          let totalArea;
-          if (tab === 'marine') {
-            totalArea = location?.total_marine_area ? Number(location?.total_marine_area) : 0;
-          } else {
-            totalArea = location?.total_terrestrial_area
-              ? Number(location?.total_terrestrial_area)
-              : 0;
-          }
-
+          // ? total area
+          const totalArea = Number(data?.[0].attributes.total_area ?? 0);
+          // ? total custom protected areas (analysis)
           const totalCustomAreas = modellingData.locations_area.reduce((acc, location) => {
             return acc + location.protected_area;
           }, 0);
-
+          // ? sum of existing global protected area and custom protected areas (analysis)
           const totalProtectedArea = protectedArea + totalCustomAreas;
-          //  ? percentage of custom protected areas (analysis)
+          // ? percentage of custom protected areas (analysis)
           const totalCustomAreasPercentage = (totalCustomAreas / totalArea) * 100;
-          //  ? percentage of existing global protected area
+          // ? percentage of existing global protected area
           const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
-
+          // ? percentage of existing global protected area and custom protected areas
           const totalPercentage = totalCustomAreasPercentage + totalExistingAreaPercentage;
 
           return {
@@ -203,7 +196,7 @@ const ModellingWidget: FCWithMessages = () => {
           },
           'pagination[limit]': 1,
           // @ts-ignore
-          fields: ['protected_area'],
+          fields: ['protected_area', 'total_area'],
         },
         {
           query: {
@@ -212,33 +205,25 @@ const ModellingWidget: FCWithMessages = () => {
             select: ({ data }) => {
               if (!data) return null;
 
+              // ? existing protected area
               const protectedArea = data?.[0]?.attributes.protected_area ?? 0;
-
+              // ? total area
+              const totalArea = Number(data?.[0]?.attributes.total_area ?? 0);
+              // ? total custom protected area (analysis)
               const location = data?.[0]?.attributes?.location?.data?.attributes;
-
-              // ? total extension of location
-              let totalArea;
-              if (tab === 'marine') {
-                totalArea = location?.total_marine_area ? Number(location.total_marine_area) : 0;
-              } else {
-                totalArea = location?.total_terrestrial_area
-                  ? Number(location.total_terrestrial_area)
-                  : 0;
-              }
-
-              // ? total custom  protected area (analysis)
-              const totalCustomArea = modellingData.locations_area.find(
+              const customArea = modellingData.locations_area.find(
                 ({ code }) => code === location?.code
               ).protected_area;
-
-              //  ? percentage of custom protected area (analysis)
-              const totalCustomAreaPercentage = (totalCustomArea / totalArea) * 100;
-              //  ? percentage of existing protected area
-              const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
-
-              // ? sum of existing protected area and protected custom area (analysis)
+              // If custom area exceeds total unprotected area, cap it to the total unprotected area
+              const totalCustomArea =
+                customArea + protectedArea > totalArea ? totalArea - protectedArea : customArea;
+              // ? sum of existing protected area and custom protected area (analysis)
               const totalProtectedArea = protectedArea + totalCustomArea;
-
+              // ? percentage of custom protected area (analysis)
+              const totalCustomAreaPercentage = (totalCustomArea / totalArea) * 100;
+              // ? percentage of existing protected area
+              const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
+              // ? percentage of existing protected area and custom protected area
               const totalPercentage = totalCustomAreaPercentage + totalExistingAreaPercentage;
 
               return {

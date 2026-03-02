@@ -2,20 +2,12 @@ import geopandas as gpd
 import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
-
-from src.core.params import (
-    BUCKET,
-    DISSOLVED_TERRESTRIAL_PA,
-    TOLERANCES,
-    WDPA_TERRESTRIAL_FILE_NAME,
-)
+from src.core.params import BUCKET
 from src.utils.gcp import (
-    load_zipped_shapefile_from_gcs,  # Loads a zipped shapefile from GCS into a GeoDataFrame
-    read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
-    upload_gdf_zip,  # Saves a GeoDataFrame to GCS as a zipped file
+    read_json_df,                   # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
+    upload_gdf                      # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
 )
 from src.utils.logger import Logger
-
 logger = Logger()
 
 
@@ -35,91 +27,20 @@ def process_country(country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame
         GeoDataFrame with protected areas subtracted from total area for a country.
     """
     if country_pa.empty:
+        # If no protected areas, return original boundary
         return country_area
-    country_area = country_area.copy()
-    country_area["geometry"] = country_area.difference(country_pa)
-    return country_area
-
-
-def process_pas(pa: gpd.GeoDataFrame):
-    """
-    Processes protected areas GeoDataFrame by making geometries valid and dissolving by country.
-
-    Parameters
-    ----------
-    pa : gpd.GeoDataFrame
-        GeoDataFrame with protected areas.
-
-    Returns
-    -------
-        Processed GeoDataFrame with dissolved protected areas by country.
-    """
-    # Keep only polygon records and make the geometries valid
-    pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
-    pa.geometry = pa.geometry.make_valid()
-
-    # Dissolve geometries by country
-    dissolved = pa[["ISO3", "geometry"]].dissolve(by="ISO3").reset_index()
-    dissolved = dissolved[dissolved.geometry.geom_type.isin(["MultiPolygon", "Polygon"])]
-
-    return dissolved
-
-
-def dissolve_geometries(
-    bucket: str = BUCKET,
-    gdf_file: str = WDPA_TERRESTRIAL_FILE_NAME,
-    out_file: str = DISSOLVED_TERRESTRIAL_PA,
-    tolerance: float = TOLERANCES[0],
-    verbose: bool = True,
-):
-    """
-    Loads a GeoDataFrame from GCS, dissolves geometries by country,
-    and saves the output to GCS.
-
-    Parameters
-    ----------
-    bucket : str
-        GCS bucket name.
-    gdf_file : str
-        Filename of GeoDataFrame GeoJSON in GCS.
-    out_file : str
-        Filename for output GeoJSON file in GCS.
-    tolerance : float
-        Tolerance value used in simplification.
-    verbose : bool, optional
-        Whether to print verbose logs, by default True.
-
-    Returns
-    -------
-        GeoDataFrame saved to GCS as a zipped file.
-    """
-
-    # Load GeoDataFrame from GCS
-    pa = read_json_df(
-        bucket_name=bucket,
-        filename=gdf_file.replace(".geojson", f"_{tolerance}.geojson"),
-        verbose=verbose,
-    )
-
-    # Clean and dissolve geometries by country
-    dissolved = process_pas(pa)
-    if verbose:
-        logger.info({"message": f"Dissolved file has {len(dissolved)} rows."})
-
-    # Save to GCS as zipped shapefile
-    upload_gdf_zip(
-        bucket_name=bucket,
-        gdf=dissolved,
-        destination_blob_name=out_file.replace(".zip", f"_{tolerance}.zip"),
-        output_file_type=".shp",
-    )
+    else:
+        # If protected areas found, return original boundary with protected areas removed
+        pa_union = country_pa.geometry.union_all()
+        country_area.geometry = country_area.geometry.difference(pa_union)
+        return country_area
 
 
 def generate_total_area_minus_pa(
     total_area_file: str,
     pa_file: str,
-    is_processed: bool,
     out_file: str,
+    archive_out_file: str,
     tolerance: float,
     bucket: str = BUCKET,
     verbose: bool = True,
@@ -147,7 +68,7 @@ def generate_total_area_minus_pa(
 
     Returns
     -------
-        GeoDataFrame saved to GCS as a zipped shapefile.
+        GeoDataFrame saved to GCS as a Parquet.
     """
 
     # Total areas: GADM (terrestrial) or EEZ (marine)
@@ -162,18 +83,20 @@ def generate_total_area_minus_pa(
     countries = total_area["location"].unique().tolist()
 
     # Protected areas: PA (terrestrial) or MPA (marine)
-    if is_processed:
-        pa = load_zipped_shapefile_from_gcs(
-            bucket=bucket, filename=pa_file.replace(".zip", f"_{tolerance}.zip")
-        )
-    else:
-        pa = read_json_df(
-            bucket_name=bucket,
-            filename=pa_file.replace(".geojson", f"_{tolerance}.geojson"),
-            verbose=verbose,
-        )
-        # Clean and dissolve geometries by country
-        pa = process_pas(pa)
+    pa = read_json_df(
+        bucket_name=bucket,
+        filename=pa_file.replace(".geojson", f"_{tolerance}.geojson"),
+        verbose=verbose,
+    )
+    
+    # Create one row per country
+    pa["ISO3"] = pa["ISO3"].str.split(";")
+    pa = pa.explode("ISO3")
+    pa["ISO3"] = pa["ISO3"].str.strip()
+
+    # Keep only polygon records and make the geometries valid
+    pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
+    pa.geometry = pa.geometry.make_valid()
 
     # Subtract geometries
     if verbose:
@@ -190,10 +113,18 @@ def generate_total_area_minus_pa(
     if verbose:
         logger.info({"message": f"Output file has {len(total_area_minus_pa)} rows."})
 
-    # Save to GCS as zipped shapefile
-    upload_gdf_zip(
+    # Save to GCS
+    upload_gdf(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=out_file,
-        output_file_type=".shp",
+        output_file_type='.parquet'
+    )
+
+    # Save to archive
+    upload_gdf(
+        bucket_name=bucket,
+        gdf=total_area_minus_pa,
+        destination_blob_name=archive_out_file,
+        output_file_type=".parquet",
     )
