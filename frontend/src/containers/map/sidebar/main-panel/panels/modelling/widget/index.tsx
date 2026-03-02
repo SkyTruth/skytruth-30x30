@@ -129,21 +129,21 @@ const ModellingWidget: FCWithMessages = () => {
         select: ({ data }) => {
           if (!data) return null;
 
-          // ? existing global protected area
+          // existing global protected area
           const protectedArea = data?.[0].attributes.protected_area ?? 0;
-          // ? total area
+          // total area
           const totalArea = Number(data?.[0].attributes.total_area ?? 0);
-          // ? total custom protected areas (analysis)
+          // total custom protected areas (analysis)
           const totalCustomAreas = modellingData.locations_area.reduce((acc, location) => {
             return acc + location.protected_area;
           }, 0);
-          // ? sum of existing global protected area and custom protected areas (analysis)
+          // sum of existing global protected area and custom protected areas (analysis)
           const totalProtectedArea = protectedArea + totalCustomAreas;
-          // ? percentage of custom protected areas (analysis)
+          // percentage of custom protected areas (analysis)
           const totalCustomAreasPercentage = (totalCustomAreas / totalArea) * 100;
-          // ? percentage of existing global protected area
+          // percentage of existing global protected area
           const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
-          // ? percentage of existing global protected area and custom protected areas
+          // percentage of existing global protected area and custom protected areas
           const totalPercentage = totalCustomAreasPercentage + totalExistingAreaPercentage;
 
           return {
@@ -205,25 +205,26 @@ const ModellingWidget: FCWithMessages = () => {
             select: ({ data }) => {
               if (!data) return null;
 
-              // ? existing protected area
+              // existing protected area
               const protectedArea = data?.[0]?.attributes.protected_area ?? 0;
-              // ? total area
+              // total area
               const totalArea = Number(data?.[0]?.attributes.total_area ?? 0);
-              // ? total custom protected area (analysis)
+              // total custom protected area (analysis)
               const location = data?.[0]?.attributes?.location?.data?.attributes;
               const customArea = modellingData.locations_area.find(
                 ({ code }) => code === location?.code
               ).protected_area;
               // If custom area exceeds total unprotected area, cap it to the total unprotected area
+              // necessary because of rounding errors and differences in data resolutions
               const totalCustomArea =
                 customArea + protectedArea > totalArea ? totalArea - protectedArea : customArea;
-              // ? sum of existing protected area and custom protected area (analysis)
+              // sum of existing protected area and custom protected area (analysis)
               const totalProtectedArea = protectedArea + totalCustomArea;
-              // ? percentage of custom protected area (analysis)
+              // percentage of custom protected area (analysis)
               const totalCustomAreaPercentage = (totalCustomArea / totalArea) * 100;
-              // ? percentage of existing protected area
+              // percentage of existing protected area
               const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
-              // ? percentage of existing protected area and custom protected area
+              // percentage of existing protected area and custom protected area
               const totalPercentage = totalCustomAreaPercentage + totalExistingAreaPercentage;
 
               return {
