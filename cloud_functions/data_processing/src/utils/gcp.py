@@ -308,12 +308,13 @@ def upload_gdf(
     bucket_name: str,
     gdf: gpd.GeoDataFrame,
     destination_blob_name: str,
+    output_file_type: str = '.geojson',
     project_id: str = PROJECT,
     verbose: bool = True,
     timeout: int = 600,
 ) -> None:
     """
-    Saves a GeoDataFrame to GCS as a .geojson file.
+    Saves a GeoDataFrame to GCS as a .geojson or .parquet file.
 
     Parameters:
     ----------
@@ -322,7 +323,7 @@ def upload_gdf(
     gdf : gpd.GeoDataFrame
         The GeoDataFrame to upload.
     destination_blob_name : str
-        Destination path for the .geojson file in the bucket.
+        Destination path for the file in the bucket.
     project_id : str, optional
         Google Cloud project ID. Defaults to global PROJECT.
     verbose : bool, optional
@@ -333,13 +334,17 @@ def upload_gdf(
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
 
-    with tempfile.NamedTemporaryFile(suffix=".geojson") as tmp_file:
-        gdf.to_file(tmp_file.name, driver="GeoJSON")
+    if verbose:
+        print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
 
-        if verbose:
-            print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
-
-        bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
+    if output_file_type == '.geojson':
+        with tempfile.NamedTemporaryFile(suffix=".geojson") as tmp_file:
+            gdf.to_file(tmp_file.name, driver="GeoJSON")
+            bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
+    elif output_file_type == '.parquet':
+        with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp_file:
+            gdf.to_parquet(tmp_file.name)
+            bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
 
     if verbose:
         print("Upload complete.")
@@ -669,6 +674,33 @@ def read_json_from_gcs(bucket_name: str, filename: str, verbose: bool = True) ->
 
     with fs.open(gcs_path, "r") as f:
         return json.load(f)
+
+
+def read_parquet_from_gcs(bucket_name: str, filename: str, verbose: bool = True):
+    """
+    Loads a parquet from a Google Cloud Storage (GCS) bucket into a GeoDataFrame.
+
+    Parameters:
+    ----------
+    filename : str
+        Name of the ZIP file (blob) in the GCS bucket.
+    bucket : str
+        Name of the GCS bucket where the ZIP file is stored.
+
+    Returns:
+    -------
+    gpd.GeoDataFrame
+        A GeoDataFrame containing the shapefile’s features and attributes.
+    """
+
+    gcs_path = f"gs://{bucket_name}/{filename}"
+
+    if verbose:
+        print(f"Reading Parquet from {gcs_path}")
+    
+    gdf = gpd.read_parquet(gcs_path)
+
+    return gdf
 
 
 def download_zipfile_from_gcs(bucket_name: str, zip_filename: str, verbose: bool = True) -> Path:
