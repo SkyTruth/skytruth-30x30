@@ -120,8 +120,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="block w-full max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
-                      style={{ cursor: 'text' }}
+                      className="block w-full max-w-full cursor-text overflow-hidden text-ellipsis whitespace-nowrap text-left hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
                       onClick={beginEdit}
                     >
                       <span className="sr-only">{t('edit-layer-name')}</span>
