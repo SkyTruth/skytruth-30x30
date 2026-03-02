@@ -88,82 +88,44 @@ def get_locations_stats(
     geometry = get_geojson(geojson)
     with db.connect() as conn:
         validate_geometry_topology(conn, geometry)
-        if environment == "terrestrial":
-            stmt = sqlalchemy.text(
-                """
-                WITH
-                    user_data AS (
-                        SELECT ST_GeomFromGeoJSON(:geometry) AS geom
-                    ),
-                    user_data_stats AS (
-                        SELECT *,
-                            ROUND((ST_Area(ST_Transform(geom,
-                                '+proj=longlat +datum=WGS84 +no_defs +type=crs',
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
-                            ) AS user_area_km2
-                        FROM user_data
-                    ),
-                    stats AS (
-                        SELECT
-                            location,
-                            ROUND((ST_Area(ST_Transform(
-                                ST_MakeValid(ST_Intersection(the_geom, user_data_stats.geom)),
-                                '+proj=longlat +datum=WGS84 +no_defs +type=crs', 
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
-                            ) AS portion_area_km2,
-                            user_data_stats.user_area_km2
-                        FROM
-                            data.gadm_minus_pa_v2,
-                            user_data_stats
-                        WHERE
-                            ST_Intersects(the_geom, user_data_stats.geom)
-                    )
-                SELECT
-                    location,
-                    SUM(portion_area_km2) AS portion_area_km2,
-                    AVG(user_area_km2) AS user_area_km2
-                FROM stats
-                GROUP BY location
-                """
-            )
-        elif environment == "marine":
-            stmt = sqlalchemy.text(
-                """
-                WITH
-                    user_data AS (
-                        SELECT ST_GeomFromGeoJSON(:geometry) AS geom
-                    ),
-                    user_data_stats AS (
-                        SELECT *,
-                            ROUND((ST_Area(ST_Transform(geom,
-                                '+proj=longlat +datum=WGS84 +no_defs +type=crs',
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
-                            ) AS user_area_km2
-                        FROM user_data
-                    ),
-                    stats AS (
-                        SELECT
-                            location,
-                            ROUND((ST_Area(ST_Transform(
-                                ST_MakeValid(ST_Intersection(the_geom, user_data_stats.geom)),
-                                '+proj=longlat +datum=WGS84 +no_defs +type=crs', 
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
-                            ) AS portion_area_km2,
-                            user_data_stats.user_area_km2
-                        FROM
-                            data.eez_minus_mpa_v2,
-                            user_data_stats
-                        WHERE
-                            ST_Intersects(the_geom, user_data_stats.geom)
-                    )
-                SELECT
-                    location,
-                    SUM(portion_area_km2) AS portion_area_km2,
-                    AVG(user_area_km2) AS user_area_km2
-                FROM stats
-                GROUP BY location
-                """
-            )
+        table_name = 'gadm_minus_pa_v2' if environment == 'terrestrial' else 'eez_minus_mpa_v2'
+        stmt = sqlalchemy.text(
+            f"""
+            WITH
+                user_data AS (
+                    SELECT ST_GeomFromGeoJSON(:geometry) AS geom
+                ),
+                user_data_stats AS (
+                    SELECT *,
+                        ROUND((ST_Area(ST_Transform(geom,
+                            '+proj=longlat +datum=WGS84 +no_defs +type=crs',
+                            '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
+                        ) AS user_area_km2
+                    FROM user_data
+                ),
+                stats AS (
+                    SELECT
+                        location,
+                        ROUND((ST_Area(ST_Transform(
+                            ST_MakeValid(ST_Intersection(the_geom, user_data_stats.geom)),
+                            '+proj=longlat +datum=WGS84 +no_defs +type=crs', 
+                            '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
+                        ) AS portion_area_km2,
+                        user_data_stats.user_area_km2
+                    FROM
+                        data.{table_name},
+                        user_data_stats
+                    WHERE
+                        ST_Intersects(the_geom, user_data_stats.geom)
+                )
+            SELECT
+                location,
+                SUM(portion_area_km2) AS portion_area_km2,
+                AVG(user_area_km2) AS user_area_km2
+            FROM stats
+            GROUP BY location
+            """
+        )
         data_response = conn.execute(stmt, parameters={"geometry": geometry}).all()
 
     return serialize_response(environment, data_response)
