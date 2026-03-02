@@ -225,7 +225,7 @@
       "use-layer-for-modelling": "Use layer for modelling",
       "layer-used-in-modelling": "Layer used in modelling",
       "upload-layer": "Upload Layer",
-      "upload-directions": "Upload a vector map file to display your own data on the map. Supported formats: GeoJSON (.geojson), KML (.kml), KMZ (.kmz), or Shapefile (.shp). If uploading a Shapefile, include all required components: .shp, .shx, and .dbf (the .prj file is optional but recommended). Maximum file size: 5 MB."
+      "upload-directions": "Supported file formats: GeoJSON, KML, KMZ, or SHP (shapefiles must include .shp, .shx, and .dbf). Maximum file size: 5Mb."
     },
     "map": {
       "loading": "Loading...",
