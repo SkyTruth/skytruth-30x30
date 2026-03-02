@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import { cn } from '@/lib/classnames';
@@ -25,6 +26,8 @@ const SidebarModelling: FCWithMessages = () => {
 
   const { status: modellingStatus } = useAtomValue(modellingAtom);
   const [{ tab }, setSettings] = useSyncMapContentSettings();
+
+  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active'); // TODO: TECH-3372 Teardown
 
   const showIntro = useMemo(() => modellingStatus === 'idle', [modellingStatus]);
 
@@ -57,8 +60,8 @@ const SidebarModelling: FCWithMessages = () => {
           <h1
             className={cn({
               'text-ellipsis font-black transition-all': true,
-              'min-h-[3rem] text-5xl': contentScroll === 0,
-              'min-h-[1.75rem] text-xl': contentScroll > 0,
+              'min-h-[3rem] text-5xl': !isCustomLayersActive || contentScroll === 0,
+              'min-h-[1.75rem] text-xl': isCustomLayersActive && contentScroll > 0,
             })}
           >
             {showIntro ? t('conservation-scenarios') : t('custom-area')}
