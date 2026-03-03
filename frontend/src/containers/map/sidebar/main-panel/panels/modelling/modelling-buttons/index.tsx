@@ -28,7 +28,7 @@ import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
 
 const COMMON_BUTTON_CLASSES =
-  'flex h-10 justify-between border-t border-black px-5 md:px-8 w-full pt-1 font-mono text-xs normal-case justify-center';
+  'flex h-10 justify-between border-t border-black px- md:px-8 w-full pt-1 font-mono text-xs normal-case justify-center';
 
 type ModellingButtonsProps = {
   className?: HTMLDivElement['className'];
@@ -204,7 +204,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
       {status !== 'drawing' && status !== 'success' && (
         <div className="flex w-full flex-col space-y-2">
-          <div className="flex w-full space-x-2">
+          <div className="flex w-full gap-3 px-5">
             <Button
               className={COMMON_BUTTON_CLASSES}
               size="full"
@@ -239,7 +239,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
         </div>
       )}
       {(status === 'drawing' || status === 'success') && (
-        <div className="flex w-full space-x-2">
+        <div className="flex w-full gap-3 px-5">
           <Button
             variant="blue"
             className={COMMON_BUTTON_CLASSES}
