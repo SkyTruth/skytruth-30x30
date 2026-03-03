@@ -51,7 +51,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       searchParams += `&run-as-of=${runAsOf}`;
     }
 
-    const target = `/${context.locale}/${PAGES.progressTracker}/${location}?${searchParams}`;
+    const target = `/${context.locale}${PAGES.progressTracker}/${location}?${searchParams}`;
 
     return {
       redirect: {

@@ -38,7 +38,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       searchParams += `&run-as-of=${runAsOf}`;
     }
 
-    const target = `/${context.locale}/${PAGES.conservationBuilder}/?${searchParams}`;
+    const target = `/${context.locale}${PAGES.conservationBuilder}/?${searchParams}`;
 
     return {
       redirect: {
