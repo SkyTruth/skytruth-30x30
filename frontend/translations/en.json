@@ -259,11 +259,11 @@
       "line-color": "Line color",
       "change-color": "Change {layer} color to {color}",
       "layer-style-color-options": {
-        "soft-blue": "soft blue",
-        "soft-green": "soft green",
-        "soft-lime": "soft lime",
-        "muted-red": "muted red",
-        "muted-pink": "muted pink"
+        "periwinkle-blue": "periwinkle blue",
+        "light-blue": "light blue",
+        "mint-green": "mint green",
+        "saffron-yellow": "saffron yellow",
+        "brick-red": "brick red"
       },
       "hide": "Hide",
       "hide-layer": "Hide {layer}",

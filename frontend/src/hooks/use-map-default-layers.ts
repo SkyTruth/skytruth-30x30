@@ -15,14 +15,7 @@ export default function useMapDefaultLayers() {
 
   const [datasets] = useDatasetsByEnvironment();
 
-  // Capture the URL's layer state at mount time, before any async data arrives.
-  // nuqs reads the URL synchronously on first render, so this ref reflects what
-  // was actually in the URL when the user landed on the page.
   const initialMapLayersRef = useRef(mapLayers);
-
-  // Ensures Effect 1 (initial defaults) only fires once per mount, and gates
-  // Effect 2 (tab changes) so it doesn't fire for the forced summary→terrestrial
-  // switch that happens before datasets have loaded.
   const hasSetInitialDefaultsRef = useRef(false);
 
   const defaultLayerSlugs = useMemo(() => {
