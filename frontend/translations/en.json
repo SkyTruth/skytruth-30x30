@@ -375,7 +375,8 @@
     },
     "map": {
       "zoom-in": "Zoom in",
-      "zoom-out": "Zoom out"
+      "zoom-out": "Zoom out",
+      "screenshot": "Screenshot"
     },
     "mobile-disclaimer-dialog": {
       "page-optimized-for-desktop-viewing": "This page is optimized for desktop viewing.",

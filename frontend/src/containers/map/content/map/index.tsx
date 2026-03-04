@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useAtom, useAtomValue } from 'jotai';
 import { useLocale } from 'next-intl';
 
-import Map, { ZoomControls, Attributions } from '@/components/map';
+import Map, { ZoomControls, Screenshot, Attributions } from '@/components/map';
 import { DEFAULT_VIEW_STATE } from '@/components/map/constants';
 import DrawControls from '@/containers/map/content/map/draw-controls';
 import LabelsManager from '@/containers/map/content/map/labels-manager';
@@ -267,6 +267,7 @@ const MainMap: FCWithMessages = () => {
           <LabelsManager />
           <LayersToolbox />
           <ZoomControls />
+          <Screenshot />
           <DrawControls />
           <LayerManager cursor={cursor} />
           <Modelling />
@@ -282,6 +283,7 @@ MainMap.messages = [
   ...Popup.messages,
   ...LayersToolbox.messages,
   ...ZoomControls.messages,
+  ...Screenshot.messages,
   // Indirectly imported by the layer manager
   ...GenericPopup.messages,
   ...ProtectedAreaPopup.messages,
