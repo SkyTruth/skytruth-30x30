@@ -21,7 +21,10 @@ const ZoomControls: FCWithMessages = () => {
   const maxZoom = getMaxZoom();
 
   return (
-    <div className="absolute right-0 top-0 z-10 flex flex-col border border-r-0 border-t-0 border-black">
+    <div
+      className="absolute right-0 top-0 z-10 flex flex-col border border-r-0 border-t-0 border-black"
+      data-screenshot="zoom"
+    >
       <Button
         type="button"
         size="icon"

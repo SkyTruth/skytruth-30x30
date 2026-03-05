@@ -80,7 +80,7 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
         </div>
       </TooltipProvider>
       <TooltipProvider>
-        <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 items-center" data-screenshot="legendHeader">
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button

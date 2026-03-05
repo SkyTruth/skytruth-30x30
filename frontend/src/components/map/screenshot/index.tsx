@@ -65,7 +65,10 @@ const Screenshot: FCWithMessages = () => {
   };
 
   return (
-    <div className="absolute right-0 top-20 z-10 border border-r-0 border-t-0 border-black">
+    <div
+      className="absolute right-0 top-20 z-10 border border-r-0 border-t-0 border-black"
+      data-screenshot="screenshot"
+    >
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button type="button" size="icon" className={BUTTON_CLASSES}>
