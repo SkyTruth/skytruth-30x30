@@ -24,6 +24,7 @@ import {
   layersInteractiveIdsAtom,
   popupAtom,
 } from '@/containers/map/store';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useMapBounds from '@/hooks/useMapBounds';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
@@ -52,6 +53,9 @@ const MainMap: FCWithMessages = () => {
   const hoveredPolygonId = useRef<Parameters<typeof map.setFeatureState>[0] | null>(null);
   const mountedRef = useRef(false);
   const previousDefaultLayersRef = useRef(null);
+
+  // TECH-3372: tear down
+  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
   const { data: layersInteractiveData } = useGetLayers(
     {
@@ -270,7 +274,7 @@ const MainMap: FCWithMessages = () => {
           <LabelsManager />
           <LayersToolbox />
           <ZoomControls />
-          <Screenshot />
+          {isCustomLayersActive ? <Screenshot /> : null} {/* TECH-3372: tear down FF */}
           <DrawControls />
           <LayerManager cursor={cursor} />
           <Modelling />
