@@ -1,5 +1,6 @@
 import { useId } from 'react';
 
+import { useAtomValue } from 'jotai';
 import { useTranslations } from 'next-intl';
 import { HiEye, HiEyeOff } from 'react-icons/hi';
 
@@ -10,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Slider } from '@/components/ui/slider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CUSTOM_LAYER_STYLE_COLORS } from '@/constants/custom-layer-style-colors';
+import { screenshotOpenAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import ArrowDownIcon from '@/styles/icons/arrow-down.svg';
 import ArrowTopIcon from '@/styles/icons/arrow-top.svg';
@@ -51,6 +53,7 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
   title,
 }) => {
   const t = useTranslations('containers.map');
+  const screenshotOpen = useAtomValue(screenshotOpenAtom);
   const layerTitleId = useId();
   const styleButtonLabel = isCustomLayer ? t('change-layer-style') : t('change-opacity');
   const moveUpLabel = t('move-up-layer', { layer: title });
@@ -79,137 +82,139 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
           {title}
         </div>
       </TooltipProvider>
-      <TooltipProvider>
-        <div className="flex shrink-0 items-center" data-screenshot="legendHeader">
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled={isFirst}
-                aria-label={moveUpLabel}
-                onClick={() => onMoveLayerUp(slug)}
-              >
-                <span className="sr-only">{moveUpLabel}</span>
-                <Icon icon={ArrowTopIcon} className="h-3 w-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('move-up')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled={isLast}
-                aria-label={moveDownLabel}
-                onClick={() => onMoveLayerDown(slug)}
-              >
-                <span className="sr-only">{moveDownLabel}</span>
-                <Icon icon={ArrowDownIcon} className="h-3 w-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('move-down')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <Popover>
+      {!screenshotOpen && (
+        <TooltipProvider>
+          <div className="flex shrink-0 items-center">
+            <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={styleButtonLayerLabel}
-                  >
-                    <span className="sr-only">{styleButtonLayerLabel}</span>
-                    <Icon icon={OpacityIcon} className="h-3.5 w-3.5" />
-                  </Button>
-                </PopoverTrigger>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={isFirst}
+                  aria-label={moveUpLabel}
+                  onClick={() => onMoveLayerUp(slug)}
+                >
+                  <span className="sr-only">{moveUpLabel}</span>
+                  <Icon icon={ArrowTopIcon} className="h-3 w-3" />
+                </Button>
               </TooltipTrigger>
-              <TooltipContent>{styleButtonLabel}</TooltipContent>
-              <PopoverContent className="w-56 space-y-3" align="end">
-                <div>
-                  <Label className="mb-2 block text-xs">{t('opacity')}</Label>
-                  <Slider
-                    thumbLabel={opacityThumbLabel}
-                    value={[opacity]}
-                    max={1}
-                    step={0.1}
-                    onValueChange={([value]) => onChangeLayerOpacity(slug, value)}
-                  />
-                </div>
-                {isCustomLayer && (
-                  <div>
-                    <Label className="mb-2 block text-xs">{t('color')}</Label>
-                    <div
-                      role="radiogroup"
-                      aria-label={colorGroupLabel}
-                      className="grid grid-cols-5 gap-2"
+              <TooltipContent>{t('move-up')}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={isLast}
+                  aria-label={moveDownLabel}
+                  onClick={() => onMoveLayerDown(slug)}
+                >
+                  <span className="sr-only">{moveDownLabel}</span>
+                  <Icon icon={ArrowDownIcon} className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('move-down')}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <Popover>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={styleButtonLayerLabel}
                     >
-                      {CUSTOM_LAYER_STYLE_COLORS.map(({ value, nameKey }) => (
-                        <button
-                          key={`color-${value}`}
-                          type="button"
-                          role="radio"
-                          aria-checked={color === value}
-                          aria-label={t('change-color', {
-                            layer: title,
-                            color: t(`layer-style-color-options.${nameKey}`),
-                          })}
-                          className={cn(
-                            'h-5 w-5 rounded-full border border-black',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1',
-                            {
-                              'ring-2 ring-black ring-offset-1': color === value,
-                            }
-                          )}
-                          style={{ backgroundColor: value }}
-                          onClick={() => onChangeLayerColor?.(slug, value)}
-                        />
-                      ))}
-                    </div>
+                      <span className="sr-only">{styleButtonLayerLabel}</span>
+                      <Icon icon={OpacityIcon} className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent>{styleButtonLabel}</TooltipContent>
+                <PopoverContent className="w-56 space-y-3" align="end">
+                  <div>
+                    <Label className="mb-2 block text-xs">{t('opacity')}</Label>
+                    <Slider
+                      thumbLabel={opacityThumbLabel}
+                      value={[opacity]}
+                      max={1}
+                      step={0.1}
+                      onValueChange={([value]) => onChangeLayerOpacity(slug, value)}
+                    />
                   </div>
-                )}
-              </PopoverContent>
-            </Popover>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={toggleVisibilityLabel}
-                onClick={() => onToggleLayerVisibility(slug, !isVisible)}
-              >
-                <span className="sr-only">{toggleVisibilityLabel}</span>
-                {isVisible && <HiEye className="h-4 w-4" aria-hidden />}
-                {!isVisible && <HiEyeOff className="h-4 w-4" aria-hidden />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{isVisible ? t('hide') : t('show')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={removeLabel}
-                onClick={() => {
-                  onRemoveLayer(slug);
-                }}
-              >
-                <span className="sr-only">{removeLabel}</span>
-                <Icon icon={CloseIcon} className="h-3 w-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('remove')}</TooltipContent>
-          </Tooltip>
-        </div>
-      </TooltipProvider>
+                  {isCustomLayer && (
+                    <div>
+                      <Label className="mb-2 block text-xs">{t('color')}</Label>
+                      <div
+                        role="radiogroup"
+                        aria-label={colorGroupLabel}
+                        className="grid grid-cols-5 gap-2"
+                      >
+                        {CUSTOM_LAYER_STYLE_COLORS.map(({ value, nameKey }) => (
+                          <button
+                            key={`color-${value}`}
+                            type="button"
+                            role="radio"
+                            aria-checked={color === value}
+                            aria-label={t('change-color', {
+                              layer: title,
+                              color: t(`layer-style-color-options.${nameKey}`),
+                            })}
+                            className={cn(
+                              'h-5 w-5 rounded-full border border-black',
+                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1',
+                              {
+                                'ring-2 ring-black ring-offset-1': color === value,
+                              }
+                            )}
+                            style={{ backgroundColor: value }}
+                            onClick={() => onChangeLayerColor?.(slug, value)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={toggleVisibilityLabel}
+                  onClick={() => onToggleLayerVisibility(slug, !isVisible)}
+                >
+                  <span className="sr-only">{toggleVisibilityLabel}</span>
+                  {isVisible && <HiEye className="h-4 w-4" aria-hidden />}
+                  {!isVisible && <HiEyeOff className="h-4 w-4" aria-hidden />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isVisible ? t('hide') : t('show')}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={removeLabel}
+                  onClick={() => {
+                    onRemoveLayer(slug);
+                  }}
+                >
+                  <span className="sr-only">{removeLabel}</span>
+                  <Icon icon={CloseIcon} className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('remove')}</TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
+      )}
     </div>
   );
 };

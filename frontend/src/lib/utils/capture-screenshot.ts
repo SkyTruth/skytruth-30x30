@@ -65,12 +65,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promise<string> {
   const { includeLegend, includeSidebar, pixelRatio = 2 } = options;
 
-  const filterData = ['zoom', 'screenshot', 'legendHeader'];
-  const filterNodes = (node: HTMLElement): boolean => {
-    if (!node.dataset) return true;
-    return !filterData.includes(node.dataset.screenshot);
-  };
-
   const mapEl = document.querySelector<HTMLElement>('[data-screenshot="map"]');
   if (!mapEl) throw new Error('Map element not found');
 
@@ -87,7 +81,7 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
 
   const restoreMapSvgs = inlineSvgUseElements(mapEl);
   try {
-    mapDataUrl = await toPng(mapEl, { cacheBust: true, pixelRatio, filter: filterNodes });
+    mapDataUrl = await toPng(mapEl, { cacheBust: true, pixelRatio });
 
     if (includeSidebar) {
       const sidebarEl = document.querySelector<HTMLElement>('[data-screenshot="sidebar"]');

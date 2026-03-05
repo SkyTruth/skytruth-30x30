@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { useAtom } from 'jotai';
 import { Camera, Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -11,9 +12,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { screenshotOpenAtom } from '@/containers/map/store';
 import { buildScreenshotDataUrl, downloadScreenshot } from '@/lib/utils/capture-screenshot';
 import { FCWithMessages } from '@/types';
 
@@ -23,7 +24,7 @@ const ICON_CLASSES = 'h-4 w-4 text-black group-hover:text-white';
 const Screenshot: FCWithMessages = () => {
   const t = useTranslations('components.map');
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useAtom(screenshotOpenAtom);
   const [includeLegend, setIncludeLegend] = useState(true);
   const [includeSidebar, setIncludeSidebar] = useState(false);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
@@ -65,18 +66,21 @@ const Screenshot: FCWithMessages = () => {
   };
 
   return (
-    <div
-      className="absolute right-0 top-20 z-10 border border-r-0 border-t-0 border-black"
-      data-screenshot="screenshot"
-    >
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button type="button" size="icon" className={BUTTON_CLASSES}>
+    <>
+      {!open && (
+        <div className="absolute right-0 top-20 z-10 border border-r-0 border-t-0 border-black">
+          <Button
+            type="button"
+            size="icon"
+            className={BUTTON_CLASSES}
+            onClick={() => setOpen(true)}
+          >
             <Camera className={ICON_CLASSES} aria-hidden />
             <span className="sr-only">{t('screenshot')}</span>
           </Button>
-        </DialogTrigger>
-
+        </div>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('screenshot-dialog-title')}</DialogTitle>
@@ -135,7 +139,7 @@ const Screenshot: FCWithMessages = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 
