@@ -6,6 +6,53 @@ interface ScreenshotOptions {
   pixelRatio?: number;
 }
 
+/**
+ * Replace <use> sprite references with inlined symbol content so that
+ * html-to-image can serialize them. Also resolves currentColor to the
+ * computed color value. Returns a function that restores the original DOM.
+ * This is a patch until we have time to render the legend svg's as their own
+ * components with @svgr/webpack
+ */
+function inlineSvgUseElements(root: HTMLElement): () => void {
+  const restoreFns: (() => void)[] = [];
+
+  root.querySelectorAll<SVGSVGElement>('svg.fill-current').forEach((svg) => {
+    const useEl = svg.querySelector('use');
+    if (!useEl) return;
+    const href =
+      useEl.getAttribute('href') ?? useEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+    if (!href) return;
+
+    const symbol = document.getElementById(href.replace(/^#/, ''));
+    if (!symbol) return;
+
+    const computedColor = getComputedStyle(svg).color;
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+    Array.from(symbol.children).forEach((child) => {
+      const clone = child.cloneNode(true) as SVGElement;
+      resolveCurrentColor(clone, computedColor);
+      group.appendChild(clone);
+    });
+
+    svg.replaceChild(group, useEl);
+    restoreFns.push(() => svg.replaceChild(useEl, group));
+  });
+
+  return () => restoreFns.forEach((fn) => fn());
+}
+
+function resolveCurrentColor(el: SVGElement, color: string): void {
+  for (const attr of ['fill', 'stroke', 'stop-color', 'flood-color']) {
+    if (el.getAttribute(attr) === 'currentColor') {
+      el.setAttribute(attr, color);
+    }
+  }
+  Array.from(el.children).forEach((child) => {
+    if (child instanceof SVGElement) resolveCurrentColor(child, color);
+  });
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -31,6 +78,7 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   let mapDataUrl: string;
   let sidebarDataUrl: string | null = null;
 
+  const restoreMapSvgs = inlineSvgUseElements(mapEl);
   try {
     mapDataUrl = await toPng(mapEl, { cacheBust: true, pixelRatio });
 
@@ -41,7 +89,7 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
       }
     }
   } finally {
-    // Restore legend visibility
+    restoreMapSvgs();
     if (!includeLegend && legendEl) {
       legendEl.style.visibility = legendPrevVisibility;
     }
