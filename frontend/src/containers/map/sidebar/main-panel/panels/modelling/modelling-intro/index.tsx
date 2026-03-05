@@ -55,10 +55,10 @@ const ModellingIntro: FCWithMessages = () => {
               <p>{t('upload-step-2-description')}</p>
             </li>
           </ol>
+
+          <p>{t('upload-context-layers')}</p>
         </>
       )}
-
-      <p>{t('upload-context-layers')}</p>
     </div>
   );
 };
