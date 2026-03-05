@@ -3,6 +3,7 @@ import { toPng } from 'html-to-image';
 interface ScreenshotOptions {
   includeLegend: boolean;
   includeSidebar: boolean;
+  pixelRatio?: number;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -15,7 +16,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promise<string> {
-  const { includeLegend, includeSidebar } = options;
+  const { includeLegend, includeSidebar, pixelRatio = 2 } = options;
 
   const mapEl = document.querySelector<HTMLElement>('[data-screenshot="map"]');
   if (!mapEl) throw new Error('Map element not found');
@@ -31,12 +32,12 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   let sidebarDataUrl: string | null = null;
 
   try {
-    mapDataUrl = await toPng(mapEl, { cacheBust: true });
+    mapDataUrl = await toPng(mapEl, { cacheBust: true, pixelRatio });
 
     if (includeSidebar) {
       const sidebarEl = document.querySelector<HTMLElement>('[data-screenshot="sidebar"]');
       if (sidebarEl) {
-        sidebarDataUrl = await toPng(sidebarEl, { cacheBust: true });
+        sidebarDataUrl = await toPng(sidebarEl, { cacheBust: true, pixelRatio });
       }
     }
   } finally {
@@ -69,8 +70,8 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   // Draw SkyTruth logo in top-left of the map area
   try {
     const logo = await loadImage('/images/skytruth-30-30-logo.svg');
-    const logoSize = 40;
-    const padding = 16;
+    const logoSize = 40 * pixelRatio;
+    const padding = 16 * pixelRatio;
     ctx.drawImage(logo, sidebarWidth + padding, padding, logoSize, logoSize);
   } catch {
     // Logo not found — skip silently
