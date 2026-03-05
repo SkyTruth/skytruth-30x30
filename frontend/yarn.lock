@@ -9051,6 +9051,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"html-to-image@npm:^1.11.11":
+  version: 1.11.13
+  resolution: "html-to-image@npm:1.11.13"
+  checksum: 18da77cf6c1e7f821f320dc6941642ee292df136f38c548ecb77aa04718b979df63ba4ea56e53d1939b9dbe8e23ca10c44b55319a885bfe7f5f5023c1b5698fe
+  languageName: node
+  linkType: hard
+
 "htmlparser2@npm:^3.8.3":
   version: 3.10.1
   resolution: "htmlparser2@npm:3.10.1"
@@ -13197,6 +13204,7 @@ __metadata:
     eslint-import-resolver-typescript: 3.6.3
     eslint-plugin-import: 2.31.0
     eslint-plugin-prettier: 5.2.1
+    html-to-image: ^1.11.11
     husky: 6.0.0
     jotai: 2.4.3
     lodash-es: ^4.17.21

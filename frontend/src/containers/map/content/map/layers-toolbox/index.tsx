@@ -16,7 +16,7 @@ const LayersToolbox: FCWithMessages = () => {
   const [open, setOpen] = useState(true);
 
   return (
-    <div className="absolute bottom-0 right-0 z-20 bg-red">
+    <div className="absolute bottom-0 right-0 z-20 bg-red" data-screenshot="legend">
       <div className="relative">
         <Collapsible className="relative bg-red" open={open} onOpenChange={setOpen}>
           <CollapsibleTrigger className="absolute right-0 top-0 -translate-y-full border border-b-0 border-black bg-white">

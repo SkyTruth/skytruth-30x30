@@ -1,7 +1,20 @@
-import { Camera } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import { Camera, Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { buildScreenshotDataUrl, downloadScreenshot } from '@/lib/utils/capture-screenshot';
 import { FCWithMessages } from '@/types';
 
 const BUTTON_CLASSES = 'group bg-white';
@@ -10,12 +23,115 @@ const ICON_CLASSES = 'h-4 w-4 text-black group-hover:text-white';
 const Screenshot: FCWithMessages = () => {
   const t = useTranslations('components.map');
 
+  const [open, setOpen] = useState(false);
+  const [includeLegend, setIncludeLegend] = useState(true);
+  const [includeSidebar, setIncludeSidebar] = useState(false);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    setIsGeneratingPreview(true);
+    setPreviewDataUrl(null);
+
+    buildScreenshotDataUrl({ includeLegend, includeSidebar })
+      .then((dataUrl) => {
+        if (!cancelled) setPreviewDataUrl(dataUrl);
+      })
+      .catch(() => {
+        // Preview failed — leave null so user can still attempt download
+      })
+      .finally(() => {
+        if (!cancelled) setIsGeneratingPreview(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, includeLegend, includeSidebar]);
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const dataUrl = await buildScreenshotDataUrl({ includeLegend, includeSidebar });
+      downloadScreenshot(dataUrl);
+      setOpen(false);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="absolute right-0 top-20 z-10 border border-r-0 border-t-0 border-black">
-      <Button type="button" size="icon" className={BUTTON_CLASSES}>
-        <Camera className={ICON_CLASSES} aria-hidden />
-        <span className="sr-only">{t('screenshot')}</span>
-      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button type="button" size="icon" className={BUTTON_CLASSES}>
+            <Camera className={ICON_CLASSES} aria-hidden />
+            <span className="sr-only">{t('screenshot')}</span>
+          </Button>
+        </DialogTrigger>
+
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('screenshot-dialog-title')}</DialogTitle>
+          </DialogHeader>
+
+          {/* Options */}
+          <div className="flex flex-col gap-3">
+            <label className="flex cursor-pointer items-center gap-2 font-mono text-xs">
+              <Checkbox
+                name="include-legend"
+                checked={includeLegend}
+                onCheckedChange={(checked) => setIncludeLegend(checked === true)}
+              />
+              {t('screenshot-include-legend')}
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 font-mono text-xs">
+              <Checkbox
+                name="include-sidebar"
+                checked={includeSidebar}
+                onCheckedChange={(checked) => setIncludeSidebar(checked === true)}
+              />
+              {t('screenshot-include-sidebar')}
+            </label>
+          </div>
+
+          {/* Preview */}
+          <div className="flex min-h-[200px] items-center justify-center overflow-hidden border border-black">
+            {isGeneratingPreview && (
+              <Skeleton className="h-full w-full" style={{ minHeight: 200 }} />
+            )}
+            {!isGeneratingPreview && previewDataUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={previewDataUrl}
+                alt={t('screenshot-dialog-title')}
+                className="max-h-[60vh] max-w-full object-contain"
+              />
+            )}
+            {!isGeneratingPreview && !previewDataUrl && (
+              <span className="font-mono text-xs text-gray-400">
+                {t('screenshot-preview-loading')}
+              </span>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={handleDownload}
+              disabled={isDownloading || isGeneratingPreview}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              {isDownloading ? t('screenshot-downloading') : t('screenshot-download')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

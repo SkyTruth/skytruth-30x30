@@ -250,7 +250,10 @@ const MainMap: FCWithMessages = () => {
   const disableMouseMove = popup.type === 'click' && popup.features?.length;
 
   return (
-    <div className="absolute left-0 h-full w-full border-b border-r border-black">
+    <div
+      className="absolute left-0 h-full w-full border-b border-r border-black"
+      data-screenshot="map"
+    >
       <Map
         initialViewState={initialViewState}
         bounds={bounds}

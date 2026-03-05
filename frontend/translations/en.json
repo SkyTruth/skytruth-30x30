@@ -376,7 +376,13 @@
     "map": {
       "zoom-in": "Zoom in",
       "zoom-out": "Zoom out",
-      "screenshot": "Screenshot"
+      "screenshot": "Screenshot",
+      "screenshot-include-legend": "Include legend",
+      "screenshot-include-sidebar": "Include sidebar",
+      "screenshot-download": "Download",
+      "screenshot-downloading": "Downloading...",
+      "screenshot-preview-loading": "Generating preview...",
+      "screenshot-dialog-title": "Download map image"
     },
     "mobile-disclaimer-dialog": {
       "page-optimized-for-desktop-viewing": "This page is optimized for desktop viewing.",
