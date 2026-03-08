@@ -20,8 +20,6 @@ import type {
   EnvironmentResponse,
   EnvironmentRequest,
   GetEnvironmentsIdParams,
-  EnvironmentLocalizationResponse,
-  EnvironmentLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -343,75 +341,6 @@ export const useDeleteEnvironmentsId = <TError = ErrorType<Error>, TContext = un
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteEnvironmentsIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postEnvironmentsIdLocalizations = (
-  id: number,
-  environmentLocalizationRequest: BodyType<EnvironmentLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<EnvironmentLocalizationResponse>(
-    {
-      url: `/environments/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: environmentLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostEnvironmentsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<EnvironmentLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<EnvironmentLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>,
-    { id: number; data: BodyType<EnvironmentLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postEnvironmentsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostEnvironmentsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>
->;
-export type PostEnvironmentsIdLocalizationsMutationBody = BodyType<EnvironmentLocalizationRequest>;
-export type PostEnvironmentsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostEnvironmentsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<EnvironmentLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostEnvironmentsIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

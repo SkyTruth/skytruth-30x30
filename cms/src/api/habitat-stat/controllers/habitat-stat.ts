@@ -69,28 +69,22 @@ export default factories.createCoreController(HABITAT_STATS_NAMESPACE, ({ strapi
                             });
                             continue;
                         }
-                        await strapi.entityService.create(
-                            HABITAT_STATS_NAMESPACE,
-                            {
-                                data: {
-                                    year,
-                                    total_area,
-                                    protected_area,
-                                    location: locationMap[stat.location],
-                                    habitat: habitatMap[stat.habitat],
-                                    environment: environmentMap[stat.environment]
-                                }
+                        await strapi.documents(HABITAT_STATS_NAMESPACE).create({
+                            data: {
+                                year,
+                                total_area,
+                                protected_area,
+                                location: locationMap[stat.location],
+                                habitat: habitatMap[stat.habitat],
+                                environment: environmentMap[stat.environment]
                             }
-                        );
+                        });
                     } else {
                         // Existing record, update it
-                        await strapi.entityService.update(
-                            HABITAT_STATS_NAMESPACE,
-                            habitatStatMap[statKey],
-                            {
-                                data: { total_area, protected_area }
-                            }
-                        );
+                        await strapi.documents(HABITAT_STATS_NAMESPACE).update({
+                            documentId: habitatStatMap[statKey].toString(),
+                            data: { total_area, protected_area }
+                        });
                     }
                 }
             });

@@ -23,18 +23,18 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             // find the most recently updated record and return its updatedAt date
             const updatedAtQuery = {
                 ...query,
-                fields: ['updatedAt'],
-                sort: { updatedAt: 'desc' },
+                fields: ['updatedAt'] as any,
+                sort: { updatedAt: 'desc' } as any,
                 limit: 1
             };
-            const updatedAt = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE, updatedAtQuery).then((data) => {
+            const updatedAt = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).findMany(updatedAtQuery).then((data) => {
                 return data[0]?.updatedAt ?? null;
             });
 
             const dataQuery = {
                 ...query,
                 pagination: { pageSize: 1000000, page: 1 } // Max allowed by the API config. Will paginate after sorting
-            }
+            } as any;
             delete dataQuery.sort; // We will sort the data after we get it
             ctx.query = dataQuery;
             // run the original find function without pagination or sorting
@@ -123,10 +123,11 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                     if (statsMap[`${stat.location}-${stat.environment}`]) {
                         // Update existing stat
                         const id = statsMap[`${location}-${environment}`];
-                        await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                        await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
+                            documentId: id.toString(),
                             data: {
                                 ...attributes,
-                            },
+                            }
                         });
                     } else {
                         // Create new stat
@@ -155,7 +156,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                         const locationId = locationMap[location];
                         const environmentId = environmentMap[environment];
 
-                        const { id } = await strapi.entityService.create(PROTECTION_COVERAGE_STAT_NAMESPACE, {
+                        const { id } = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).create({
                             data: {
                                 ...attributes,
                                 year,
@@ -163,7 +164,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                                 environment: environmentId
                             },
                         });
-                        const prevLastYear = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE, {
+                        const prevLastYear = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).findMany({
                             filters: {
                                 is_last_year: true,
                                 location: {
@@ -193,16 +194,19 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
 
                         } else if (prevLastYear.length === 0 && year === new Date().getFullYear()) {
                         // If there is no previous last year record, set the new record as last year if it is the current year
-                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                            await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
+                                documentId: id.toString(),
                                 data: { is_last_year: true }
                             });
                         } else if (prevLastYear[0].year < year) {
                             // If the new record is the most recent set is_last_year to true and unset it for the previous last year
-                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, prevLastYear[0].id, {
+                            await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
+                                documentId: prevLastYear[0].id.toString(),
                                 data: { is_last_year: false }
                             });
 
-                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                            await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
+                                documentId: id.toString(),
                                 data: { is_last_year: true }
                             });
                         }

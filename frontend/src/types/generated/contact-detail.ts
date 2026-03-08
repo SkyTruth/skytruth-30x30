@@ -18,8 +18,6 @@ import type {
   Error,
   GetContactDetailParams,
   ContactDetailRequest,
-  ContactDetailLocalizationResponse,
-  ContactDetailLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -212,74 +210,6 @@ export const useDeleteContactDetail = <
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteContactDetailMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postContactDetailLocalizations = (
-  contactDetailLocalizationRequest: BodyType<ContactDetailLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<ContactDetailLocalizationResponse>(
-    {
-      url: `/contact-detail/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: contactDetailLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostContactDetailLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postContactDetailLocalizations>>,
-    TError,
-    { data: BodyType<ContactDetailLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postContactDetailLocalizations>>,
-  TError,
-  { data: BodyType<ContactDetailLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postContactDetailLocalizations>>,
-    { data: BodyType<ContactDetailLocalizationRequest> }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return postContactDetailLocalizations(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostContactDetailLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postContactDetailLocalizations>>
->;
-export type PostContactDetailLocalizationsMutationBody = BodyType<ContactDetailLocalizationRequest>;
-export type PostContactDetailLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostContactDetailLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postContactDetailLocalizations>>,
-    TError,
-    { data: BodyType<ContactDetailLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostContactDetailLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

@@ -68,28 +68,22 @@ export default factories.createCoreController('api::location.location', ({ strap
             if (options?.newType) {
               attributes.type = options.newType
             }
-            await strapi.entityService.create(
-              'api::location.location',
-              {
-                data: {
-                  code,
-                  name,
-                  ...attributes,
-                },
-              }
-            );
+            await strapi.documents('api::location.location').create({
+              data: {
+                code,
+                name,
+                ...attributes,
+              },
+            });
           } else {
             // Existing record, update it
-            await strapi.entityService.update(
-              'api::location.location',
-              locationsMap[code],
-              {
-                data: {
-                  name,
-                  ...attributes,
-                },
+            await strapi.documents('api::location.location').update({
+              documentId: locationsMap[code].toString(),
+              data: {
+                name,
+                ...attributes,
               }
-            );
+            });
           }
         }
       }

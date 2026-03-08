@@ -1,51 +1,53 @@
-import type { Schema, Attribute } from '@strapi/strapi';
+import type { Schema, Struct } from '@strapi/strapi';
 
-export interface DocumentationMetadata extends Schema.Component {
+export interface DocumentationMetadata extends Struct.ComponentSchema {
   collectionName: 'components_documentation_metadata';
   info: {
-    displayName: 'Metadata';
     description: '';
+    displayName: 'Metadata';
   };
   attributes: {
-    description: Attribute.RichText & Attribute.Required;
-    citation: Attribute.RichText;
-    source: Attribute.RichText;
-    resolution: Attribute.String;
-    content_date: Attribute.Date;
-    license: Attribute.String;
+    citation: Schema.Attribute.RichText;
+    content_date: Schema.Attribute.Date;
+    description: Schema.Attribute.RichText & Schema.Attribute.Required;
+    license: Schema.Attribute.String;
+    resolution: Schema.Attribute.String;
+    source: Schema.Attribute.RichText;
   };
 }
 
-export interface LegendLegendItems extends Schema.Component {
-  collectionName: 'components_legend_legend_items';
-  info: {
-    displayName: 'legend_items';
-  };
-  attributes: {
-    icon: Attribute.String;
-    color: Attribute.String;
-    value: Attribute.String & Attribute.Required;
-    description: Attribute.String;
-  };
-}
-
-export interface LegendLegend extends Schema.Component {
+export interface LegendLegend extends Struct.ComponentSchema {
   collectionName: 'components_legend_legends';
   info: {
     displayName: 'legend';
   };
   attributes: {
-    type: Attribute.Enumeration<['basic', 'icon', 'choropleth', 'gradient']>;
-    items: Attribute.Component<'legend.legend-items', true>;
+    items: Schema.Attribute.Component<'legend.legend-items', true>;
+    type: Schema.Attribute.Enumeration<
+      ['basic', 'icon', 'choropleth', 'gradient']
+    >;
   };
 }
 
-declare module '@strapi/types' {
-  export module Shared {
-    export interface Components {
+export interface LegendLegendItems extends Struct.ComponentSchema {
+  collectionName: 'components_legend_legend_items';
+  info: {
+    displayName: 'legend_items';
+  };
+  attributes: {
+    color: Schema.Attribute.String;
+    description: Schema.Attribute.String;
+    icon: Schema.Attribute.String;
+    value: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
+declare module '@strapi/strapi' {
+  export module Public {
+    export interface ComponentSchemas {
       'documentation.metadata': DocumentationMetadata;
-      'legend.legend-items': LegendLegendItems;
       'legend.legend': LegendLegend;
+      'legend.legend-items': LegendLegendItems;
     }
   }
 }

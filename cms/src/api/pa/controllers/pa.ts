@@ -59,9 +59,9 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
 
       // First, we get the list of all the parents (no pagination) for which at least one child
       // matches the filters. No sorting.
-      const { parent, ...filtersWithoutParentProperty } = ctx.query.filters ?? {};
+      const { parent, ...filtersWithoutParentProperty } = (ctx.query.filters ?? {}) as any;
 
-      const parentIds = (await strapi.entityService.findMany('api::pa.pa', {
+      const parentIds = (await strapi.documents('api::pa.pa').findMany({
         fields: ['id'],
         populate: {
           parent: {
@@ -167,7 +167,8 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
 
           // Record exists, update in place
           if (id) {
-            await strapi.entityService.update("api::pa.pa", id, {
+            await strapi.documents("api::pa.pa").update({
+              documentId: id.toString(),
               data: {
                 data_source: dataSourceMap[data_source],
                 environment: environmentMap[environment],
@@ -186,7 +187,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
           } else {
             //Break the required fields out just to keep the type checker happy
             const { name, area, bbox, coverage, ...optionalAttributes } = attributes;
-            const newPA = await strapi.entityService.create("api::pa.pa", {
+            const newPA = await strapi.documents("api::pa.pa").create({
               data: {
                 area,
                 bbox,
@@ -238,7 +239,8 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
         
         const parent = relations?.parent?.key ? newIdMap[relations.parent.key] : null;
 
-        await strapi.entityService.update('api::pa.pa', id, {
+        await strapi.documents('api::pa.pa').update({
+          documentId: id.toString(),
           data: {
             ...(children ? { children } : {}),
             ...(parent ? { parent } : null)

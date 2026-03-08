@@ -1,14 +1,14 @@
 {
-  "key": "plugin_content_manager_configuration_content_types::api::mpa-iucn-category.mpa-iucn-category",
+  "key": "plugin_content_manager_configuration_content_types::plugin::review-workflows.workflow",
   "value": {
-    "uid": "api::mpa-iucn-category.mpa-iucn-category",
     "settings": {
       "bulkable": true,
       "filterable": true,
       "searchable": true,
       "pageSize": 10,
-      "mainField": "slug",
-      "defaultSortBy": "slug",
+      "relationOpenMode": "modal",
+      "mainField": "name",
+      "defaultSortBy": "name",
       "defaultSortOrder": "ASC"
     },
     "metadatas": {
@@ -16,20 +16,6 @@
         "edit": {},
         "list": {
           "label": "id",
-          "searchable": true,
-          "sortable": true
-        }
-      },
-      "slug": {
-        "edit": {
-          "label": "slug",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true
-        },
-        "list": {
-          "label": "slug",
           "searchable": true,
           "sortable": true
         }
@@ -48,18 +34,48 @@
           "sortable": true
         }
       },
-      "info": {
+      "stages": {
         "edit": {
-          "label": "info",
+          "label": "stages",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true,
+          "mainField": "name"
+        },
+        "list": {
+          "label": "stages",
+          "searchable": false,
+          "sortable": false
+        }
+      },
+      "stageRequiredToPublish": {
+        "edit": {
+          "label": "stageRequiredToPublish",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true,
+          "mainField": "name"
+        },
+        "list": {
+          "label": "stageRequiredToPublish",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "contentTypes": {
+        "edit": {
+          "label": "contentTypes",
           "description": "",
           "placeholder": "",
           "visible": true,
           "editable": true
         },
         "list": {
-          "label": "info",
-          "searchable": true,
-          "sortable": true
+          "label": "contentTypes",
+          "searchable": false,
+          "sortable": false
         }
       },
       "createdAt": {
@@ -132,29 +148,36 @@
     "layouts": {
       "list": [
         "id",
-        "slug",
         "name",
-        "info"
+        "stages",
+        "stageRequiredToPublish"
       ],
       "edit": [
         [
           {
-            "name": "slug",
+            "name": "name",
             "size": 6
           },
           {
-            "name": "name",
+            "name": "stages",
             "size": 6
           }
         ],
         [
           {
-            "name": "info",
+            "name": "stageRequiredToPublish",
             "size": 6
+          }
+        ],
+        [
+          {
+            "name": "contentTypes",
+            "size": 12
           }
         ]
       ]
-    }
+    },
+    "uid": "plugin::review-workflows.workflow"
   },
   "type": "object",
   "environment": null,

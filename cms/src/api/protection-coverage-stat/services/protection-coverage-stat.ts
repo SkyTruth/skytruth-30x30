@@ -22,21 +22,18 @@ type StatsMapStats = {
 export default factories.createCoreService('api::protection-coverage-stat.protection-coverage-stat', 
   ({ strapi }) => ({
     async getStatsMap(year: number): Promise<IDMap> {
-      const stats = await strapi.entityService.findMany(
-        PROTECTION_COVERAGE_STAT_NAMESPACE,
-        {
-            filters: { year },
-            fields:['id', 'is_last_year'],
-            populate: {
-                location: {
-                    fields: ['code']
-                },
-                environment: {
-                    fields: ['slug']
-                }
-            }
-        }
-      ) as StatsMapStats[];
+      const stats = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).findMany({
+          filters: { year },
+          fields:['id', 'is_last_year'],
+          populate: {
+              location: {
+                  fields: ['code']
+              },
+              environment: {
+                  fields: ['slug']
+              }
+          }
+      }) as StatsMapStats[];
 
       const statsMap: IDMap = {};
       stats.forEach((stat) => {

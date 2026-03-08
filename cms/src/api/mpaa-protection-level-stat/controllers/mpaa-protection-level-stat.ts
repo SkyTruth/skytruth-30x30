@@ -51,31 +51,25 @@ export default factories
                 });
                 continue;
               }
-              await strapi.entityService.create(
-                MPAA_PROTECTION_LEVEL_STATS_NAMESPACE,
-                {
-                  data: {
-                    area,
-                    percentage,
-                    total_area,
-                    location: locationMap[stat.location],
-                    mpaa_protection_level: MpaaProtectionLevelMap[stat.mpaa_protection_level],
-                  },
-                }
-              );
+              await strapi.documents(MPAA_PROTECTION_LEVEL_STATS_NAMESPACE).create({
+                data: {
+                  area,
+                  percentage,
+                  total_area,
+                  location: locationMap[stat.location],
+                  mpaa_protection_level: MpaaProtectionLevelMap[stat.mpaa_protection_level],
+                },
+              });
             } else {
               // Update the existing record
-              await strapi.entityService.update(
-                MPAA_PROTECTION_LEVEL_STATS_NAMESPACE,
-                statsMap[statKey],
-                {
-                  data: {
-                    area,
-                    percentage,
-                    total_area,
-                  },
+              await strapi.documents(MPAA_PROTECTION_LEVEL_STATS_NAMESPACE).update({
+                documentId: statsMap[statKey].toString(),
+                data: {
+                  area,
+                  percentage,
+                  total_area,
                 }
-              );
+              });
             }
           }
         })

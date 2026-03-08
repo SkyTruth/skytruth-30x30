@@ -20,8 +20,6 @@ import type {
   DataToolEcosystemResponse,
   DataToolEcosystemRequest,
   GetDataToolEcosystemsIdParams,
-  DataToolEcosystemLocalizationResponse,
-  DataToolEcosystemLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -355,76 +353,6 @@ export const useDeleteDataToolEcosystemsId = <
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteDataToolEcosystemsIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postDataToolEcosystemsIdLocalizations = (
-  id: number,
-  dataToolEcosystemLocalizationRequest: BodyType<DataToolEcosystemLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<DataToolEcosystemLocalizationResponse>(
-    {
-      url: `/data-tool-ecosystems/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: dataToolEcosystemLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostDataToolEcosystemsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataToolEcosystemsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataToolEcosystemLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postDataToolEcosystemsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<DataToolEcosystemLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postDataToolEcosystemsIdLocalizations>>,
-    { id: number; data: BodyType<DataToolEcosystemLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postDataToolEcosystemsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostDataToolEcosystemsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postDataToolEcosystemsIdLocalizations>>
->;
-export type PostDataToolEcosystemsIdLocalizationsMutationBody =
-  BodyType<DataToolEcosystemLocalizationRequest>;
-export type PostDataToolEcosystemsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostDataToolEcosystemsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataToolEcosystemsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataToolEcosystemLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostDataToolEcosystemsIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

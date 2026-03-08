@@ -35,7 +35,7 @@ export default factories.createCoreService('api::feature-flag.feature-flag', () 
     const runAsOf = header['run-as-of'] ?? query['run-as-of']
     const formattedRunAsOf = runAsOf ? new Date(runAsOf) : new Date()
 
-    const flags =  await strapi.entityService.findMany('api::feature-flag.feature-flag', {
+    const flags =  await strapi.documents('api::feature-flag.feature-flag').findMany({
         filters: {
             feature: {
                 '$eq': name

@@ -4,12 +4,10 @@
  * DOCUMENTATION
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type {
   UseQueryOptions,
-  UseMutationOptions,
   QueryFunction,
-  MutationFunction,
   UseQueryResult,
   QueryKey,
 } from '@tanstack/react-query';
@@ -19,11 +17,9 @@ import type {
   GetMpaaEstablishmentStagesParams,
   MpaaEstablishmentStageResponse,
   GetMpaaEstablishmentStagesIdParams,
-  MpaaEstablishmentStageLocalizationResponse,
-  MpaaEstablishmentStageLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
-import type { ErrorType, BodyType } from '../../services/api/index';
+import type { ErrorType } from '../../services/api/index';
 
 // eslint-disable-next-line
 type SecondParameter<T extends (...args: any) => any> = T extends (
@@ -175,75 +171,4 @@ export const useGetMpaaEstablishmentStagesId = <
   query.queryKey = queryOptions.queryKey;
 
   return query;
-};
-
-export const postMpaaEstablishmentStagesIdLocalizations = (
-  id: number,
-  mpaaEstablishmentStageLocalizationRequest: BodyType<MpaaEstablishmentStageLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<MpaaEstablishmentStageLocalizationResponse>(
-    {
-      url: `/mpaa-establishment-stages/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: mpaaEstablishmentStageLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostMpaaEstablishmentStagesIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postMpaaEstablishmentStagesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<MpaaEstablishmentStageLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postMpaaEstablishmentStagesIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<MpaaEstablishmentStageLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postMpaaEstablishmentStagesIdLocalizations>>,
-    { id: number; data: BodyType<MpaaEstablishmentStageLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postMpaaEstablishmentStagesIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostMpaaEstablishmentStagesIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postMpaaEstablishmentStagesIdLocalizations>>
->;
-export type PostMpaaEstablishmentStagesIdLocalizationsMutationBody =
-  BodyType<MpaaEstablishmentStageLocalizationRequest>;
-export type PostMpaaEstablishmentStagesIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostMpaaEstablishmentStagesIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postMpaaEstablishmentStagesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<MpaaEstablishmentStageLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostMpaaEstablishmentStagesIdLocalizationsMutationOptions(options);
-
-  return useMutation(mutationOptions);
 };

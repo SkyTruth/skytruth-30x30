@@ -6,7 +6,7 @@ import { factories } from '@strapi/strapi';
 
 export default factories.createCoreService('api::habitat-stat.habitat-stat', ({ strapi }) => ({
   async getHabitatStatMap(year: number): Promise<IDMap> {
-    const habitatStats = await strapi.entityService.findMany('api::habitat-stat.habitat-stat', {
+    const habitatStats = await strapi.documents('api::habitat-stat.habitat-stat').findMany({
       filters: { 
         year,
         locale: 'en',
