@@ -17,6 +17,7 @@ export enum UploadErrorType {
   Generic,
   InvalidXMLSyntax,
   SHPMissingFile,
+  SHPMissingPRJ,
   UnsupportedFile,
   UnsupportedCRS,
   NoPolygons,
@@ -188,6 +189,27 @@ async function reprojectIfNeeded(geojson: FeatureCollection): Promise<FeatureCol
 }
 
 /**
+ * Check whether any coordinate in a set of features falls outside valid WGS84 bounds,
+ * indicating the data is in a projected CRS.
+ */
+function hasOutOfBoundsCoordinates(features: Feature[]): boolean {
+  const checkPosition = (pos: Position): boolean => Math.abs(pos[0]) > 180 || Math.abs(pos[1]) > 90;
+
+  const checkCoords = (coords: unknown): boolean => {
+    if (!Array.isArray(coords)) return false;
+    if (typeof coords[0] === 'number') return checkPosition(coords as Position);
+
+    return coords.some((coord) => checkCoords(coord));
+  };
+
+  return features.some(
+    (feature) =>
+      feature.geometry &&
+      checkCoords((feature.geometry as Exclude<Geometry, GeoJSON.GeometryCollection>).coordinates)
+  );
+}
+
+/**
  * Convert files to a GeoJSON
  * @param files Files to convert
  * @returns Error code if the convertion fails
@@ -226,7 +248,7 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
     loader = KMLLoader;
   } else {
     try {
-      loader = await selectLoader(fileToParse, [ShapefileLoader, KMLLoader]);
+      loader = await selectLoader(fileToParse, [ShapefileLoader, KMLLoader] as Loader[]);
     } catch (e) {
       return Promise.reject(UploadErrorType.UnsupportedFile);
     }
@@ -284,9 +306,17 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
   let parsed: FeatureCollection;
 
   if (loader === ShapefileLoader) {
+    const features = (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>)
+      .data as Feature[];
+    const hasPrj = files.some((f) => f.name.toLowerCase().endsWith('.prj'));
+
+    if (!hasPrj && hasOutOfBoundsCoordinates(features)) {
+      return Promise.reject(UploadErrorType.SHPMissingPRJ);
+    }
+
     parsed = {
       type: 'FeatureCollection',
-      features: (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>).data as Feature[],
+      features,
     };
   } else {
     const feature = content as GeoJSONObject;

@@ -395,6 +395,7 @@
       "generic-upload-error": "Unable to validate the file.",
       "xml-syntax-error": "This .kml/.kmz file does not have a valid XML syntax. Please try to validate it and resolve the issues.",
       "shp-missing-files-error": "To upload a Shapefile geometry, you must upload the .shp, .shx, .dbf and, optionally, .prj files all at once.",
+      "shp-missing-prj-error": "This Shapefile appears to use a non-WGS84 coordinate system. Please include the .prj file so the data can be reprojected, or convert it to EPSG:4326 (WGS 84) before uploading.",
       "unsupported-file-error": "Unable to parse the file. Please try uploading a different format.",
       "file-too-large-error": "This file is too large. Maximum file size is {size}",
       "no-polygons-error": "File must contain at least one polygon or multipolygon",

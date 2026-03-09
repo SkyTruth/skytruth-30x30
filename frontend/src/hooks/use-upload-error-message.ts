@@ -29,6 +29,8 @@ export const useUploadErrorMessage = ({ maxFileSize }: UseUploadErrorMessagePara
           return t('xml-syntax-error');
         case UploadErrorType.SHPMissingFile:
           return t('shp-missing-files-error');
+        case UploadErrorType.SHPMissingPRJ:
+          return t('shp-missing-prj-error');
         case UploadErrorType.UnsupportedFile:
           return t('unsupported-file-error');
         case UploadErrorType.UnsupportedCRS:
