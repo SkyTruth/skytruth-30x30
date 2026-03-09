@@ -398,6 +398,7 @@
       "unsupported-file-error": "Unable to parse the file. Please try uploading a different format.",
       "file-too-large-error": "This file is too large. Maximum file size is {size}",
       "no-polygons-error": "File must contain at least one polygon or multipolygon",
+      "unsupported-crs-error": "This file uses an unsupported coordinate reference system. Please convert it to EPSG:4326 (WGS 84) and try again.",
       "features-excluded-info": "One or more features were excluded because they were not polygons."
     }
   }

@@ -18,6 +18,7 @@ export enum UploadErrorType {
   InvalidXMLSyntax,
   SHPMissingFile,
   UnsupportedFile,
+  UnsupportedCRS,
   NoPolygons,
 }
 
@@ -163,8 +164,7 @@ async function reprojectIfNeeded(geojson: FeatureCollection): Promise<FeatureCol
       const def = await resp.text();
       proj4.defs(sourceCrs, def);
     } catch {
-      console.warn(`Could not resolve CRS definition for ${sourceCrs}, skipping reprojection`);
-      return geojson;
+      throw UploadErrorType.UnsupportedCRS;
     }
   }
 
