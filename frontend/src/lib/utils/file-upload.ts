@@ -92,12 +92,20 @@ export const validateFile = async (
   }
 };
 
+/** Legacy CRS property found in pre-RFC 7946 GeoJSON files */
+type LegacyCrs = {
+  type?: string;
+  properties?: { name?: string; code?: string | number };
+};
+
+type GeoJSONWithCrs = GeoJSONObject & { crs?: LegacyCrs };
+
 /**
  * Extract an EPSG code from a legacy GeoJSON `crs` property.
  * Returns null if no crs is defined or if it's already WGS84 (4326).
  */
-function extractNonWgs84Epsg(geojson: Record<string, unknown>): string | null {
-  const crs = geojson.crs as { type?: string; properties?: Record<string, unknown> } | undefined;
+function extractNonWgs84Epsg(geojson: GeoJSONWithCrs): string | null {
+  const { crs } = geojson;
   if (!crs?.properties) return null;
 
   let code: number | null = null;
@@ -128,7 +136,7 @@ function reprojectCoordinates(coords: unknown, transformer: proj4.Converter): un
   if (typeof coords[0] === 'number') {
     return reprojectPosition(coords as Position, transformer);
   }
-  return coords.map((c) => reprojectCoordinates(c, transformer));
+  return coords.map((coord) => reprojectCoordinates(coord, transformer));
 }
 
 function reprojectGeometry(geometry: Geometry, transformer: proj4.Converter): Geometry {
@@ -138,12 +146,10 @@ function reprojectGeometry(geometry: Geometry, transformer: proj4.Converter): Ge
       geometries: geometry.geometries.map((g) => reprojectGeometry(g as Geometry, transformer)),
     };
   }
+  const geo = geometry as Exclude<Geometry, GeoJSON.GeometryCollection>;
   return {
-    ...geometry,
-    coordinates: reprojectCoordinates(
-      (geometry as Geometry & { coordinates: unknown }).coordinates,
-      transformer
-    ),
+    ...geo,
+    coordinates: reprojectCoordinates(geo.coordinates, transformer),
   } as Geometry;
 }
 
@@ -152,7 +158,7 @@ function reprojectGeometry(geometry: Geometry, transformer: proj4.Converter): Ge
  * reproject all coordinates to EPSG:4326.
  */
 async function reprojectIfNeeded(geojson: FeatureCollection): Promise<FeatureCollection> {
-  const sourceCrs = extractNonWgs84Epsg(geojson as unknown as Record<string, unknown>);
+  const sourceCrs = extractNonWgs84Epsg(geojson as GeoJSONWithCrs);
   if (!sourceCrs) return geojson;
 
   // proj4 knows EPSG:4326 and EPSG:3857 by default.
@@ -206,27 +212,6 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
     return Promise.reject(UploadErrorType.SHPMissingFile);
   }
 
-  // GeoJSON files are parsed directly — no loader needed
-  if (fileToParse instanceof File && fileToParse.name.endsWith('.geojson')) {
-    try {
-      const text = await readFileAsText(fileToParse);
-      const json = JSON.parse(text) as GeoJSONObject;
-
-      let parsed: FeatureCollection;
-      if (isFeatureCollection(json)) {
-        parsed = json as FeatureCollection;
-      } else if (isFeature(json)) {
-        parsed = featureCollection([json]);
-      } else {
-        return Promise.reject(UploadErrorType.UnsupportedFile);
-      }
-
-      return reprojectIfNeeded(parsed);
-    } catch {
-      return Promise.reject(UploadErrorType.UnsupportedFile);
-    }
-  }
-
   if (fileToParse.name.endsWith('.kmz')) {
     // In most of the cases, a .kmz file is just a zipped .kml file, but it can still contains
     // multiple files
@@ -278,7 +263,6 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
       // server so we reroute loaders.gl to the files the user uploaded.
       fetch: async (url: string | File): Promise<Response> => {
         let file: File;
-
         if (typeof url === 'string') {
           const extension = url.split('.').pop();
           file = files.find((f) => f.name.toLowerCase().endsWith(extension.toLowerCase()));
