@@ -4,7 +4,8 @@ import { Loader } from '@loaders.gl/loader-utils';
 import { ShapefileLoader } from '@loaders.gl/shapefile';
 import { ZipLoader } from '@loaders.gl/zip';
 import { featureCollection, GeoJSONObject, MultiPolygon } from '@turf/turf';
-import type { Feature, FeatureCollection, Geometry } from 'geojson';
+import type { Feature, FeatureCollection, Geometry, Position } from 'geojson';
+import proj4 from 'proj4';
 
 import {
   isFeature,
@@ -91,6 +92,96 @@ export const validateFile = async (
 };
 
 /**
+ * Extract an EPSG code from a legacy GeoJSON `crs` property.
+ * Returns null if no crs is defined or if it's already WGS84 (4326).
+ */
+function extractNonWgs84Epsg(geojson: Record<string, unknown>): string | null {
+  const crs = geojson.crs as { type?: string; properties?: Record<string, unknown> } | undefined;
+  if (!crs?.properties) return null;
+
+  let code: number | null = null;
+
+  if (crs.type === 'name' && typeof crs.properties.name === 'string') {
+    // Formats: "urn:ogc:def:crs:EPSG::3857", "EPSG:3857"
+    const match = crs.properties.name.match(/EPSG:+(\d+)/i);
+    if (match) code = parseInt(match[1], 10);
+  } else if (typeof crs.properties.code === 'number') {
+    code = crs.properties.code;
+  } else if (typeof crs.properties.code === 'string') {
+    code = parseInt(crs.properties.code, 10);
+  }
+
+  if (!code || code === 4326) return null;
+  return `EPSG:${code}`;
+}
+
+function reprojectPosition(pos: Position, transformer: proj4.Converter): Position {
+  const [x, y, ...rest] = pos;
+  const [lon, lat] = transformer.forward([x, y]);
+  return [lon, lat, ...rest];
+}
+
+function reprojectCoordinates(coords: unknown, transformer: proj4.Converter): unknown {
+  if (!Array.isArray(coords)) return coords;
+  // A position is an array of numbers
+  if (typeof coords[0] === 'number') {
+    return reprojectPosition(coords as Position, transformer);
+  }
+  return coords.map((c) => reprojectCoordinates(c, transformer));
+}
+
+function reprojectGeometry(geometry: Geometry, transformer: proj4.Converter): Geometry {
+  if (geometry.type === 'GeometryCollection') {
+    return {
+      ...geometry,
+      geometries: geometry.geometries.map((g) => reprojectGeometry(g as Geometry, transformer)),
+    };
+  }
+  return {
+    ...geometry,
+    coordinates: reprojectCoordinates(
+      (geometry as Geometry & { coordinates: unknown }).coordinates,
+      transformer
+    ),
+  } as Geometry;
+}
+
+/**
+ * If the FeatureCollection has a legacy `crs` property with a non-WGS84 CRS,
+ * reproject all coordinates to EPSG:4326.
+ */
+async function reprojectIfNeeded(geojson: FeatureCollection): Promise<FeatureCollection> {
+  const sourceCrs = extractNonWgs84Epsg(geojson as unknown as Record<string, unknown>);
+  if (!sourceCrs) return geojson;
+
+  // proj4 knows EPSG:4326 and EPSG:3857 by default.
+  // For other codes, fetch the definition from epsg.io.
+  if (!proj4.defs(sourceCrs)) {
+    try {
+      const resp = await fetch(`https://epsg.io/${sourceCrs.replace('EPSG:', '')}.proj4`);
+      if (!resp.ok) throw new Error(`Unknown CRS: ${sourceCrs}`);
+      const def = await resp.text();
+      proj4.defs(sourceCrs, def);
+    } catch {
+      console.warn(`Could not resolve CRS definition for ${sourceCrs}, skipping reprojection`);
+      return geojson;
+    }
+  }
+
+  const transformer = proj4(sourceCrs, 'EPSG:4326');
+
+  return {
+    type: 'FeatureCollection',
+    features: geojson.features.map((feature) => ({
+      ...feature,
+      geometry: feature.geometry
+        ? reprojectGeometry(feature.geometry, transformer)
+        : feature.geometry,
+    })),
+  };
+}
+
+/**
  * Convert files to a GeoJSON
  * @param files Files to convert
  * @returns Error code if the convertion fails
@@ -113,6 +204,27 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
     files.length < 3
   ) {
     return Promise.reject(UploadErrorType.SHPMissingFile);
+  }
+
+  // GeoJSON files are parsed directly — no loader needed
+  if (fileToParse instanceof File && fileToParse.name.endsWith('.geojson')) {
+    try {
+      const text = await readFileAsText(fileToParse);
+      const json = JSON.parse(text) as GeoJSONObject;
+
+      let parsed: FeatureCollection;
+      if (isFeatureCollection(json)) {
+        parsed = json as FeatureCollection;
+      } else if (isFeature(json)) {
+        parsed = featureCollection([json]);
+      } else {
+        return Promise.reject(UploadErrorType.UnsupportedFile);
+      }
+
+      return reprojectIfNeeded(parsed);
+    } catch {
+      return Promise.reject(UploadErrorType.UnsupportedFile);
+    }
   }
 
   if (fileToParse.name.endsWith('.kmz')) {
@@ -201,7 +313,7 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
     }
   }
 
-  return parsed;
+  return reprojectIfNeeded(parsed);
 }
 
 /**
