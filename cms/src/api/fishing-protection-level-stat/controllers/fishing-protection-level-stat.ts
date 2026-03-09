@@ -64,7 +64,7 @@ export default factories
           } else {
             // Update existing record
             await strapi.documents(FISHING_PROTECTION_LEVEL_STATS_NAMESPACE).update({
-              documentId: statsMap[statKey].toString(),
+              documentId: statsMap[statKey],
               data: { area, pct, total_area }
             });
           }

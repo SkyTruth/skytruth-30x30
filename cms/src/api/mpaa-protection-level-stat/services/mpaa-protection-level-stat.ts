@@ -12,7 +12,7 @@ export default factories
           // this is all we track now, if we expand, level can be part of the map key
           mpaa_protection_level: { slug: 'fully-highly-protected' }
         },
-        fields:  ['id'],
+        fields:  ['documentId'],
         populate: {
           location: {
             fields: ['code']
@@ -21,12 +21,12 @@ export default factories
             fields: ['slug']
           }
         }
-      }) as { id: number, location: { code: string }, mpaa_protection_level: { slug: string } }[];
+      }) as { documentId: string, location: { code: string }, mpaa_protection_level: { slug: string } }[];
 
       const statsMap: Record<string, any> = {};
       for (const stat of stats) {
         if (stat?.location !== null && stat?.mpaa_protection_level !== null) {
-          statsMap[`${stat.location.code}-${stat.mpaa_protection_level.slug}`] = stat.id;
+          statsMap[`${stat.location.code}-${stat.mpaa_protection_level.slug}`] = stat.documentId;
         }
       };
       return statsMap;

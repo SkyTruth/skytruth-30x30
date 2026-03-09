@@ -82,7 +82,7 @@ export default factories.createCoreController(HABITAT_STATS_NAMESPACE, ({ strapi
                     } else {
                         // Existing record, update it
                         await strapi.documents(HABITAT_STATS_NAMESPACE).update({
-                            documentId: habitatStatMap[statKey].toString(),
+                            documentId: habitatStatMap[statKey],
                             data: { total_area, protected_area }
                         });
                     }

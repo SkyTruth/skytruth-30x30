@@ -63,7 +63,7 @@ export default factories
             } else {
               // Update the existing record
               await strapi.documents(MPAA_PROTECTION_LEVEL_STATS_NAMESPACE).update({
-                documentId: statsMap[statKey].toString(),
+                documentId: statsMap[statKey],
                 data: {
                   area,
                   percentage,

@@ -5,7 +5,7 @@
 import { factories } from '@strapi/strapi'
 
 export type PARelations = {
-  id?: number;
+  documentId?: string;
   wdpaid?: number;
   wdpa_p_id?: string;
   zone_id?: number;
@@ -15,14 +15,14 @@ export type PARelations = {
 }
 
 export type ToUpdateRelations = {
-  id?: {
+  documentId?: {
     children: PARelations[]
     parent: PARelations
   }
 }
 
 export type PA = {
-  id?: number;
+  documentId?: string;
   year?: number;
   name?: string;
   area?: number;
@@ -31,7 +31,7 @@ export type PA = {
   wdpa_p_id?: string | null;
   zone_id?: number | null;
   coverage?: number | null;
-  children?: number[] | null;
+  children?: string[] | null;
   data_source?: number | null;
   environment?: number | null;
   protection_status?: number | null;
@@ -39,7 +39,7 @@ export type PA = {
   location?: number | null;
   mpaa_protection_level?: number | null;
   mpaa_establishment_stage?: number | null;
-  parent?: number | null;
+  parent?: string | null;
   created_at?: Date;
   updated_at?: Date;
 };
@@ -62,10 +62,10 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
       const { parent, ...filtersWithoutParentProperty } = (ctx.query.filters ?? {}) as any;
 
       const parentIds = (await strapi.documents('api::pa.pa').findMany({
-        fields: ['id'],
+        fields: ['documentId'],
         populate: {
           parent: {
-            fields: ['id'],
+            fields: ['documentId'],
           },
         },
         filters: {
@@ -81,7 +81,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
           ],
         },
         limit: -1,
-      }) as { id: number; parent: { id: number } }[]).map((d) => d.parent.id);
+      }) as { documentId: string; parent: { documentId: string } }[]).map((d) => d.parent.documentId);
 
       const uniqueParentIds = [...new Set(parentIds)];
 
@@ -104,7 +104,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
                 $or: [
                   filtersWithoutParentProperty,
                   {
-                    id: {
+                    documentId: {
                       $in: uniqueParentIds,
                     },
                   },
@@ -144,7 +144,6 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
 
       await strapi.db.transaction(async () => {
         for (const pa of data) {
-
           const areRelationsValid = strapi.service('api::pa.pa')
             .validateFields(pa, idMaps, errors);
           
@@ -152,9 +151,10 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             continue;
           }
 
-          const updatedPA = strapi.service('api::pa.pa').checkParentChild(pa, toUpdateRelations)
+          const updatedPA = strapi.service('api::pa.pa')
+            .checkParentChild(pa, toUpdateRelations)
           const {
-            id,
+            documentId,
             data_source,
             environment,
             location,
@@ -166,9 +166,9 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
           } = updatedPA as PA;
 
           // Record exists, update in place
-          if (id) {
+          if (documentId) {
             await strapi.documents("api::pa.pa").update({
-              documentId: id.toString(),
+              documentId: documentId,
               data: {
                 data_source: dataSourceMap[data_source],
                 environment: environmentMap[environment],
@@ -211,14 +211,14 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
              * return relational fields
              */ 
             const paKey = strapi.service('api::pa.pa').makePAKey(updatedPA);
-            newIdMap[paKey] = +newPA.id;
+            newIdMap[paKey] = newPA.documentId;
 
             /**
              * If the newly created Pa has relations to update later add its 
              * new ID update relations map
              */
             if (toUpdateRelations[paKey]) {
-              toUpdateRelations[+newPA.id] = toUpdateRelations[paKey];
+              toUpdateRelations[newPA.documentId] = toUpdateRelations[paKey];
               delete toUpdateRelations[paKey]
             }
             created++;
@@ -231,16 +231,15 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
        */
       for (const toUpdate in toUpdateRelations) {
         const relations = toUpdateRelations[toUpdate];
-        const id = Number.isNaN(+toUpdate) ? newIdMap[toUpdate] : toUpdate;
 
-        const children = relations?.children?.map(child => child?.id ? 
-          child.id : 
+        const children = relations?.children?.map(child => child?.documentId ? 
+          child.documentId : 
           newIdMap[child.key])
         
         const parent = relations?.parent?.key ? newIdMap[relations.parent.key] : null;
 
         await strapi.documents('api::pa.pa').update({
-          documentId: id.toString(),
+          documentId: toUpdate,
           data: {
             ...(children ? { children } : {}),
             ...(parent ? { parent } : null)

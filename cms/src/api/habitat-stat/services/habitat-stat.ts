@@ -11,7 +11,7 @@ export default factories.createCoreService('api::habitat-stat.habitat-stat', ({ 
         year,
         locale: 'en',
       },
-      fields: ['id'],
+      fields: ['documentId'],
       populate: {
         location: {
           fields: ['code'],
@@ -23,15 +23,15 @@ export default factories.createCoreService('api::habitat-stat.habitat-stat', ({ 
           fields: ['slug']
         }
       },
-    }) as { id: number, location: { code: string }, environment: { slug: string }, habitat: { slug: string } }[];
+    }) as { documentId: string, location: { code: string }, environment: { slug: string }, habitat: { slug: string } }[];
 
     const statsMap: IDMap = {};
     habitatStats.forEach((stat) => {
       if (!stat.location || !stat.environment || !stat.habitat) {
-        strapi.log.warn(`Habitat stat with ID ${stat.id} is missing location, environment, or habitat.`);
+        strapi.log.warn(`Habitat stat with ID ${stat.documentId} is missing location, environment, or habitat.`);
         return;
       }
-      statsMap[`${stat.location.code}-${stat.environment.slug}-${stat.habitat.slug}`] = stat.id
+      statsMap[`${stat.location.code}-${stat.environment.slug}-${stat.habitat.slug}`] = stat.documentId;
     });
     return statsMap;
   },

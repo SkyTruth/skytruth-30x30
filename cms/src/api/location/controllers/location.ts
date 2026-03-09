@@ -78,7 +78,7 @@ export default factories.createCoreController('api::location.location', ({ strap
           } else {
             // Existing record, update it
             await strapi.documents('api::location.location').update({
-              documentId: locationsMap[code].toString(),
+              documentId: locationsMap[code],
               data: {
                 name,
                 ...attributes,

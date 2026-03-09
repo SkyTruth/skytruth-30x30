@@ -122,9 +122,9 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                     }
                     if (statsMap[`${stat.location}-${stat.environment}`]) {
                         // Update existing stat
-                        const id = statsMap[`${location}-${environment}`];
+                        const docId = statsMap[`${location}-${environment}`];
                         await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
-                            documentId: id.toString(),
+                            documentId: docId,
                             data: {
                                 ...attributes,
                             }
@@ -156,7 +156,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                         const locationId = locationMap[location];
                         const environmentId = environmentMap[environment];
 
-                        const { id } = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).create({
+                        const { documentId } = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).create({
                             data: {
                                 ...attributes,
                                 year,
@@ -178,8 +178,8 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                                     }
                                 }
                                 },
-                            fields: ['id', 'year'],
-                        }) as { id: number, year: number }[];
+                            fields: ['documentId', 'year'],
+                        }) as { documentId: string, year: number }[];
 
                         // If multiple records are found taged as last_year, log and alert the user 
                         if (prevLastYear.length > 1) {
@@ -195,18 +195,18 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                         } else if (prevLastYear.length === 0 && year === new Date().getFullYear()) {
                         // If there is no previous last year record, set the new record as last year if it is the current year
                             await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
-                                documentId: id.toString(),
+                                documentId: documentId,
                                 data: { is_last_year: true }
                             });
                         } else if (prevLastYear[0].year < year) {
                             // If the new record is the most recent set is_last_year to true and unset it for the previous last year
                             await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
-                                documentId: prevLastYear[0].id.toString(),
+                                documentId: prevLastYear[0].documentId,
                                 data: { is_last_year: false }
                             });
 
                             await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
-                                documentId: id.toString(),
+                                documentId: documentId,
                                 data: { is_last_year: true }
                             });
                         }
@@ -251,7 +251,7 @@ function getPaginationBounds(pagination: Pagination = {}, dataLength: number): [
 
 interface ProtectionCoverageStatResponse
     extends ApiProtectionCoverageStatProtectionCoverageStat {
-    id: number;
+    documentId: string;
     data?: ApiLocationLocation | ApiEnvironmentEnvironment
 }
 
