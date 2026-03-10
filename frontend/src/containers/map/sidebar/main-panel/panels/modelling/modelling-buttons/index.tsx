@@ -273,9 +273,13 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           </Button>
         </div>
       )}
-      <div className="mt-2 w-full">
+      <div className="mt-2 w-full px-5">
         {uploadErrorMessage && (
-          <p id="upload-shape-error" className="text-[11px] leading-4 text-error" role="alert">
+          <p
+            id="upload-shape-error"
+            className="text-[11px] font-medium leading-4 text-error"
+            role="alert"
+          >
             {uploadErrorMessage}
           </p>
         )}
