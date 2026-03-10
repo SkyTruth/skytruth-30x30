@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { BarChartHorizontal, Save, Trash } from 'lucide-react';
+import { BarChart4, Save, Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -86,7 +86,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   return (
     <li className="flex items-start justify-between">
       <TooltipProvider>
-        <span className="flex min-w-0 flex-1 items-start gap-2 overflow-x-hidden text-nowrap">
+        <span className="flex min-w-0 flex-1 items-start gap-2 text-nowrap">
           <Switch
             id={`${layer.name}-switch`}
             aria-label={layer.name}
@@ -170,7 +170,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
                   onClick={() => onUseLayerForModelling(layer)}
                 >
                   <span className="sr-only">{useForModellingLabel}</span>
-                  <BarChartHorizontal size={16} />
+                  <BarChart4 size={16} />
                 </Button>
               </span>
             </TooltipTrigger>
