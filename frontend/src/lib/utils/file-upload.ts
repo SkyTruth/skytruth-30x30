@@ -167,7 +167,11 @@ async function reprojectIfNeeded(geojson: FeatureCollection): Promise<FeatureCol
   if (!proj4.defs(sourceCrs)) {
     try {
       const resp = await fetch(`https://epsg.io/${sourceCrs.replace('EPSG:', '')}.proj4`);
-      if (!resp.ok) throw new Error(`Unknown CRS: ${sourceCrs}`);
+
+      if (!resp.ok) {
+        throw new Error(`Unknown CRS: ${sourceCrs}`);
+      }
+
       const def = await resp.text();
       proj4.defs(sourceCrs, def);
     } catch {
@@ -308,7 +312,7 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
   if (loader === ShapefileLoader) {
     const features = (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>)
       .data as Feature[];
-    const hasPrj = files.some((f) => f.name.toLowerCase().endsWith('.prj'));
+    const hasPrj = files.some((file) => file.name.toLowerCase().endsWith('.prj'));
 
     if (!hasPrj && hasOutOfBoundsCoordinates(features)) {
       return Promise.reject(UploadErrorType.SHPMissingPRJ);
