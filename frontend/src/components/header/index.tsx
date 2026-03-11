@@ -27,6 +27,7 @@ import {
   useSyncMapLayers,
   useSyncMapSettings,
 } from '@/containers/map/content/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { cn } from '@/lib/classnames';
 import ArrowRight from '@/styles/icons/arrow-right.svg';
 import { FCWithMessages } from '@/types';
@@ -61,25 +62,35 @@ export type HeaderProps = VariantProps<typeof headerVariants> & {
 
 const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const t = useTranslations('components.header');
+  const hideInfoPages = useFeatureFlag('hide_info_pages'); //TECH 3447 teardown
 
   const navigationItems = useMemo(
-    () => [
-      {
-        name: t('progress-tracker'),
-        href: PAGES.progressTracker,
-        colorClassName: 'text-orange',
-        preserveMapParams: true,
-      },
-      {
-        name: t('conservation-builder'),
-        href: PAGES.conservationBuilder,
-        colorClassName: 'text-blue',
-        preserveMapParams: true,
-      },
-      { name: t('knowledge-hub'), href: PAGES.knowledgeHub, colorClassName: 'text-green' },
-      { name: t('about'), href: PAGES.about, colorClassName: 'text-violet' },
-    ],
-    [t]
+    () =>
+      [
+        {
+          name: t('progress-tracker'),
+          href: PAGES.progressTracker,
+          colorClassName: 'text-orange',
+          preserveMapParams: true,
+        },
+        {
+          name: t('conservation-builder'),
+          href: PAGES.conservationBuilder,
+          colorClassName: 'text-blue',
+          preserveMapParams: true,
+        },
+        !hideInfoPages && {
+          name: t('knowledge-hub'),
+          href: PAGES.knowledgeHub,
+          colorClassName: 'text-green',
+        },
+        !hideInfoPages && {
+          name: t('about'),
+          href: PAGES.about,
+          colorClassName: 'text-violet',
+        },
+      ].filter(Boolean),
+    [t, hideInfoPages]
   );
 
   const [mapSettings] = useSyncMapSettings();
