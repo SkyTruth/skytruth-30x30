@@ -342,8 +342,7 @@
     "widget": {
       "updated-on": "Updated on {date}",
       "no-data-available": "No data available",
-      "not-visible-due-to-error": "The current widget is not visible due to an error",
-      "invalid-geometry": "Invalid geometry. The uploaded shape likely contains an intersection."
+      "not-visible-due-to-error": "The current widget is not visible due to an error"
     },
     "chart-conservation": {
       "year-value": "Year: {value}",
@@ -401,7 +400,8 @@
       "file-too-large-error": "This file is too large. Maximum file size is {size}",
       "no-polygons-error": "File must contain at least one polygon or multipolygon",
       "unsupported-crs-error": "This file uses an unsupported coordinate reference system. Please convert it to EPSG:4326 (WGS 84) and try again.",
-      "features-excluded-info": "One or more features were excluded because they were not polygons."
+      "features-excluded-info": "One or more features were excluded because they were not polygons.",
+      "invalid-geometry": "Invalid geometry. The uploaded shape likely contains an intersection."
     }
   }
 }

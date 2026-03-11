@@ -39,7 +39,9 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
   const setBboxLocation = useSetAtom(bboxLocationAtom);
   const setCustomLayers = useSetAtom(customLayersAtom);
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<unknown>(null);
+
+  const errorMessage = uploadError ? getUploadErrorMessage(uploadError) : null;
 
   const onChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
@@ -63,7 +65,7 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
           const geojson = await convertFilesToGeojson(files);
           const newId = window.crypto.randomUUID();
 
-          setErrorMessage(null);
+          setUploadError(null);
           setCustomLayers((prev) => {
             const color = getNextCustomLayerColor(prev);
 
@@ -88,13 +90,13 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
             setBboxLocation(bounds as [number, number, number, number]);
           }
         } catch (error) {
-          setErrorMessage(getUploadErrorMessage(error));
+          setUploadError(error);
         } finally {
           input.value = '';
         }
       })();
     },
-    [setBboxLocation, setCustomLayers, getUploadErrorMessage]
+    [setBboxLocation, setCustomLayers]
   );
 
   return (
