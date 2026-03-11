@@ -23,11 +23,19 @@ const Modelling: FCWithMessages = () => {
 
   const [{ tab }] = useSyncMapContentSettings();
 
-  const getErrorMessageKey = (error: string) => {
-    if (error.includes('Invalid input geometry')) {
+  const getErrorMessageKey = (req: unknown): string => {
+    if (!isAxiosError(req)) return 'general-stats-error';
+
+    const status = req.response?.status;
+    const error = req.response?.data?.error as string;
+
+    if (status === 400) {
+      if (error?.includes('No data found')) return 'no-intersection-error';
+      if (error?.includes('Invalid geometry')) return 'invalid-geometry';
       return 'invalid-geometry';
     }
-    return error;
+
+    return 'general-stats-error';
   };
 
   const { isFetching, isSuccess, data } = useQuery(
@@ -39,22 +47,11 @@ const Modelling: FCWithMessages = () => {
       refetchOnWindowFocus: false,
       retry: false,
       onError: (req) => {
-        if (isAxiosError(req)) {
-          setModellingState((prevState) => ({
-            ...prevState,
-            status: 'error',
-            errorMessage:
-              req.response?.status === 400
-                ? getErrorMessageKey(req.response?.data.error)
-                : undefined,
-          }));
-        } else {
-          setModellingState((prevState) => ({
-            ...prevState,
-            status: 'error',
-            errorMessage: undefined,
-          }));
-        }
+        setModellingState((prevState) => ({
+          ...prevState,
+          status: 'error',
+          errorMessage: getErrorMessageKey(req),
+        }));
       },
     }
   );

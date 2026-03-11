@@ -85,7 +85,7 @@ const ModellingWidget: FCWithMessages = () => {
   } = useAtomValue(modellingAtom);
 
   const errorMessage = errorMessageKey
-    ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0])
+    ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0], { environment: tab })
     : undefined;
   const { status: drawStatus } = useAtomValue(drawStateAtom);
 

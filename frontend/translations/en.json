@@ -401,7 +401,9 @@
       "no-polygons-error": "File must contain at least one polygon or multipolygon",
       "unsupported-crs-error": "This file uses an unsupported coordinate reference system. Please convert it to EPSG:4326 (WGS 84) and try again.",
       "features-excluded-info": "One or more features were excluded because they were not polygons.",
-      "invalid-geometry": "Invalid geometry. The uploaded shape likely contains an intersection."
+      "no-intersection-error": "No data found. This is likely because your custom area does not intersect with an unprotected {environment} area.",
+      "invalid-geometry": "Invalid geometry. The uploaded shape could not be processed.",
+      "general-stats-error": "An error occurred calculating statistics. Please try again or upload a different geometry."
     }
   }
 }
