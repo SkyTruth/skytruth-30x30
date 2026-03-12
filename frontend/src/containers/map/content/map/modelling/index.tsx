@@ -62,6 +62,7 @@ const Modelling: FC = () => {
       enabled: Boolean(feature) && ['marine', 'terrestrial'].includes(tab),
       select: ({ data }) => data,
       refetchOnWindowFocus: false,
+      staleTime: Infinity,
       retry: false,
       onError: (req) => {
         setModellingState((prevState) => ({
