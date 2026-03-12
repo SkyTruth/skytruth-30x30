@@ -1,6 +1,5 @@
 import { MapLayerMouseEvent } from 'react-map-gl';
 
-import { Feature } from 'geojson';
 import { atom } from 'jotai';
 import { atomWithReset } from 'jotai/utils';
 
@@ -25,14 +24,10 @@ export const popupAtom = atom<Partial<MapLayerMouseEvent | null>>({});
 export const drawStateAtom = atomWithReset<{
   active: boolean;
   status: 'idle' | 'drawing' | 'uploading' | 'success';
-  feature: Feature;
-  revision: number;
   source?: 'draw' | 'upload' | null;
 }>({
   active: false,
   status: 'idle',
-  feature: null,
-  revision: 0,
   source: null,
 });
 export const allActiveLayersAtom = atom<Array<string>>([]);

@@ -1,5 +1,6 @@
 import { ChangeEventHandler, useCallback, useRef, useState } from 'react';
 
+import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
 import { Upload } from 'lucide-react';
@@ -9,9 +10,13 @@ import { RxTransform } from 'react-icons/rx';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MAX_CUSTOM_LAYER_SIZE } from '@/containers/map/sidebar/layers-panel/constants';
+import {
+  MAX_CUSTOM_LAYER_SIZE,
+  MAX_CUSTOM_LAYERS,
+} from '@/containers/map/sidebar/layers-panel/constants';
 import {
   bboxLocationAtom,
+  customLayersAtom,
   modellingAtom,
   modellingCustomLayerIdAtom,
   drawStateAtom,
@@ -19,6 +24,7 @@ import {
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
+import { createCustomLayer } from '@/lib/utils/create-custom-layer';
 import {
   extractPolygons,
   convertFilesToGeojson,
@@ -50,8 +56,9 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const [drawState, setDrawState] = useAtom(drawStateAtom);
   const { active, status, source } = drawState;
 
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
+  const [modellingCustomLayerId, setModellingCustomLayerId] = useAtom(modellingCustomLayerIdAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
-  const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
 
@@ -63,29 +70,40 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
+  const removeModellingLayer = useCallback(() => {
+    if (modellingCustomLayerId) {
+      setCustomLayers((prev) => {
+        const updated = { ...prev };
+        delete updated[modellingCustomLayerId];
+        return updated;
+      });
+    }
+  }, [modellingCustomLayerId, setCustomLayers]);
+
   const onClickClearModelling = useCallback(() => {
+    removeModellingLayer();
     resetDrawState();
     resetModelling();
     setModellingCustomLayerId(null);
     setUploadError(null);
     setShowFeaturesExcludedInfo(false);
-  }, [resetModelling, resetDrawState, setModellingCustomLayerId]);
+  }, [removeModellingLayer, resetModelling, resetDrawState, setModellingCustomLayerId]);
 
   const onClickRedraw = useCallback(() => {
+    removeModellingLayer();
     resetModelling();
     setModellingCustomLayerId(null);
     setDrawState((prevState) => ({
       ...prevState,
       active: true,
       status: 'drawing',
-      feature: null,
       source: 'draw',
     }));
 
     setModelling((prevState) => ({ ...prevState, active: true }));
     setUploadError(null);
     setShowFeaturesExcludedInfo(false);
-  }, [resetModelling, setModelling, setDrawState, setModellingCustomLayerId]);
+  }, [removeModellingLayer, resetModelling, setModelling, setDrawState, setModellingCustomLayerId]);
 
   const onUploadChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
@@ -114,23 +132,32 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
 
           const geojson = await convertFilesToGeojson(files);
-          const { feature, removed } = extractPolygons(geojson);
+          const { feature, removed } = extractPolygons(geojson as GeoJSONObject);
 
           if (!feature) {
             throw new Error('No valid geometry found');
           }
 
+          // Remove old modelling layer before creating new one
+          removeModellingLayer();
+
+          const layer = createCustomLayer('Custom Area', feature, customLayers);
+
+          setCustomLayers((prev) => ({
+            ...prev,
+            [layer.id]: layer,
+          }));
+
+          setModellingCustomLayerId(layer.id);
+
           setDrawState((prevState) => ({
             ...prevState,
             active: false,
             status: 'success',
-            feature,
-            revision: prevState.revision + 1,
             source: 'upload',
           }));
 
           setModelling((prevState) => ({ ...prevState, active: true }));
-          setModellingCustomLayerId(null);
 
           const bounds = getGeoJSONBoundingBox(feature);
           if (bounds) {
@@ -149,7 +176,16 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
         }
       })();
     },
-    [drawState, setDrawState, setModelling, setModellingCustomLayerId, setBboxLocation]
+    [
+      drawState,
+      customLayers,
+      removeModellingLayer,
+      setDrawState,
+      setCustomLayers,
+      setModellingCustomLayerId,
+      setModelling,
+      setBboxLocation,
+    ]
   );
 
   const onOpenUploadPicker = useCallback(() => {
@@ -159,10 +195,17 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   }, []);
 
   const isUploadProcessing = status === 'uploading';
+  // When a modelling layer already exists, draw/upload will replace it, so the count won't increase
+  const isAtMaxLayers =
+    !modellingCustomLayerId && Object.keys(customLayers).length >= MAX_CUSTOM_LAYERS;
   const isUploadDisabled =
-    active || status === 'drawing' || status === 'uploading' || modellingStatus === 'running';
+    active ||
+    status === 'drawing' ||
+    status === 'uploading' ||
+    modellingStatus === 'running' ||
+    isAtMaxLayers;
 
-  const isDrawDisabled = isUploadProcessing;
+  const isDrawDisabled = isUploadProcessing || isAtMaxLayers;
   const ariaDescribedBy = [
     uploadErrorMessage ? 'upload-shape-error' : null,
     !uploadErrorMessage && uploadInfoMessage ? 'upload-shape-info' : null,
@@ -250,6 +293,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             disabled={isUploadProcessing}
             onClick={() => {
               if (source === 'upload' && isCustomLayersActive) {
+                removeModellingLayer();
                 onOpenUploadPicker();
                 return;
               }

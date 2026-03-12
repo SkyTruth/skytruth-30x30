@@ -1,12 +1,18 @@
-import { FC, useEffect } from 'react';
+import { FC, useEffect, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
+import type { GeoJSONObject } from '@turf/turf';
 import axios, { isAxiosError } from 'axios';
 import type { Feature } from 'geojson';
 import { useAtomValue, useSetAtom } from 'jotai';
 
-import { modellingAtom, drawStateAtom } from '@/containers/map/store';
+import {
+  modellingAtom,
+  customLayersAtom,
+  modellingCustomLayerIdAtom,
+} from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { extractPolygons } from '@/lib/utils/file-upload';
 import { ModellingData } from '@/types/modelling';
 
 const fetchModelling = async (tab: string, feature: Feature) => {
@@ -17,10 +23,22 @@ const fetchModelling = async (tab: string, feature: Feature) => {
 };
 
 const Modelling: FC = () => {
-  const { feature, revision } = useAtomValue(drawStateAtom);
+  const modellingLayerId = useAtomValue(modellingCustomLayerIdAtom);
+  const customLayers = useAtomValue(customLayersAtom);
   const setModellingState = useSetAtom(modellingAtom);
 
   const [{ tab }] = useSyncMapContentSettings();
+
+  const modellingLayer = modellingLayerId ? customLayers[modellingLayerId] : null;
+
+  const feature = useMemo(() => {
+    if (!modellingLayer) return null;
+    try {
+      return extractPolygons(modellingLayer.feature as GeoJSONObject).feature;
+    } catch {
+      return null;
+    }
+  }, [modellingLayer]);
 
   const getErrorMessageKey = (req: unknown): string => {
     if (!isAxiosError(req)) return 'general-stats-error';
@@ -38,7 +56,7 @@ const Modelling: FC = () => {
   };
 
   const { isFetching, isSuccess, data } = useQuery(
-    ['modelling', tab, revision, feature],
+    ['modelling', tab, modellingLayerId],
     () => fetchModelling(tab, feature),
     {
       enabled: Boolean(feature) && ['marine', 'terrestrial'].includes(tab),

@@ -128,20 +128,19 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
       setSidebarOpen(true);
 
       try {
-        const { feature } = extractPolygons(layer.feature as GeoJSONObject);
+        // Validate that the layer contains polygon geometry before activating modelling
+        extractPolygons(layer.feature as GeoJSONObject);
 
         setDrawState((prevState) => ({
           ...prevState,
           active: false,
           status: 'success',
-          feature,
-          revision: prevState.revision + 1,
           source: 'upload',
         }));
         setModellingState((prevState) => ({ ...prevState, active: true }));
         setModellingCustomLayerId(layer.id);
 
-        const bounds = getGeoJSONBoundingBox(feature);
+        const bounds = getGeoJSONBoundingBox(layer.feature);
         if (bounds) {
           setBboxLocation(bounds as [number, number, number, number]);
         }

@@ -1,34 +1,72 @@
 import { FC, useCallback, useMemo } from 'react';
 
-import { Layer, Source } from 'react-map-gl';
-
+import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
 
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { useMapboxDraw, UseMapboxDrawProps } from '@/components/map/draw-controls/hooks';
 import {
-  DRAW_STYLES,
-  useMapboxDraw,
-  UseMapboxDrawProps,
-} from '@/components/map/draw-controls/hooks';
-import { drawStateAtom, modellingCustomLayerIdAtom } from '@/containers/map/store';
+  bboxLocationAtom,
+  customLayersAtom,
+  drawStateAtom,
+  modellingAtom,
+  modellingCustomLayerIdAtom,
+} from '@/containers/map/store';
+import { createCustomLayer } from '@/lib/utils/create-custom-layer';
+import { extractPolygons } from '@/lib/utils/file-upload';
+import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 
 const DrawControls: FC = () => {
-  const [{ active, feature }, setDrawState] = useAtom(drawStateAtom);
+  const [{ active }, setDrawState] = useAtom(drawStateAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
+  const setCustomLayers = useSetAtom(customLayersAtom);
+  const setModelling = useSetAtom(modellingAtom);
+  const setBboxLocation = useSetAtom(bboxLocationAtom);
 
   const onCreate: UseMapboxDrawProps['onCreate'] = useCallback(
     ({ features }) => {
-      setModellingCustomLayerId(null);
-      setDrawState((prevState) => ({
-        ...prevState,
-        active: false,
-        status: 'success',
-        feature: features[0],
-        revision: prevState.revision + 1,
-        source: 'draw',
-      }));
+      const drawnFeature = features[0];
+      const featureCollection = {
+        type: 'FeatureCollection' as const,
+        features: [drawnFeature],
+      };
+
+      try {
+        const { feature } = extractPolygons(featureCollection as GeoJSONObject);
+
+        setCustomLayers((prev) => {
+          const layer = createCustomLayer('Custom Area', feature, prev);
+
+          setModellingCustomLayerId(layer.id);
+
+          const bounds = getGeoJSONBoundingBox(feature);
+          if (bounds) {
+            setBboxLocation([...bounds] as [number, number, number, number]);
+          }
+
+          setModelling((prevState) => ({ ...prevState, active: true }));
+
+          setDrawState((prevState) => ({
+            ...prevState,
+            active: false,
+            status: 'success',
+            source: 'draw',
+          }));
+
+          return {
+            ...prev,
+            [layer.id]: layer,
+          };
+        });
+      } catch {
+        setDrawState((prevState) => ({
+          ...prevState,
+          active: false,
+          status: 'idle',
+        }));
+      }
     },
-    [setDrawState, setModellingCustomLayerId]
+    [setCustomLayers, setModellingCustomLayerId, setBboxLocation, setModelling, setDrawState]
   );
 
   const onClick: UseMapboxDrawProps['onClick'] = useCallback(() => {
@@ -49,24 +87,7 @@ const DrawControls: FC = () => {
 
   useMapboxDraw(useMapboxDrawProps);
 
-  if (active || !feature) {
-    return null;
-  }
-
-  return (
-    <Source
-      id="drawing"
-      type="geojson"
-      data={{
-        type: 'FeatureCollection',
-        features: [feature],
-      }}
-    >
-      {DRAW_STYLES.filter((layer) => layer.type !== 'circle').map((layer) => (
-        <Layer key={layer.id} {...layer} />
-      ))}
-    </Source>
-  );
+  return null;
 };
 
 export default DrawControls;

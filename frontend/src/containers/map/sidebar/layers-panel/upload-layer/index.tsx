@@ -7,28 +7,18 @@ import { useTranslations } from 'next-intl';
 import TooltipButton from '@/components/tooltip-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CUSTOM_LAYER_STYLE_COLORS } from '@/constants/custom-layer-style-colors';
 import { bboxLocationAtom, customLayersAtom } from '@/containers/map/store';
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
+import { createCustomLayer } from '@/lib/utils/create-custom-layer';
 import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
-import { CustomLayer } from '@/types/layers';
 
 import { MAX_CUSTOM_LAYER_SIZE, SWITCH_LABEL_CLASSES } from '../constants';
 
 type UploadLayerProps = {
   isDisabled: boolean;
-};
-
-const DEFAULT_LAYER_STYLE = {
-  opacity: 0.5,
-};
-
-const getNextCustomLayerColor = (layers: Record<string, CustomLayer>): string => {
-  const nextColorIndex = Object.keys(layers).length % CUSTOM_LAYER_STYLE_COLORS.length;
-  return CUSTOM_LAYER_STYLE_COLORS[nextColorIndex].value;
 };
 
 const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
@@ -63,26 +53,13 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
           }
 
           const geojson = await convertFilesToGeojson(files);
-          const newId = window.crypto.randomUUID();
 
           setUploadError(null);
           setCustomLayers((prev) => {
-            const color = getNextCustomLayerColor(prev);
-
+            const layer = createCustomLayer(files[0]?.name ?? '', geojson, prev);
             return {
               ...prev,
-              [newId]: {
-                id: newId,
-                name: files[0]?.name ?? '',
-                feature: geojson,
-                isVisible: true,
-                isActive: true,
-                style: {
-                  ...DEFAULT_LAYER_STYLE,
-                  fillColor: color,
-                  lineColor: color,
-                },
-              },
+              [layer.id]: layer,
             };
           });
           const bounds = getGeoJSONBoundingBox(geojson);

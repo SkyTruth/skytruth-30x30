@@ -254,7 +254,7 @@ const MainMap: FCWithMessages = () => {
       <Map
         initialViewState={initialViewState}
         bounds={bounds}
-        interactiveLayerIds={!drawState.active && !drawState.feature ? layersInteractiveIds : []}
+        interactiveLayerIds={!drawState.active ? layersInteractiveIds : []}
         onClick={handleMapClick}
         onMoveEnd={handleMoveEnd}
         onMouseMove={!disableMouseMove && handleMouseMove}
