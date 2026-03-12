@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { FC, useEffect } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import axios, { isAxiosError } from 'axios';
@@ -7,7 +7,6 @@ import { useAtomValue, useSetAtom } from 'jotai';
 
 import { modellingAtom, drawStateAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { FCWithMessages } from '@/types';
 import { ModellingData } from '@/types/modelling';
 
 const fetchModelling = async (tab: string, feature: Feature) => {
@@ -17,7 +16,7 @@ const fetchModelling = async (tab: string, feature: Feature) => {
   });
 };
 
-const Modelling: FCWithMessages = () => {
+const Modelling: FC = () => {
   const { feature, revision } = useAtomValue(drawStateAtom);
   const setModellingState = useSetAtom(modellingAtom);
 
@@ -66,7 +65,5 @@ const Modelling: FCWithMessages = () => {
 
   return null;
 };
-
-Modelling.messages = [];
 
 export default Modelling;
