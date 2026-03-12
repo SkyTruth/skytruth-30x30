@@ -1,6 +1,7 @@
-import { FC, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { useAtom, useSetAtom } from 'jotai';
+import { useTranslations } from 'next-intl';
 
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { useMapboxDraw, UseMapboxDrawProps } from '@/components/map/draw-controls/hooks';
@@ -13,8 +14,10 @@ import {
 } from '@/containers/map/store';
 import { createCustomLayer } from '@/lib/utils/create-custom-layer';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
+import { FCWithMessages } from '@/types';
 
-const DrawControls: FC = () => {
+const DrawControls: FCWithMessages = () => {
+  const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ active }, setDrawState] = useAtom(drawStateAtom);
   const [modellingState, setModelling] = useAtom(modellingAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
@@ -31,7 +34,7 @@ const DrawControls: FC = () => {
 
       // Drawn shapes are always polygons
       setCustomLayers((prev) => {
-        const layer = createCustomLayer('Custom Area', featureCollection, prev, true);
+        const layer = createCustomLayer(t('drawn-layer'), featureCollection, prev, true);
 
         // Only activate modelling if it's not already active (no stats displayed)
         if (!modellingState.active) {
@@ -58,6 +61,7 @@ const DrawControls: FC = () => {
       });
     },
     [
+      t,
       modellingState.active,
       setCustomLayers,
       setModellingCustomLayerId,
@@ -87,5 +91,7 @@ const DrawControls: FC = () => {
 
   return null;
 };
+
+DrawControls.messages = ['containers.map-sidebar-main-panel'];
 
 export default DrawControls;

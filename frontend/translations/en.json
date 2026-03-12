@@ -151,6 +151,7 @@
       "proportion-habitat-within-protected-areas": "Proportion of Habitat within Protected and Conserved Areas",
       "conservation-scenarios": "Conservation scenarios with custom areas.",
       "custom-area": "Custom Area",
+      "drawn-layer": "Drawn Layer",
       "custom-area-description": "Activate more layers for additional contextual information about your custom area conservation scenario.",
       "start-drawing-on-map": "Start drawing on the map",
       "draw-shape": "Draw shape",

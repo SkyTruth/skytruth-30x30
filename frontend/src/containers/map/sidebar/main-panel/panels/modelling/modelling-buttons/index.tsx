@@ -133,7 +133,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
 
           // Add full geometry as custom layer (all geometry types render on map)
-          const layer = createCustomLayer('Custom Area', geojson, customLayers, hasPolygons);
+          const layer = createCustomLayer(files[0].name, geojson, customLayers, hasPolygons);
 
           setCustomLayers((prev) => ({
             ...prev,

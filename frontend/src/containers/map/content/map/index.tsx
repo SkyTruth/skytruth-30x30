@@ -282,6 +282,7 @@ MainMap.messages = [
   ...Popup.messages,
   ...LayersToolbox.messages,
   ...ZoomControls.messages,
+  ...DrawControls.messages,
   // Indirectly imported by the layer manager
   ...GenericPopup.messages,
   ...ProtectedAreaPopup.messages,
