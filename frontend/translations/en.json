@@ -225,7 +225,8 @@
       "use-layer-for-modelling": "Use layer for modelling",
       "layer-used-in-modelling": "Layer used in modelling",
       "upload-layer": "Upload Layer",
-      "upload-directions": "Supported file formats: GeoJSON, KML, KMZ, or SHP (shapefiles must include .shp, .shx, and .dbf). Maximum file size: 5Mb."
+      "upload-directions": "Supported file formats: GeoJSON, KML, KMZ, or SHP (shapefiles must include .shp, .shx, and .dbf). Maximum file size: 5Mb.",
+      "custom-layers": "Custom Layers"
     },
     "map": {
       "loading": "Loading...",
@@ -341,8 +342,7 @@
     "widget": {
       "updated-on": "Updated on {date}",
       "no-data-available": "No data available",
-      "not-visible-due-to-error": "The current widget is not visible due to an error",
-      "invalid-geometry": "Invalid geometry. The uploaded shape likely contains an intersection."
+      "not-visible-due-to-error": "The current widget is not visible due to an error"
     },
     "chart-conservation": {
       "year-value": "Year: {value}",
@@ -400,7 +400,10 @@
       "file-too-large-error": "This file is too large. Maximum file size is {size}",
       "no-polygons-error": "File must contain at least one polygon or multipolygon",
       "unsupported-crs-error": "This file uses an unsupported coordinate reference system. Please convert it to EPSG:4326 (WGS 84) and try again.",
-      "features-excluded-info": "One or more features were excluded because they were not polygons."
+      "features-excluded-info": "One or more features were excluded because they were not polygons.",
+      "no-intersection-error": "No data found. This is likely because your custom area does not intersect with an unprotected {environment} area.",
+      "invalid-geometry": "Invalid geometry. The uploaded shape could not be processed.",
+      "general-stats-error": "An error occurred calculating statistics. Please try again or upload a different geometry."
     }
   }
 }
