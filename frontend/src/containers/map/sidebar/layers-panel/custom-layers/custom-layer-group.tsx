@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
@@ -17,7 +16,6 @@ import {
 } from '@/containers/map/store';
 import useCustomLayersIndexedDB from '@/hooks/use-custom-layers-indexed-db';
 import { cn } from '@/lib/classnames';
-import { extractPolygons } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
 import { CustomLayer } from '@/types/layers';
@@ -127,29 +125,18 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
     (layer: CustomLayer) => {
       setSidebarOpen(true);
 
-      try {
-        // Validate that the layer contains polygon geometry before activating modelling
-        extractPolygons(layer.feature as GeoJSONObject);
+      setDrawState((prevState) => ({
+        ...prevState,
+        active: false,
+        status: 'success',
+        source: 'upload',
+      }));
+      setModellingState((prevState) => ({ ...prevState, active: true }));
+      setModellingCustomLayerId(layer.id);
 
-        setDrawState((prevState) => ({
-          ...prevState,
-          active: false,
-          status: 'success',
-          source: 'upload',
-        }));
-        setModellingState((prevState) => ({ ...prevState, active: true }));
-        setModellingCustomLayerId(layer.id);
-
-        const bounds = getGeoJSONBoundingBox(layer.feature);
-        if (bounds) {
-          setBboxLocation(bounds as [number, number, number, number]);
-        }
-      } catch {
-        setModellingState((prevState) => ({
-          ...prevState,
-          status: 'error',
-          errorMessage: 'no-polygons-error',
-        }));
+      const bounds = getGeoJSONBoundingBox(layer.feature);
+      if (bounds) {
+        setBboxLocation(bounds as [number, number, number, number]);
       }
     },
     [setBboxLocation, setDrawState, setModellingCustomLayerId, setModellingState, setSidebarOpen]
@@ -255,6 +242,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
                     saveTooltipLabel={saveTooltipLabel}
                     isSaveDisabled={isSaveDisabled}
                     isUseForModellingDisabled={modellingCustomLayerId === slug}
+                    hasPolygons={layer.hasPolygons}
                     onToggleLayer={onToggleLayer}
                     onCommitEdit={onCommitEdit}
                     onSaveLayer={onSaveLayer}

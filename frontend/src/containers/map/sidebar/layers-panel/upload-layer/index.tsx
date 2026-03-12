@@ -11,7 +11,11 @@ import { bboxLocationAtom, customLayersAtom } from '@/containers/map/store';
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
 import { createCustomLayer } from '@/lib/utils/create-custom-layer';
-import { convertFilesToGeojson, supportedFileformats } from '@/lib/utils/file-upload';
+import {
+  convertFilesToGeojson,
+  extractPolygons,
+  supportedFileformats,
+} from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
 
@@ -54,9 +58,17 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
 
           const geojson = await convertFilesToGeojson(files);
 
+          let hasPolygons = false;
+          try {
+            extractPolygons(geojson);
+            hasPolygons = true;
+          } catch {
+            // No polygon geometry — layer still renders, just can't be used for modelling
+          }
+
           setUploadError(null);
           setCustomLayers((prev) => {
-            const layer = createCustomLayer(files[0]?.name ?? '', geojson, prev);
+            const layer = createCustomLayer(files[0]?.name ?? '', geojson, prev, hasPolygons);
             return {
               ...prev,
               [layer.id]: layer,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { BarChart4, Save, Trash } from 'lucide-react';
+import { AlertTriangle, BarChart4, Save, Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ type CustomLayerItemProps = {
   saveTooltipLabel: string;
   isSaveDisabled: boolean;
   isUseForModellingDisabled: boolean;
+  hasPolygons: boolean;
   onToggleLayer: (layer: CustomLayer, checked: boolean) => void;
   onCommitEdit: (slug: string, newName: string) => void;
   onSaveLayer: (layer: CustomLayer) => Promise<void> | void;
@@ -34,6 +35,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   saveTooltipLabel,
   isSaveDisabled,
   isUseForModellingDisabled,
+  hasPolygons,
   onToggleLayer,
   onCommitEdit,
   onSaveLayer,
@@ -158,24 +160,36 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
             </TooltipTrigger>
             <TooltipContent>{saveTooltipLabel}</TooltipContent>
           </Tooltip>
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-                <Button
-                  className="h-auto w-auto pl-1.5"
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  disabled={isUseForModellingDisabled}
-                  onClick={() => onUseLayerForModelling(layer)}
-                >
-                  <span className="sr-only">{useForModellingLabel}</span>
-                  <BarChart4 size={16} />
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{useForModellingLabel}</TooltipContent>
-          </Tooltip>
+          {hasPolygons ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <Button
+                    className="h-auto w-auto pl-1.5"
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    disabled={isUseForModellingDisabled}
+                    onClick={() => onUseLayerForModelling(layer)}
+                  >
+                    <span className="sr-only">{useForModellingLabel}</span>
+                    <BarChart4 size={16} />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{useForModellingLabel}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <span className="inline-flex py-1 pl-1.5 text-gray-400">
+                  <AlertTriangle size={16} />
+                  <span className="sr-only">{t('layer-cannot-be-used-for-modelling')}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{t('layer-cannot-be-used-for-modelling')}</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <Button

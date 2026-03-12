@@ -132,23 +132,33 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
 
           const geojson = await convertFilesToGeojson(files);
-          const { feature, removed } = extractPolygons(geojson as GeoJSONObject);
 
-          if (!feature) {
-            throw new Error('No valid geometry found');
+          // Check if the geometry contains polygons for modelling
+          let hasPolygons = false;
+          let removed = { any: false };
+          try {
+            const result = extractPolygons(geojson as GeoJSONObject);
+            hasPolygons = true;
+            removed = result.removed;
+          } catch {
+            // Layer has no polygon geometry — still added to map, just not used for modelling
           }
 
           // Remove old modelling layer before creating new one
           removeModellingLayer();
 
-          const layer = createCustomLayer('Custom Area', feature, customLayers);
+          // Add full geometry as custom layer (all geometry types render on map)
+          const layer = createCustomLayer('Custom Area', geojson, customLayers, hasPolygons);
 
           setCustomLayers((prev) => ({
             ...prev,
             [layer.id]: layer,
           }));
 
-          setModellingCustomLayerId(layer.id);
+          if (hasPolygons) {
+            setModellingCustomLayerId(layer.id);
+            setModelling((prevState) => ({ ...prevState, active: true }));
+          }
 
           setDrawState((prevState) => ({
             ...prevState,
@@ -157,9 +167,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             source: 'upload',
           }));
 
-          setModelling((prevState) => ({ ...prevState, active: true }));
-
-          const bounds = getGeoJSONBoundingBox(feature);
+          const bounds = getGeoJSONBoundingBox(geojson);
           if (bounds) {
             setBboxLocation([...bounds] as [number, number, number, number]);
           }

@@ -224,6 +224,7 @@
       "edit-layer-name": "Edit Layer Name",
       "use-layer-for-modelling": "Use layer for modelling",
       "layer-used-in-modelling": "Layer used in modelling",
+      "layer-cannot-be-used-for-modelling": "Layer cannot be used for modelling",
       "upload-layer": "Upload Layer",
       "upload-directions": "Supported file formats: GeoJSON, KML, KMZ, or SHP (shapefiles must include .shp, .shx, and .dbf). Maximum file size: 5Mb.",
       "custom-layers": "Custom Layers"

@@ -1,6 +1,5 @@
 import { FC, useCallback, useMemo } from 'react';
 
-import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
 
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
@@ -13,7 +12,6 @@ import {
   modellingCustomLayerIdAtom,
 } from '@/containers/map/store';
 import { createCustomLayer } from '@/lib/utils/create-custom-layer';
-import { extractPolygons } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 
 const DrawControls: FC = () => {
@@ -31,40 +29,31 @@ const DrawControls: FC = () => {
         features: [drawnFeature],
       };
 
-      try {
-        const { feature } = extractPolygons(featureCollection as GeoJSONObject);
+      // Drawn shapes are always polygons
+      setCustomLayers((prev) => {
+        const layer = createCustomLayer('Custom Area', featureCollection, prev, true);
 
-        setCustomLayers((prev) => {
-          const layer = createCustomLayer('Custom Area', feature, prev);
+        setModellingCustomLayerId(layer.id);
 
-          setModellingCustomLayerId(layer.id);
+        const bounds = getGeoJSONBoundingBox(featureCollection);
+        if (bounds) {
+          setBboxLocation([...bounds] as [number, number, number, number]);
+        }
 
-          const bounds = getGeoJSONBoundingBox(feature);
-          if (bounds) {
-            setBboxLocation([...bounds] as [number, number, number, number]);
-          }
+        setModelling((prevState) => ({ ...prevState, active: true }));
 
-          setModelling((prevState) => ({ ...prevState, active: true }));
-
-          setDrawState((prevState) => ({
-            ...prevState,
-            active: false,
-            status: 'success',
-            source: 'draw',
-          }));
-
-          return {
-            ...prev,
-            [layer.id]: layer,
-          };
-        });
-      } catch {
         setDrawState((prevState) => ({
           ...prevState,
           active: false,
-          status: 'idle',
+          status: 'success',
+          source: 'draw',
         }));
-      }
+
+        return {
+          ...prev,
+          [layer.id]: layer,
+        };
+      });
     },
     [setCustomLayers, setModellingCustomLayerId, setBboxLocation, setModelling, setDrawState]
   );
