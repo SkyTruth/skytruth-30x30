@@ -16,9 +16,9 @@ import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 
 const DrawControls: FC = () => {
   const [{ active }, setDrawState] = useAtom(drawStateAtom);
+  const [modellingState, setModelling] = useAtom(modellingAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const setCustomLayers = useSetAtom(customLayersAtom);
-  const setModelling = useSetAtom(modellingAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
 
   const onCreate: UseMapboxDrawProps['onCreate'] = useCallback(
@@ -33,14 +33,16 @@ const DrawControls: FC = () => {
       setCustomLayers((prev) => {
         const layer = createCustomLayer('Custom Area', featureCollection, prev, true);
 
-        setModellingCustomLayerId(layer.id);
+        // Only activate modelling if it's not already active (no stats displayed)
+        if (!modellingState.active) {
+          setModellingCustomLayerId(layer.id);
+          setModelling((prevState) => ({ ...prevState, active: true }));
+        }
 
         const bounds = getGeoJSONBoundingBox(featureCollection);
         if (bounds) {
           setBboxLocation([...bounds] as [number, number, number, number]);
         }
-
-        setModelling((prevState) => ({ ...prevState, active: true }));
 
         setDrawState((prevState) => ({
           ...prevState,
@@ -55,7 +57,14 @@ const DrawControls: FC = () => {
         };
       });
     },
-    [setCustomLayers, setModellingCustomLayerId, setBboxLocation, setModelling, setDrawState]
+    [
+      modellingState.active,
+      setCustomLayers,
+      setModellingCustomLayerId,
+      setBboxLocation,
+      setModelling,
+      setDrawState,
+    ]
   );
 
   const onClick: UseMapboxDrawProps['onClick'] = useCallback(() => {
