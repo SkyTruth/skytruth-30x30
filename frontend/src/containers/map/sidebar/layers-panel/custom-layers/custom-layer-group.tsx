@@ -92,6 +92,12 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
       });
       if (modellingCustomLayerId === slug) {
         setModellingCustomLayerId(null);
+        setModellingState({
+          active: false,
+          status: 'idle',
+          data: null,
+          errorMessage: undefined,
+        });
       }
 
       try {
@@ -100,7 +106,14 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         setPersistActionKey('delete-layer-error');
       }
     },
-    [customLayers, deleteLayer, modellingCustomLayerId, setCustomLayers, setModellingCustomLayerId]
+    [
+      customLayers,
+      deleteLayer,
+      modellingCustomLayerId,
+      setCustomLayers,
+      setModellingCustomLayerId,
+      setModellingState,
+    ]
   );
 
   const onCommitEdit = useCallback(
