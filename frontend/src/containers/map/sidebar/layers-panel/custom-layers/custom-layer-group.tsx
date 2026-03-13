@@ -242,7 +242,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
                     saveTooltipLabel={saveTooltipLabel}
                     isSaveDisabled={isSaveDisabled}
                     isUseForModellingDisabled={modellingCustomLayerId === slug}
-                    hasPolygons={layer.hasPolygons}
+                    canBeUsedForModelling={layer.canBeUsedForModelling}
                     onToggleLayer={onToggleLayer}
                     onCommitEdit={onCommitEdit}
                     onSaveLayer={onSaveLayer}

@@ -16,7 +16,7 @@ export function createCustomLayer(
   name: string,
   feature: GeoJSON,
   existingLayers: Record<string, CustomLayer>,
-  hasPolygons: boolean
+  canBeUsedForModelling: boolean
 ): CustomLayer {
   const id = window.crypto.randomUUID();
   const color = getNextCustomLayerColor(existingLayers);
@@ -27,7 +27,7 @@ export function createCustomLayer(
     feature,
     isVisible: true,
     isActive: true,
-    hasPolygons,
+    canBeUsedForModelling,
     style: {
       ...DEFAULT_LAYER_STYLE,
       fillColor: color,

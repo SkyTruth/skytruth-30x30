@@ -58,17 +58,22 @@ const UploadLayer: FCWithMessages<UploadLayerProps> = ({ isDisabled }) => {
 
           const geojson = await convertFilesToGeojson(files);
 
-          let hasPolygons = false;
+          let canBeUsedForModelling = false;
           try {
             extractPolygons(geojson);
-            hasPolygons = true;
+            canBeUsedForModelling = true;
           } catch {
             // No polygon geometry — layer still renders, just can't be used for modelling
           }
 
           setUploadError(null);
           setCustomLayers((prev) => {
-            const layer = createCustomLayer(files[0]?.name ?? '', geojson, prev, hasPolygons);
+            const layer = createCustomLayer(
+              files[0]?.name ?? '',
+              geojson,
+              prev,
+              canBeUsedForModelling
+            );
             return {
               ...prev,
               [layer.id]: layer,

@@ -19,7 +19,7 @@ type CustomLayerItemProps = {
   saveTooltipLabel: string;
   isSaveDisabled: boolean;
   isUseForModellingDisabled: boolean;
-  hasPolygons: boolean;
+  canBeUsedForModelling: boolean;
   onToggleLayer: (layer: CustomLayer, checked: boolean) => void;
   onCommitEdit: (slug: string, newName: string) => void;
   onSaveLayer: (layer: CustomLayer) => Promise<void> | void;
@@ -35,7 +35,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   saveTooltipLabel,
   isSaveDisabled,
   isUseForModellingDisabled,
-  hasPolygons,
+  canBeUsedForModelling,
   onToggleLayer,
   onCommitEdit,
   onSaveLayer,
@@ -160,7 +160,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
             </TooltipTrigger>
             <TooltipContent>{saveTooltipLabel}</TooltipContent>
           </Tooltip>
-          {hasPolygons ? (
+          {canBeUsedForModelling ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <span className="inline-flex">

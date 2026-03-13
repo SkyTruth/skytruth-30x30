@@ -1,5 +1,6 @@
 import { ChangeEventHandler, useCallback, useRef, useState } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
@@ -21,6 +22,7 @@ import {
   modellingCustomLayerIdAtom,
   drawStateAtom,
 } from '@/containers/map/store';
+import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
@@ -31,6 +33,7 @@ import {
   supportedFileformats,
 } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
+import { validateGeometryForModelling } from '@/lib/utils/validate-geometry-for-modelling';
 import { FCWithMessages } from '@/types';
 
 const COMMON_BUTTON_CLASSES =
@@ -50,6 +53,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   // TECH-3372: tear down
   const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
+  const queryClient = useQueryClient();
+  const [{ tab }] = useSyncMapContentSettings();
   const [modellingState, setModelling] = useAtom(modellingAtom);
   const { status: modellingStatus } = modellingState;
 
@@ -122,29 +127,28 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           const geojson = await convertFilesToGeojson(files);
 
           // Check if the geometry contains polygons for modelling
-          let hasPolygons = false;
+          let canBeUsedForModelling = false;
           let removed = { any: false };
           try {
             const result = extractPolygons(geojson as GeoJSONObject);
-            hasPolygons = true;
+            canBeUsedForModelling = true;
             removed = result.removed;
           } catch {
             // Layer has no polygon geometry — still added to map, just not used for modelling
           }
 
           // Add full geometry as custom layer (all geometry types render on map)
-          const layer = createCustomLayer(files[0].name, geojson, customLayers, hasPolygons);
+          const layer = createCustomLayer(
+            files[0].name,
+            geojson,
+            customLayers,
+            canBeUsedForModelling
+          );
 
           setCustomLayers((prev) => ({
             ...prev,
             [layer.id]: layer,
           }));
-
-          // Only activate modelling if it's not already active (no stats displayed)
-          if (hasPolygons && !modellingState.active) {
-            setModellingCustomLayerId(layer.id);
-            setModelling((prevState) => ({ ...prevState, active: true }));
-          }
 
           setDrawState((prevState) => ({
             ...prevState,
@@ -160,6 +164,27 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
           setUploadError(null);
           setShowFeaturesExcludedInfo(removed.any);
+
+          // Validate geometry server-side before activating modelling
+          if (canBeUsedForModelling) {
+            const polygonFeature = extractPolygons(geojson as GeoJSONObject).feature;
+            const { valid } = await validateGeometryForModelling(
+              queryClient,
+              tab,
+              layer.id,
+              polygonFeature
+            );
+
+            if (!valid) {
+              setCustomLayers((prev) => ({
+                ...prev,
+                [layer.id]: { ...prev[layer.id], canBeUsedForModelling: false },
+              }));
+            } else if (!modellingState.active) {
+              setModellingCustomLayerId(layer.id);
+              setModelling((prevState) => ({ ...prevState, active: true }));
+            }
+          }
         } catch (error) {
           setDrawState(previousDrawState);
           setShowFeaturesExcludedInfo(false);
@@ -171,9 +196,11 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       })();
     },
     [
+      tab,
       drawState,
       customLayers,
       modellingState.active,
+      queryClient,
       setDrawState,
       setCustomLayers,
       setModellingCustomLayerId,

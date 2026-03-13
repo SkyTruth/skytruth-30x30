@@ -1,5 +1,7 @@
 import { useCallback, useMemo } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
+import type { Feature } from 'geojson';
 import { useAtom, useSetAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 
@@ -12,16 +14,20 @@ import {
   modellingAtom,
   modellingCustomLayerIdAtom,
 } from '@/containers/map/store';
+import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { createCustomLayer } from '@/lib/utils/create-custom-layer';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
+import { validateGeometryForModelling } from '@/lib/utils/validate-geometry-for-modelling';
 import { FCWithMessages } from '@/types';
 
 const DrawControls: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
+  const queryClient = useQueryClient();
+  const [{ tab }] = useSyncMapContentSettings();
   const [{ active }, setDrawState] = useAtom(drawStateAtom);
   const [modellingState, setModelling] = useAtom(modellingAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
-  const setCustomLayers = useSetAtom(customLayersAtom);
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
 
   const onCreate: UseMapboxDrawProps['onCreate'] = useCallback(
@@ -32,37 +38,52 @@ const DrawControls: FCWithMessages = () => {
         features: [drawnFeature],
       };
 
-      // Drawn shapes are always polygons
-      setCustomLayers((prev) => {
-        const layer = createCustomLayer(t('drawn-layer'), featureCollection, prev, true);
+      // Create layer synchronously so it renders immediately
+      const layer = createCustomLayer(t('drawn-layer'), featureCollection, customLayers, true);
 
-        // Only activate modelling if it's not already active (no stats displayed)
-        if (!modellingState.active) {
+      setCustomLayers((prev) => ({
+        ...prev,
+        [layer.id]: layer,
+      }));
+
+      const bounds = getGeoJSONBoundingBox(featureCollection);
+      if (bounds) {
+        setBboxLocation([...bounds] as [number, number, number, number]);
+      }
+
+      setDrawState((prevState) => ({
+        ...prevState,
+        active: false,
+        status: 'success',
+        source: 'draw',
+      }));
+
+      // Validate geometry server-side, then activate modelling if valid
+      void (async () => {
+        const { valid } = await validateGeometryForModelling(
+          queryClient,
+          tab,
+          layer.id,
+          drawnFeature as Feature
+        );
+
+        if (!valid) {
+          setCustomLayers((prev) => ({
+            ...prev,
+            [layer.id]: { ...prev[layer.id], canBeUsedForModelling: false },
+          }));
+        } else if (!modellingState.active) {
           setModellingCustomLayerId(layer.id);
           setModelling((prevState) => ({ ...prevState, active: true }));
         }
-
-        const bounds = getGeoJSONBoundingBox(featureCollection);
-        if (bounds) {
-          setBboxLocation([...bounds] as [number, number, number, number]);
-        }
-
-        setDrawState((prevState) => ({
-          ...prevState,
-          active: false,
-          status: 'success',
-          source: 'draw',
-        }));
-
-        return {
-          ...prev,
-          [layer.id]: layer,
-        };
-      });
+      })();
     },
     [
       t,
+      tab,
+      customLayers,
       modellingState.active,
+      queryClient,
       setCustomLayers,
       setModellingCustomLayerId,
       setBboxLocation,

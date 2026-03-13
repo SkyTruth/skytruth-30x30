@@ -78,6 +78,6 @@ export type CustomLayer = {
   feature: GeoJSON;
   isActive: boolean;
   isVisible: boolean;
-  hasPolygons: boolean;
+  canBeUsedForModelling: boolean;
   style: LayerStyle;
 };
