@@ -176,10 +176,10 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
               <TooltipTrigger asChild>
                 <span className="inline-flex py-1 pl-1.5 text-gray-400">
                   <AlertTriangle size={16} />
-                  <span className="sr-only">{t('layer-cannot-be-used-for-modelling')}</span>
+                  <span className="sr-only">{t('invalid-geometry-for-stats')}</span>
                 </span>
               </TooltipTrigger>
-              <TooltipContent>{t('layer-cannot-be-used-for-modelling')}</TooltipContent>
+              <TooltipContent>{t('invalid-geometry-for-stats')}</TooltipContent>
             </Tooltip>
           )}
           <Tooltip delayDuration={0}>

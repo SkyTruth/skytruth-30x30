@@ -224,12 +224,11 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             disabled={isDrawDisabled}
             onClick={() => {
               setUploadError(null);
-              setModellingCustomLayerId(null);
               setDrawState((prevState) => ({ ...prevState, active: true }));
             }}
           >
             <RxTransform className="mr-3 h-4 w-4" aria-hidden />
-            {isCustomLayersActive ? t('draw-layer') : t('draw-shape')}
+            {t('draw-shape')}
           </Button>
           {
             // TODO: TECH-3372 remove feature flag check

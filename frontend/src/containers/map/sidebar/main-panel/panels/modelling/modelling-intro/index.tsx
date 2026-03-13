@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+import { BarChart4 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
@@ -13,6 +14,7 @@ const ModellingIntro: FCWithMessages = () => {
     (textKey, className: string) => {
       return t.rich(textKey, {
         b: (chunks) => <span className={className}>{chunks}</span>,
+        i: () => <BarChart4 className="inline h-4 w-4 pb-px" />,
       });
     },
     [t]
@@ -39,6 +41,13 @@ const ModellingIntro: FCWithMessages = () => {
           <p className="mr-[1rem] font-mono text-[1.125rem]">03</p>
           <p>{t('draw-step-3-description')}</p>
         </li>
+
+        {isCustomLayersActive && (
+          <li className="flex items-start">
+            <p className="mr-[1rem] font-mono text-[1rem]">04</p>
+            <p>{parseTextWithStyle('draw-step-4-description', 'font-bold text-[1rem]')}</p>
+          </li>
+        )}
       </ol>
 
       {isCustomLayersActive && (
@@ -54,9 +63,17 @@ const ModellingIntro: FCWithMessages = () => {
               <p className="mr-[1rem] font-mono text-[1.125rem]">02</p>
               <p>{t('upload-step-2-description')}</p>
             </li>
-          </ol>
 
-          <p>{t('upload-context-layers')}</p>
+            <li className="flex items-start">
+              <p className="mr-[1rem] font-mono text-[1.125rem]">03</p>
+              <p>{t('upload-step-3-description')}</p>
+            </li>
+
+            <li className="flex items-start">
+              <p className="mr-[1rem] font-mono text-[1.125rem]">04</p>
+              <p>{parseTextWithStyle('upload-step-4-description', 'font-bold text-[1rem]')}</p>
+            </li>
+          </ol>
         </>
       )}
     </div>
