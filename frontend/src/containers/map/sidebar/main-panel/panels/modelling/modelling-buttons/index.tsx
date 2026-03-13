@@ -62,9 +62,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
 
-  const [uploadError, setUploadError] = useState<unknown>(null);
-
-  const uploadErrorMessage = uploadError ? getUploadErrorMessage(uploadError) : null;
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -78,6 +76,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           return;
         }
 
+        setUploadError(null);
         setDrawState((prevState) => ({
           ...prevState,
           active: false,
@@ -147,6 +146,9 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
                 ...prev,
                 [layer.id]: { ...prev[layer.id], canBeUsedForModelling: false },
               }));
+              if (!modellingState.active) {
+                setUploadError(t('invalid-geometry-for-stats'));
+              }
             } else if (!modellingState.active) {
               setModellingCustomLayerId(layer.id);
               setModelling((prevState) => ({ ...prevState, active: true }));
@@ -154,7 +156,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
         } catch (error) {
           setDrawState(previousDrawState);
-          setUploadError(error);
+          setUploadError(getUploadErrorMessage(error));
         } finally {
           // Reset input value so uploading the same file again triggers onChange
           input.value = '';
@@ -162,6 +164,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       })();
     },
     [
+      t,
       tab,
       drawState,
       customLayers,
@@ -209,8 +212,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               className="hidden"
               onChange={onUploadChange}
               disabled={isUploadDisabled}
-              aria-describedby={uploadErrorMessage ? 'upload-layer-error' : undefined}
-              aria-invalid={Boolean(uploadErrorMessage)}
+              aria-describedby={uploadError ? 'modelling-button-error' : undefined}
+              aria-invalid={Boolean(uploadError)}
             />
           </>
         ) : null
@@ -249,13 +252,13 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
         </div>
       </div>
       <div className="mt-2 w-full px-5">
-        {uploadErrorMessage && (
+        {uploadError && (
           <p
-            id="upload-layer-error"
+            id="modelling-button-error"
             className="text-[11px] font-medium leading-4 text-error"
             role="alert"
           >
-            {uploadErrorMessage}
+            {uploadError}
           </p>
         )}
       </div>

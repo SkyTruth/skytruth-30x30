@@ -156,6 +156,7 @@
       "start-drawing-on-map": "Start drawing on the map",
       "draw-shape": "Draw shape",
       "upload-layer": "Upload layer",
+      "invalid-geometry-for-stats": "The uploaded layer has an invalid geometry and cannot be used for statistics calculation.",
       "uploading-layer-to-map": "Uploading layer to map...",
       "loading-data": "Loading data...",
       "draw-upload-directions": "<b>Draw</b> or <b>upload</b> a shape on the map to build a custom conservation scenario",
