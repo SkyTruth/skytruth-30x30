@@ -24,10 +24,8 @@ import {
   COLLAPSIBLE_CONTENT_CLASSES,
   COLLAPSIBLE_TRIGGER_CLASSES,
   COLLAPSIBLE_TRIGGER_ICONS_CLASSES,
-  MAX_CUSTOM_LAYERS,
   SWITCH_LABEL_CLASSES,
 } from '../constants';
-import UploadLayer from '../upload-layer';
 
 import CustomLayerItem from './custom-layer-item';
 
@@ -179,11 +177,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
     [savedLayers]
   );
 
-  const isUploadDisabled = useMemo(
-    () => Object.keys(customLayers).length >= MAX_CUSTOM_LAYERS,
-    [customLayers]
-  );
-
   const displayNumLayers = numCustomLayers > 0;
 
   return (
@@ -211,7 +204,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         })}
       >
         <div>
-          <UploadLayer isDisabled={isUploadDisabled} />
           {persistActionError && (
             <p className="px-2 pt-2 text-xs text-error" role="alert">
               {persistActionError}
@@ -259,11 +251,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
   );
 };
 
-CustomLayerGroup.messages = [
-  'containers.map-sidebar-layers-panel',
-  'services.uploads',
-  ...UploadLayer.messages,
-  ...CustomLayerItem.messages,
-];
+CustomLayerGroup.messages = ['containers.map-sidebar-layers-panel', ...CustomLayerItem.messages];
 
 export default CustomLayerGroup;

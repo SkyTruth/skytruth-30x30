@@ -253,7 +253,7 @@ const ModellingWidget: FCWithMessages = () => {
   const loading = modellingStatus === 'running' || drawStatus === 'uploading';
   const error = modellingStatus === 'error';
   const loadingMessage =
-    drawStatus === 'uploading' ? t('uploading-shape-to-map') : t('loading-data');
+    drawStatus === 'uploading' ? t('uploading-layer-to-map') : t('loading-data');
 
   // @ts-expect-error will check later
   const nationalLevelContributions: {

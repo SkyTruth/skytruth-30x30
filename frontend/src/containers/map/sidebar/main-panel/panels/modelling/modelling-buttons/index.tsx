@@ -3,10 +3,8 @@ import { ChangeEventHandler, useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
-import { useResetAtom } from 'jotai/utils';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { LuTrash2 } from 'react-icons/lu';
 import { RxTransform } from 'react-icons/rx';
 
 import { Button } from '@/components/ui/button';
@@ -45,7 +43,6 @@ type ModellingButtonsProps = {
 
 const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const tUploads = useTranslations('services.uploads');
   const getUploadErrorMessage = useUploadErrorMessage({
     maxFileSize: MAX_CUSTOM_LAYER_SIZE,
   });
@@ -59,44 +56,17 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const { status: modellingStatus } = modellingState;
 
   const [drawState, setDrawState] = useAtom(drawStateAtom);
-  const { active, status, source } = drawState;
+  const { active, status } = drawState;
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
-  const resetModelling = useResetAtom(modellingAtom);
-  const resetDrawState = useResetAtom(drawStateAtom);
 
   const [uploadError, setUploadError] = useState<unknown>(null);
-  const [showFeaturesExcludedInfo, setShowFeaturesExcludedInfo] = useState(false);
 
   const uploadErrorMessage = uploadError ? getUploadErrorMessage(uploadError) : null;
-  const uploadInfoMessage = showFeaturesExcludedInfo ? tUploads('features-excluded-info') : null;
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
-
-  const onClickClearModelling = useCallback(() => {
-    resetDrawState();
-    resetModelling();
-    setModellingCustomLayerId(null);
-    setUploadError(null);
-    setShowFeaturesExcludedInfo(false);
-  }, [resetModelling, resetDrawState, setModellingCustomLayerId]);
-
-  const onClickRedraw = useCallback(() => {
-    resetModelling();
-    setModellingCustomLayerId(null);
-    setDrawState((prevState) => ({
-      ...prevState,
-      active: true,
-      status: 'drawing',
-      source: 'draw',
-    }));
-
-    setModelling((prevState) => ({ ...prevState, active: true }));
-    setUploadError(null);
-    setShowFeaturesExcludedInfo(false);
-  }, [resetModelling, setModelling, setDrawState, setModellingCustomLayerId]);
 
   const onUploadChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
@@ -128,11 +98,9 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
           // Check if the geometry contains polygons for modelling
           let canBeUsedForModelling = false;
-          let removed = { any: false };
           try {
-            const result = extractPolygons(geojson as GeoJSONObject);
+            extractPolygons(geojson as GeoJSONObject);
             canBeUsedForModelling = true;
-            removed = result.removed;
           } catch {
             // Layer has no polygon geometry — still added to map, just not used for modelling
           }
@@ -163,7 +131,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
 
           setUploadError(null);
-          setShowFeaturesExcludedInfo(removed.any);
 
           // Validate geometry server-side before activating modelling
           if (canBeUsedForModelling) {
@@ -187,10 +154,9 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
         } catch (error) {
           setDrawState(previousDrawState);
-          setShowFeaturesExcludedInfo(false);
           setUploadError(error);
         } finally {
-          // Rest input value so uplaoding the same file again triggers onChange
+          // Reset input value so uploading the same file again triggers onChange
           input.value = '';
         }
       })();
@@ -211,7 +177,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
   const onOpenUploadPicker = useCallback(() => {
     setUploadError(null);
-    setShowFeaturesExcludedInfo(false);
     uploadInputRef.current?.click();
   }, []);
 
@@ -225,12 +190,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
     isAtMaxLayers;
 
   const isDrawDisabled = isUploadProcessing || isAtMaxLayers;
-  const ariaDescribedBy = [
-    uploadErrorMessage ? 'upload-shape-error' : null,
-    !uploadErrorMessage && uploadInfoMessage ? 'upload-shape-info' : null,
-  ]
-    .filter(Boolean)
-    .join(' ');
 
   return (
     <div className={cn('flex w-full flex-col font-mono', className)}>
@@ -238,11 +197,11 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
         // TODO: TECH-3372 remove feature flag check
         isCustomLayersActive ? (
           <>
-            <label htmlFor="upload-shape" className="sr-only">
-              {t('upload-shape')}
+            <label htmlFor="upload-layer" className="sr-only">
+              {t('upload-layer')}
             </label>
             <Input
-              id="upload-shape"
+              id="upload-layer"
               ref={uploadInputRef}
               type="file"
               multiple
@@ -250,102 +209,54 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               className="hidden"
               onChange={onUploadChange}
               disabled={isUploadDisabled}
-              aria-describedby={ariaDescribedBy || undefined}
+              aria-describedby={uploadErrorMessage ? 'upload-layer-error' : undefined}
               aria-invalid={Boolean(uploadErrorMessage)}
             />
           </>
         ) : null
       }
 
-      {status !== 'drawing' && status !== 'success' && (
-        <div className="flex w-full flex-col space-y-2">
-          <div className="flex w-full gap-3 px-5">
-            <Button
-              className={COMMON_BUTTON_CLASSES}
-              size="full"
-              disabled={isDrawDisabled}
-              onClick={() => {
-                setUploadError(null);
-                setShowFeaturesExcludedInfo(false);
-                setModellingCustomLayerId(null);
-                setDrawState((prevState) => ({ ...prevState, active: true }));
-              }}
-            >
-              <RxTransform className="mr-3 h-4 w-4" aria-hidden />
-              {active ? t('start-drawing-on-map') : t('draw-shape')}
-            </Button>
-            {
-              // TODO: TECH-3372 remove feature flag check
-              isCustomLayersActive ? (
-                <Button
-                  className={COMMON_BUTTON_CLASSES}
-                  size="full"
-                  type="button"
-                  onClick={onOpenUploadPicker}
-                  disabled={isUploadDisabled}
-                  aria-controls="upload-shape"
-                >
-                  <Upload className="mr-3 h-4 w-4" aria-hidden />
-                  {t('upload-shape')}
-                </Button>
-              ) : null
-            }
-          </div>
-        </div>
-      )}
-      {(status === 'drawing' || status === 'success') && (
+      <div className="flex w-full flex-col space-y-2">
         <div className="flex w-full gap-3 px-5">
           <Button
-            variant="blue"
             className={COMMON_BUTTON_CLASSES}
             size="full"
-            disabled={isUploadProcessing}
-            onClick={onClickClearModelling}
-          >
-            <LuTrash2 className="mr-3 h-4 w-4" aria-hidden />
-            {t('clear-shape')}
-          </Button>
-          <Button
-            variant="blue"
-            className={COMMON_BUTTON_CLASSES}
-            size="full"
-            disabled={isUploadProcessing}
+            disabled={isDrawDisabled}
             onClick={() => {
-              if (source === 'upload' && isCustomLayersActive) {
-                onOpenUploadPicker();
-                return;
-              }
-
-              onClickRedraw();
+              setUploadError(null);
+              setModellingCustomLayerId(null);
+              setDrawState((prevState) => ({ ...prevState, active: true }));
             }}
           >
-            {source === 'upload' && isCustomLayersActive ? (
-              <Upload className="mr-3 h-4 w-4" aria-hidden />
-            ) : (
-              <RxTransform className="mr-3 h-4 w-4" aria-hidden />
-            )}
-            {source === 'upload' && isCustomLayersActive ? t('upload-new-shape') : t('re-draw')}
+            <RxTransform className="mr-3 h-4 w-4" aria-hidden />
+            {isCustomLayersActive ? t('draw-layer') : t('draw-shape')}
           </Button>
+          {
+            // TODO: TECH-3372 remove feature flag check
+            isCustomLayersActive ? (
+              <Button
+                className={COMMON_BUTTON_CLASSES}
+                size="full"
+                type="button"
+                onClick={onOpenUploadPicker}
+                disabled={isUploadDisabled}
+                aria-controls="upload-layer"
+              >
+                <Upload className="mr-3 h-4 w-4" aria-hidden />
+                {t('upload-layer')}
+              </Button>
+            ) : null
+          }
         </div>
-      )}
+      </div>
       <div className="mt-2 w-full px-5">
         {uploadErrorMessage && (
           <p
-            id="upload-shape-error"
+            id="upload-layer-error"
             className="text-[11px] font-medium leading-4 text-error"
             role="alert"
           >
             {uploadErrorMessage}
-          </p>
-        )}
-        {!uploadErrorMessage && uploadInfoMessage && (
-          <p
-            id="upload-shape-info"
-            className="text-[11px] leading-4 text-black"
-            role="status"
-            aria-live="polite"
-          >
-            {uploadInfoMessage}
           </p>
         )}
       </div>
@@ -353,6 +264,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   );
 };
 
-ModellingButtons.messages = ['containers.map-sidebar-main-panel', 'services.uploads'];
+ModellingButtons.messages = ['containers.map-sidebar-main-panel'];
 
 export default ModellingButtons;
