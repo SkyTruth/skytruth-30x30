@@ -155,6 +155,7 @@
       "custom-area-description": "Activate more layers for additional contextual information about your custom area conservation scenario.",
       "start-drawing-on-map": "Start drawing on the map",
       "draw-shape": "Draw shape",
+      "cancel-drawing": "Cancel drawing",
       "upload-layer": "Upload layer",
       "invalid-geometry-for-stats": "The uploaded layer has an invalid geometry and cannot be used for statistics calculation.",
       "uploading-layer-to-map": "Uploading layer to map...",

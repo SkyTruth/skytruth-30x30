@@ -197,7 +197,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
     modellingStatus === 'running' ||
     isAtMaxLayers;
 
-  const isDrawDisabled = isUploadProcessing || isAtMaxLayers;
+  const isDrawing = active || status === 'drawing';
+  const isDrawDisabled = isUploadProcessing || (!isDrawing && isAtMaxLayers);
 
   return (
     <div className={cn('flex w-full flex-col font-mono', className)}>
@@ -232,11 +233,15 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             disabled={isDrawDisabled}
             onClick={() => {
               setUploadError(null);
-              setDrawState((prevState) => ({ ...prevState, active: true }));
+              if (isDrawing) {
+                setDrawState({ active: false, status: 'idle', source: null });
+              } else {
+                setDrawState((prevState) => ({ ...prevState, active: true }));
+              }
             }}
           >
             <RxTransform className="mr-3 h-4 w-4" aria-hidden />
-            {t('draw-shape')}
+            {isDrawing ? t('cancel-drawing') : t('draw-shape')}
           </Button>
           {
             // TODO: TECH-3372 remove feature flag check
