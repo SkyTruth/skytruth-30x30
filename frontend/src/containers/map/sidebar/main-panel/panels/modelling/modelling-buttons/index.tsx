@@ -97,11 +97,13 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
           // Check if the geometry contains polygons for modelling
           let canBeUsedForModelling = false;
+          let geometryError = null;
           try {
             extractPolygons(geojson as GeoJSONObject);
             canBeUsedForModelling = true;
-          } catch {
+          } catch (error) {
             // Layer has no polygon geometry — still added to map, just not used for modelling
+            geometryError = error;
           }
 
           // Add full geometry as custom layer (all geometry types render on map)
@@ -129,7 +131,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             setBboxLocation([...bounds] as [number, number, number, number]);
           }
 
-          setUploadError(null);
+          // setUploadError(null);
 
           // Validate geometry server-side before activating modelling
           if (canBeUsedForModelling) {
@@ -153,6 +155,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               setModellingCustomLayerId(layer.id);
               setModelling((prevState) => ({ ...prevState, active: true }));
             }
+          } else {
+            setUploadError(geometryError ? getUploadErrorMessage(geometryError) : null);
           }
         } catch (error) {
           setDrawState(previousDrawState);
@@ -168,6 +172,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       tab,
       drawState,
       customLayers,
+      getUploadErrorMessage,
       modellingState.active,
       queryClient,
       setDrawState,
