@@ -160,6 +160,7 @@
       "clear-shape": "Clear shape",
       "redraw": "Re-draw",
       "upload-layer": "Upload layer",
+      "max-layers-reached": "Maximum of {max} custom layers reached. Remove a layer to add more.",
       "invalid-geometry-for-stats": "The uploaded layer has an invalid geometry and cannot be used for statistics calculation.",
       "uploading-layer-to-map": "Uploading layer to map...",
       "loading-data": "Loading data...",

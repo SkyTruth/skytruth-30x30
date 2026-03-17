@@ -10,6 +10,7 @@ import { RxTransform } from 'react-icons/rx';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   MAX_CUSTOM_LAYER_SIZE,
   MAX_CUSTOM_LAYERS,
@@ -283,36 +284,62 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             </>
           ) : (
             <>
-              <Button
-                className={COMMON_BUTTON_CLASSES}
-                size="full"
-                disabled={isDrawDisabled}
-                onClick={() => {
-                  setUploadError(null);
-                  if (isDrawing) {
-                    setDrawState({ active: false, status: 'idle', source: null });
-                  } else {
-                    setDrawState((prevState) => ({ ...prevState, active: true }));
-                  }
-                }}
-              >
-                <RxTransform className="mr-3 h-4 w-4" aria-hidden />
-                {isDrawing ? t('cancel-drawing') : t('draw-shape')}
-              </Button>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <span className="w-full">
+                      <Button
+                        className={COMMON_BUTTON_CLASSES}
+                        size="full"
+                        disabled={isDrawDisabled}
+                        onClick={() => {
+                          setUploadError(null);
+                          if (isDrawing) {
+                            setDrawState({ active: false, status: 'idle', source: null });
+                          } else {
+                            setDrawState((prevState) => ({ ...prevState, active: true }));
+                          }
+                        }}
+                      >
+                        <RxTransform className="mr-3 h-4 w-4" aria-hidden />
+                        {isDrawing ? t('cancel-drawing') : t('draw-shape')}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {isAtMaxLayers && (
+                    <TooltipContent>
+                      {t('max-layers-reached', { max: MAX_CUSTOM_LAYERS })}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
               {
                 // TODO: TECH-3372 remove feature flag check
                 isCustomLayersActive ? (
-                  <Button
-                    className={COMMON_BUTTON_CLASSES}
-                    size="full"
-                    type="button"
-                    onClick={onOpenUploadPicker}
-                    disabled={isUploadDisabled}
-                    aria-controls="upload-layer"
-                  >
-                    <Upload className="mr-3 h-4 w-4" aria-hidden />
-                    {t('upload-layer')}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <span className="w-full">
+                          <Button
+                            className={COMMON_BUTTON_CLASSES}
+                            size="full"
+                            type="button"
+                            onClick={onOpenUploadPicker}
+                            disabled={isUploadDisabled}
+                            aria-controls="upload-layer"
+                          >
+                            <Upload className="mr-3 h-4 w-4" aria-hidden />
+                            {t('upload-layer')}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {isAtMaxLayers && (
+                        <TooltipContent>
+                          {t('max-layers-reached', { max: MAX_CUSTOM_LAYERS })}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : null
               }
             </>
