@@ -152,12 +152,21 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
                 [layer.id]: { ...prev[layer.id], canBeUsedForModelling: false },
               }));
               if (!modellingState.active) {
+                setModelling({
+                  active: false,
+                  status: 'idle',
+                  data: null,
+                  errorMessage: undefined,
+                });
                 setUploadError(t('invalid-geometry-for-stats'));
               }
             } else if (!modellingState.active) {
               setModellingCustomLayerId(layer.id);
             }
           } else {
+            if (!modellingState.active) {
+              setModelling({ active: false, status: 'idle', data: null, errorMessage: undefined });
+            }
             setUploadError(geometryError ? getUploadErrorMessage(geometryError) : null);
           }
         } catch (error) {
