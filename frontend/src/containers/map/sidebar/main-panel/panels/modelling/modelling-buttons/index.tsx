@@ -186,8 +186,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           } else {
             if (!modellingState.active) {
               setModelling({ active: false, status: 'idle', data: null, errorMessage: undefined });
+              setUploadError(geometryError ? getUploadErrorMessage(geometryError) : null);
             }
-            setUploadError(geometryError ? getUploadErrorMessage(geometryError) : null);
           }
         } catch (error) {
           if (!modellingState.active) {
