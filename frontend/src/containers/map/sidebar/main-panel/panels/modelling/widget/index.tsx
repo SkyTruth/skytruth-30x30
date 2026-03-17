@@ -70,6 +70,7 @@ WidgetLegend.messages = ['containers.map-sidebar-main-panel'];
 
 const ModellingWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
+  const tUploads = useTranslations('services.uploads');
   const locale = useLocale();
   const locationNameField = useNameField();
 
@@ -80,8 +81,12 @@ const ModellingWidget: FCWithMessages = () => {
   const {
     status: modellingStatus,
     data: modellingData,
-    errorMessage,
+    errorMessage: errorMessageKey,
   } = useAtomValue(modellingAtom);
+
+  const errorMessage = errorMessageKey
+    ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0], { environment: tab })
+    : undefined;
   const { status: drawStatus } = useAtomValue(drawStateAtom);
 
   // Tooltips with mapping
@@ -371,6 +376,7 @@ const ModellingWidget: FCWithMessages = () => {
 
 ModellingWidget.messages = [
   'containers.map-sidebar-main-panel',
+  'services.uploads',
   ...Widget.messages,
   ...WidgetLegend.messages,
   ...StackedHorizontalBarChart.messages,

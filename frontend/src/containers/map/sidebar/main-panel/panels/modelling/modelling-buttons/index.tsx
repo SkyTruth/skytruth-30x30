@@ -55,8 +55,11 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
 
-  const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
-  const [uploadInfoMessage, setUploadInfoMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<unknown>(null);
+  const [showFeaturesExcludedInfo, setShowFeaturesExcludedInfo] = useState(false);
+
+  const uploadErrorMessage = uploadError ? getUploadErrorMessage(uploadError) : null;
+  const uploadInfoMessage = showFeaturesExcludedInfo ? tUploads('features-excluded-info') : null;
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -64,8 +67,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
     resetDrawState();
     resetModelling();
     setModellingCustomLayerId(null);
-    setUploadErrorMessage(null);
-    setUploadInfoMessage(null);
+    setUploadError(null);
+    setShowFeaturesExcludedInfo(false);
   }, [resetModelling, resetDrawState, setModellingCustomLayerId]);
 
   const onClickRedraw = useCallback(() => {
@@ -80,8 +83,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
     }));
 
     setModelling((prevState) => ({ ...prevState, active: true }));
-    setUploadErrorMessage(null);
-    setUploadInfoMessage(null);
+    setUploadError(null);
+    setShowFeaturesExcludedInfo(false);
   }, [resetModelling, setModelling, setDrawState, setModellingCustomLayerId]);
 
   const onUploadChange: ChangeEventHandler<HTMLInputElement> = useCallback(
@@ -134,34 +137,24 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             setBboxLocation([...bounds] as [number, number, number, number]);
           }
 
-          setUploadErrorMessage(null);
-          setUploadInfoMessage(removed.any ? tUploads('features-excluded-info') : null);
+          setUploadError(null);
+          setShowFeaturesExcludedInfo(removed.any);
         } catch (error) {
           setDrawState(previousDrawState);
-          setUploadInfoMessage(null);
-          setUploadErrorMessage(getUploadErrorMessage(error));
+          setShowFeaturesExcludedInfo(false);
+          setUploadError(error);
         } finally {
           // Rest input value so uplaoding the same file again triggers onChange
           input.value = '';
         }
       })();
     },
-    [
-      drawState,
-      setDrawState,
-      setModelling,
-      setModellingCustomLayerId,
-      setBboxLocation,
-      getUploadErrorMessage,
-      setUploadErrorMessage,
-      setUploadInfoMessage,
-      tUploads,
-    ]
+    [drawState, setDrawState, setModelling, setModellingCustomLayerId, setBboxLocation]
   );
 
   const onOpenUploadPicker = useCallback(() => {
-    setUploadErrorMessage(null);
-    setUploadInfoMessage(null);
+    setUploadError(null);
+    setShowFeaturesExcludedInfo(false);
     uploadInputRef.current?.click();
   }, []);
 
@@ -210,8 +203,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               size="full"
               disabled={isDrawDisabled}
               onClick={() => {
-                setUploadErrorMessage(null);
-                setUploadInfoMessage(null);
+                setUploadError(null);
+                setShowFeaturesExcludedInfo(false);
                 setModellingCustomLayerId(null);
                 setDrawState((prevState) => ({ ...prevState, active: true }));
               }}
@@ -273,9 +266,13 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           </Button>
         </div>
       )}
-      <div className="mt-2 w-full">
+      <div className="mt-2 w-full px-5">
         {uploadErrorMessage && (
-          <p id="upload-shape-error" className="text-[11px] leading-4 text-error" role="alert">
+          <p
+            id="upload-shape-error"
+            className="text-[11px] font-medium leading-4 text-error"
+            role="alert"
+          >
             {uploadErrorMessage}
           </p>
         )}

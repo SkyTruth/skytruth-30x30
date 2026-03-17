@@ -45,11 +45,14 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
   isOpen = true,
 }): JSX.Element => {
   const t = useTranslations('containers.map-sidebar-layers-panel');
-  const tUploads = useTranslations('services.uploads');
 
   const [open, setOpen] = useState(isOpen);
   const [savingLayerIds, setSavingLayerIds] = useState<Record<CustomLayer['id'], boolean>>({});
-  const [persistActionError, setPersistActionError] = useState<string | null>(null);
+  const [persistActionKey, setPersistActionKey] = useState<
+    'delete-layer-error' | 'save-layer-error' | null
+  >(null);
+
+  const persistActionError = persistActionKey ? t(persistActionKey) : null;
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers] = useAtom(allActiveLayersAtom);
@@ -84,7 +87,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
       const updatedLayers = { ...customLayers };
       delete updatedLayers[slug];
 
-      setPersistActionError(null);
+      setPersistActionKey(null);
       setCustomLayers(updatedLayers);
       setSavingLayerIds((prev) => {
         const next = { ...prev };
@@ -98,17 +101,10 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
       try {
         await deleteLayer(slug);
       } catch {
-        setPersistActionError(t('delete-layer-error'));
+        setPersistActionKey('delete-layer-error');
       }
     },
-    [
-      customLayers,
-      deleteLayer,
-      modellingCustomLayerId,
-      setCustomLayers,
-      setModellingCustomLayerId,
-      t,
-    ]
+    [customLayers, deleteLayer, modellingCustomLayerId, setCustomLayers, setModellingCustomLayerId]
   );
 
   const onCommitEdit = useCallback(
@@ -153,25 +149,18 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         setModellingState((prevState) => ({
           ...prevState,
           status: 'error',
-          errorMessage: tUploads('no-polygons-error'),
+          errorMessage: 'no-polygons-error',
         }));
       }
     },
-    [
-      setBboxLocation,
-      setDrawState,
-      setModellingCustomLayerId,
-      setModellingState,
-      setSidebarOpen,
-      tUploads,
-    ]
+    [setBboxLocation, setDrawState, setModellingCustomLayerId, setModellingState, setSidebarOpen]
   );
 
   const onSaveLayer = useCallback(
     async (layer: CustomLayer) => {
       if (!isIndexedDBAvailable) return;
 
-      setPersistActionError(null);
+      setPersistActionKey(null);
       setSavingLayerIds((prev) => ({
         ...prev,
         [layer.id]: true,
@@ -180,7 +169,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
       try {
         await saveLayer(layer);
       } catch {
-        setPersistActionError(t('save-layer-error'));
+        setPersistActionKey('save-layer-error');
       } finally {
         setSavingLayerIds((prev) => {
           const next = { ...prev };
@@ -189,7 +178,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         });
       }
     },
-    [isIndexedDBAvailable, saveLayer, t]
+    [isIndexedDBAvailable, saveLayer]
   );
 
   const savedLayerSnapshots = useMemo(

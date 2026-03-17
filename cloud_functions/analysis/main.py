@@ -3,7 +3,7 @@ from flask.logging import default_handler
 import logging
 
 from src.connect_tcp import connect_tcp_socket
-from src.analysis import get_locations_stats
+from src.analysis import get_locations_stats, InvalidGeometryError
 
 logger = logging.getLogger(__name__)
 logger.addHandler(default_handler)
@@ -58,6 +58,9 @@ def index(request):
 
         return (get_locations_stats(environment, db, geometry), 200, headers)
 
+    except InvalidGeometryError as e:
+        logger.exception(str(e))
+        return {"error": "Invalid geometry"}, 400, headers
     except ValueError as e:
         logger.exception(str(e))
         return {"error": str(e)}, 400, headers

@@ -1,14 +1,12 @@
-import { useEffect } from 'react';
+import { FC, useEffect } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import axios, { isAxiosError } from 'axios';
 import type { Feature } from 'geojson';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { useTranslations } from 'next-intl';
 
 import { modellingAtom, drawStateAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { FCWithMessages } from '@/types';
 import { ModellingData } from '@/types/modelling';
 
 const fetchModelling = async (tab: string, feature: Feature) => {
@@ -18,19 +16,25 @@ const fetchModelling = async (tab: string, feature: Feature) => {
   });
 };
 
-const Modelling: FCWithMessages = () => {
-  const t = useTranslations('components.widget');
-
+const Modelling: FC = () => {
   const { feature, revision } = useAtomValue(drawStateAtom);
   const setModellingState = useSetAtom(modellingAtom);
 
   const [{ tab }] = useSyncMapContentSettings();
 
-  const getErrorMessage = (error) => {
-    if (error.includes('Invalid input geometry')) {
-      return t('invalid-geometry');
+  const getErrorMessageKey = (req: unknown): string => {
+    if (!isAxiosError(req)) return 'general-stats-error';
+
+    const status = req.response?.status;
+    const error = req.response?.data?.error as string;
+
+    if (status === 400) {
+      if (error?.includes('No data found')) return 'no-intersection-error';
+      if (error?.includes('Invalid geometry')) return 'invalid-geometry';
+      return 'invalid-geometry';
     }
-    return error;
+
+    return 'general-stats-error';
   };
 
   const { isFetching, isSuccess, data } = useQuery(
@@ -42,20 +46,11 @@ const Modelling: FCWithMessages = () => {
       refetchOnWindowFocus: false,
       retry: false,
       onError: (req) => {
-        if (isAxiosError(req)) {
-          setModellingState((prevState) => ({
-            ...prevState,
-            status: 'error',
-            errorMessage:
-              req.response?.status === 400 ? getErrorMessage(req.response?.data.error) : undefined,
-          }));
-        } else {
-          setModellingState((prevState) => ({
-            ...prevState,
-            status: 'error',
-            errorMessage: undefined,
-          }));
-        }
+        setModellingState((prevState) => ({
+          ...prevState,
+          status: 'error',
+          errorMessage: getErrorMessageKey(req),
+        }));
       },
     }
   );
@@ -70,7 +65,5 @@ const Modelling: FCWithMessages = () => {
 
   return null;
 };
-
-Modelling.messages = ['components.widget'];
 
 export default Modelling;
