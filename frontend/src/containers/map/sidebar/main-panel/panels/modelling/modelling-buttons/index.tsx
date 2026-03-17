@@ -3,6 +3,7 @@ import { ChangeEventHandler, useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
+import { useResetAtom } from 'jotai/utils';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { RxTransform } from 'react-icons/rx';
@@ -62,9 +63,28 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
 
+  const resetModelling = useResetAtom(modellingAtom);
+  const resetDrawState = useResetAtom(drawStateAtom);
+  const resetModellingCustomLayerId = useResetAtom(modellingCustomLayerIdAtom);
+
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+
+  const onClickClearShape = useCallback(() => {
+    resetDrawState();
+    resetModelling();
+    resetModellingCustomLayerId();
+    setCustomLayers({});
+  }, [resetModelling, resetDrawState, resetModellingCustomLayerId, setCustomLayers]);
+
+  const onClickRedraw = useCallback(() => {
+    resetDrawState();
+    resetModelling();
+    resetModellingCustomLayerId();
+    setCustomLayers({});
+    setDrawState((prevState) => ({ ...prevState, active: true }));
+  }, [resetModelling, resetDrawState, resetModellingCustomLayerId, setCustomLayers, setDrawState]);
 
   const onUploadChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
@@ -213,6 +233,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
   const isDrawing = active || status === 'drawing';
   const isDrawDisabled = isUploadProcessing || (!isDrawing && isAtMaxLayers);
+  const hasCompletedDraw = !isCustomLayersActive && status === 'success';
 
   return (
     <div className={cn('flex w-full flex-col font-mono', className)}>
@@ -241,38 +262,61 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
       <div className="flex w-full flex-col space-y-2">
         <div className="flex w-full gap-3 px-5">
-          <Button
-            className={COMMON_BUTTON_CLASSES}
-            size="full"
-            disabled={isDrawDisabled}
-            onClick={() => {
-              setUploadError(null);
-              if (isDrawing) {
-                setDrawState({ active: false, status: 'idle', source: null });
-              } else {
-                setDrawState((prevState) => ({ ...prevState, active: true }));
-              }
-            }}
-          >
-            <RxTransform className="mr-3 h-4 w-4" aria-hidden />
-            {isDrawing ? t('cancel-drawing') : t('draw-shape')}
-          </Button>
-          {
-            // TODO: TECH-3372 remove feature flag check
-            isCustomLayersActive ? (
+          {hasCompletedDraw ? (
+            <>
+              <Button
+                variant="blue"
+                className={COMMON_BUTTON_CLASSES}
+                size="full"
+                onClick={onClickClearShape}
+              >
+                {t('clear-shape')}
+              </Button>
+              <Button
+                variant="blue"
+                className={COMMON_BUTTON_CLASSES}
+                size="full"
+                onClick={onClickRedraw}
+              >
+                {t('redraw')}
+              </Button>
+            </>
+          ) : (
+            <>
               <Button
                 className={COMMON_BUTTON_CLASSES}
                 size="full"
-                type="button"
-                onClick={onOpenUploadPicker}
-                disabled={isUploadDisabled}
-                aria-controls="upload-layer"
+                disabled={isDrawDisabled}
+                onClick={() => {
+                  setUploadError(null);
+                  if (isDrawing) {
+                    setDrawState({ active: false, status: 'idle', source: null });
+                  } else {
+                    setDrawState((prevState) => ({ ...prevState, active: true }));
+                  }
+                }}
               >
-                <Upload className="mr-3 h-4 w-4" aria-hidden />
-                {t('upload-layer')}
+                <RxTransform className="mr-3 h-4 w-4" aria-hidden />
+                {isDrawing ? t('cancel-drawing') : t('draw-shape')}
               </Button>
-            ) : null
-          }
+              {
+                // TODO: TECH-3372 remove feature flag check
+                isCustomLayersActive ? (
+                  <Button
+                    className={COMMON_BUTTON_CLASSES}
+                    size="full"
+                    type="button"
+                    onClick={onOpenUploadPicker}
+                    disabled={isUploadDisabled}
+                    aria-controls="upload-layer"
+                  >
+                    <Upload className="mr-3 h-4 w-4" aria-hidden />
+                    {t('upload-layer')}
+                  </Button>
+                ) : null
+              }
+            </>
+          )}
         </div>
       </div>
       <div className="mt-2 w-full px-5">

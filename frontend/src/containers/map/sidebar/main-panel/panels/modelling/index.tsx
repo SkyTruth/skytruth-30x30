@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { useAtomValue } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { useTranslations } from 'next-intl';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,14 +28,19 @@ const SidebarModelling: FCWithMessages = () => {
   const contentRef = useRef<HTMLDivElement | null>(null);
   const contentScroll = useScrollPosition(contentRef);
 
-  const { status: modellingStatus } = useAtomValue(modellingAtom);
-  const modellingCustomLayerId = useAtomValue(modellingCustomLayerIdAtom);
+  const [{ status: modellingStatus }, setModelling] = useAtom(modellingAtom);
+  const [modellingCustomLayerId, setModellingCustomLayerId] = useAtom(modellingCustomLayerIdAtom);
   const customLayers = useAtomValue(customLayersAtom);
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
   const isCustomLayersActive = useFeatureFlag('is_custom_layers_active'); // TODO: TECH-3372 Teardown
 
   const showIntro = useMemo(() => modellingStatus === 'idle', [modellingStatus]);
+
+  const handleViewInstructions = useCallback(() => {
+    setModellingCustomLayerId(null);
+    setModelling({ active: false, status: 'idle', data: null, errorMessage: undefined });
+  }, [setModelling, setModellingCustomLayerId]);
 
   // Keep default map layers in sync with selected tab/environment.
   useMapDefaultLayers();
@@ -77,7 +82,17 @@ const SidebarModelling: FCWithMessages = () => {
                 t('custom-area')}
           </h1>
         </div>
-        {!showIntro && <p className="mt-2 font-black">{t('custom-area-description')}</p>}
+        {!showIntro && isCustomLayersActive ? (
+          <button
+            type="button"
+            className="mt-2 text-left underline"
+            onClick={handleViewInstructions}
+          >
+            {t('view-instructions')}
+          </button>
+        ) : (
+          <p className="mt-2 font-black">{t('custom-area-description')}</p>
+        )}
         <TabsList className="relative top-px mt-5">
           <TabsTrigger value="terrestrial">{t('terrestrial')}</TabsTrigger>
           <TabsTrigger value="marine">{t('marine')}</TabsTrigger>
