@@ -68,9 +68,8 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
       */}
 
       {
-        // TODO: TECH-3372 remove feature flag check
         mapType === MapTypes.ConservationBuilder &&
-        isCustomLayersActive &&
+        isCustomLayersActive && // TODO: TECH-3372 remove feature flag check
         Object.keys(customLayers).length > 0 ? (
           <CustomLayerGroup name={t('custom-layers')} isOpen={true} />
         ) : null
