@@ -67,13 +67,11 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
           implementations.
       */}
 
-      {
-        mapType === MapTypes.ConservationBuilder &&
-        isCustomLayersActive && // TODO: TECH-3372 remove feature flag check
-        Object.keys(customLayers).length > 0 ? (
-          <CustomLayerGroup name={t('custom-layers')} isOpen={true} />
-        ) : null
-      }
+      {mapType === MapTypes.ConservationBuilder &&
+      isCustomLayersActive && // TODO: TECH-3372 remove feature flag check
+      Object.keys(customLayers).length > 0 ? (
+        <CustomLayerGroup name={t('custom-layers')} isOpen={true} />
+      ) : null}
       <LayersGroup
         name={t('basemap')}
         datasets={datasets.basemap}
