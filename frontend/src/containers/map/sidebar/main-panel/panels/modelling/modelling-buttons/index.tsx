@@ -71,6 +71,11 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       const input = event.currentTarget;
       const files = Array.from(input.files ?? []);
       const previousDrawState = drawState;
+
+      if (!modellingState.active) {
+        setModelling((prevState) => ({ ...prevState, active: true, status: 'running' }));
+      }
+
       void (async () => {
         if (files.length === 0) {
           return;
@@ -131,8 +136,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             setBboxLocation([...bounds] as [number, number, number, number]);
           }
 
-          // setUploadError(null);
-
           // Validate geometry server-side before activating modelling
           if (canBeUsedForModelling) {
             const polygonFeature = extractPolygons(geojson as GeoJSONObject).feature;
@@ -153,12 +156,14 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               }
             } else if (!modellingState.active) {
               setModellingCustomLayerId(layer.id);
-              setModelling((prevState) => ({ ...prevState, active: true }));
             }
           } else {
             setUploadError(geometryError ? getUploadErrorMessage(geometryError) : null);
           }
         } catch (error) {
+          if (!modellingState.active) {
+            setModelling((prevState) => ({ ...prevState, active: true, status: 'idle' }));
+          }
           setDrawState(previousDrawState);
           setUploadError(getUploadErrorMessage(error));
         } finally {
@@ -173,7 +178,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       drawState,
       customLayers,
       getUploadErrorMessage,
-      modellingState.active,
+      modellingState,
       queryClient,
       setDrawState,
       setCustomLayers,

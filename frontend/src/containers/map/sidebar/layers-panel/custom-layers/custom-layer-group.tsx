@@ -142,7 +142,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         status: 'success',
         source: 'upload',
       }));
-      setModellingState((prevState) => ({ ...prevState, active: true }));
+      setModellingState((prevState) => ({ ...prevState, active: true, status: 'running' }));
       setModellingCustomLayerId(layer.id);
 
       const bounds = getGeoJSONBoundingBox(layer.feature);

@@ -47,7 +47,6 @@ const Modelling: FC = () => {
     const error = req.response?.data?.error as string;
 
     if (status === 400) {
-      if (error?.includes('No data found')) return 'no-intersection-error';
       if (error?.includes('Invalid geometry')) return 'invalid-geometry';
       return 'invalid-geometry';
     }
@@ -75,11 +74,19 @@ const Modelling: FC = () => {
   );
 
   useEffect(() => {
-    setModellingState((prevState) => ({
-      ...prevState,
-      ...(isSuccess && { status: 'success', data }),
-      ...(isFetching && { status: 'running' }),
-    }));
+    if (isFetching) {
+      setModellingState((prevState) => ({ ...prevState, status: 'running' }));
+    } else if (isSuccess) {
+      if (data?.locations_area?.length > 0) {
+        setModellingState((prevState) => ({ ...prevState, status: 'success', data }));
+      } else {
+        setModellingState((prevState) => ({
+          ...prevState,
+          status: 'error',
+          errorMessage: 'no-intersection-error',
+        }));
+      }
+    }
   }, [setModellingState, isFetching, isSuccess, data]);
 
   return null;

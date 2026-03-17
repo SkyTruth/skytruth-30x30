@@ -285,7 +285,7 @@ const ModellingWidget: FCWithMessages = () => {
 
   return (
     <Widget
-      className="border-b border-black py-0"
+      className="border-black py-0"
       noData={!nationalLevelContributions}
       loading={loading}
       loadingMessage={loadingMessage}
