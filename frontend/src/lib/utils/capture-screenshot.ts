@@ -67,12 +67,22 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   const mapEl = document.querySelector<HTMLElement>('[data-screenshot="map"]');
   if (!mapEl) throw new Error('Map element not found');
 
-  // Temporarily hide legend if excluded
+  // Temporarily hide legend if excluded, or expand height to include as many layers as possible if included
   const legendEl = document.querySelector<HTMLElement>('[data-screenshot="legend"]');
   const legendPrevVisibility = legendEl?.style.visibility ?? '';
 
+  const legendScrollContainer = legendEl?.querySelector<HTMLElement>('.overflow-y-auto');
+  const prevMaxHeight = legendScrollContainer?.style.maxHeight ?? '';
+  const prevOverflow = legendScrollContainer?.style.overflow ?? '';
+  const prevHeight = legendScrollContainer?.style.height ?? '';
+
   if (!includeLegend && legendEl) {
     legendEl.style.visibility = 'hidden';
+  } else if (includeLegend && legendScrollContainer) {
+    const mapHeight = mapEl.offsetHeight;
+    legendScrollContainer.style.maxHeight = `${mapHeight}px`;
+    legendScrollContainer.style.height = 'auto';
+    legendScrollContainer.style.overflow = 'hidden';
   }
 
   let mapDataUrl: string;
@@ -84,6 +94,11 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
     restoreMapSvgs();
     if (!includeLegend && legendEl) {
       legendEl.style.visibility = legendPrevVisibility;
+    }
+    if (legendScrollContainer) {
+      legendScrollContainer.style.maxHeight = prevMaxHeight;
+      legendScrollContainer.style.height = prevHeight;
+      legendScrollContainer.style.overflow = prevOverflow;
     }
   }
 
