@@ -277,10 +277,10 @@ const MainMap: FCWithMessages = () => {
           <LabelsManager />
           <LayersToolbox />
           <ZoomControls />
+          {/* TECH-3372: tear down FF */}
           {isCustomLayersActive && mapType === MapTypes.ConservationBuilder ? (
             <Screenshot />
           ) : null}{' '}
-          {/* TECH-3372: tear down FF */}
           <DrawControls />
           <LayerManager cursor={cursor} />
           <Modelling />

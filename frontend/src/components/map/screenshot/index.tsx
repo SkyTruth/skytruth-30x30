@@ -92,7 +92,6 @@ const Screenshot: FCWithMessages = () => {
             <DialogTitle>{t('screenshot-dialog-title')}</DialogTitle>
           </DialogHeader>
 
-          {/* Options */}
           <div className="flex flex-col gap-3">
             <label className="flex cursor-pointer items-center gap-2 font-mono text-xs">
               <Checkbox
@@ -104,7 +103,6 @@ const Screenshot: FCWithMessages = () => {
             </label>
           </div>
 
-          {/* Preview */}
           <div className="flex min-h-[200px] items-center justify-center overflow-hidden border border-black">
             {isGeneratingPreview && <div className="h-full w-full" />}
             {!isGeneratingPreview && previewDataUrl && (
