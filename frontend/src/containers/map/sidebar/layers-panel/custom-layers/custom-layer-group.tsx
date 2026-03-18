@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
@@ -17,7 +16,6 @@ import {
 } from '@/containers/map/store';
 import useCustomLayersIndexedDB from '@/hooks/use-custom-layers-indexed-db';
 import { cn } from '@/lib/classnames';
-import { extractPolygons } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { FCWithMessages } from '@/types';
 import { CustomLayer } from '@/types/layers';
@@ -26,10 +24,8 @@ import {
   COLLAPSIBLE_CONTENT_CLASSES,
   COLLAPSIBLE_TRIGGER_CLASSES,
   COLLAPSIBLE_TRIGGER_ICONS_CLASSES,
-  MAX_CUSTOM_LAYERS,
   SWITCH_LABEL_CLASSES,
 } from '../constants';
-import UploadLayer from '../upload-layer';
 
 import CustomLayerItem from './custom-layer-item';
 
@@ -96,6 +92,12 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
       });
       if (modellingCustomLayerId === slug) {
         setModellingCustomLayerId(null);
+        setModellingState({
+          active: false,
+          status: 'idle',
+          data: null,
+          errorMessage: undefined,
+        });
       }
 
       try {
@@ -104,7 +106,14 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         setPersistActionKey('delete-layer-error');
       }
     },
-    [customLayers, deleteLayer, modellingCustomLayerId, setCustomLayers, setModellingCustomLayerId]
+    [
+      customLayers,
+      deleteLayer,
+      modellingCustomLayerId,
+      setCustomLayers,
+      setModellingCustomLayerId,
+      setModellingState,
+    ]
   );
 
   const onCommitEdit = useCallback(
@@ -127,30 +136,18 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
     (layer: CustomLayer) => {
       setSidebarOpen(true);
 
-      try {
-        const { feature } = extractPolygons(layer.feature as GeoJSONObject);
+      setDrawState((prevState) => ({
+        ...prevState,
+        active: false,
+        status: 'success',
+        source: 'upload',
+      }));
+      setModellingState((prevState) => ({ ...prevState, active: true, status: 'running' }));
+      setModellingCustomLayerId(layer.id);
 
-        setDrawState((prevState) => ({
-          ...prevState,
-          active: false,
-          status: 'success',
-          feature,
-          revision: prevState.revision + 1,
-          source: 'upload',
-        }));
-        setModellingState((prevState) => ({ ...prevState, active: true }));
-        setModellingCustomLayerId(layer.id);
-
-        const bounds = getGeoJSONBoundingBox(feature);
-        if (bounds) {
-          setBboxLocation(bounds as [number, number, number, number]);
-        }
-      } catch {
-        setModellingState((prevState) => ({
-          ...prevState,
-          status: 'error',
-          errorMessage: 'no-polygons-error',
-        }));
+      const bounds = getGeoJSONBoundingBox(layer.feature);
+      if (bounds) {
+        setBboxLocation(bounds as [number, number, number, number]);
       }
     },
     [setBboxLocation, setDrawState, setModellingCustomLayerId, setModellingState, setSidebarOpen]
@@ -193,11 +190,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
     [savedLayers]
   );
 
-  const isUploadDisabled = useMemo(
-    () => Object.keys(customLayers).length >= MAX_CUSTOM_LAYERS,
-    [customLayers]
-  );
-
   const displayNumLayers = numCustomLayers > 0;
 
   return (
@@ -225,7 +217,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         })}
       >
         <div>
-          <UploadLayer isDisabled={isUploadDisabled} />
           {persistActionError && (
             <p className="px-2 pt-2 text-xs text-error" role="alert">
               {persistActionError}
@@ -256,6 +247,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
                     saveTooltipLabel={saveTooltipLabel}
                     isSaveDisabled={isSaveDisabled}
                     isUseForModellingDisabled={modellingCustomLayerId === slug}
+                    canBeUsedForModelling={layer.canBeUsedForModelling}
                     onToggleLayer={onToggleLayer}
                     onCommitEdit={onCommitEdit}
                     onSaveLayer={onSaveLayer}
@@ -272,11 +264,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
   );
 };
 
-CustomLayerGroup.messages = [
-  'containers.map-sidebar-layers-panel',
-  'services.uploads',
-  ...UploadLayer.messages,
-  ...CustomLayerItem.messages,
-];
+CustomLayerGroup.messages = ['containers.map-sidebar-layers-panel', ...CustomLayerItem.messages];
 
 export default CustomLayerGroup;

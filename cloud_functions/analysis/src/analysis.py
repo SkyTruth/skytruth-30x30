@@ -52,9 +52,11 @@ def serialize_response(
     into a Dict {locations_area:{"code":<location_iso>, "protected_area": <area>}, "total_area":<total_area>} response
     """
     if not data or len(data) == 0:
-        raise ValueError(
-            f"No data found. This is likely because your custom area does not intersect with an unprotected {environment} area."
-        )
+        return {
+            "locations_area": [],
+            "total_area": 0,
+            "total_protected_area": 0,
+        }
 
     result = {"total_area": data[0][2]}
     sub_result = {}

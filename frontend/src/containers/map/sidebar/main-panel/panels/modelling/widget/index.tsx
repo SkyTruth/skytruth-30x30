@@ -253,7 +253,7 @@ const ModellingWidget: FCWithMessages = () => {
   const loading = modellingStatus === 'running' || drawStatus === 'uploading';
   const error = modellingStatus === 'error';
   const loadingMessage =
-    drawStatus === 'uploading' ? t('uploading-shape-to-map') : t('loading-data');
+    drawStatus === 'uploading' ? t('uploading-layer-to-map') : t('loading-data');
 
   // @ts-expect-error will check later
   const nationalLevelContributions: {
@@ -285,7 +285,7 @@ const ModellingWidget: FCWithMessages = () => {
 
   return (
     <Widget
-      className="border-b border-black py-0"
+      className="border-black py-0"
       noData={!nationalLevelContributions}
       loading={loading}
       loadingMessage={loadingMessage}
