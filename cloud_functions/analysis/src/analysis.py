@@ -57,9 +57,6 @@ def serialize_response(
             "total_area": 0,
             "total_protected_area": 0,
         }
-        # raise ValueError(
-        #     f"No data found. This is likely because your custom area does not intersect with an unprotected {environment} area."
-        # )
 
     result = {"total_area": data[0][2]}
     sub_result = {}

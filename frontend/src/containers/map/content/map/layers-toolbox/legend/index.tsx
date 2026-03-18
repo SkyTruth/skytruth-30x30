@@ -214,7 +214,7 @@ const Legend: FCWithMessages = () => {
           let legend_config: LegendLegendComponent;
           let params_config;
 
-          // TODO: TECH-3372 remove feature flag check
+          // TODO: TECH-3372 remove this line entirely
           if (customLayers[slug] && !isCustomLayersActive) return null;
 
           if (!customLayers[slug] && layersQuery.data?.length) {

@@ -12,7 +12,6 @@ import {
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
-import useScrollPosition from '@/hooks/use-scroll-position';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
@@ -26,7 +25,6 @@ const SidebarModelling: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const contentScroll = useScrollPosition(contentRef);
 
   const [{ status: modellingStatus }, setModelling] = useAtom(modellingAtom);
   const [modellingCustomLayerId, setModellingCustomLayerId] = useAtom(modellingCustomLayerIdAtom);
@@ -70,10 +68,8 @@ const SidebarModelling: FCWithMessages = () => {
         <div>
           <h1
             className={cn({
-              'font-black transition-all': true,
+              'min-h-[3rem] text-5xl font-black transition-all': true,
               truncate: !showIntro,
-              'min-h-[3rem] text-5xl': !isCustomLayersActive || contentScroll === 0,
-              'min-h-[1.75rem] text-xl': isCustomLayersActive && contentScroll > 0,
             })}
           >
             {showIntro
