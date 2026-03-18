@@ -80,7 +80,6 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   const restoreMapSvgs = inlineSvgUseElements(mapEl);
   try {
     mapDataUrl = await toPng(mapEl, { cacheBust: true, pixelRatio });
-
   } finally {
     restoreMapSvgs();
     if (!includeLegend && legendEl) {
@@ -90,7 +89,6 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
 
   // Load captured images
   const mapImg = await loadImage(mapDataUrl);
-
 
   const canvas = document.createElement('canvas');
   canvas.width = mapImg.width;
@@ -103,9 +101,10 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   // Draw SkyTruth logo in top-left of the map area
   try {
     const logo = await loadImage('/images/SkyTruth_logo.svg');
-    const logoSize = 40 * pixelRatio;
+    const logoHeight = 120 * pixelRatio;
+    const logoWidth = 170 * pixelRatio;
     const padding = 16 * pixelRatio;
-    ctx.drawImage(logo, padding, padding, logoSize, logoSize);
+    ctx.drawImage(logo, padding, padding, logoWidth, logoHeight);
   } catch {
     // Logo not found — skip silently
   }
@@ -114,8 +113,17 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
 }
 
 export function downloadScreenshot(dataUrl: string): void {
+  const now = new Date();
+  const date = `${now.getMonth() + 1}_${now.getDate()}_${now.getFullYear()}`;
+  const hours = now.getHours();
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const seconds = now.getSeconds().toString().padStart(2, '0');
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  const time = `${hours12}_${minutes}_${seconds} ${period}`;
+
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = 'map-screenshot.png';
+  a.download = `SkyTruth 30x30 Screenshot ${date}, ${time}.png`;
   a.click();
 }

@@ -87,7 +87,7 @@ const Screenshot: FCWithMessages = () => {
         </div>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent size='large'>
+        <DialogContent size="large">
           <DialogHeader>
             <DialogTitle>{t('screenshot-dialog-title')}</DialogTitle>
           </DialogHeader>
@@ -106,9 +106,7 @@ const Screenshot: FCWithMessages = () => {
 
           {/* Preview */}
           <div className="flex min-h-[200px] items-center justify-center overflow-hidden border border-black">
-            {isGeneratingPreview && (
-              <div className="h-full w-full" />
-            )}
+            {isGeneratingPreview && <div className="h-full w-full" />}
             {!isGeneratingPreview && previewDataUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
