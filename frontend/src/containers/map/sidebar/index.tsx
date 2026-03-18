@@ -31,7 +31,7 @@ const MapSidebar: FCWithMessages = () => {
   const showLayersToggle = showLayersPanel;
 
   return (
-    <div className="relative z-20 flex h-full border-l border-black" data-screenshot="sidebar">
+    <div className="relative z-20 flex h-full border-l border-black">
       {/* MAIN PANEL */}
       {showSidebar && (
         <div

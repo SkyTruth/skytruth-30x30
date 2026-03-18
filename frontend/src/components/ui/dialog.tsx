@@ -41,6 +41,8 @@ const dialogContentVariants = cva(
       size: {
         default:
           'max-h-[calc(100%_-_theme(spacing.8))] w-[calc(100%_-_theme(spacing.8))] max-w-[600px] lg:w-auto',
+          large:
+          'max-h-[calc(100%_-_theme(spacing.10))] w-[calc(100%_-_theme(spacing.10))] max-w-[800px]',
         full: 'w-full h-full',
       },
     },

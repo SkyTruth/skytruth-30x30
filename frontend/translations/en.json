@@ -385,11 +385,10 @@
       "zoom-out": "Zoom out",
       "screenshot": "Screenshot",
       "screenshot-include-legend": "Include legend",
-      "screenshot-include-sidebar": "Include sidebar",
       "screenshot-download": "Download",
       "screenshot-downloading": "Downloading...",
       "screenshot-preview-loading": "Generating preview...",
-      "screenshot-dialog-title": "Download map image",
+      "screenshot-dialog-title": "Download Map Preview",
       "screenshot-tooltip": "Download a screenshot of the map"
     },
     "mobile-disclaimer-dialog": {

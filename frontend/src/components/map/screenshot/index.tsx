@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { screenshotOpenAtom } from '@/containers/map/store';
 import { buildScreenshotDataUrl, downloadScreenshot } from '@/lib/utils/capture-screenshot';
@@ -27,7 +26,6 @@ const Screenshot: FCWithMessages = () => {
 
   const [open, setOpen] = useAtom(screenshotOpenAtom);
   const [includeLegend, setIncludeLegend] = useState(true);
-  const [includeSidebar, setIncludeSidebar] = useState(false);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -39,7 +37,7 @@ const Screenshot: FCWithMessages = () => {
     setIsGeneratingPreview(true);
     setPreviewDataUrl(null);
 
-    buildScreenshotDataUrl({ includeLegend, includeSidebar })
+    buildScreenshotDataUrl({ includeLegend })
       .then((dataUrl) => {
         if (!cancelled) setPreviewDataUrl(dataUrl);
       })
@@ -53,12 +51,12 @@ const Screenshot: FCWithMessages = () => {
     return () => {
       cancelled = true;
     };
-  }, [open, includeLegend, includeSidebar]);
+  }, [open, includeLegend]);
 
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const dataUrl = await buildScreenshotDataUrl({ includeLegend, includeSidebar });
+      const dataUrl = await buildScreenshotDataUrl({ includeLegend });
       downloadScreenshot(dataUrl);
       setOpen(false);
     } finally {
@@ -89,7 +87,7 @@ const Screenshot: FCWithMessages = () => {
         </div>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent size='large'>
           <DialogHeader>
             <DialogTitle>{t('screenshot-dialog-title')}</DialogTitle>
           </DialogHeader>
@@ -104,27 +102,19 @@ const Screenshot: FCWithMessages = () => {
               />
               {t('screenshot-include-legend')}
             </label>
-            <label className="flex cursor-pointer items-center gap-2 font-mono text-xs">
-              <Checkbox
-                name="include-sidebar"
-                checked={includeSidebar}
-                onCheckedChange={(checked) => setIncludeSidebar(checked === true)}
-              />
-              {t('screenshot-include-sidebar')}
-            </label>
           </div>
 
           {/* Preview */}
           <div className="flex min-h-[200px] items-center justify-center overflow-hidden border border-black">
             {isGeneratingPreview && (
-              <Skeleton className="h-full w-full" style={{ minHeight: 200 }} />
+              <div className="h-full w-full" />
             )}
             {!isGeneratingPreview && previewDataUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewDataUrl}
                 alt={t('screenshot-dialog-title')}
-                className="max-h-[60vh] max-w-full object-contain"
+                className="max-h-[80vh] max-w-full object-contain"
               />
             )}
             {!isGeneratingPreview && !previewDataUrl && (

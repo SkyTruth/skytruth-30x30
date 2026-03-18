@@ -2,7 +2,6 @@ import { toPng } from 'html-to-image';
 
 interface ScreenshotOptions {
   includeLegend: boolean;
-  includeSidebar: boolean;
   pixelRatio?: number;
 }
 
@@ -63,7 +62,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promise<string> {
-  const { includeLegend, includeSidebar, pixelRatio = 2 } = options;
+  const { includeLegend, pixelRatio = 2 } = options;
 
   const mapEl = document.querySelector<HTMLElement>('[data-screenshot="map"]');
   if (!mapEl) throw new Error('Map element not found');
@@ -77,18 +76,11 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   }
 
   let mapDataUrl: string;
-  let sidebarDataUrl: string | null = null;
 
   const restoreMapSvgs = inlineSvgUseElements(mapEl);
   try {
     mapDataUrl = await toPng(mapEl, { cacheBust: true, pixelRatio });
 
-    if (includeSidebar) {
-      const sidebarEl = document.querySelector<HTMLElement>('[data-screenshot="sidebar"]');
-      if (sidebarEl) {
-        sidebarDataUrl = await toPng(sidebarEl, { cacheBust: true, pixelRatio });
-      }
-    }
   } finally {
     restoreMapSvgs();
     if (!includeLegend && legendEl) {
@@ -98,30 +90,22 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
 
   // Load captured images
   const mapImg = await loadImage(mapDataUrl);
-  const sidebarImg = sidebarDataUrl ? await loadImage(sidebarDataUrl) : null;
 
-  // Composite onto a single canvas
-  const sidebarWidth = sidebarImg ? sidebarImg.width : 0;
-  const totalWidth = sidebarWidth + mapImg.width;
-  const totalHeight = Math.max(mapImg.height, sidebarImg ? sidebarImg.height : 0);
 
   const canvas = document.createElement('canvas');
-  canvas.width = totalWidth;
-  canvas.height = totalHeight;
+  canvas.width = mapImg.width;
+  canvas.height = mapImg.height;
 
   const ctx = canvas.getContext('2d')!;
 
-  if (sidebarImg) {
-    ctx.drawImage(sidebarImg, 0, 0);
-  }
-  ctx.drawImage(mapImg, sidebarWidth, 0);
+  ctx.drawImage(mapImg, 0, 0);
 
   // Draw SkyTruth logo in top-left of the map area
   try {
-    const logo = await loadImage('/images/skytruth-30-30-logo.svg');
+    const logo = await loadImage('/images/SkyTruth_logo.svg');
     const logoSize = 40 * pixelRatio;
     const padding = 16 * pixelRatio;
-    ctx.drawImage(logo, sidebarWidth + padding, padding, logoSize, logoSize);
+    ctx.drawImage(logo, padding, padding, logoSize, logoSize);
   } catch {
     // Logo not found — skip silently
   }
