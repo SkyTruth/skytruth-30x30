@@ -22,6 +22,7 @@ import {
   drawStateAtom,
   layersInteractiveAtom,
   layersInteractiveIdsAtom,
+  mapTypeAtom,
   popupAtom,
 } from '@/containers/map/store';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
@@ -29,6 +30,7 @@ import useMapBounds from '@/hooks/useMapBounds';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped } from '@/types/layers';
+import { MapTypes } from '@/types/map';
 
 const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-manager'), {
   ssr: false,
@@ -45,6 +47,7 @@ const MainMap: FCWithMessages = () => {
   const drawState = useAtomValue(drawStateAtom);
   const layersInteractive = useAtomValue(layersInteractiveAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
+  const mapType = useAtomValue(mapTypeAtom);
 
   const [popup, setPopup] = useAtom(popupAtom);
 
@@ -274,7 +277,10 @@ const MainMap: FCWithMessages = () => {
           <LabelsManager />
           <LayersToolbox />
           <ZoomControls />
-          {isCustomLayersActive ? <Screenshot /> : null} {/* TECH-3372: tear down FF */}
+          {isCustomLayersActive && mapType === MapTypes.ConservationBuilder ? (
+            <Screenshot />
+          ) : null}{' '}
+          {/* TECH-3372: tear down FF */}
           <DrawControls />
           <LayerManager cursor={cursor} />
           <Modelling />

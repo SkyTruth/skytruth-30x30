@@ -14,12 +14,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { screenshotOpenAtom } from '@/containers/map/store';
 import { buildScreenshotDataUrl, downloadScreenshot } from '@/lib/utils/capture-screenshot';
 import { FCWithMessages } from '@/types';
 
 const BUTTON_CLASSES = 'group bg-white';
-const ICON_CLASSES = 'h-4 w-4 text-black group-hover:text-white';
+const ICON_CLASSES = 'text-black group-hover:text-white';
 
 const Screenshot: FCWithMessages = () => {
   const t = useTranslations('components.map');
@@ -68,16 +69,23 @@ const Screenshot: FCWithMessages = () => {
   return (
     <>
       {!open && (
-        <div className="absolute right-0 top-20 z-10 border border-r-0 border-t-0 border-black">
-          <Button
-            type="button"
-            size="icon"
-            className={BUTTON_CLASSES}
-            onClick={() => setOpen(true)}
-          >
-            <Camera className={ICON_CLASSES} aria-hidden />
-            <span className="sr-only">{t('screenshot')}</span>
-          </Button>
+        <div className="absolute right-0 top-20 z-10 mt-[0.6rem] border border-r-0 border-black">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  className={BUTTON_CLASSES}
+                  onClick={() => setOpen(true)}
+                >
+                  <Camera className={ICON_CLASSES} aria-hidden size={18} />
+                  <span className="sr-only">{t('screenshot')}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">{t('screenshot-tooltip')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
