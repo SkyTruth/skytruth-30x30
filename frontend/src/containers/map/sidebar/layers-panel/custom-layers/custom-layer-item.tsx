@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { BarChartHorizontal, Save, Trash } from 'lucide-react';
+import { AlertTriangle, BarChart4, Save, Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ type CustomLayerItemProps = {
   saveTooltipLabel: string;
   isSaveDisabled: boolean;
   isUseForModellingDisabled: boolean;
+  canBeUsedForModelling: boolean;
   onToggleLayer: (layer: CustomLayer, checked: boolean) => void;
   onCommitEdit: (slug: string, newName: string) => void;
   onSaveLayer: (layer: CustomLayer) => Promise<void> | void;
@@ -34,6 +35,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   saveTooltipLabel,
   isSaveDisabled,
   isUseForModellingDisabled,
+  canBeUsedForModelling,
   onToggleLayer,
   onCommitEdit,
   onSaveLayer,
@@ -86,7 +88,7 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
   return (
     <li className="flex items-start justify-between">
       <TooltipProvider>
-        <span className="flex min-w-0 flex-1 items-start gap-2 overflow-x-hidden text-nowrap">
+        <span className="flex min-w-0 flex-1 items-start gap-2 text-nowrap">
           <Switch
             id={`${layer.name}-switch`}
             aria-label={layer.name}
@@ -120,7 +122,10 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="block w-full max-w-full cursor-text overflow-hidden text-ellipsis whitespace-nowrap text-left hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black"
+                      className={cn(
+                        'block w-full max-w-full cursor-text overflow-hidden text-ellipsis whitespace-nowrap text-left hover:bg-gray-200 hover:text-gray-700 focus-visible:ring-black',
+                        isUseForModellingDisabled && 'font-bold'
+                      )}
                       onClick={beginEdit}
                     >
                       <span className="sr-only">{t('edit-layer-name')}</span>
@@ -140,6 +145,43 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
         </span>
 
         <div className="flex items-center">
+          {canBeUsedForModelling ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <Button
+                    className={cn(
+                      'h-auto w-auto pl-1.5',
+                      isUseForModellingDisabled && 'disabled:opacity-100'
+                    )}
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    disabled={isUseForModellingDisabled}
+                    onClick={() => onUseLayerForModelling(layer)}
+                  >
+                    <span className="sr-only">{useForModellingLabel}</span>
+                    <BarChart4
+                      size={16}
+                      strokeWidth={isUseForModellingDisabled ? 2.25 : 2}
+                      className={cn(isUseForModellingDisabled && 'text-blue-600')}
+                    />
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{useForModellingLabel}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <span className="inline-flex py-1 pl-1.5 text-gray-400">
+                  <AlertTriangle size={16} />
+                  <span className="sr-only">{t('invalid-geometry-for-stats')}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{t('invalid-geometry-for-stats')}</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
               <span className="inline-flex">
@@ -157,24 +199,6 @@ const CustomLayerItem: FCWithMessages<CustomLayerItemProps> = ({
               </span>
             </TooltipTrigger>
             <TooltipContent>{saveTooltipLabel}</TooltipContent>
-          </Tooltip>
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-                <Button
-                  className="h-auto w-auto pl-1.5"
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  disabled={isUseForModellingDisabled}
-                  onClick={() => onUseLayerForModelling(layer)}
-                >
-                  <span className="sr-only">{useForModellingLabel}</span>
-                  <BarChartHorizontal size={16} />
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{useForModellingLabel}</TooltipContent>
           </Tooltip>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>

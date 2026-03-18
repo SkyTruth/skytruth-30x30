@@ -1,34 +1,95 @@
-import { FC, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import { Layer, Source } from 'react-map-gl';
-
+import { useQueryClient } from '@tanstack/react-query';
+import type { Feature } from 'geojson';
 import { useAtom, useSetAtom } from 'jotai';
+import { useTranslations } from 'next-intl';
 
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { useMapboxDraw, UseMapboxDrawProps } from '@/components/map/draw-controls/hooks';
 import {
-  DRAW_STYLES,
-  useMapboxDraw,
-  UseMapboxDrawProps,
-} from '@/components/map/draw-controls/hooks';
-import { drawStateAtom, modellingCustomLayerIdAtom } from '@/containers/map/store';
+  bboxLocationAtom,
+  customLayersAtom,
+  drawStateAtom,
+  modellingAtom,
+  modellingCustomLayerIdAtom,
+} from '@/containers/map/store';
+import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { createCustomLayer } from '@/lib/utils/create-custom-layer';
+import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
+import { validateGeometryForModelling } from '@/lib/utils/validate-geometry-for-modelling';
+import { FCWithMessages } from '@/types';
 
-const DrawControls: FC = () => {
-  const [{ active, feature }, setDrawState] = useAtom(drawStateAtom);
+const DrawControls: FCWithMessages = () => {
+  const t = useTranslations('containers.map-sidebar-main-panel');
+  const queryClient = useQueryClient();
+  const [{ tab }] = useSyncMapContentSettings();
+  const [{ active }, setDrawState] = useAtom(drawStateAtom);
+  const [modellingState, setModelling] = useAtom(modellingAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
+  const setBboxLocation = useSetAtom(bboxLocationAtom);
 
   const onCreate: UseMapboxDrawProps['onCreate'] = useCallback(
     ({ features }) => {
-      setModellingCustomLayerId(null);
+      const drawnFeature = features[0];
+      const featureCollection = {
+        type: 'FeatureCollection' as const,
+        features: [drawnFeature],
+      };
+
+      // Create layer synchronously so it renders immediately
+      const layer = createCustomLayer(t('drawn-layer'), featureCollection, customLayers, true);
+
+      setCustomLayers((prev) => ({
+        ...prev,
+        [layer.id]: layer,
+      }));
+
+      const bounds = getGeoJSONBoundingBox(featureCollection);
+      if (bounds) {
+        setBboxLocation([...bounds] as [number, number, number, number]);
+      }
+
       setDrawState((prevState) => ({
         ...prevState,
         active: false,
         status: 'success',
-        feature: features[0],
-        revision: prevState.revision + 1,
         source: 'draw',
       }));
+
+      // Validate geometry server-side, then activate modelling if valid
+      void (async () => {
+        const { valid } = await validateGeometryForModelling(
+          queryClient,
+          tab,
+          layer.id,
+          drawnFeature as Feature
+        );
+
+        if (!valid) {
+          setCustomLayers((prev) => ({
+            ...prev,
+            [layer.id]: { ...prev[layer.id], canBeUsedForModelling: false },
+          }));
+        } else if (!modellingState.active) {
+          setModellingCustomLayerId(layer.id);
+          setModelling((prevState) => ({ ...prevState, active: true }));
+        }
+      })();
     },
-    [setDrawState, setModellingCustomLayerId]
+    [
+      t,
+      tab,
+      customLayers,
+      modellingState.active,
+      queryClient,
+      setCustomLayers,
+      setModellingCustomLayerId,
+      setBboxLocation,
+      setModelling,
+      setDrawState,
+    ]
   );
 
   const onClick: UseMapboxDrawProps['onClick'] = useCallback(() => {
@@ -49,24 +110,9 @@ const DrawControls: FC = () => {
 
   useMapboxDraw(useMapboxDrawProps);
 
-  if (active || !feature) {
-    return null;
-  }
-
-  return (
-    <Source
-      id="drawing"
-      type="geojson"
-      data={{
-        type: 'FeatureCollection',
-        features: [feature],
-      }}
-    >
-      {DRAW_STYLES.filter((layer) => layer.type !== 'circle').map((layer) => (
-        <Layer key={layer.id} {...layer} />
-      ))}
-    </Source>
-  );
+  return null;
 };
+
+DrawControls.messages = ['containers.map-sidebar-main-panel'];
 
 export default DrawControls;

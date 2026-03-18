@@ -261,7 +261,7 @@ const MainMap: FCWithMessages = () => {
       <Map
         initialViewState={initialViewState}
         bounds={bounds}
-        interactiveLayerIds={!drawState.active && !drawState.feature ? layersInteractiveIds : []}
+        interactiveLayerIds={!drawState.active ? layersInteractiveIds : []}
         onClick={handleMapClick}
         onMoveEnd={handleMoveEnd}
         onMouseMove={!disableMouseMove && handleMouseMove}
@@ -291,6 +291,7 @@ MainMap.messages = [
   ...LayersToolbox.messages,
   ...ZoomControls.messages,
   ...Screenshot.messages,
+  ...DrawControls.messages,
   // Indirectly imported by the layer manager
   ...GenericPopup.messages,
   ...ProtectedAreaPopup.messages,
