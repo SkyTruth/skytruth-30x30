@@ -23,10 +23,12 @@ export enum UploadErrorType {
   NoPolygons,
 }
 
+export const SHAPE_EXTENSIONS = ['shp', 'prj', 'shx', 'dbf', 'cfg'];
+
 export const supportedFileformats = [
   ...KMLLoader.extensions,
   ...['kmz'],
-  ...['shp', 'prj', 'shx', 'dbf', 'cfg'],
+  ...SHAPE_EXTENSIONS,
   ...['geojson'],
 ];
 

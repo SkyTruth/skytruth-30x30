@@ -6,6 +6,11 @@ import { useAtom, useSetAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import {
+  customLayerEngaged,
+  CustomLayerActions,
+  CustomLayerMethods,
+} from '@/components/analytics/heap';
 import { useMapboxDraw, UseMapboxDrawProps } from '@/components/map/draw-controls/hooks';
 import {
   bboxLocationAtom,
@@ -46,9 +51,16 @@ const DrawControls: FCWithMessages = () => {
         [layer.id]: layer,
       }));
 
-      const bounds = getGeoJSONBoundingBox(featureCollection);
+      const bounds = getGeoJSONBoundingBox(featureCollection) as [number, number, number, number];
+
+      customLayerEngaged({
+        action: CustomLayerActions.Create,
+        bbox: bounds,
+        method: CustomLayerMethods.Draw,
+      });
+
       if (bounds) {
-        setBboxLocation([...bounds] as [number, number, number, number]);
+        setBboxLocation([...bounds]);
       }
 
       setDrawState((prevState) => ({

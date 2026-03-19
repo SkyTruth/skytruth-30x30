@@ -4,6 +4,7 @@ import { useAtom, useSetAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
+import { CustomLayerActions, customLayerEngaged } from '@/components/analytics/heap';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   allActiveLayersAtom,
@@ -100,6 +101,10 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
         });
       }
 
+      customLayerEngaged({
+        action: CustomLayerActions.Delete,
+      });
+
       try {
         await deleteLayer(slug);
       } catch {
@@ -128,6 +133,8 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
           },
         };
       });
+
+      customLayerEngaged({ action: CustomLayerActions.Rename });
     },
     [setCustomLayers]
   );
@@ -145,9 +152,14 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
       setModellingState((prevState) => ({ ...prevState, active: true, status: 'running' }));
       setModellingCustomLayerId(layer.id);
 
-      const bounds = getGeoJSONBoundingBox(layer.feature);
+      const bounds = getGeoJSONBoundingBox(layer.feature) as [number, number, number, number];
+      customLayerEngaged({
+        action: CustomLayerActions.Stats,
+        bbox: bounds,
+      });
+
       if (bounds) {
-        setBboxLocation(bounds as [number, number, number, number]);
+        setBboxLocation(bounds);
       }
     },
     [setBboxLocation, setDrawState, setModellingCustomLayerId, setModellingState, setSidebarOpen]
@@ -173,6 +185,7 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
           delete next[layer.id];
           return next;
         });
+        customLayerEngaged({ action: CustomLayerActions.Save });
       }
     },
     [isIndexedDBAvailable, saveLayer]
