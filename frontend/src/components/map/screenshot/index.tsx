@@ -116,7 +116,7 @@ const Screenshot: FCWithMessages = () => {
           </DialogHeader>
 
           <div className="flex flex-col gap-3">
-            <label className="flex cursor-pointer items-center gap-2 font-mono text-xs">
+            <label className="text-s flex cursor-pointer items-center gap-2">
               <Checkbox
                 name="include-legend"
                 checked={includeLegend}
