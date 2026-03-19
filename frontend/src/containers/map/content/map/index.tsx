@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useAtom, useAtomValue } from 'jotai';
 import { useLocale } from 'next-intl';
 
-import Map, { ZoomControls, Attributions } from '@/components/map';
+import Map, { ZoomControls, Screenshot, Attributions } from '@/components/map';
 import { DEFAULT_VIEW_STATE } from '@/components/map/constants';
 import DrawControls from '@/containers/map/content/map/draw-controls';
 import LabelsManager from '@/containers/map/content/map/labels-manager';
@@ -22,12 +22,15 @@ import {
   drawStateAtom,
   layersInteractiveAtom,
   layersInteractiveIdsAtom,
+  mapTypeAtom,
   popupAtom,
 } from '@/containers/map/store';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useMapBounds from '@/hooks/useMapBounds';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped } from '@/types/layers';
+import { MapTypes } from '@/types/map';
 
 const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-manager'), {
   ssr: false,
@@ -44,6 +47,7 @@ const MainMap: FCWithMessages = () => {
   const drawState = useAtomValue(drawStateAtom);
   const layersInteractive = useAtomValue(layersInteractiveAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
+  const mapType = useAtomValue(mapTypeAtom);
 
   const [popup, setPopup] = useAtom(popupAtom);
 
@@ -52,6 +56,9 @@ const MainMap: FCWithMessages = () => {
   const hoveredPolygonId = useRef<Parameters<typeof map.setFeatureState>[0] | null>(null);
   const mountedRef = useRef(false);
   const previousDefaultLayersRef = useRef(null);
+
+  // TECH-3372: tear down
+  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
   const { data: layersInteractiveData } = useGetLayers(
     {
@@ -250,7 +257,10 @@ const MainMap: FCWithMessages = () => {
   const disableMouseMove = popup.type === 'click' && popup.features?.length;
 
   return (
-    <div className="absolute left-0 h-full w-full border-b border-r border-black">
+    <div
+      className="absolute left-0 h-full w-full border-b border-r border-black"
+      data-screenshot="map"
+    >
       <Map
         initialViewState={initialViewState}
         bounds={bounds}
@@ -267,6 +277,10 @@ const MainMap: FCWithMessages = () => {
           <LabelsManager />
           <LayersToolbox />
           <ZoomControls />
+          {/* TECH-3372: tear down FF */}
+          {isCustomLayersActive && mapType === MapTypes.ConservationBuilder ? (
+            <Screenshot />
+          ) : null}{' '}
           <DrawControls />
           <LayerManager cursor={cursor} />
           <Modelling />
@@ -282,6 +296,7 @@ MainMap.messages = [
   ...Popup.messages,
   ...LayersToolbox.messages,
   ...ZoomControls.messages,
+  ...Screenshot.messages,
   ...DrawControls.messages,
   // Indirectly imported by the layer manager
   ...GenericPopup.messages,

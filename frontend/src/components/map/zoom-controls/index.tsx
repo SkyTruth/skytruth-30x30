@@ -1,9 +1,11 @@
 import { useMap } from 'react-map-gl';
 
+import { useAtomValue } from 'jotai';
 import { Minus, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
+import { screenshotOpenAtom } from '@/containers/map/store';
 import { FCWithMessages } from '@/types';
 
 const BUTTON_CLASSES = 'group bg-white';
@@ -11,6 +13,7 @@ const ICON_CLASSES = 'h-4 w-4 text-black group-hover:text-white';
 
 const ZoomControls: FCWithMessages = () => {
   const t = useTranslations('components.map');
+  const screenshotOpen = useAtomValue(screenshotOpenAtom);
 
   const {
     current: { getZoom, zoomTo, getMinZoom, getMaxZoom },
@@ -19,6 +22,8 @@ const ZoomControls: FCWithMessages = () => {
   const zoom = getZoom();
   const minZoom = getMinZoom();
   const maxZoom = getMaxZoom();
+
+  if (screenshotOpen) return null;
 
   return (
     <div className="absolute right-0 top-0 z-10 flex flex-col border border-r-0 border-t-0 border-black">

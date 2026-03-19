@@ -12,6 +12,9 @@ import type { ModellingData } from '@/types/modelling';
 
 export const sidebarAtom = atom(true);
 export const layersAtom = atom(false);
+export const screenshotOpenAtom = atom<boolean>(false);
+export const legendOpenAtom = atom<boolean>(true);
+export const legendReadyAtom = atom<boolean>(true);
 
 // ? Map state
 export const mapTypeAtom = atom<MapTypes>(MapTypes.ProgressTracker);
