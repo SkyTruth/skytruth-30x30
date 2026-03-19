@@ -67,14 +67,14 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   const mapEl = document.querySelector<HTMLElement>('[data-screenshot="map"]');
   if (!mapEl) throw new Error('Map element not found');
 
-  // Temporarily hide legend if excluded, or expand height to include as many layers as possible if included
+  // The screenshot component ensures the legend is open via atom before calling this.
+  // Here we just hide it with CSS if the user unchecked "include legend",
+  // or expand the scroll container to fit content (up to map height) if included.
   const legendEl = document.querySelector<HTMLElement>('[data-screenshot="legend"]');
-  const legendPrevVisibility = legendEl?.style.visibility ?? '';
-
   const legendScrollContainer = legendEl?.querySelector<HTMLElement>('.overflow-y-auto');
-  const prevMaxHeight = legendScrollContainer?.style.maxHeight ?? '';
-  const prevOverflow = legendScrollContainer?.style.overflow ?? '';
-  const prevHeight = legendScrollContainer?.style.height ?? '';
+
+  const prevLegendVisibility = legendEl?.style.visibility ?? '';
+  const prevScrollStyle = legendScrollContainer?.style.cssText ?? '';
 
   if (!includeLegend && legendEl) {
     legendEl.style.visibility = 'hidden';
@@ -93,12 +93,10 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   } finally {
     restoreMapSvgs();
     if (!includeLegend && legendEl) {
-      legendEl.style.visibility = legendPrevVisibility;
+      legendEl.style.visibility = prevLegendVisibility;
     }
     if (legendScrollContainer) {
-      legendScrollContainer.style.maxHeight = prevMaxHeight;
-      legendScrollContainer.style.height = prevHeight;
-      legendScrollContainer.style.overflow = prevOverflow;
+      legendScrollContainer.style.cssText = prevScrollStyle;
     }
   }
 
@@ -116,8 +114,9 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
   // Draw SkyTruth logo in top-left of the map area
   try {
     const logo = await loadImage('/images/SkyTruth_logo.svg');
+    const logoRatio = 2.92 / 2; // Asepct ratio of skytruth logo
     const logoHeight = 120 * pixelRatio;
-    const logoWidth = 170 * pixelRatio;
+    const logoWidth = logoHeight * logoRatio;
     const padding = 16 * pixelRatio;
     ctx.drawImage(logo, padding, padding, logoWidth, logoHeight);
   } catch {

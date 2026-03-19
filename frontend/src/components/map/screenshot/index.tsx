@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { useAtom } from 'jotai';
+import { useAtom, useSetAtom } from 'jotai';
 import { Camera, Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { screenshotOpenAtom } from '@/containers/map/store';
+import { legendOpenAtom, legendReadyAtom, screenshotOpenAtom } from '@/containers/map/store';
 import { buildScreenshotDataUrl, downloadScreenshot } from '@/lib/utils/capture-screenshot';
 import { FCWithMessages } from '@/types';
 
@@ -25,13 +25,36 @@ const Screenshot: FCWithMessages = () => {
   const t = useTranslations('components.map');
 
   const [open, setOpen] = useAtom(screenshotOpenAtom);
+  const [legendReady, setLegendReady] = useAtom(legendReadyAtom);
+  const setLegendOpen = useSetAtom(legendOpenAtom);
+
   const [includeLegend, setIncludeLegend] = useState(true);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const legendWasOpenRef = useRef(true);
+
+  // When dialog opens: save legend state, force it open, wait for ready.
+  // When dialog closes: restore legend to its previous state.
   useEffect(() => {
     if (!open) return;
+    setLegendOpen((prev) => {
+      legendWasOpenRef.current = prev;
+      if (!prev) {
+        // Legend was closed — open it and mark not ready until animation finishes
+        setLegendReady(false);
+      }
+      return true;
+    });
+    return () => {
+      setLegendOpen(legendWasOpenRef.current);
+    };
+  }, [open, setLegendOpen, setLegendReady]);
+
+  // Capture whenever the dialog is open and legend is ready, or when includeLegend changes
+  useEffect(() => {
+    if (!open || !legendReady) return;
 
     let cancelled = false;
     setIsGeneratingPreview(true);
@@ -51,7 +74,7 @@ const Screenshot: FCWithMessages = () => {
     return () => {
       cancelled = true;
     };
-  }, [open, includeLegend]);
+  }, [open, legendReady, includeLegend]);
 
   const handleDownload = async () => {
     setIsDownloading(true);
