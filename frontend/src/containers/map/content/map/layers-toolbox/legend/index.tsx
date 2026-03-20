@@ -8,6 +8,7 @@ import {
   useSyncMapLayers,
 } from '@/containers/map/content/map/sync-settings';
 import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
@@ -26,6 +27,7 @@ const Legend: FCWithMessages = () => {
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
+  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active'); // TECH-3372: tear down
 
   const layersQuery = useGetLayers<LayerListResponseDataItem[]>(
     {
@@ -212,6 +214,9 @@ const Legend: FCWithMessages = () => {
           let legend_config: LegendLegendComponent;
           let params_config;
 
+          // TODO: TECH-3372 remove this line entirely
+          if (customLayers[slug] && !isCustomLayersActive) return null;
+
           if (!customLayers[slug] && layersQuery.data?.length) {
             const layer = layersQuery.data.filter((layer) => layer.slug === slug)[0];
 
@@ -291,6 +296,7 @@ const Legend: FCWithMessages = () => {
   }, [
     allActiveLayers,
     customLayers,
+    isCustomLayersActive,
     layerSettings,
     layersQuery.data,
     onChangeLayerOpacity,

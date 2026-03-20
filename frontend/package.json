@@ -1,6 +1,6 @@
 {
   "name": "skytruth-30x30-frontend",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "scripts": {
     "dev": "yarn types && next dev",
@@ -59,6 +59,7 @@
     "dexie": "^4.3.0",
     "dexie-react-hooks": "^4.2.0",
     "embla-carousel-react": "8.0.0",
+    "html-to-image": "^1.11.11",
     "jotai": "2.4.3",
     "lodash-es": "^4.17.21",
     "lucide-react": "^0.274.0",
@@ -70,6 +71,7 @@
     "nuqs": "^2.4.1",
     "orval": "6.18.1",
     "postcss": "8.4.21",
+    "proj4": "^2.20.4",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-hook-form": "^7.48.2",
@@ -88,6 +90,7 @@
     "@types/google.analytics": "0.0.42",
     "@types/mapbox__mapbox-gl-draw": "1.4.6",
     "@types/node": "18.15.0",
+    "@types/proj4": "^2.19.0",
     "@types/react": "^18.2.31",
     "@types/react-dom": "^18.2.14",
     "@types/recharts": "^1.8.26",

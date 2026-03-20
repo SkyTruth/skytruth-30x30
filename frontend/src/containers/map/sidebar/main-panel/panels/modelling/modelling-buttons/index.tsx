@@ -1,30 +1,39 @@
 import { ChangeEventHandler, useCallback, useRef, useState } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
+import type { GeoJSONObject } from '@turf/turf';
 import { useAtom, useSetAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { LuTrash2 } from 'react-icons/lu';
 import { RxTransform } from 'react-icons/rx';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MAX_CUSTOM_LAYER_SIZE } from '@/containers/map/sidebar/layers-panel/constants';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  MAX_CUSTOM_LAYER_SIZE,
+  MAX_CUSTOM_LAYERS,
+} from '@/containers/map/sidebar/layers-panel/constants';
 import {
   bboxLocationAtom,
+  customLayersAtom,
   modellingAtom,
   modellingCustomLayerIdAtom,
   drawStateAtom,
 } from '@/containers/map/store';
+import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
+import { createCustomLayer } from '@/lib/utils/create-custom-layer';
 import {
   extractPolygons,
   convertFilesToGeojson,
   supportedFileformats,
 } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
+import { validateGeometryForModelling } from '@/lib/utils/validate-geometry-for-modelling';
 import { FCWithMessages } from '@/types';
 
 const COMMON_BUTTON_CLASSES =
@@ -36,7 +45,6 @@ type ModellingButtonsProps = {
 
 const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const tUploads = useTranslations('services.uploads');
   const getUploadErrorMessage = useUploadErrorMessage({
     maxFileSize: MAX_CUSTOM_LAYER_SIZE,
   });
@@ -44,56 +52,57 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   // TECH-3372: tear down
   const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
+  const queryClient = useQueryClient();
+  const [{ tab }] = useSyncMapContentSettings();
   const [modellingState, setModelling] = useAtom(modellingAtom);
   const { status: modellingStatus } = modellingState;
 
   const [drawState, setDrawState] = useAtom(drawStateAtom);
-  const { active, status, source } = drawState;
+  const { active, status } = drawState;
 
-  const setBboxLocation = useSetAtom(bboxLocationAtom);
+  const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
+  const setBboxLocation = useSetAtom(bboxLocationAtom);
+
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
+  const resetModellingCustomLayerId = useResetAtom(modellingCustomLayerIdAtom);
 
-  const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
-  const [uploadInfoMessage, setUploadInfoMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
 
-  const onClickClearModelling = useCallback(() => {
+  const onClickClearShape = useCallback(() => {
     resetDrawState();
     resetModelling();
-    setModellingCustomLayerId(null);
-    setUploadErrorMessage(null);
-    setUploadInfoMessage(null);
-  }, [resetModelling, resetDrawState, setModellingCustomLayerId]);
+    resetModellingCustomLayerId();
+    setCustomLayers({});
+  }, [resetModelling, resetDrawState, resetModellingCustomLayerId, setCustomLayers]);
 
   const onClickRedraw = useCallback(() => {
+    resetDrawState();
     resetModelling();
-    setModellingCustomLayerId(null);
-    setDrawState((prevState) => ({
-      ...prevState,
-      active: true,
-      status: 'drawing',
-      feature: null,
-      source: 'draw',
-    }));
-
-    setModelling((prevState) => ({ ...prevState, active: true }));
-    setUploadErrorMessage(null);
-    setUploadInfoMessage(null);
-  }, [resetModelling, setModelling, setDrawState, setModellingCustomLayerId]);
+    resetModellingCustomLayerId();
+    setCustomLayers({});
+    setDrawState((prevState) => ({ ...prevState, active: true }));
+  }, [resetModelling, resetDrawState, resetModellingCustomLayerId, setCustomLayers, setDrawState]);
 
   const onUploadChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
       const input = event.currentTarget;
       const files = Array.from(input.files ?? []);
       const previousDrawState = drawState;
+
+      if (!modellingState.active) {
+        setModelling((prevState) => ({ ...prevState, active: true, status: 'running' }));
+      }
+
       void (async () => {
         if (files.length === 0) {
           return;
         }
 
+        setUploadError(null);
         setDrawState((prevState) => ({
           ...prevState,
           active: false,
@@ -111,71 +120,121 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
           }
 
           const geojson = await convertFilesToGeojson(files);
-          const { feature, removed } = extractPolygons(geojson);
 
-          if (!feature) {
-            throw new Error('No valid geometry found');
+          // Check if the geometry contains polygons for modelling
+          let canBeUsedForModelling = false;
+          let geometryError = null;
+          try {
+            extractPolygons(geojson as GeoJSONObject);
+            canBeUsedForModelling = true;
+          } catch (error) {
+            // Layer has no polygon geometry — still added to map, just not used for modelling
+            geometryError = error;
           }
+
+          // Add full geometry as custom layer (all geometry types render on map)
+          const layer = createCustomLayer(
+            files[0].name,
+            geojson,
+            customLayers,
+            canBeUsedForModelling
+          );
+
+          setCustomLayers((prev) => ({
+            ...prev,
+            [layer.id]: layer,
+          }));
 
           setDrawState((prevState) => ({
             ...prevState,
             active: false,
             status: 'success',
-            feature,
-            revision: prevState.revision + 1,
             source: 'upload',
           }));
 
-          setModelling((prevState) => ({ ...prevState, active: true }));
-          setModellingCustomLayerId(null);
-
-          const bounds = getGeoJSONBoundingBox(feature);
+          const bounds = getGeoJSONBoundingBox(geojson);
           if (bounds) {
             setBboxLocation([...bounds] as [number, number, number, number]);
           }
 
-          setUploadErrorMessage(null);
-          setUploadInfoMessage(removed.any ? tUploads('features-excluded-info') : null);
+          // Validate geometry server-side before activating modelling
+          if (canBeUsedForModelling) {
+            const polygonFeature = extractPolygons(geojson as GeoJSONObject).feature;
+            const { valid } = await validateGeometryForModelling(
+              queryClient,
+              tab,
+              layer.id,
+              polygonFeature
+            );
+
+            if (!valid) {
+              setCustomLayers((prev) => ({
+                ...prev,
+                [layer.id]: { ...prev[layer.id], canBeUsedForModelling: false },
+              }));
+              if (!modellingState.active) {
+                setModelling({
+                  active: false,
+                  status: 'idle',
+                  data: null,
+                  errorMessage: undefined,
+                });
+                setUploadError(t('invalid-geometry-for-stats'));
+              }
+            } else if (!modellingState.active) {
+              setModellingCustomLayerId(layer.id);
+            }
+          } else {
+            if (!modellingState.active) {
+              setModelling({ active: false, status: 'idle', data: null, errorMessage: undefined });
+              setUploadError(geometryError ? getUploadErrorMessage(geometryError) : null);
+            }
+          }
         } catch (error) {
+          if (!modellingState.active) {
+            setModelling((prevState) => ({ ...prevState, active: true, status: 'idle' }));
+          }
           setDrawState(previousDrawState);
-          setUploadInfoMessage(null);
-          setUploadErrorMessage(getUploadErrorMessage(error));
+          setUploadError(getUploadErrorMessage(error));
         } finally {
-          // Rest input value so uplaoding the same file again triggers onChange
+          // Reset input value so uploading the same file again triggers onChange
           input.value = '';
         }
       })();
     },
     [
+      t,
+      tab,
       drawState,
-      setDrawState,
-      setModelling,
-      setModellingCustomLayerId,
-      setBboxLocation,
+      customLayers,
       getUploadErrorMessage,
-      setUploadErrorMessage,
-      setUploadInfoMessage,
-      tUploads,
+      modellingState,
+      queryClient,
+      setDrawState,
+      setCustomLayers,
+      setModellingCustomLayerId,
+      setModelling,
+      setBboxLocation,
     ]
   );
 
   const onOpenUploadPicker = useCallback(() => {
-    setUploadErrorMessage(null);
-    setUploadInfoMessage(null);
+    setUploadError(null);
     uploadInputRef.current?.click();
   }, []);
 
   const isUploadProcessing = status === 'uploading';
+  const isAtMaxLayers = Object.keys(customLayers).length >= MAX_CUSTOM_LAYERS;
   const isUploadDisabled =
-    active || status === 'drawing' || status === 'uploading' || modellingStatus === 'running';
+    active ||
+    status === 'drawing' ||
+    status === 'uploading' ||
+    modellingStatus === 'running' ||
+    isAtMaxLayers;
 
-  const isDrawDisabled = isUploadProcessing;
-  const ariaDescribedBy = [
-    uploadErrorMessage ? 'upload-shape-error' : null,
-    !uploadErrorMessage && uploadInfoMessage ? 'upload-shape-info' : null,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const isDrawing = active || status === 'drawing';
+  const isDrawDisabled = isUploadProcessing || (!isDrawing && isAtMaxLayers);
+  const hasCompletedDraw = !isCustomLayersActive && status === 'success';
 
   return (
     <div className={cn('flex w-full flex-col font-mono', className)}>
@@ -183,11 +242,11 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
         // TODO: TECH-3372 remove feature flag check
         isCustomLayersActive ? (
           <>
-            <label htmlFor="upload-shape" className="sr-only">
-              {t('upload-shape')}
+            <label htmlFor="upload-layer" className="sr-only">
+              {t('upload-layer')}
             </label>
             <Input
-              id="upload-shape"
+              id="upload-layer"
               ref={uploadInputRef}
               type="file"
               multiple
@@ -195,98 +254,106 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               className="hidden"
               onChange={onUploadChange}
               disabled={isUploadDisabled}
-              aria-describedby={ariaDescribedBy || undefined}
-              aria-invalid={Boolean(uploadErrorMessage)}
+              aria-describedby={uploadError ? 'modelling-button-error' : undefined}
+              aria-invalid={Boolean(uploadError)}
             />
           </>
         ) : null
       }
 
-      {status !== 'drawing' && status !== 'success' && (
-        <div className="flex w-full flex-col space-y-2">
-          <div className="flex w-full gap-3 px-5">
-            <Button
-              className={COMMON_BUTTON_CLASSES}
-              size="full"
-              disabled={isDrawDisabled}
-              onClick={() => {
-                setUploadErrorMessage(null);
-                setUploadInfoMessage(null);
-                setModellingCustomLayerId(null);
-                setDrawState((prevState) => ({ ...prevState, active: true }));
-              }}
-            >
-              <RxTransform className="mr-3 h-4 w-4" aria-hidden />
-              {active ? t('start-drawing-on-map') : t('draw-shape')}
-            </Button>
-            {
-              // TODO: TECH-3372 remove feature flag check
-              isCustomLayersActive ? (
-                <Button
-                  className={COMMON_BUTTON_CLASSES}
-                  size="full"
-                  type="button"
-                  onClick={onOpenUploadPicker}
-                  disabled={isUploadDisabled}
-                  aria-controls="upload-shape"
-                >
-                  <Upload className="mr-3 h-4 w-4" aria-hidden />
-                  {t('upload-shape')}
-                </Button>
-              ) : null
-            }
-          </div>
-        </div>
-      )}
-      {(status === 'drawing' || status === 'success') && (
+      <div className="flex w-full flex-col space-y-2">
         <div className="flex w-full gap-3 px-5">
-          <Button
-            variant="blue"
-            className={COMMON_BUTTON_CLASSES}
-            size="full"
-            disabled={isUploadProcessing}
-            onClick={onClickClearModelling}
-          >
-            <LuTrash2 className="mr-3 h-4 w-4" aria-hidden />
-            {t('clear-shape')}
-          </Button>
-          <Button
-            variant="blue"
-            className={COMMON_BUTTON_CLASSES}
-            size="full"
-            disabled={isUploadProcessing}
-            onClick={() => {
-              if (source === 'upload' && isCustomLayersActive) {
-                onOpenUploadPicker();
-                return;
+          {hasCompletedDraw ? (
+            <>
+              <Button
+                variant="blue"
+                className={COMMON_BUTTON_CLASSES}
+                size="full"
+                onClick={onClickClearShape}
+              >
+                {t('clear-shape')}
+              </Button>
+              <Button
+                variant="blue"
+                className={COMMON_BUTTON_CLASSES}
+                size="full"
+                onClick={onClickRedraw}
+              >
+                {t('redraw')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <span className="w-full">
+                      <Button
+                        className={COMMON_BUTTON_CLASSES}
+                        size="full"
+                        disabled={isDrawDisabled}
+                        onClick={() => {
+                          setUploadError(null);
+                          if (isDrawing) {
+                            setDrawState({ active: false, status: 'idle', source: null });
+                          } else {
+                            setDrawState((prevState) => ({ ...prevState, active: true }));
+                          }
+                        }}
+                      >
+                        <RxTransform className="mr-3 h-4 w-4" aria-hidden />
+                        {isDrawing ? t('cancel-drawing') : t('draw-shape')}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {isAtMaxLayers && (
+                    <TooltipContent>
+                      {t('max-layers-reached', { max: MAX_CUSTOM_LAYERS })}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+              {
+                // TODO: TECH-3372 remove feature flag check
+                isCustomLayersActive ? (
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <span className="w-full">
+                          <Button
+                            className={COMMON_BUTTON_CLASSES}
+                            size="full"
+                            type="button"
+                            onClick={onOpenUploadPicker}
+                            disabled={isUploadDisabled}
+                            aria-controls="upload-layer"
+                          >
+                            <Upload className="mr-3 h-4 w-4" aria-hidden />
+                            {t('upload-layer')}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {isAtMaxLayers && (
+                        <TooltipContent>
+                          {t('max-layers-reached', { max: MAX_CUSTOM_LAYERS })}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : null
               }
-
-              onClickRedraw();
-            }}
-          >
-            {source === 'upload' && isCustomLayersActive ? (
-              <Upload className="mr-3 h-4 w-4" aria-hidden />
-            ) : (
-              <RxTransform className="mr-3 h-4 w-4" aria-hidden />
-            )}
-            {source === 'upload' && isCustomLayersActive ? t('upload-new-shape') : t('re-draw')}
-          </Button>
+            </>
+          )}
         </div>
-      )}
-      <div className="mt-2 w-full">
-        {uploadErrorMessage && (
-          <p id="upload-shape-error" className="text-[11px] leading-4 text-error" role="alert">
-            {uploadErrorMessage}
-          </p>
-        )}
-        {!uploadErrorMessage && uploadInfoMessage && (
+      </div>
+      <div className="mt-2 w-full px-5">
+        {uploadError && (
           <p
-            id="upload-shape-info"
-            className="text-[11px] leading-4 text-black"
-            role="status"
-            aria-live="polite"
+            id="modelling-button-error"
+            className="text-[11px] font-medium leading-4 text-error"
+            role="alert"
           >
-            {uploadInfoMessage}
+            {uploadError}
           </p>
         )}
       </div>
@@ -294,6 +361,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   );
 };
 
-ModellingButtons.messages = ['containers.map-sidebar-main-panel', 'services.uploads'];
+ModellingButtons.messages = ['containers.map-sidebar-main-panel'];
 
 export default ModellingButtons;
