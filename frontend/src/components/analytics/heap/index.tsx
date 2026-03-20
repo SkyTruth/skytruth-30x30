@@ -1,6 +1,7 @@
 enum HeapEvents {
   CustomRegionEngaged = '30x30 Custom Region Engaged',
   CustomLayerEngaged = '30x30 Custom Layer Engaged',
+  ConservationStatsImpressed = '30x30 Conservation Stats Impressed',
 }
 
 export enum CustomRegionActions {
@@ -50,4 +51,17 @@ export const customLayerEngaged = (payload: CustomLayerEngagedPayload) => {
     return;
   }
   window.heap.track(HeapEvents.CustomLayerEngaged, payload);
+};
+
+type ConservationStatsImpressedPayload = {
+  countries: string[];
+  environment: string;
+  area?: number;
+};
+
+export const conservationStatsImpressed = (payload: ConservationStatsImpressedPayload) => {
+  if (!window.heap) {
+    return;
+  }
+  window.heap.track(HeapEvents.ConservationStatsImpressed, payload);
 };
