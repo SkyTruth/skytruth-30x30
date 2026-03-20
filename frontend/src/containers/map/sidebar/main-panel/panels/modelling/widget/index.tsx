@@ -212,10 +212,14 @@ const ModellingWidget: FCWithMessages = () => {
 
               // existing protected area
               const protectedArea = data?.[0]?.attributes.protected_area ?? 0;
-              // total area
-              const totalArea = Number(data?.[0]?.attributes.total_area ?? 0);
-              // total custom protected area (analysis)
               const location = data?.[0]?.attributes?.location?.data?.attributes;
+
+              // Fallback area if location isn't in WDPA
+              const fallBackArea =
+                tab === 'marine' ? location?.total_marine_area : location?.total_terrestrial_area;
+
+              const totalArea = Number(data?.[0]?.attributes.total_area ?? fallBackArea);
+              // total custom protected area (analysis)
               const customArea = modellingData.locations_area.find(
                 ({ code }) => code === location?.code
               ).protected_area;
