@@ -8,6 +8,11 @@ import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { RxTransform } from 'react-icons/rx';
 
+import {
+  CustomLayerActions,
+  CustomLayerMethods,
+  customLayerEngaged,
+} from '@/components/analytics/heap';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -30,6 +35,7 @@ import { createCustomLayer } from '@/lib/utils/create-custom-layer';
 import {
   extractPolygons,
   convertFilesToGeojson,
+  SHAPE_EXTENSIONS,
   supportedFileformats,
 } from '@/lib/utils/file-upload';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
@@ -152,9 +158,20 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
             source: 'upload',
           }));
 
-          const bounds = getGeoJSONBoundingBox(geojson);
+          const bounds = getGeoJSONBoundingBox(geojson) as [number, number, number, number];
+          const fileExtension = files[0].name.split('.').pop();
+          const fileType = SHAPE_EXTENSIONS.includes(fileExtension) ? 'shp' : fileExtension;
+
+          customLayerEngaged({
+            action: CustomLayerActions.Create,
+            bbox: bounds,
+            fileSize: totalSize / 1000000, // Convert to Mb
+            fileType,
+            method: CustomLayerMethods.Upload,
+          });
+
           if (bounds) {
-            setBboxLocation([...bounds] as [number, number, number, number]);
+            setBboxLocation([...bounds]);
           }
 
           // Validate geometry server-side before activating modelling

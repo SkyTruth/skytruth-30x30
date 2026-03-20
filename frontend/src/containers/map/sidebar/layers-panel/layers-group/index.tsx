@@ -3,6 +3,7 @@ import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 're
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
+import { layerToggleEngaged } from '@/components/analytics/heap';
 import TooltipButton from '@/components/tooltip-button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
@@ -73,6 +74,10 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
           ? [layerSlug, ...activeLayers]
           : activeLayers.filter((activeSlug) => activeSlug !== layerSlug)
       );
+      layerToggleEngaged({
+        layerId: layerSlug,
+        active: isActive,
+      });
     },
     [activeLayers, setMapLayers]
   );
