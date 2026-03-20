@@ -4,6 +4,7 @@ import { useAtomValue } from 'jotai';
 import { useTranslations } from 'next-intl';
 import { HiEye, HiEyeOff } from 'react-icons/hi';
 
+import { layerToggleEngaged } from '@/components/analytics/heap';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import { Label } from '@/components/ui/label';
@@ -204,6 +205,7 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
                   aria-label={removeLabel}
                   onClick={() => {
                     onRemoveLayer(slug);
+                    layerToggleEngaged({ layerId: slug, active: false });
                   }}
                 >
                   <span className="sr-only">{removeLabel}</span>
