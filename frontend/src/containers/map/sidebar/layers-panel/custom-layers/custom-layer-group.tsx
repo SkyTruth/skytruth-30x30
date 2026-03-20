@@ -4,7 +4,11 @@ import { useAtom, useSetAtom } from 'jotai';
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
-import { CustomLayerActions, customLayerEngaged } from '@/components/analytics/heap';
+import {
+  CustomLayerActions,
+  customLayerEngaged,
+  layerToggleEngaged,
+} from '@/components/analytics/heap';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   allActiveLayersAtom,
@@ -75,6 +79,11 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
       }
 
       setCustomLayers(updatedLayers);
+
+      layerToggleEngaged({
+        layerId: 'custom',
+        active: checked,
+      });
     },
     [allActiveLayers, customLayers, setCustomLayers]
   );
