@@ -259,7 +259,7 @@ interface ProtectionCoverageStatResponse
  * Helper method to get data from a nested object using a string path. Similar to Lodash's get, except it 
  *  also looks for data and attributes keys where appropriate
  * @param data Returned data from the API
- * @param path String path to the desired value, e.g. 'data.attributes.name'
+ * @param path String path to the desired value, e.g. 'data.name'
  * @returns 
  */
 function getValueByPath(
@@ -273,11 +273,11 @@ function getValueByPath(
         if (acc[key]) {
             return acc[key];
         }
-        if (acc?.attributes) {
-            return acc.attributes[key];
+        if (acc) {
+            return acc[key];
         }
         if (acc?.data) {
-            return acc.data?.attributes[key];
+            return acc.data[key];
         }
 
     }, data);

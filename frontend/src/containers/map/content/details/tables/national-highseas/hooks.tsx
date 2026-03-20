@@ -98,7 +98,7 @@ const useTooltips = () => {
   } = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes;
+    const tooltip = dataInfo.find(( item ) => item.slug === value);
 
     if (!tooltip) return;
 
@@ -123,8 +123,8 @@ const useFiltersOptions = () => {
       query: {
         select: ({ data }) =>
           data.map((environment) => ({
-            name: environment.attributes.name,
-            value: environment.attributes.slug,
+            name: environment.name,
+            value: environment.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -143,8 +143,8 @@ const useFiltersOptions = () => {
         select: ({ data }) =>
           data
             .map((dataSource) => ({
-              name: dataSource.attributes.title,
-              value: dataSource.attributes.slug,
+              name: dataSource.title,
+              value: dataSource.slug,
             }))
             .filter(({ value }) =>
               // ? Even though there are more data sources, we limit the display to these
@@ -168,8 +168,8 @@ const useFiltersOptions = () => {
       query: {
         select: ({ data }) =>
           data.map((protectionStatus) => ({
-            name: protectionStatus.attributes.name,
-            value: protectionStatus.attributes.slug,
+            name: protectionStatus.name,
+            value: protectionStatus.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -187,8 +187,8 @@ const useFiltersOptions = () => {
       query: {
         select: ({ data }) =>
           data.map((iucnCategory) => ({
-            name: iucnCategory.attributes.name,
-            value: iucnCategory.attributes.slug,
+            name: iucnCategory.name,
+            value: iucnCategory.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -208,8 +208,8 @@ const useFiltersOptions = () => {
       query: {
         select: ({ data }) =>
           data.map((mpaaEstablishmentStage) => ({
-            name: mpaaEstablishmentStage.attributes.name,
-            value: mpaaEstablishmentStage.attributes.slug,
+            name: mpaaEstablishmentStage.name,
+            value: mpaaEstablishmentStage.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -235,12 +235,12 @@ const useFiltersOptions = () => {
                * sense as filters. They are just used internally for aggregating protection stats
                */
               (mpaaProtectionLevel) =>
-                mpaaProtectionLevel.attributes.slug !== 'fully-highly-protected' &&
-                mpaaProtectionLevel.attributes.slug !== 'less-protected-unknown'
+                mpaaProtectionLevel.slug !== 'fully-highly-protected' &&
+                mpaaProtectionLevel.slug !== 'less-protected-unknown'
             )
             .map((mpaaProtectionLevel) => ({
-              name: mpaaProtectionLevel.attributes.name,
-              value: mpaaProtectionLevel.attributes.slug,
+              name: mpaaProtectionLevel.name,
+              value: mpaaProtectionLevel.slug,
             })),
         placeholderData: { data: [] },
       },
@@ -637,49 +637,49 @@ export const useData = (
   const processData = useCallback(
     (data: PaListResponse) => {
       return [
-        data.data?.map(({ attributes }): NationalHighseasTableColumns => {
+        data.data?.map(( item ): NationalHighseasTableColumns => {
           const getData = (pa: Pa | PaChildrenDataItemAttributes) => {
-            const environment = pa.environment?.data?.attributes;
+            const environment = pa.environment;
             const localizedEnvironment = [
               environment,
-              ...(environment?.localizations.data.map((environment) => environment.attributes) ??
+              ...(environment?.localizations.map((environment) => environment) ??
                 []),
             ].find((data) => data?.locale === locale);
 
-            const dataSource = pa.data_source?.data?.attributes;
+            const dataSource = pa.data_source;
             const localizedDataSource = [
               dataSource,
-              ...(dataSource?.localizations.data.map((dataSource) => dataSource.attributes) ?? []),
+              ...(dataSource?.localizations.map((dataSource) => dataSource) ?? []),
             ].find((data) => data?.locale === locale);
 
-            const protectionStatus = pa.protection_status?.data?.attributes;
+            const protectionStatus = pa.protection_status;
             const localizedProtectionStatus = [
               protectionStatus,
-              ...(protectionStatus?.localizations.data.map(
-                (protectionStatus) => protectionStatus.attributes
+              ...(protectionStatus?.localizations.map(
+                (protectionStatus) => protectionStatus
               ) ?? []),
             ].find((data) => data?.locale === locale);
 
-            const iucnCategory = pa.iucn_category?.data?.attributes;
+            const iucnCategory = pa.iucn_category;
             const localizedIucnCategory = [
               iucnCategory,
-              ...(iucnCategory?.localizations.data.map((iucnCategory) => iucnCategory.attributes) ??
+              ...(iucnCategory?.localizations.map((iucnCategory) => iucnCategory) ??
                 []),
             ].find((data) => data?.locale === locale);
 
-            const mpaaEstablishmentStage = pa.mpaa_establishment_stage?.data?.attributes;
+            const mpaaEstablishmentStage = pa.mpaa_establishment_stage;
             const localizedMpaaEstablishmentStage = [
               mpaaEstablishmentStage,
-              ...(mpaaEstablishmentStage?.localizations.data.map(
-                (mpaaEstablishmentStage) => mpaaEstablishmentStage.attributes
+              ...(mpaaEstablishmentStage?.localizations.map(
+                (mpaaEstablishmentStage) => mpaaEstablishmentStage
               ) ?? []),
             ].find((data) => data?.locale === locale);
 
-            const mpaaProtectionLevel = pa.mpaa_protection_level?.data?.attributes;
+            const mpaaProtectionLevel = pa.mpaa_protection_level;
             const localizedMpaaProtectionLevel = [
               mpaaProtectionLevel,
-              ...(mpaaProtectionLevel?.localizations.data.map(
-                (mpaaProtectionLevel) => mpaaProtectionLevel.attributes
+              ...(mpaaProtectionLevel?.localizations.map(
+                (mpaaProtectionLevel) => mpaaProtectionLevel
               ) ?? []),
             ].find((data) => data?.locale === locale);
 
@@ -715,10 +715,10 @@ export const useData = (
           };
 
           return {
-            ...getData(attributes),
-            ...(attributes.children.data.length > 0
+            ...getData(item),
+            ...(item.children?.length > 0
               ? {
-                  subRows: attributes.children.data.map(({ attributes }) => getData(attributes)),
+                  subRows: item.children.map(item => getData(item)),
                 }
               : {}),
           };

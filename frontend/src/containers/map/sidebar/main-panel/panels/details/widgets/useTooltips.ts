@@ -26,7 +26,7 @@ const useTooltips = () => {
   const tooltips = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes
+    const tooltip = dataInfo.find( item  => item.slug === value)
       ?.content;
 
     if (!tooltip) return;

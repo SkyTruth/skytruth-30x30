@@ -4050,7 +4050,9 @@ __metadata:
     "@strapi/plugin-documentation": 5.38.0
     "@strapi/plugin-users-permissions": 5.38.0
     "@strapi/strapi": 5.38.0
+    "@types/qs": ^6.15.0
     pg: 8.8.0
+    qs: ^6.15.0
     react: ^18.0.0
     react-dom: ^18.0.0
     react-router-dom: ^6.0.0
@@ -5609,6 +5611,13 @@ __metadata:
   version: 6.14.0
   resolution: "@types/qs@npm:6.14.0"
   checksum: 1909205514d22b3cbc7c2314e2bd8056d5f05dfb21cf4377f0730ee5e338ea19957c41735d5e4806c746176563f50005bbab602d8358432e25d900bdf4970826
+  languageName: node
+  linkType: hard
+
+"@types/qs@npm:^6.15.0":
+  version: 6.15.0
+  resolution: "@types/qs@npm:6.15.0"
+  checksum: 871162881f1c83e61d0c8c243c65549be5dddf33a6911f3324edeebd4087207b1174644da9a3afaa20cf494c5288d2a1ece09e10e4822f755339f14a05c339ea
   languageName: node
   linkType: hard
 
@@ -13897,7 +13906,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qs@npm:^6.11.0, qs@npm:^6.5.2":
+"qs@npm:^6.11.0, qs@npm:^6.15.0, qs@npm:^6.5.2":
   version: 6.15.0
   resolution: "qs@npm:6.15.0"
   dependencies:

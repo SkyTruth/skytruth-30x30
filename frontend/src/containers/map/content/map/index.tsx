@@ -86,7 +86,7 @@ const MainMap: FCWithMessages = () => {
     },
     {
       query: {
-        select: ({ data }) => data.map(({ attributes }) => attributes?.slug),
+        select: ({ data }) => data.map(item => item?.slug),
       },
     }
   );
@@ -173,7 +173,7 @@ const MainMap: FCWithMessages = () => {
       if (
         layersInteractive.length &&
         layersInteractiveData.some((l) => {
-          const attributes = l.attributes as LayerTyped;
+          const attributes = l as LayerTyped;
           return attributes?.interaction_config?.events.some((ev) => ev.type === 'click');
         })
       ) {

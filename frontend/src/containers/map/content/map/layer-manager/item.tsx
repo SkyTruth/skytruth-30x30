@@ -34,11 +34,13 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
       },
       sort: 'interaction_config',
       locale,
-      populate: 'metadata',
+      populate: {
+        metadata: true
+      } as any,
     },
     {
       query: {
-        select: ({ data }) => data[0]?.attributes,
+        select: ({ data }) => data[0],
       },
     }
   );

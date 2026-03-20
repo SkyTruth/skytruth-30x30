@@ -50,10 +50,10 @@ const Legend: FCWithMessages = () => {
       query: {
         select: ({ data }) =>
           data
-            .filter(({ attributes: { slug } }) => activeLayers.includes(slug))
+            .filter(item => activeLayers.includes(item.slug))
             .sort((a, b) => {
-              const indexA = activeLayers.indexOf(a.attributes.slug);
-              const indexB = activeLayers.indexOf(b.attributes.slug);
+              const indexA = activeLayers.indexOf(a.slug);
+              const indexB = activeLayers.indexOf(b.slug);
               return indexA - indexB;
             }),
         placeholderData: { data: [] },
@@ -213,16 +213,16 @@ const Legend: FCWithMessages = () => {
           let params_config;
 
           if (!customLayers[slug] && layersQuery.data?.length) {
-            const layer = layersQuery.data.filter((layer) => layer.attributes.slug === slug)[0];
+            const layer = layersQuery.data.filter((layer) => layer.slug === slug)[0];
 
             // Short circuit to catch when allActiveLayers state updates and the layersQuery
             // hasn't yet returned the corresponding data
             if (!layer) return null;
 
-            legend_config = layer.attributes.legend_config;
-            params_config = layer.attributes.params_config;
+            legend_config = layer.legend_config;
+            params_config = layer.params_config;
 
-            title = layer.attributes.title;
+            title = layer.title;
             isVisible = layerSettings[slug]?.visibility !== false;
             opacity = layerSettings[slug]?.opacity ?? 1;
           } else {

@@ -39,13 +39,15 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
           $eq: layerSlug,
         },
       },
-      populate: 'metadata',
+      populate:  {
+        metadata: true
+      } as any,
     },
     {
       query: {
         select: ({ data }) => ({
-          source: (data[0].attributes as LayerTyped).config?.source,
-          click: (data[0].attributes as LayerTyped)?.interaction_config?.events.find(
+          source: (data[0] as LayerTyped).config?.source,
+          click: (data[0] as LayerTyped)?.interaction_config?.events.find(
             (ev) => ev.type === 'click'
           ),
         }),

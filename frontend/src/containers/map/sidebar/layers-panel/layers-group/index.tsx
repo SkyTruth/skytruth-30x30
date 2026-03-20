@@ -113,16 +113,16 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
           {datasets?.map((dataset) => {
             return (
               <div key={dataset.id} className="[&:not(:first-child)]:pt-3">
-                {showDatasetsNames && <h4 className="font-mono">{dataset?.attributes?.name}</h4>}
+                {showDatasetsNames && <h4 className="font-mono">{dataset?.name}</h4>}
                 <ul className={cn('my-3 flex flex-col space-y-3', { '-my-0': !showDatasetsNames })}>
-                  {dataset.attributes?.layers?.data?.map((layer: LayerResponseDataObject) => {
-                    const isActive = activeLayers?.includes(layer?.attributes?.slug);
-                    const onCheckedChange = onToggleLayer.bind(null, layer?.attributes?.slug) as (
+                  {dataset?.layers?.map((layer: LayerResponseDataObject) => {
+                    const isActive = activeLayers?.includes(layer?.slug);
+                    const onCheckedChange = onToggleLayer.bind(null, layer?.slug) as (
                       isActive: boolean
                     ) => void;
-                    const metadata = layer?.attributes?.metadata;
+                    const metadata = layer?.metadata;
                     const sources = metadata?.citation
-                      ? [{ id: layer?.id, title: metadata?.citation, url: metadata?.source }]
+                      ? [{ documentId: layer?.documentId, slug: layer?.slug, title: metadata?.citation, url: metadata?.source }]
                       : null;
 
                     return (
@@ -135,7 +135,7 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
                             onCheckedChange={onCheckedChange}
                           />
                           <Label htmlFor={`${layer.id}-switch`} className={SWITCH_LABEL_CLASSES}>
-                            {layer.attributes.title}
+                            {layer.title}
                           </Label>
                         </span>
                         {metadata?.description && (

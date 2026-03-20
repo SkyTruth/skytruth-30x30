@@ -59,16 +59,18 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
       filters: {
         slug: 'fishing-protection-level',
       },
-      populate: 'data_sources',
+      populate: {
+        data_sources: true
+      } as any,
     },
     {
       query: {
         select: ({ data }) =>
           data[0]
             ? {
-                info: data[0]?.attributes?.content,
-                sources: data[0]?.attributes?.data_sources?.data?.map(
-                  ({ id, attributes: { title, url } }) => ({
+                info: data[0]?.content,
+                sources: data[0]?.data_sources?.map(
+                  ({ id, title, url }) => ({
                     id,
                     title,
                     url,

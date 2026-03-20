@@ -11,7 +11,8 @@ const DEFAULT_MAX_PERCENTAGE = 100;
 const PROTECTION_TARGET = 30;
 
 interface Source {
-  id: number;
+  documentId: string;
+  slug: string,
   title: string;
   url: string;
 }

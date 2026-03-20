@@ -86,7 +86,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   return {
     props: {
       locale: context.locale,
-      location: locationsData.data[0].attributes,
+      location: locationsData.data[0],
       dehydratedState: dehydrate(queryClient),
       messages: await fetchTranslations(context.locale, ProgressTrackerPage.messages),
     },

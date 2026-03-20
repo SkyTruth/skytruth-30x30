@@ -39,7 +39,7 @@ const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ count
     <div className="mt-2 text-xs">
       {'* ' + t('no-data-for') + ' '}
       {locations.map(
-        (loc, idx) => loc.attributes[nameField] + `${idx !== locations.length - 1 ? ', ' : ''}`
+        (loc, idx) => loc[nameField] + `${idx !== locations.length - 1 ? ', ' : ''}`
       )}
     </div>
   );

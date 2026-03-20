@@ -65,7 +65,9 @@ const useTooltips = () => {
   const { data: dataInfo } = useGetDataInfos(
     {
       locale,
-      populate: 'data_sources',
+      populate: {
+        data_sources: true
+      } as any,
       filters: {
         slug: {
           $in: Object.entries(TOOLTIP_MAPPING).map((entry) => entry[1]),
@@ -87,13 +89,13 @@ const useTooltips = () => {
   } = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes;
+    const tooltip = dataInfo.find(( item ) => item.slug === value);
 
     if (!tooltip) return;
-    const sources = !!tooltip?.data_sources?.data?.length
-      ? tooltip?.data_sources?.data.map(
-          ({ id, attributes: { slug, title = null, url = null } }) => {
-            return { id, slug, url, title };
+    const sources = !!tooltip?.data_sources?.length
+      ? tooltip?.data_sources?.map(
+          ({ documentId, slug, title = null, url = null }) => {
+            return { documentId, slug, url, title };
           }
         )
       : null;
@@ -118,8 +120,8 @@ const useFiltersOptions = () => {
       query: {
         select: ({ data }) =>
           data.map((environment) => ({
-            name: environment.attributes.name,
-            value: environment.attributes.slug,
+            name: environment.name,
+            value: environment.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -383,7 +385,7 @@ export const useData = (
     },
     {
       query: {
-        select: ({ data }) => data[0]?.attributes.type,
+        select: ({ data }) => data[0]?.type,
       },
     }
   );
@@ -480,13 +482,13 @@ export const useData = (
         keepPreviousData: true,
         select: (data) => {
           return [
-            data.data?.map(({ attributes }): GlobalRegionalTableColumns => {
-              const location = attributes.location?.data.attributes;
-              const environment = attributes.environment?.data.attributes;
+            data.data?.map(( item ): GlobalRegionalTableColumns => {
+              const location = item.location;
+              const environment = item.environment;
 
               const localizedEnvironment = [
                 environment,
-                ...(environment.localizations.data.map((environment) => environment.attributes) ??
+                ...(environment.localizations.map((environment) => environment) ??
                   []),
               ].find((data) => data.locale === locale);
 
@@ -498,18 +500,18 @@ export const useData = (
                   name_pt: location?.name_pt,
                   code: location.code,
                   mpaa_protection_level_stats: {
-                    percentage: location?.mpaa_protection_level_stats?.data?.attributes.percentage,
+                    percentage: location?.mpaa_protection_level_stats?.percentage,
                   },
                 },
                 environment: {
                   name: localizedEnvironment.name,
                   slug: localizedEnvironment.slug,
                 },
-                coverage: attributes.coverage,
-                protected_area: attributes.protected_area,
-                pas: attributes.pas,
-                oecms: attributes.oecms,
-                global_contribution: attributes.global_contribution,
+                coverage: item.coverage,
+                protected_area: item.protected_area,
+                pas: item.pas,
+                oecms: item.oecms,
+                global_contribution: item.global_contribution,
               };
             }) ?? [],
             data.meta?.pagination ?? {},

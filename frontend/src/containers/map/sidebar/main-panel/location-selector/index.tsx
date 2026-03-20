@@ -170,8 +170,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   ]);
 
   const reorderedLocations = useMemo(() => {
-    const globalLocation = locationsData.find(({ attributes }) => attributes.type === 'worldwide');
-    return [globalLocation, ...locationsData.filter(({ id }) => id !== globalLocation.id)].filter(
+    const globalLocation = locationsData.find(item => item.type === 'worldwide');
+    return [globalLocation, ...locationsData.filter(({ documentId }) => documentId !== globalLocation?.documentId)].filter(
       Boolean
     );
   }, [locationsData]);
@@ -185,8 +185,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       setLocationsFilter('all');
     }
 
-    let filtered = reorderedLocations.filter(({ attributes }) =>
-      FILTERS[locationsFilter].includes(attributes.type)
+    let filtered = reorderedLocations.filter(item =>
+      FILTERS[locationsFilter].includes(item.type)
     );
 
     if (locationsFilter === 'customRegion') {
@@ -206,9 +206,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       const top = [clearAll];
       const bottom = [];
       for (const location of filtered) {
-        const {
-          attributes: { code },
-        } = location;
+        const { code } = location;
 
         // Prevent adding soverigns to custom regions
         if (code.endsWith('*')) continue;

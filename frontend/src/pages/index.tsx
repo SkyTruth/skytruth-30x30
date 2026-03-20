@@ -78,8 +78,8 @@ const Home: FCWithMessages = ({
 
     Object.entries(STATIC_INDICATOR_MAPPING).map(([key, value]) => {
       const indicator = staticIndicators?.data?.find(
-        ({ attributes }) => attributes.slug === value
-      )?.attributes;
+        ( item ) => item.slug === value
+      );
 
       if (!indicator) return;
       indicators[key] = indicator;
@@ -94,11 +94,11 @@ const Home: FCWithMessages = ({
       if (!protectionCoverageStatsData?.length) return null;
 
       const stats = protectionCoverageStatsData.find(
-        (item) => item.attributes.environment?.data?.attributes?.slug === env
+        (item) => item.environment?.slug === env
       );
       if (!stats) return null;
 
-      return formatPercentage(locale, stats?.attributes?.coverage, {
+      return formatPercentage(locale, stats?.coverage, {
         displayPercentageSign: false,
       });
     },

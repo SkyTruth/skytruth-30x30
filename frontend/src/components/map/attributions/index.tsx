@@ -19,13 +19,15 @@ const Attributions: FC = () => {
           $in: activeLayers,
         },
       },
-      populate: 'metadata',
+      populate: {
+        metadata: true
+      } as any,
     },
     {
       query: {
         enabled: !!activeLayers.length,
         select: ({ data }) =>
-          data.map(({ attributes: { metadata } }) => metadata?.source).filter((source) => !!source),
+          data.map(({ metadata }) => metadata?.source).filter((source) => !!source),
       },
     }
   );

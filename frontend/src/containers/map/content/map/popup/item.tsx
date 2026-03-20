@@ -26,11 +26,13 @@ const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
       },
       locale,
       sort: 'interaction_config',
-      populate: 'metadata',
+      populate: {
+        metadata: true
+      } as any,
     },
     {
       query: {
-        select: ({ data }) => data[0]?.attributes,
+        select: ({ data }) => data[0],
       },
     }
   );

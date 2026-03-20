@@ -16,7 +16,10 @@ export default function useDatasetsByEnvironment() {
       // @ts-ignore
       populate: {
         layers: {
-          populate: 'metadata,environment',
+          populate: {
+            metadata: true,
+            environment: true
+          },
         },
       },
     },
@@ -40,16 +43,15 @@ export default function useDatasetsByEnvironment() {
     const filterLayersByEnvironment = (layers, environment) => {
       const layersData = layers?.data;
       return (
-        layersData?.filter(({ attributes }) => {
-          const environmentData = attributes?.environment?.data;
-          return environmentData?.attributes?.slug === environment;
+        layersData?.filter(( item ) => {
+          return item.environment?.slug === environment;
         }) || []
       );
     };
 
     const parseDatasetsByEnvironment = (datasets: DatasetUpdatedByData[], environment: string) => {
       const parsedDatasets = datasets?.map((d) => {
-        const { layers, ...rest } = d?.attributes;
+        const { layers, ...rest } = d;
         const filteredLayers = filterLayersByEnvironment(layers, environment);
 
         // If dataset contains no layers, it should not displayed. We'll filter this
