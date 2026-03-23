@@ -4,6 +4,7 @@ enum HeapEvents {
   ConservationStatsImpressed = '30x30 Conservation Stats Impressed',
   LayerToggleEngaged = '30x30 Layer Toggle Engaged',
   ScreenshotEngaged = '30x30 Screenshot Engaged',
+  LayersImpressed = '30x30 Layers Impressed',
 }
 
 export enum CustomRegionActions {
@@ -81,4 +82,12 @@ type ScreenshotEngagedPayload = {
 
 export const screenshotEngaged = (payload: ScreenshotEngagedPayload) => {
   window.heap?.track(HeapEvents.ScreenshotEngaged, payload);
+};
+
+type LayersImpressedPayload = {
+  layers: string[];
+};
+
+export const layersImpressed = (payload: LayersImpressedPayload) => {
+  window.heap?.track(HeapEvents.LayersImpressed, payload);
 };
