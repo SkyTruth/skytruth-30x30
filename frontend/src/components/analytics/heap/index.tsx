@@ -20,10 +20,7 @@ type CustomRegionEngagedPayload = {
   custom_region?: string[];
 };
 export const customRegionEngaged = (payload: CustomRegionEngagedPayload) => {
-  if (!window.heap) {
-    return;
-  }
-  window.heap.track(HeapEvents.CustomRegionEngaged, payload);
+  window.heap?.track(HeapEvents.CustomRegionEngaged, payload);
 };
 
 export enum CustomLayerActions {
@@ -48,10 +45,7 @@ type CustomLayerEngagedPayload = {
 };
 
 export const customLayerEngaged = (payload: CustomLayerEngagedPayload) => {
-  if (!window.heap) {
-    return;
-  }
-  window.heap.track(HeapEvents.CustomLayerEngaged, payload);
+  window.heap?.track(HeapEvents.CustomLayerEngaged, payload);
 };
 
 type ConservationStatsImpressedPayload = {
@@ -61,10 +55,7 @@ type ConservationStatsImpressedPayload = {
 };
 
 export const conservationStatsImpressed = (payload: ConservationStatsImpressedPayload) => {
-  if (!window.heap) {
-    return;
-  }
-  window.heap.track(HeapEvents.ConservationStatsImpressed, payload);
+  window.heap?.track(HeapEvents.ConservationStatsImpressed, payload);
 };
 
 type LayerToggleEngagedPayload = {
@@ -73,8 +64,5 @@ type LayerToggleEngagedPayload = {
 };
 
 export const layerToggleEngaged = (payload: LayerToggleEngagedPayload) => {
-  if (!window.heap) {
-    return;
-  }
-  window.heap.track(HeapEvents.LayerToggleEngaged, payload);
+  window.heap?.track(HeapEvents.LayerToggleEngaged, payload);
 };
