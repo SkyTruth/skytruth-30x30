@@ -72,6 +72,10 @@ const DrawControls: FCWithMessages = () => {
 
       // Validate geometry server-side, then activate modelling if valid
       void (async () => {
+        if (!modellingState.active) {
+          setModelling((prevState) => ({ ...prevState, active: true, status: 'running' }));
+        }
+
         const { valid } = await validateGeometryForModelling(
           queryClient,
           tab,
@@ -84,9 +88,11 @@ const DrawControls: FCWithMessages = () => {
             ...prev,
             [layer.id]: { ...prev[layer.id], canBeUsedForModelling: false },
           }));
+          if (!modellingState.active) {
+            setModelling({ active: false, status: 'idle', data: null, errorMessage: undefined });
+          }
         } else if (!modellingState.active) {
           setModellingCustomLayerId(layer.id);
-          setModelling((prevState) => ({ ...prevState, active: true }));
         }
       })();
     },
