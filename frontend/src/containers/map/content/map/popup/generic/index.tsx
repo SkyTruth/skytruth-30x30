@@ -39,8 +39,8 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
           $eq: layerSlug,
         },
       },
-      populate:  {
-        metadata: true
+      populate: {
+        metadata: true,
       } as any,
     },
     {

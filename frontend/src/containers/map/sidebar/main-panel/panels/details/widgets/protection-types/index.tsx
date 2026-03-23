@@ -52,7 +52,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
         slug: 'fully-highly-protected',
       },
       populate: {
-        data_sources: true
+        data_sources: true,
       } as any,
     },
     {
@@ -61,14 +61,12 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
           data[0]
             ? {
                 info: data[0]?.content,
-                sources: data[0]?.data_sources?.map(
-                  ({ documentId, slug, title, url }) => ({
-                    documentId,
-                    slug,
-                    title,
-                    url,
-                  })
-                ),
+                sources: data[0]?.data_sources?.map(({ documentId, slug, title, url }) => ({
+                  documentId,
+                  slug,
+                  title,
+                  url,
+                })),
               }
             : undefined,
       },

@@ -27,7 +27,7 @@ const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
       locale,
       sort: 'interaction_config',
       populate: {
-        metadata: true
+        metadata: true,
       } as any,
     },
     {

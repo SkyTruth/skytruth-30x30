@@ -4950,13 +4950,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/qs@npm:^6.15.0":
-  version: 6.15.0
-  resolution: "@types/qs@npm:6.15.0"
-  checksum: 871162881f1c83e61d0c8c243c65549be5dddf33a6911f3324edeebd4087207b1174644da9a3afaa20cf494c5288d2a1ece09e10e4822f755339f14a05c339ea
-  languageName: node
-  linkType: hard
-
 "@types/react-dom@npm:^18.2.14":
   version: 18.2.14
   resolution: "@types/react-dom@npm:18.2.14"
@@ -13392,7 +13385,6 @@ __metadata:
     "@types/mapbox__mapbox-gl-draw": 1.4.6
     "@types/node": 18.15.0
     "@types/proj4": ^2.19.0
-    "@types/qs": ^6.15.0
     "@types/react": ^18.2.31
     "@types/react-dom": ^18.2.14
     "@types/recharts": ^1.8.26

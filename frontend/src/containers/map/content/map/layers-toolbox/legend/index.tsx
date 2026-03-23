@@ -12,7 +12,7 @@ import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear do
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
-import { LayerListResponseDataItem, LegendLegendComponent } from '@/types/generated/strapi.schemas';
+import { Layer, LegendLegendComponent } from '@/types/generated/strapi.schemas';
 import { LayerTyped, ParamsConfig } from '@/types/layers';
 
 import LegendItem from './item';
@@ -29,7 +29,7 @@ const Legend: FCWithMessages = () => {
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
   const isCustomLayersActive = useFeatureFlag('is_custom_layers_active'); // TECH-3372: tear down
 
-  const layersQuery = useGetLayers<LayerListResponseDataItem[]>(
+  const layersQuery = useGetLayers<Layer[]>(
     {
       locale,
       sort: 'title:asc',
@@ -52,7 +52,7 @@ const Legend: FCWithMessages = () => {
       query: {
         select: ({ data }) =>
           data
-            .filter(item => activeLayers.includes(item.slug))
+            .filter((item) => activeLayers.includes(item.slug))
             .sort((a, b) => {
               const indexA = activeLayers.indexOf(a.slug);
               const indexB = activeLayers.indexOf(b.slug);

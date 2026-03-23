@@ -66,7 +66,7 @@ const useTooltips = () => {
     {
       locale,
       populate: {
-        data_sources: true
+        data_sources: true,
       } as any,
       filters: {
         slug: {
@@ -89,15 +89,13 @@ const useTooltips = () => {
   } = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(( item ) => item.slug === value);
+    const tooltip = dataInfo.find((item) => item.slug === value);
 
     if (!tooltip) return;
     const sources = !!tooltip?.data_sources?.length
-      ? tooltip?.data_sources?.map(
-          ({ documentId, slug, title = null, url = null }) => {
-            return { documentId, slug, url, title };
-          }
-        )
+      ? tooltip?.data_sources?.map(({ documentId, slug, title = null, url = null }) => {
+          return { documentId, slug, url, title };
+        })
       : null;
 
     tooltips[key] = { text: tooltip?.content, sources };
@@ -482,14 +480,13 @@ export const useData = (
         keepPreviousData: true,
         select: (data) => {
           return [
-            data.data?.map(( item ): GlobalRegionalTableColumns => {
+            data.data?.map((item): GlobalRegionalTableColumns => {
               const location = item.location;
               const environment = item.environment;
 
               const localizedEnvironment = [
                 environment,
-                ...(environment.localizations.map((environment) => environment) ??
-                  []),
+                ...(environment.localizations.map((environment) => environment) ?? []),
               ].find((data) => data.locale === locale);
 
               return {

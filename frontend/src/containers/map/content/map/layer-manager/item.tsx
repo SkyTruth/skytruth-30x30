@@ -34,9 +34,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
       },
       sort: 'interaction_config',
       locale,
-      populate: {
-        metadata: true
-      } as any,
+      populate: '*',
     },
     {
       query: {

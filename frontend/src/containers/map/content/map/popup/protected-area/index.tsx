@@ -40,8 +40,8 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
           $eq: layerSlug,
         },
       },
-      populate:  {
-        metadata: true
+      populate: {
+        metadata: true,
       } as any,
     },
     {

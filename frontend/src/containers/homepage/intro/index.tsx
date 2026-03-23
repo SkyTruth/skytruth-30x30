@@ -17,7 +17,7 @@ const Intro: FCWithMessages<IntroProps> = ({ onScrollClick }) => {
   const t = useTranslations('containers.homepage-intro');
   const locale = useLocale();
 
-  const { data: protectionStatsData, isError, error } = useGetProtectionCoverageStats<{
+  const { data: protectionStatsData } = useGetProtectionCoverageStats<{
     marine?: string;
     terrestrial?: string;
   }>(
@@ -46,9 +46,7 @@ const Intro: FCWithMessages<IntroProps> = ({ onScrollClick }) => {
             (d) => d.environment?.slug === 'terrestrial'
           )?.coverage;
 
-          const marineCoverage = data?.find(
-            (d) => d.environment?.slug === 'marine'
-          )?.coverage;
+          const marineCoverage = data?.find((d) => d.environment?.slug === 'marine')?.coverage;
 
           return {
             terrestrial:
@@ -68,10 +66,6 @@ const Intro: FCWithMessages<IntroProps> = ({ onScrollClick }) => {
       },
     }
   );
-
-  console.log('protectionStatsData:', protectionStatsData);
-  console.log('isError:', isError);
-  console.log('error:', error);
 
   return (
     <div className="bg-black">

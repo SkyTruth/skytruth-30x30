@@ -12,7 +12,7 @@ const PROTECTION_TARGET = 30;
 
 interface Source {
   documentId: string;
-  slug: string,
+  slug: string;
   title: string;
   url: string;
 }

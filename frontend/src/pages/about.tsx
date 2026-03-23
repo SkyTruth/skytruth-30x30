@@ -83,7 +83,7 @@ const About: FCWithMessages = ({
 
   const protectedLandIndicator: StaticIndicator = useMemo(() => {
     return staticIndicators?.data?.find(
-      ( item ) => item.slug === 'terrestrial-inland-areas-protected'
+      (item) => item.slug === 'terrestrial-inland-areas-protected'
     );
   }, [staticIndicators]);
 

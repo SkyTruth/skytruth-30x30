@@ -19,7 +19,7 @@ import { useGetPas } from '@/types/generated/pa';
 import { useGetProtectionStatuses } from '@/types/generated/protection-status';
 import {
   Pa,
-  PaChildrenDataItemAttributes,
+  PaChildrenItem,
   PaListResponse,
   PaListResponseMetaPagination,
 } from '@/types/generated/strapi.schemas';
@@ -98,7 +98,7 @@ const useTooltips = () => {
   } = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(( item ) => item.slug === value);
+    const tooltip = dataInfo.find((item) => item.slug === value);
 
     if (!tooltip) return;
 
@@ -637,13 +637,12 @@ export const useData = (
   const processData = useCallback(
     (data: PaListResponse) => {
       return [
-        data.data?.map(( item ): NationalHighseasTableColumns => {
-          const getData = (pa: Pa | PaChildrenDataItemAttributes) => {
+        data.data?.map((item): NationalHighseasTableColumns => {
+          const getData = (pa: Pa | PaChildrenItem) => {
             const environment = pa.environment;
             const localizedEnvironment = [
               environment,
-              ...(environment?.localizations.map((environment) => environment) ??
-                []),
+              ...((environment as any)?.localizations?.map((environment) => environment) ?? []),
             ].find((data) => data?.locale === locale);
 
             const dataSource = pa.data_source;
@@ -655,16 +654,14 @@ export const useData = (
             const protectionStatus = pa.protection_status;
             const localizedProtectionStatus = [
               protectionStatus,
-              ...(protectionStatus?.localizations.map(
-                (protectionStatus) => protectionStatus
-              ) ?? []),
+              ...((protectionStatus as any)?.localizations?.map((protectionStatus) => protectionStatus) ??
+                []),
             ].find((data) => data?.locale === locale);
 
             const iucnCategory = pa.iucn_category;
             const localizedIucnCategory = [
               iucnCategory,
-              ...(iucnCategory?.localizations.map((iucnCategory) => iucnCategory) ??
-                []),
+              ...(iucnCategory?.localizations.map((iucnCategory) => iucnCategory) ?? []),
             ].find((data) => data?.locale === locale);
 
             const mpaaEstablishmentStage = pa.mpaa_establishment_stage;
@@ -678,7 +675,7 @@ export const useData = (
             const mpaaProtectionLevel = pa.mpaa_protection_level;
             const localizedMpaaProtectionLevel = [
               mpaaProtectionLevel,
-              ...(mpaaProtectionLevel?.localizations.map(
+              ...((mpaaProtectionLevel as any)?.localizations?.map(
                 (mpaaProtectionLevel) => mpaaProtectionLevel
               ) ?? []),
             ].find((data) => data?.locale === locale);
@@ -718,7 +715,7 @@ export const useData = (
             ...getData(item),
             ...(item.children?.length > 0
               ? {
-                  subRows: item.children.map(item => getData(item)),
+                  subRows: item.children.map((item) => getData(item)),
                 }
               : {}),
           };

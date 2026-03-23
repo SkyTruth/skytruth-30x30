@@ -14,7 +14,7 @@ import { FCWithMessages } from '@/types';
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type {
-  LocationGroupsDataItemAttributes,
+  LocationGroupsItem,
   AggregatedStats,
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
@@ -22,7 +22,7 @@ import type {
 import MissingCountriesList from '../widget-alerts/MissingCountriesList';
 
 type MarineConservationWidgetProps = {
-  location: LocationGroupsDataItemAttributes;
+  location: LocationGroupsItem;
 };
 
 const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = ({ location }) => {
@@ -94,7 +94,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
         slug: 'coverage-widget',
       },
       populate: {
-        data_sources: true
+        data_sources: true,
       } as any,
     },
     {
@@ -103,14 +103,12 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
           data[0]
             ? {
                 info: data[0]?.content,
-                sources: data[0]?.data_sources?.map(
-                  ({ documentId, slug, title, url }) => ({
-                    documentId,
-                    slug,
-                    title,
-                    url,
-                  })
-                ),
+                sources: data[0]?.data_sources?.map(({ documentId, slug, title, url }) => ({
+                  documentId,
+                  slug,
+                  title,
+                  url,
+                })),
               }
             : undefined,
       },

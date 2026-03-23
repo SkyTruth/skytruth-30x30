@@ -44,7 +44,11 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
   }, [tab]);
 
   const { data: habitatMetadatas } = useGetDataInfos<
-    { slug: string; info: string; sources?: { documentId: string; slug: string, title: string; url: string }[] }[]
+    {
+      slug: string;
+      info: string;
+      sources?: { documentId: string; slug: string; title: string; url: string }[];
+    }[]
   >(
     {
       locale,
@@ -65,14 +69,12 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
           data?.map((item) => ({
             slug: item.slug,
             info: item.content,
-            sources: item.data_sources?.map(
-              ({ documentId, slug, title, url }) => ({
-                documentId,
-                slug,
-                title,
-                url,
-              })
-            ),
+            sources: item.data_sources?.map(({ documentId, slug, title, url }) => ({
+              documentId,
+              slug,
+              title,
+              url,
+            })),
           })) ?? [],
       },
     }
@@ -87,7 +89,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       protectedArea: number;
       missingLocations: string[];
       info?: string;
-      sources?: { documentId: string; slug: string, title: string; url: string }[];
+      sources?: { documentId: string; slug: string; title: string; url: string }[];
       updatedAt: string;
     }[]
   >(
@@ -156,7 +158,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
         slug: `habitat-widget-${tab}`,
       },
       populate: {
-        data_sources: true
+        data_sources: true,
       } as any,
     },
     {
@@ -165,14 +167,12 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
           data[0]
             ? {
                 info: data[0].content,
-                sources: data[0]?.data_sources?.map(
-                  ({ documentId, slug, title, url }) => ({
-                    documentId,
-                    slug,
-                    title,
-                    url,
-                  })
-                ),
+                sources: data[0]?.data_sources?.map(({ documentId, slug, title, url }) => ({
+                  documentId,
+                  slug,
+                  title,
+                  url,
+                })),
               }
             : undefined,
       },

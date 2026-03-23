@@ -20,7 +20,7 @@ const Attributions: FC = () => {
         },
       },
       populate: {
-        metadata: true
+        metadata: true,
       } as any,
     },
     {

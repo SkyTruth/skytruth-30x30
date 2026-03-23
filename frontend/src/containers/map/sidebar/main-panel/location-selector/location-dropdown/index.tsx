@@ -13,12 +13,12 @@ import {
 import useNameField from '@/hooks/use-name-field';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
-import { LocationListResponseDataItem } from '@/types/generated/strapi.schemas';
+import { Location } from '@/types/generated/strapi.schemas';
 
 type LocationDropdownProps = {
   className?: HTMLDivElement['className'];
   searchPlaceholder?: string;
-  filteredLocations: LocationListResponseDataItem[];
+  filteredLocations: Location[];
   selectedLocation: Set<string>;
   isCustomRegionTab: boolean;
   onSelected: (code: string) => void;
@@ -52,8 +52,8 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
     if (!searchTerm) return filteredLocations;
 
     const query = normalize(searchTerm);
-    return filteredLocations.filter(({ attributes }) => {
-      const name = attributes?.[nameField];
+    return filteredLocations.filter(( item ) => {
+      const name = item?.[nameField];
       return normalize(name).includes(query);
     });
   }, [filteredLocations, searchTerm, nameField]);
@@ -67,9 +67,9 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
       />
       <CommandEmpty>{t('no-result')}</CommandEmpty>
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
-        {visibleLocations.map(({ attributes }, idx) => {
-          const { code, type } = attributes;
-          const locationName = attributes?.[nameField];
+        {visibleLocations.map(( item , idx) => {
+          const { code, type } = item;
+          const locationName = item?.[nameField];
 
           const locationType = LocationType[type] || LocationType.country;
           const Selected = isCustomRegionTab ? XCircle : Check;

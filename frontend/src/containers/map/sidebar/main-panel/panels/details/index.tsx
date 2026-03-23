@@ -89,12 +89,10 @@ const SidebarDetails: FCWithMessages = () => {
 
   const mapLocationRelations = useCallback(
     (relation: string) => {
-      const mappedLocs = locationsData?.data[0]?.[relation]?.map(
-        ({ attributes }) => ({
-          code: attributes?.code,
-          name: attributes?.[locationNameField],
-        })
-      );
+      const mappedLocs = locationsData?.data[0]?.[relation]?.map(( item ) => ({
+        code: item?.code,
+        name: item?.[locationNameField],
+      }));
       return mappedLocs;
     },
     [locationsData?.data, locationNameField]

@@ -60,7 +60,7 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
         slug: 'fishing-protection-level',
       },
       populate: {
-        data_sources: true
+        data_sources: true,
       } as any,
     },
     {
@@ -69,13 +69,12 @@ const FishingProtectionWidget: FCWithMessages<FishingProtectionWidgetProps> = ({
           data[0]
             ? {
                 info: data[0]?.content,
-                sources: data[0]?.data_sources?.map(
-                  ({ id, title, url }) => ({
-                    id,
-                    title,
-                    url,
-                  })
-                ),
+                sources: data[0]?.data_sources?.map(({ documentId, slug, title, url }) => ({
+                  documentId,
+                  slug,
+                  title,
+                  url,
+                })),
               }
             : undefined,
       },

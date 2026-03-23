@@ -6,13 +6,13 @@ import ListIcon from '@/styles/icons/list.svg';
 import StarIcon from '@/styles/icons/star.svg';
 import WorldIcon from '@/styles/icons/world.svg';
 import { FCWithMessages } from '@/types';
-import { DataToolListResponseDataItem } from '@/types/generated/strapi.schemas';
+import { DataTool } from '@/types/generated/strapi.schemas';
 
 const CIRCLE_ICON_CLASSES =
   'flex h-7 min-h-[28px] w-7 min-w-[28px] items-center justify-center rounded-full border border-black fill-black';
 
 const CardItem: FCWithMessages<{
-  data: DataToolListResponseDataItem;
+  data: DataTool;
 }> = ({ data }): JSX.Element => {
   const t = useTranslations('containers.knowledge-hub-card-filters');
 
@@ -36,16 +36,14 @@ const CardItem: FCWithMessages<{
       </div>
       <div className="mt-5 pt-5">
         <ul className="space-y-4">
-          {data.data_tool_resource_types.data && (
+          {data.data_tool_resource_types && (
             <li className="flex gap-4">
               <div className={CIRCLE_ICON_CLASSES}>
                 <Icon icon={ListIcon} className="h-4 w-4" />
               </div>
               <div className="col-span-1">
                 <h5 className="font-bold">{t('resource-category')}</h5>
-                {data.data_tool_resource_types.data
-                  .map(({ name }) => name)
-                  .join(', ')}
+                {data.data_tool_resource_types.map(({ name }) => name).join(', ')}
               </div>
             </li>
           )}
@@ -60,33 +58,25 @@ const CardItem: FCWithMessages<{
               </div>
             </li>
           )}
-          {data.data_tool_ecosystems.data?.length > 0 && (
+          {data.data_tool_ecosystems?.length > 0 && (
             <li className="flex gap-4">
               <div className={CIRCLE_ICON_CLASSES}>
                 <Icon icon={WorldIcon} className="h-4 w-4" />
               </div>
               <div className="columns-auto">
                 <h5 className="font-bold">{t('ecosystems')}</h5>
-                <span>
-                  {data.data_tool_ecosystems.data
-                    .map(({ name }) => name)
-                    .join(', ')}
-                </span>
+                <span>{data.data_tool_ecosystems.map(({ name }) => name).join(', ')}</span>
               </div>
             </li>
           )}
-          {data.languages.data?.length > 0 && (
+          {data.languages?.length > 0 && (
             <li className="flex gap-4">
               <div className={CIRCLE_ICON_CLASSES}>
                 <Icon icon={WorldIcon} className="h-4 w-4" />
               </div>
               <div className="columns-auto">
                 <h5 className="font-bold">{t('languages')}</h5>
-                <span>
-                  {data.languages.data
-                    .map(({ name }) => name)
-                    .join(', ')}
-                </span>
+                <span>{data.languages.map(({ name }) => name).join(', ')}</span>
               </div>
             </li>
           )}

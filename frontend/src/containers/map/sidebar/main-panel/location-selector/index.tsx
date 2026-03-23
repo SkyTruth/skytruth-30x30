@@ -20,8 +20,8 @@ import MagnifyingGlassIcon from '@/styles/icons/magnifying-glass.svg';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
 import {
-  LocationGroupsDataItemAttributes,
-  LocationListResponseDataItem,
+  LocationGroupsItem,
+  Location,
 } from '@/types/generated/strapi.schemas';
 
 import LocationDropdown from './location-dropdown';
@@ -104,7 +104,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   };
 
   const handleLocationSelected = useCallback(
-    async (locationCode: LocationGroupsDataItemAttributes['code']) => {
+    async (locationCode: LocationGroupsItem['code']) => {
       if (!isCustomRegionActive) setLocationPopoverOpen(false);
       setPopup({});
       onChange(locationCode.toUpperCase());
@@ -170,10 +170,11 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   ]);
 
   const reorderedLocations = useMemo(() => {
-    const globalLocation = locationsData.find(item => item.type === 'worldwide');
-    return [globalLocation, ...locationsData.filter(({ documentId }) => documentId !== globalLocation?.documentId)].filter(
-      Boolean
-    );
+    const globalLocation = locationsData.find((item) => item.type === 'worldwide');
+    return [
+      globalLocation,
+      ...locationsData.filter(({ documentId }) => documentId !== globalLocation?.documentId),
+    ].filter(Boolean);
   }, [locationsData]);
 
   const filteredLocations = useMemo(() => {
@@ -185,7 +186,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       setLocationsFilter('all');
     }
 
-    let filtered = reorderedLocations.filter(item =>
+    let filtered = reorderedLocations.filter((item) =>
       FILTERS[locationsFilter].includes(item.type)
     );
 
@@ -194,14 +195,12 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
       // Bit of a hack to add the "clear all" button to the custom regions list
       const clearAll = {
-        attributes: {
-          code: 'clear',
-          name: t('clear-all'),
-          name_es: t('clear-all'),
-          name_fr: t('clear-all'),
-          name_pt: t('clear-all'),
-        },
-      } as LocationListResponseDataItem;
+        code: 'clear',
+        name: t('clear-all'),
+        name_es: t('clear-all'),
+        name_fr: t('clear-all'),
+        name_pt: t('clear-all'),
+      } as Location;
 
       const top = [clearAll];
       const bottom = [];

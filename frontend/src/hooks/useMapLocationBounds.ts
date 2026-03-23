@@ -13,7 +13,7 @@ import { bboxLocationAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { combineBoundingBoxes } from '@/lib/utils/geo';
 import { useGetLocations } from '@/types/generated/location';
-import { LocationListResponseDataItem } from '@/types/generated/strapi.schemas';
+import { Location } from '@/types/generated/strapi.schemas';
 
 export default function useMapLocationBounds() {
   const locale = useLocale();
@@ -36,7 +36,7 @@ export default function useMapLocationBounds() {
       ? [...customRegionLocations]
       : [locationCode];
 
-  const { data, isFetching } = useGetLocations<Array<LocationListResponseDataItem>>(
+  const { data, isFetching } = useGetLocations<Array<Location>>(
     {
       locale,
       // @ts-ignore
@@ -70,7 +70,8 @@ export default function useMapLocationBounds() {
 
       const bounds: BBox[] = data.reduce((acc, loc) => {
         const {
-          attributes: { marine_bounds = null, terrestrial_bounds = null },
+          marine_bounds = null, 
+          terrestrial_bounds = null,
         } = loc;
         switch (tab) {
           case 'marine':

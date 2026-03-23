@@ -77,9 +77,7 @@ const Home: FCWithMessages = ({
     const indicators: { [key: string]: StaticIndicator } = {};
 
     Object.entries(STATIC_INDICATOR_MAPPING).map(([key, value]) => {
-      const indicator = staticIndicators?.data?.find(
-        ( item ) => item.slug === value
-      );
+      const indicator = staticIndicators?.data?.find((item) => item.slug === value);
 
       if (!indicator) return;
       indicators[key] = indicator;
@@ -93,9 +91,7 @@ const Home: FCWithMessages = ({
       const protectionCoverageStatsData = protectionCoverageStats?.data;
       if (!protectionCoverageStatsData?.length) return null;
 
-      const stats = protectionCoverageStatsData.find(
-        (item) => item.environment?.slug === env
-      );
+      const stats = protectionCoverageStatsData.find((item) => item.environment?.slug === env);
       if (!stats) return null;
 
       return formatPercentage(locale, stats?.coverage, {
