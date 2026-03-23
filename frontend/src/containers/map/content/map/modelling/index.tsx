@@ -6,6 +6,7 @@ import axios, { isAxiosError } from 'axios';
 import type { Feature } from 'geojson';
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { conservationStatsImpressed } from '@/components/analytics/heap';
 import {
   modellingAtom,
   customLayersAtom,
@@ -79,15 +80,25 @@ const Modelling: FC = () => {
     } else if (isSuccess) {
       if (data?.locations_area?.length > 0) {
         setModellingState((prevState) => ({ ...prevState, status: 'success', data }));
+        conservationStatsImpressed({
+          countries: data.locations_area.flatMap((loc) => loc.code),
+          environment: tab,
+          area: data.total_area,
+        });
       } else {
         setModellingState((prevState) => ({
           ...prevState,
           status: 'error',
           errorMessage: 'no-intersection-error',
         }));
+
+        conservationStatsImpressed({
+          countries: [],
+          environment: tab,
+        });
       }
     }
-  }, [setModellingState, isFetching, isSuccess, data]);
+  }, [setModellingState, isFetching, isSuccess, data, tab]);
 
   return null;
 };
