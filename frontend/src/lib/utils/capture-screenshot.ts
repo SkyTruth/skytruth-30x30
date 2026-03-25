@@ -1,5 +1,7 @@
 import { toPng } from 'html-to-image';
 
+const isFirefox = typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
 interface ScreenshotOptions {
   includeLegend: boolean;
   pixelRatio?: number;
@@ -87,9 +89,34 @@ export async function buildScreenshotDataUrl(options: ScreenshotOptions): Promis
 
   let mapDataUrl: string;
 
+  // isFirefox check is a temporary patch until
+  // https://github.com/bubkoo/html-to-image/issues/508
+  // is resolved.
+  const toPngOptions = {
+    cacheBust: true,
+    pixelRatio,
+    ...(isFirefox && { skipFonts: true }),
+  };
+
+  // Minimum data URL length that indicates a non-blank capture.
+  // A blank canvas produces a very short data URL, while a real
+  // map capture is significantly larger. This is a patch for Safari
+  // which clears the drawing buffer often which can result in toDataUrl()
+  // not capturing the fully drawn canvas
+  const MIN_DATA_URL_LENGTH = 250_000;
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 200;
+
   const restoreMapSvgs = inlineSvgUseElements(mapEl);
   try {
-    mapDataUrl = await toPng(mapEl, { cacheBust: true, pixelRatio });
+    mapDataUrl = await toPng(mapEl, toPngOptions);
+
+    let attempts = 0;
+    while (mapDataUrl.length < MIN_DATA_URL_LENGTH && attempts < MAX_RETRIES) {
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      mapDataUrl = await toPng(mapEl, toPngOptions);
+      attempts++;
+    }
   } finally {
     restoreMapSvgs();
     if (!includeLegend && legendEl) {
