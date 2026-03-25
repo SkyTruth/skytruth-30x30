@@ -113,7 +113,10 @@ ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted
 #                 Protected Planet (WDPA)
 # ------------------------------------------------------------
 WDPA_API_URL = "http://api.protectedplanet.net/v3/"
-WDPA_URL = f"https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_WDOECM_{today_formatted}_Public_all_shp.zip"
+WDPA_URL = (
+    "https://d1gam3xoknrgr2.cloudfront.net/current/"
+    f"WDPA_WDOECM_{today_formatted}_Public_all_shp.zip"
+)
 WDPA_FILE_NAME = "raw/WDPA_Public.zip"
 ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
 WDPA_COUNTRY_LEVEL_FILE_NAME = "raw/WDPA_country_level.csv"
@@ -142,7 +145,8 @@ MANGROVES_REQUEST_HEADERS = {
         "dytzpK%2F0dGIHq84O54MRr6eiPgiwCYXp2XP4IzXM40dFt%2FI6hoB0WXC%2Fwrd81XreNnMZiSEE6IVT5R0fqMcm"
         "sZdPn53u0A1d4CGU3FfliOZuWkckBuA%2F7C4upBGuSS8817LqOh1slG%2BsEOGp3nk7WX4fMoPbsHWtARfFwdfoAH"
         "z448LO7uWuZdyiu7YOrS0ZxOZEb9JZ8hcUJph4pBFofZLpOvtQQutgZY21T5bhQ7Kwfl56e6Qr0SZ%2B8sIzMfky3h"
-        "%2FjOA6DNTLoy%2BZLiZBAgFHlTYm2JwlwqWgAZU8D7cE7Zn%2Fxgf3LFF9pZ9Fe3QG4c8LIwH%2FxqjEd8GsZAhBMg"
+        "%2FjOA6DNTLoy%2BZLiZBAgFHlTYm2JwlwqWgAZU8D7cE7Zn"
+        "%2Fxgf3LFF9pZ9Fe3QG4c8LIwH%2FxqjEd8GsZAhBMg"
         "BWbxubigQ9gZssZt6CIO--7qiVsTAT8JAKj1jU--U7TI%2Fz9c151bfD8iZdkBDw%3D%3D"
     )
 }
@@ -202,16 +206,20 @@ REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 #                     Conservation Builder
 # ------------------------------------------------------------
 
-CONSERVATION_BUILDER_MARINE_DATA = f"conservation_builder/eez_minus_mpa.parquet"
-CONSERVATION_BUILDER_TERRESTRIAL_DATA = f"conservation_builder/gadm_minus_pa.parquet"
-ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA = f"archive/conservation_builder/eez_minus_mpa_{today_formatted}.parquet"
-ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = f"archive/conservation_builder/gadm_minus_pa_{today_formatted}.parquet"
+CONSERVATION_BUILDER_MARINE_DATA = "conservation_builder/eez_minus_mpa.parquet"
+CONSERVATION_BUILDER_TERRESTRIAL_DATA = "conservation_builder/gadm_minus_pa.parquet"
+ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA = (
+    f"archive/conservation_builder/eez_minus_mpa_{today_formatted}.parquet"
+)
+ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
+    f"archive/conservation_builder/gadm_minus_pa_{today_formatted}.parquet"
+)
 
 # ------------------------------------------------------------
 #                     Workflow Parameters
 # ------------------------------------------------------------
 LONG_RUNNING_TASKS = [
-    "download_protected_planet_pas",
+    # "download_protected_planet_pas",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",
