@@ -49,10 +49,10 @@ const Screenshot: FCWithMessages = () => {
   // When dialog closes: restore legend to its previous state.
   useEffect(() => {
     if (!open) return;
+    setIncludeLegend(true);
     setLegendOpen((prev) => {
       legendWasOpenRef.current = prev;
       if (!prev) {
-        // Legend was closed — open it and mark not ready until animation finishes
         setLegendReady(false);
       }
       return true;
