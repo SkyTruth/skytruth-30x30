@@ -115,7 +115,7 @@ ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted
 WDPA_API_URL = "http://api.protectedplanet.net/v3/"
 WDPA_URL = (
     "https://d1gam3xoknrgr2.cloudfront.net/current/"
-    f"WDPA_WDOECM_{today_formatted}_Public_all_shp_bad_stufff.zip"
+    f"WDPA_WDOECM_{today_formatted}_Public_all_shp.zip"
 )
 WDPA_FILE_NAME = "raw/WDPA_Public.zip"
 ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
@@ -224,6 +224,5 @@ LONG_RUNNING_TASKS = [
     "update_protected_areas",
     "generate_gadm_minus_pa",
     "generate_protected_areas_table",
-    "test_long_running_tasks",
     "update_gadm_minus_pa",
 ]

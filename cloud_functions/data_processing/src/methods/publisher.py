@@ -615,7 +615,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
         return json.dumps(resp), 200
 
     except ScheduleRetry as e:
-        if attempt <= e.max_retries:
+        if attempt < e.max_retries:
             logger.warning(
                 {
                     "message": (
