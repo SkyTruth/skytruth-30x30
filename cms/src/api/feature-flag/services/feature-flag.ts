@@ -6,17 +6,16 @@ import { factories } from '@strapi/strapi';
 import { ApiFeatureFlagFeatureFlag } from '@/types/generated/contentTypes';
 
 export default factories.createCoreService('api::feature-flag.feature-flag', () => ({
-  validateFeatureFlags(featureFlags: Array<ApiFeatureFlagFeatureFlag>, runAsOf: Date):
-    Array<ApiFeatureFlagFeatureFlag> {
+  validateFeatureFlags(featureFlags: Array<ApiFeatureFlagFeatureFlag['attributes']>, runAsOf: Date):
+    Array<ApiFeatureFlagFeatureFlag['attributes']> {
       const validFeatureFlags = featureFlags.filter(flag => {
-        const { attributes } = flag;
 
-      if (attributes.archived) {
+      if (flag.archived) {
         return false;
       }
 
-      if (!attributes.active_on || 
-        (attributes.active_on && new Date(attributes.active_on.toString()) <= runAsOf)
+      if (!flag.active_on || 
+        (flag.active_on && new Date(flag.active_on.toString()) <= runAsOf)
       ) {
         return true;
       }
@@ -44,11 +43,9 @@ export default factories.createCoreService('api::feature-flag.feature-flag', () 
     })
 
     // Reusing logic that expects the api formatted response so coerse the response to match
-    const formattedFlags = flags.map(flag => { return { attributes: flag } })
     const validatedFeatureFlags = strapi
       .services['api::feature-flag.feature-flag']
-      .validateFeatureFlags(formattedFlags, formattedRunAsOf);
-        
+      .validateFeatureFlags(flags, formattedRunAsOf);
 
     return validatedFeatureFlags[0];
   }

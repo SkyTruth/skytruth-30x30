@@ -23,7 +23,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
       pt: 'name_pt',
     },
   },
-  'gadm-countries': {
+  countries: {
     // There's currently only sov1 and sov2 but the code allows for sov3
     ids: ['location', 'ISO_SOV1', 'ISO_SOV2', 'ISO_SOV3'],
     name: {
@@ -47,15 +47,15 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
 export const POPUP_ICON_BY_SOURCE = {
   [EEZ_SOURCE]: Wave as IconProps['icon'],
   'marine-regions-source': Wave as IconProps['icon'],
-  'gadm-countries': Mountain as IconProps['icon'],
+  countries: Mountain as IconProps['icon'],
   'terrestrial-regions': Mountain as IconProps['icon'],
 };
 
 export const POPUP_BUTTON_CONTENT_BY_SOURCE = {
   [EEZ_SOURCE]: 'open-country-insights',
   'marine-regions-source': 'open-region-insights',
-  'gadm-countries': 'open-country-insights',
+  countries: 'open-country-insights',
   'terrestrial-regions': 'open-region-insights',
 };
 
-export const CUSTOM_REGION_ELIGABILITY_BY_SOURCE = new Set(['gadm-countries', EEZ_SOURCE]);
+export const CUSTOM_REGION_ELIGABILITY_BY_SOURCE = new Set(['countries', EEZ_SOURCE]);

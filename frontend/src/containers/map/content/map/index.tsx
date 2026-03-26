@@ -180,7 +180,6 @@ const MainMap: FCWithMessages = () => {
       if (
         layersInteractive.length &&
         layersInteractiveData.some((l) => {
-          // const attributes = l as LayerTyped;
           return l?.interaction_config?.events.some((ev) => ev.type === 'click');
         })
       ) {

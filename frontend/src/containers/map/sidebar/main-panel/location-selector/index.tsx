@@ -78,7 +78,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   const { data: locationsData } = useGetLocations(
     {
       locale,
-      'pagination[limit]': -1,
+      'pagination[limit]': 1000,
       sort: `${locationNameField}:asc`,
     },
     {

@@ -269,17 +269,18 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
         return ctx.badRequest('Invalid method. Only DELETE is supported for bulk patch.');
       }
       const ids = ctx.request.body.data.ids; 
-      const knex = strapi.db.connection;
       const errors = [];
       const deleted = [];
 
-      await knex.transaction(async (trx) => {
-        for (const id of ids) {
-          const deleteResponse = await trx('pas').where({ id }).delete(['id']);
-          if (!deleteResponse || deleteResponse.length === 0) {
-            errors.push({msg: "Failed to delete PA with ID " + id });
-          } else {
-            deleted.push(deleteResponse[0].id)
+      await strapi.db.transaction(async () => {
+        for (const documentId of ids) {
+          try {
+            await strapi.documents('api::pa.pa').delete({
+              documentId: documentId,
+            });
+            deleted.push(documentId);
+          } catch (error) {
+            errors.push({ msg: `Failed to delete PA with documentId ${documentId}`, error: error.message });
           }
         }
       });
