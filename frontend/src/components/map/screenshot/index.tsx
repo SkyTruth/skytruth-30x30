@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { useMap } from 'react-map-gl';
 
 import { useAtom, useSetAtom } from 'jotai';
 import { Camera, Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { screenshotEngaged, ScreenshotActions } from '@/components/analytics/heap';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -24,9 +27,16 @@ const ICON_CLASSES = 'text-black group-hover:text-white';
 const Screenshot: FCWithMessages = () => {
   const t = useTranslations('components.map');
 
+  const { default: mapRef } = useMap();
   const [open, setOpen] = useAtom(screenshotOpenAtom);
   const [legendReady, setLegendReady] = useAtom(legendReadyAtom);
   const setLegendOpen = useSetAtom(legendOpenAtom);
+
+  const getMapBbox = useCallback((): [number, number, number, number] => {
+    const bounds = mapRef?.getBounds();
+    if (!bounds) return [0, 0, 0, 0];
+    return [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+  }, [mapRef]);
 
   const [includeLegend, setIncludeLegend] = useState(true);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
@@ -39,10 +49,10 @@ const Screenshot: FCWithMessages = () => {
   // When dialog closes: restore legend to its previous state.
   useEffect(() => {
     if (!open) return;
+    setIncludeLegend(true);
     setLegendOpen((prev) => {
       legendWasOpenRef.current = prev;
       if (!prev) {
-        // Legend was closed — open it and mark not ready until animation finishes
         setLegendReady(false);
       }
       return true;
@@ -62,7 +72,14 @@ const Screenshot: FCWithMessages = () => {
 
     buildScreenshotDataUrl({ includeLegend })
       .then((dataUrl) => {
-        if (!cancelled) setPreviewDataUrl(dataUrl);
+        if (!cancelled) {
+          setPreviewDataUrl(dataUrl);
+          screenshotEngaged({
+            action: ScreenshotActions.Preview,
+            bbox: getMapBbox(),
+            includeLegend,
+          });
+        }
       })
       .catch(() => {
         // Preview failed — leave null so user can still attempt download
@@ -74,13 +91,18 @@ const Screenshot: FCWithMessages = () => {
     return () => {
       cancelled = true;
     };
-  }, [open, legendReady, includeLegend]);
+  }, [getMapBbox, open, legendReady, includeLegend]);
 
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
       const dataUrl = await buildScreenshotDataUrl({ includeLegend });
       downloadScreenshot(dataUrl);
+      screenshotEngaged({
+        action: ScreenshotActions.Download,
+        bbox: getMapBbox(),
+        includeLegend,
+      });
       setOpen(false);
     } finally {
       setIsDownloading(false);

@@ -16,7 +16,9 @@ import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import useNameField from '@/hooks/use-name-field';
+import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
+import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
 
@@ -36,6 +38,7 @@ const SidebarDetails: FCWithMessages = () => {
   const locationNameField = useNameField();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerScroll = useScrollPosition(containerRef);
 
   const [isWarningCollapsed, setIsWarningCollapsed] = useState(false);
 
@@ -166,7 +169,13 @@ const SidebarDetails: FCWithMessages = () => {
   return (
     <Tabs value={tab} onValueChange={handleTabChange} className="flex h-full w-full flex-col">
       <div className="flex flex-shrink-0 flex-col gap-x-5 gap-y-2 border-b border-black bg-orange px-4 pt-4 md:px-8 md:pt-6">
-        <h1 className={'min-h-[3rem] text-ellipsis text-5xl font-black transition-all'}>
+        <h1
+          className={cn({
+            'text-ellipsis font-black transition-all': true,
+            'min-h-[3rem] text-5xl': containerScroll === 0,
+            'min-h-[1.75rem] text-xl': containerScroll > 0,
+          })}
+        >
           {titleCountry?.[locationNameField]}
         </h1>
         <LocationSelector
