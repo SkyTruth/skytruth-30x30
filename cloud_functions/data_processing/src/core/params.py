@@ -115,7 +115,7 @@ ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted
 WDPA_API_URL = "http://api.protectedplanet.net/v3/"
 WDPA_URL = (
     "https://d1gam3xoknrgr2.cloudfront.net/current/"
-    f"WDPA_WDOECM_{today_formatted}_Public_all_shp.zip"
+    f"WDPA_WDOECM_{today_formatted}_Public_all_shp_bad_stufff.zip"
 )
 WDPA_FILE_NAME = "raw/WDPA_Public.zip"
 ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
