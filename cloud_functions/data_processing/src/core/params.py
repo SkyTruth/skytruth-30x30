@@ -219,7 +219,7 @@ ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
 #                     Workflow Parameters
 # ------------------------------------------------------------
 LONG_RUNNING_TASKS = [
-    # "download_protected_planet_pas",
+    "download_protected_planet_pas",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",

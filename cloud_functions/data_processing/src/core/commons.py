@@ -238,9 +238,6 @@ def download_file_with_progress(url: str, filename: str, verbose: bool = True):
     """
     try:
         # Send a GET request with stream=True to handle large files efficiently
-        debug_resp = requests.head(url)
-        print("DEBUGGING~~~~~~~~~~~~~~`", debug_resp.status_code)
-        print(dict(debug_resp.headers))
         response = requests.get(url, stream=True)
         response.raise_for_status()  # Raise an exception for bad status codes
 
