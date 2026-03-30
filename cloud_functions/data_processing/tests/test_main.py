@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import src.methods.publisher as main
+from src.core.retry_params import ScheduleRetry
 
 
 @pytest.fixture
@@ -52,11 +53,7 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
     ]
     for name in simple_targets:
-        return_value = (
-            ({"delay_seconds": 0, "max_retries": 0}, True)
-            if name == "download_mpatlas"
-            else {"ok": True}
-        )
+        return_value = {"ok": True}
         monkeypatch.setattr(
             main,
             name,
@@ -336,8 +333,8 @@ def test_unknown_method_returns_ok_and_calls_nothing(patched_all):
 
 
 # Error path
-def test_error_bubbles_to_208(monkeypatch, call_log):
-    """If any called function raises, handler should catch and return 208."""
+def test_error_bubbles_to_500(monkeypatch, call_log):
+    """If any called function raises, handler should catch and return 500."""
 
     monkeypatch.setattr(
         main,
@@ -356,5 +353,126 @@ def test_error_bubbles_to_208(monkeypatch, call_log):
     resp = main.run_from_payload({"METHOD": "process_gadm", "MAX_RETRIES": 0})
     assert isinstance(resp, tuple)
     body, status = resp
-    assert status == 208
+    assert status == 500
     assert "failed after 1 attempts" in body
+
+
+# ScheduleRetry path
+def test_schedule_retry_schedules_task_on_first_attempt(monkeypatch, call_log):
+    """ScheduleRetry on attempt 1 should create a delayed Cloud Task."""
+    delay_seconds = 86400
+    monkeypatch.setattr(
+        main,
+        "download_mpatlas",
+        make_recorder(
+            call_log,
+            "download_mpatlas",
+            side_effect=ScheduleRetry(
+                delay_seconds=delay_seconds, max_retries=3, message="not found"
+            ),
+        ),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "create_task",
+        make_recorder(
+            call_log,
+            "create_task",
+            return_value=MagicMock(name="tasks/retry1"),
+        ),
+        raising=True,
+    )
+
+    resp = main.run_from_payload({"METHOD": "download_mpatlas"})
+    assert resp == (f"Retrying in {delay_seconds} seconds", 202)
+
+    # create_task was called with the right delay and incremented attempt
+    task_calls = [call for call in call_log if call[0] == "create_task"]
+    assert len(task_calls) == 1
+    _name, _args, task_kwargs = task_calls[0]
+    assert task_kwargs["delay_seconds"] == 86400
+    payload = task_kwargs["payload"]
+    assert payload["attempt"] == 2
+    assert payload["MAX_RETRIES"] == 3
+
+
+def test_schedule_retry_exhausted_returns_500_and_alerts(monkeypatch, call_log):
+    """ScheduleRetry on final attempt should return 500 and send Slack alert."""
+    monkeypatch.setattr(
+        main,
+        "download_mpatlas",
+        make_recorder(
+            call_log,
+            "download_mpatlas",
+            side_effect=ScheduleRetry(delay_seconds=86400, max_retries=3, message="not found"),
+        ),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "send_slack_alert",
+        make_recorder(call_log, "send_slack_alert", return_value={"ok": True}),
+        raising=True,
+    )
+
+    # attempt=4 with max_retries=3 means all retries are exhausted
+    resp = main.run_from_payload({"METHOD": "download_mpatlas", "attempt": 4})
+    body, status = resp
+    assert status == 500
+    assert "failed after 4 attempts" in body
+
+    # Slack alert was sent
+    alert_calls = [call for call in call_log if call[0] == "send_slack_alert"]
+    assert len(alert_calls) == 1
+
+    # No retry task was created
+    task_calls = [call for call in call_log if call[0] == "create_task"]
+    assert len(task_calls) == 0
+
+
+def test_schedule_retry_does_not_fire_on_success(patched_all):
+    """Successful download_mpatlas should return OK, not retry."""
+    resp = main.run_from_payload({"METHOD": "download_mpatlas"})
+    assert resp == ("OK", 200)
+
+    # No create_task calls (only the download_mpatlas recorder)
+    task_calls = [call for call in patched_all if call[0] == "create_task"]
+    assert len(task_calls) == 0
+
+
+def test_schedule_retry_prevents_next_steps(monkeypatch, call_log):
+    """When a download raises ScheduleRetry, downstream steps should not run."""
+    monkeypatch.setattr(
+        main,
+        "download_mpatlas",
+        make_recorder(
+            call_log,
+            "download_mpatlas",
+            side_effect=ScheduleRetry(delay_seconds=86400, max_retries=3, message="not found"),
+        ),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "create_task",
+        make_recorder(
+            call_log,
+            "create_task",
+            return_value=MagicMock(name="tasks/retry1"),
+        ),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "pipe_next_steps",
+        make_recorder(call_log, "pipe_next_steps", return_value=None),
+        raising=True,
+    )
+
+    resp = main.run_from_payload({"METHOD": "download_mpatlas", "TRIGGER_NEXT": True})
+    assert resp == (f"Retrying in {86400} seconds", 202)
+
+    # pipe_next_steps was never called
+    next_step_calls = [call for call in call_log if call[0] == "pipe_next_steps"]
+    assert len(next_step_calls) == 0
