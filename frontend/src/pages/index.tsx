@@ -21,6 +21,7 @@ import Layout, { Content, Sidebar } from '@/layouts/static-page';
 import { fetchTranslations } from '@/lib/i18n';
 import { formatPercentage } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
+import { getFeatureFlags } from '@/types/generated/feature-flag';
 import {
   getGetProtectionCoverageStatsQueryKey,
   getGetProtectionCoverageStatsQueryOptions,
@@ -239,6 +240,32 @@ const Home: FCWithMessages = ({
 Home.messages = ['pages.home', ...Layout.messages, ...Intro.messages, ...LinkCards.messages];
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { 'run-as-of': runAsOf } = context.query;
+
+  // TECH 3447 teardown: remove feature flag check and make this redirect unconditional
+  const featureFlags = await getFeatureFlags({
+    filters: {
+      feature: {
+        $eq: 'hide_info_pages',
+      },
+    },
+    // @ts-ignore
+    'run-as-of': runAsOf,
+    'pagination[limit]': 1,
+  });
+  const shouldRedirect = featureFlags?.[0]?.attributes?.payload;
+
+  if (shouldRedirect) {
+    return {
+      redirect: {
+        destination: `/progress-tracker${runAsOf ? `?run-as-of=${runAsOf}` : ''}`,
+        permanent: false, // TECH 3447: Make true
+      },
+    };
+  }
+
+  // TECH 3447 teardown: remove everything below this line
+
   const queryClient = new QueryClient();
 
   const protectionCoverageStatsQueryParams = {

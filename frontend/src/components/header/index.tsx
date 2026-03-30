@@ -137,6 +137,8 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
             (hideInfoPages ? (
               <a
                 href="https://www.skytruth.org/30x30"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="-my-1.5 inline-block ring-offset-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
               >
                 <Image
