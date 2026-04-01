@@ -29,6 +29,7 @@ from src.core.params import (
     RELATED_COUNTRIES_FILE_NAME,
 )
 from src.core.processors import add_translations
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
 from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
@@ -286,6 +287,7 @@ def create_and_update_protected_area_tileset(
     tileset_id: str,
     display_name: str,
     tolerance: float,
+    method: str,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -310,14 +312,21 @@ def create_and_update_protected_area_tileset(
             cfg,
             process=protected_area_process,
         )
-    except Exception as excep:
+    except Exception as e:
         logger.error(
             {
-                "message": "Error creating and updating Terrestrial Regions tileset",
-                "error": str(excep),
+                "message": f"Error creating and updating {display_name} tileset",
+                "error": str(e),
             }
         )
-        raise excep
+        retry_cfg = METHOD_RETRY_CONFIGS.get(method)
+        if retry_cfg:
+            raise ScheduleRetry(
+                delay_seconds=retry_cfg["delay_seconds"],
+                max_retries=retry_cfg["max_retries"],
+                message=f"{display_name} tileset update failed: {e}",
+            ) from e
+        raise
 
 
 def protected_area_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
