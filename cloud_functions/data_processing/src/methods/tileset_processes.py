@@ -77,10 +77,6 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
 def create_and_update_mpatlas_tileset(
     bucket: str = BUCKET,
     source_file: str = MPATLAS_FILE_NAME,
-<<<<<<< Updated upstream
-    # these are placeholders following the naming convention of other tilesets
-=======
->>>>>>> Stashed changes
     tileset_file: str = MPATLAS_TILESET_FILE,
     tileset_id: str = MPATLAS_TILESET_ID,
     display_name: str = MPATLAST_TILESET_NAME,
