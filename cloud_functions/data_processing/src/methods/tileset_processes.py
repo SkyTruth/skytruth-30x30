@@ -27,6 +27,7 @@ from src.core.params import (
     LOCATIONS_TRANSLATED_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
+    MPATLAS_FILE_NAME,
 )
 from src.core.processors import add_translations
 from src.utils.gcp import read_dataframe, read_json_from_gcs
@@ -34,6 +35,67 @@ from src.utils.logger import Logger
 from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
 
 logger = Logger()
+
+def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str,Any]):
+    gdf = gdf.rename(columns={
+        "designation": "designatio",
+        "establishment_stage": "establishm",
+        "country": "location_i",
+        "mpa_zone_id": "mpa_zone_i", 
+        "protection_mpaguide_level": "protection",
+        "implemented_date" :"year",
+    })
+
+    #Create a new bucketed column based on the protection value, returning only 1. fully or highly or 2. less or unknown
+    gdf["protecti_1"] = gdf["protection"].apply(
+        lambda x: "fully or highly" if x in ["full", "high"] else "less or unknown")
+
+    keep = ["designatio", "establishm", "location_i", "mpa_zone_i", "name", "protection", "protecti_1", "wdpa_id", "year"]
+    gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
+
+    return gdf
+
+
+def create_and_update_mpatlas_tileset(
+    bucket: str = BUCKET,
+    source_file: str = MPATLAS_FILE_NAME,
+    #these are placeholders following the naming convention of other tilesets 
+    tileset_file: str = MPATLAS_TILESET_FILE,
+    tileset_id: str = MPATLAS_TILESET_ID, 
+    display_name: str = MPATLAST_TILESET_NAME,
+    verbose: bool = False,
+    *,
+    keep_temp: bool = False,
+):
+
+    try:
+        if verbose:
+            logger.info({"message": f"Creating and updating {display_name} tileset..."})
+
+        cfg = TilesetConfig(
+            bucket=bucket,
+            tileset_blob_name=tileset_file,
+            tileset_id=tileset_id,
+            display_name=display_name,
+            local_geojson_name=f"{tileset_id}.geojson",
+            local_mbtiles_name=f"{tileset_id}.mbtiles",
+            source_file=source_file,
+            verbose=verbose,
+            keep_temp=keep_temp,
+        )
+
+        return run_tileset_pipeline(
+            cfg,
+            process=mpatlas_process,
+        )
+    except Exception as excep:
+        logger.error(
+            {
+                "message": "Error creating and updating MPAtlas tileset",
+                "error": str(excep),
+            }
+        )
+        raise excep
 
 
 def eez_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
