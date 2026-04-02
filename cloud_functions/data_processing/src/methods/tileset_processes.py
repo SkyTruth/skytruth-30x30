@@ -15,6 +15,9 @@ from src.core.map_params import (
     MARINE_REGIONS_TILESET_FILE,
     MARINE_REGIONS_TILESET_ID,
     MARINE_REGIONS_TILESET_NAME,
+    MPATLAS_TILESET_FILE,
+    MPATLAS_TILESET_ID,
+    MPATLAST_TILESET_NAME,
     TERRESTRIAL_REGIONS_TILESET_FILE,
     TERRESTRIAL_REGIONS_TILESET_ID,
     TERRESTRIAL_REGIONS_TILESET_NAME,
@@ -25,9 +28,9 @@ from src.core.params import (
     EEZ_MULTIPLE_SOV_FILE_NAME,
     GADM_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
+    MPATLAS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
-    MPATLAS_FILE_NAME,
 )
 from src.core.processors import add_translations
 from src.utils.gcp import read_dataframe, read_json_from_gcs
@@ -36,21 +39,36 @@ from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
 
 logger = Logger()
 
-def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str,Any]):
-    gdf = gdf.rename(columns={
-        "designation": "designatio",
-        "establishment_stage": "establishm",
-        "country": "location_i",
-        "mpa_zone_id": "mpa_zone_i", 
-        "protection_mpaguide_level": "protection",
-        "implemented_date" :"year",
-    })
 
-    #Create a new bucketed column based on the protection value, returning only 1. fully or highly or 2. less or unknown
+def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
+    gdf = gdf.rename(
+        columns={
+            "designation": "designatio",
+            "establishment_stage": "establishm",
+            "country": "location_i",
+            "mpa_zone_id": "mpa_zone_i",
+            "protection_mpaguide_level": "protection",
+            "implemented_date": "year",
+        }
+    )
+
+    # Create a new bucketed column based on the protection value, returning only 1. fully or highly or 2. less or unknown
     gdf["protecti_1"] = gdf["protection"].apply(
-        lambda x: "fully or highly" if x in ["full", "high"] else "less or unknown")
+        lambda x: "fully or highly" if x in ["full", "high"] else "less or unknown"
+    )
 
-    keep = ["designatio", "establishm", "location_i", "mpa_zone_i", "name", "protection", "protecti_1", "wdpa_id", "year"]
+    keep = [
+        "designatio",
+        "establishm",
+        "location_i",
+        "mpa_zone_i",
+        "name",
+        "protection",
+        "protecti_1",
+        "wdpa_id",
+        "year",
+        "geometry",
+    ]
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
 
     return gdf
@@ -59,15 +77,14 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str,Any]):
 def create_and_update_mpatlas_tileset(
     bucket: str = BUCKET,
     source_file: str = MPATLAS_FILE_NAME,
-    #these are placeholders following the naming convention of other tilesets 
+    # these are placeholders following the naming convention of other tilesets
     tileset_file: str = MPATLAS_TILESET_FILE,
-    tileset_id: str = MPATLAS_TILESET_ID, 
+    tileset_id: str = MPATLAS_TILESET_ID,
     display_name: str = MPATLAST_TILESET_NAME,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
 ):
-
     try:
         if verbose:
             logger.info({"message": f"Creating and updating {display_name} tileset..."})

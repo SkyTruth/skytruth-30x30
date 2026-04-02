@@ -88,7 +88,7 @@ def run_tileset_pipeline(
         ctx.update(cfg.extra)
 
     try:
-        check_credentials()
+        #  check_credentials()
         if cfg.verbose:
             print(f"Starting {ctx['display_name']} tileset pipeline...")
 
@@ -125,7 +125,7 @@ def run_tileset_pipeline(
 
             if cfg.verbose:
                 print(f"Uploading {ctx['display_name']} tileset to Mapbox...")
-            upload_mapbox(temp_dir, ctx)
+            # upload_mapbox(temp_dir, ctx)
 
             return {
                 "temp_dir": str(temp_dir if cfg.keep_temp else None),

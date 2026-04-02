@@ -70,6 +70,7 @@ from src.methods.tileset_processes import (
     create_and_update_country_tileset,
     create_and_update_eez_tileset,
     create_and_update_marine_regions_tileset,
+    create_and_update_mpatlas_tileset,
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
@@ -535,6 +536,11 @@ def dispatch_publisher(
                 tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
                 display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
                 tolerance=map_params.WDPA_TOLERANCE,
+                verbose=verbose,
+            )
+
+        case "create_and_update_mpatlas_tileset":
+            create_and_update_mpatlas_tileset(
                 verbose=verbose,
             )
 
