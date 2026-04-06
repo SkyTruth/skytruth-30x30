@@ -31,8 +31,10 @@ from src.core.params import (
     MPATLAS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
+    TOLERANCES,
 )
 from src.core.processors import add_translations
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
 from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
@@ -69,6 +71,10 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
         "year",
         "geometry",
     ]
+
+    #simplify geometry to match same simplification of Protected Areas
+    gdf["geometry"] = gdf["geometry"].simplify(TOLERANCES[0])
+
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
 
     return gdf
@@ -80,6 +86,7 @@ def create_and_update_mpatlas_tileset(
     tileset_file: str = MPATLAS_TILESET_FILE,
     tileset_id: str = MPATLAS_TILESET_ID,
     display_name: str = MPATLAST_TILESET_NAME,
+    method: str = "update_mpatlas_tileset",
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -104,14 +111,21 @@ def create_and_update_mpatlas_tileset(
             cfg,
             process=mpatlas_process,
         )
-    except Exception as excep:
+    except Exception as e:
         logger.error(
             {
-                "message": "Error creating and updating MPAtlas tileset",
-                "error": str(excep),
+                "message": f"Error creating and updating {display_name} tileset",
+                "error": str(e),
             }
         )
-        raise excep
+        retry_cfg = METHOD_RETRY_CONFIGS.get(method)
+        if retry_cfg:
+            raise ScheduleRetry(
+                delay_seconds=retry_cfg["delay_seconds"],
+                max_retries=retry_cfg["max_retries"],
+                message=f"{display_name} tileset update failed: {e}",
+            ) from e
+        raise
 
 
 def eez_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
