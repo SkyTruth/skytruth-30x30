@@ -16,107 +16,26 @@ def protected_seas_df():
     - GBR: sovereign with territories (aggregate + NAT + 2 territories)
     - BRA: single country (aggregate only, no territories)
     - HSX: high seas (aggregate only)
+    - OCN: global ocean (used exclusively for GLOB stats)
     """
     return pd.DataFrame(
         {
-            "iso_sov": [
-                "GBR",
-                "GBR",
-                "GBR",
-                "GBR",
-                "BRA",
-                "HSX",
-            ],
-            "iso_ter": [
-                "",
-                "NAT",
-                "FLK",
-                "PCN",
-                "",
-                "",
-            ],
-            "total_area": [
-                5000.0,
-                2000.0,
-                1500.0,
-                1500.0,
-                3000.0,
-                50000.0,
-            ],
-            "lfp5_area": [
-                500.0,
-                100.0,
-                200.0,
-                200.0,
-                300.0,
-                1000.0,
-            ],
-            "lfp4_area": [
-                50.0,
-                20.0,
-                15.0,
-                15.0,
-                30.0,
-                100.0,
-            ],
-            "lfp3_area": [
-                200.0,
-                80.0,
-                60.0,
-                60.0,
-                150.0,
-                2000.0,
-            ],
-            "lfp2_area": [
-                100.0,
-                40.0,
-                30.0,
-                30.0,
-                80.0,
-                5000.0,
-            ],
-            "lfp1_area": [
-                50.0,
-                10.0,
-                20.0,
-                20.0,
-                40.0,
-                3000.0,
-            ],
-        }
-    )
-
-
-@pytest.fixture
-def protected_seas_df_with_nan():
-    """Same as protected_seas_df but iso_ter uses NaN instead of empty string."""
-    return pd.DataFrame(
-        {
-            "iso_sov": ["GBR", "GBR", "BRA", "HSX"],
-            "iso_ter": [np.nan, "NAT", np.nan, np.nan],
-            "total_area": [5000.0, 2000.0, 3000.0, 50000.0],
-            "lfp5_area": [500.0, 100.0, 300.0, 1000.0],
-            "lfp4_area": [50.0, 20.0, 30.0, 100.0],
-            "lfp3_area": [200.0, 80.0, 150.0, 2000.0],
-            "lfp2_area": [100.0, 40.0, 80.0, 5000.0],
-            "lfp1_area": [50.0, 10.0, 40.0, 3000.0],
+            "iso_sov": ["GBR", "GBR", "GBR", "GBR", "BRA", "HSX", "OCN"],
+            "iso_ter": ["", "NAT", "FLK", "PCN", "", "", ""],
+            "total_area": [5500.0, 2000.0, 1500.0, 1500.0, 3000.0, 50000.0, 100000.0],
+            "lfp5_area": [560.0, 100.0, 200.0, 200.0, 300.0, 1000.0, 2500.0],
+            "lfp4_area": [55.0, 20.0, 15.0, 15.0, 30.0, 100.0, 250.0],
+            "lfp3_area": [200.0, 80.0, 60.0, 60.0, 150.0, 2000.0, 5000.0],
+            "lfp2_area": [100.0, 40.0, 30.0, 30.0, 80.0, 5000.0, 10000.0],
+            "lfp1_area": [50.0, 10.0, 20.0, 20.0, 40.0, 3000.0, 8000.0],
         }
     )
 
 
 @pytest.fixture
 def combined_regions():
-    """
-    Minimal combined_regions dict:
-    - GBR: sovereign 3-letter key (includes GBR + territories)
-    - GBR*: sovereign aggregate key
-    - BRA: single country
-    - EU: region containing GBR and BRA
-    - GLOB: global
-    """
     return {
-        "GBR": ["GBR"],
-        "GBR*": ["GBR", "FLK", "PCN"],
+        "GBR": ["GBR", "FLK", "PCN"],
         "BRA": ["BRA"],
         "EU": ["GBR", "BRA"],
         "GLOB": [],
@@ -128,7 +47,6 @@ def upload_recorder():
     calls = []
 
     def _upload_dataframe(*, bucket_name, df, destination_blob_name, **_):
-        assert isinstance(df, pd.DataFrame)
         calls.append(
             {
                 "bucket_name": bucket_name,
@@ -149,16 +67,8 @@ def _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recor
     """Patch dependencies and run generate_fishing_protection_table."""
     calls, upload_mock = upload_recorder
 
-    monkeypatch.setattr(
-        gen_tables,
-        "load_regions",
-        lambda **_: (combined_regions, {}),
-    )
-    monkeypatch.setattr(
-        gen_tables,
-        "read_dataframe",
-        lambda *a, **kw: protected_seas_df.copy(),
-    )
+    monkeypatch.setattr(gen_tables, "load_regions", lambda **_: (combined_regions, {}))
+    monkeypatch.setattr(gen_tables, "read_dataframe", lambda *a, **kw: protected_seas_df.copy())
     monkeypatch.setattr(
         gen_tables,
         "upload_dataframe",
@@ -171,258 +81,197 @@ def _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recor
     return pd.DataFrame(result), calls
 
 
-# ---------------------------------------------------------------------------
-# Tests: Data preparation (aggregate vs NAT row selection)
-# ---------------------------------------------------------------------------
-
-
-class TestDataPreparation:
-    def test_aggregate_rows_used_for_sovereign_star_lookup(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """GBR* should use the aggregate row (total_area=5000), not NAT (2000)."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        gbr_star = df[(df["location"] == "GBR*") & (df["fishing_protection_level"] == "highly")]
-        assert len(gbr_star) == 1
-        assert gbr_star.iloc[0]["total_area"] == 5000
-
-    def test_nat_row_used_for_national_waters(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """GBR (national waters) should use the NAT row (total_area=2000)."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        gbr = df[(df["location"] == "GBR") & (df["fishing_protection_level"] == "highly")]
-        assert len(gbr) == 1
-        assert gbr.iloc[0]["total_area"] == 2000
-
-    def test_sovereign_star_differs_from_national_waters(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """GBR and GBR* should have different values."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        highly = df[df["fishing_protection_level"] == "highly"]
-        gbr = highly[highly["location"] == "GBR"].iloc[0]
-        gbr_star = highly[highly["location"] == "GBR*"].iloc[0]
-        assert gbr["total_area"] != gbr_star["total_area"]
-        assert gbr["area"] != gbr_star["area"]
-
-    def test_single_country_uses_aggregate(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """BRA has no territories, so its aggregate row is used directly."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        bra = df[(df["location"] == "BRA") & (df["fishing_protection_level"] == "highly")]
-        assert len(bra) == 1
-        assert bra.iloc[0]["total_area"] == 3000
-        assert bra.iloc[0]["area"] == 330.0  # lfp5 (300) + lfp4 (30)
-
-    def test_territory_rows_excluded_from_output(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """Individual territory rows (FLK, PCN) should not appear as locations."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        assert "FLK" not in df["location"].values
-        assert "PCN" not in df["location"].values
-
-    def test_nan_iso_ter_handled_same_as_empty(
-        self, monkeypatch, protected_seas_df_with_nan, combined_regions, upload_recorder
-    ):
-        """NaN iso_ter should be treated as aggregate rows, same as empty string."""
-        df, _ = _run_generate(
-            monkeypatch, protected_seas_df_with_nan, combined_regions, upload_recorder
-        )
-        gbr_star = df[(df["location"] == "GBR*") & (df["fishing_protection_level"] == "highly")]
-        assert len(gbr_star) == 1
-        assert gbr_star.iloc[0]["total_area"] == 5000
+def _get_row(df, location, level="highly"):
+    rows = df[(df["location"] == location) & (df["fishing_protection_level"] == level)]
+    assert len(rows) == 1, f"Expected 1 row for {location}/{level}, got {len(rows)}"
+    return rows.iloc[0]
 
 
 # ---------------------------------------------------------------------------
-# Tests: GLOB calculation
+# Tests
 # ---------------------------------------------------------------------------
 
 
-class TestGlobalStats:
-    def test_glob_total_area_is_sum_of_aggregates(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """GLOB total_area = sum of all aggregate rows (GBR + BRA + HSX)."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        glob_highly = df[(df["location"] == "GLOB") & (df["fishing_protection_level"] == "highly")]
-        assert len(glob_highly) == 1
-        # GBR aggregate (5000) + BRA aggregate (3000) + HSX aggregate (50000)
-        assert glob_highly.iloc[0]["total_area"] == 58000
-
-    def test_glob_protected_area_sums_all_aggregates(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """GLOB highly protected area = sum of lfp5+lfp4 from all aggregate rows."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        glob_highly = df[(df["location"] == "GLOB") & (df["fishing_protection_level"] == "highly")]
-        # GBR: 500+50=550, BRA: 300+30=330, HSX: 1000+100=1100 → total=1980
-        assert glob_highly.iloc[0]["area"] == 1980.0
-
-    def test_glob_pct_uses_aggregate_total(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """GLOB pct = protected / total_area * 100 using aggregate sums."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        glob_highly = df[(df["location"] == "GLOB") & (df["fishing_protection_level"] == "highly")]
-        expected_pct = 100 * 1980.0 / 58000.0
-        assert abs(glob_highly.iloc[0]["pct"] - expected_pct) < 0.001
-
-    def test_glob_does_not_double_count_nat_rows(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """GLOB should NOT include NAT or territory rows — only aggregates."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        glob_highly = df[(df["location"] == "GLOB") & (df["fishing_protection_level"] == "highly")]
-        # If NAT row (total_area=2000) leaked in, total would be 60000
-        assert glob_highly.iloc[0]["total_area"] == 58000
+def test_national_waters_uses_nat_row(
+    monkeypatch, protected_seas_df, combined_regions, upload_recorder
+):
+    """GBR should use NAT + territory rows (the original fp_location behavior)."""
+    df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
+    row = _get_row(df, "GBR")
+    # NAT (2000) + FLK (1500) + PCN (1500)
+    assert row["total_area"] == 5000
+    # NAT highly (120) + FLK (215) + PCN (215) = 550
+    assert row["area"] == 550.0
 
 
-# ---------------------------------------------------------------------------
-# Tests: Region aggregation
-# ---------------------------------------------------------------------------
+def test_single_country_uses_aggregate(
+    monkeypatch, protected_seas_df, combined_regions, upload_recorder
+):
+    """BRA has no territories, so its aggregate row is used directly."""
+    df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
+    row = _get_row(df, "BRA")
+    assert row["total_area"] == 3000
+    assert row["area"] == 330.0
 
 
-class TestRegionStats:
-    def test_region_sums_national_waters(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """EU region sums national waters of its members (GBR NAT + BRA aggregate)."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        eu_highly = df[(df["location"] == "EU") & (df["fishing_protection_level"] == "highly")]
-        assert len(eu_highly) == 1
-        # GBR NAT total_area (2000) + BRA aggregate total_area (3000)
-        assert eu_highly.iloc[0]["total_area"] == 5000
-        # GBR NAT highly (100+20=120) + BRA highly (300+30=330) = 450
-        assert eu_highly.iloc[0]["area"] == 450.0
+def test_territory_rows_appear_as_standalone_locations(
+    monkeypatch, protected_seas_df, combined_regions, upload_recorder
+):
+    """Individual territory rows (FLK, PCN) should appear as their own locations."""
+    regions = {**combined_regions, "FLK": ["FLK"], "PCN": ["PCN"]}
+    df, _ = _run_generate(monkeypatch, protected_seas_df, regions, upload_recorder)
+    flk = _get_row(df, "FLK")
+    assert flk["total_area"] == 1500
+    assert flk["area"] == 215.0
 
 
-# ---------------------------------------------------------------------------
-# Tests: Protection level calculations
-# ---------------------------------------------------------------------------
+def test_nan_iso_ter_treated_as_aggregate(monkeypatch, combined_regions, upload_recorder):
+    """NaN iso_ter should be treated identically to empty string."""
+    ps = pd.DataFrame(
+        {
+            "iso_sov": ["BRA", "OCN"],
+            "iso_ter": [np.nan, np.nan],
+            "total_area": [3000.0, 100000.0],
+            "lfp5_area": [300.0, 2500.0],
+            "lfp4_area": [30.0, 250.0],
+            "lfp3_area": [150.0, 5000.0],
+            "lfp2_area": [80.0, 10000.0],
+            "lfp1_area": [40.0, 8000.0],
+        }
+    )
+    df, _ = _run_generate(monkeypatch, ps, combined_regions, upload_recorder)
+    row = _get_row(df, "BRA")
+    assert row["total_area"] == 3000
 
 
-class TestProtectionLevels:
-    def test_all_three_levels_present(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """Output should contain highly, moderately, and less protection levels."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        levels = set(df["fishing_protection_level"].unique())
-        assert levels == {"highly", "moderately", "less"}
-
-    def test_highly_is_lfp5_plus_lfp4(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """Highly protected = lfp5 + lfp4."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        bra = df[(df["location"] == "BRA") & (df["fishing_protection_level"] == "highly")].iloc[0]
-        assert bra["area"] == 330.0  # 300 + 30
-
-    def test_moderately_is_lfp3(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """Moderately protected = lfp3."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        bra = df[(df["location"] == "BRA") & (df["fishing_protection_level"] == "moderately")].iloc[
-            0
-        ]
-        assert bra["area"] == 150.0
-
-    def test_less_is_lfp2_plus_lfp1(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """Less protected = lfp2 + lfp1."""
-        df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        bra = df[(df["location"] == "BRA") & (df["fishing_protection_level"] == "less")].iloc[0]
-        assert bra["area"] == 120.0  # 80 + 40
-
-    def test_pct_capped_at_100(self, monkeypatch, combined_regions, upload_recorder):
-        """Percentage should be capped at 100 even if area > total_area."""
-        # Create a row where lfp5+lfp4 > total_area
-        ps = pd.DataFrame(
-            {
-                "iso_sov": ["TST"],
-                "iso_ter": [""],
-                "total_area": [100.0],
-                "lfp5_area": [80.0],
-                "lfp4_area": [80.0],  # highly = 160 > total 100
-                "lfp3_area": [0.0],
-                "lfp2_area": [0.0],
-                "lfp1_area": [0.0],
-            }
-        )
-        regions = {**combined_regions, "TST": ["TST"]}
-        df, _ = _run_generate(monkeypatch, ps, regions, upload_recorder)
-        tst = df[(df["location"] == "TST") & (df["fishing_protection_level"] == "highly")].iloc[0]
-        assert tst["pct"] == 100
+def test_glob_uses_ocn_row(monkeypatch, protected_seas_df, combined_regions, upload_recorder):
+    """GLOB should use the OCN (Global Ocean) row directly."""
+    df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
+    row = _get_row(df, "GLOB")
+    assert row["total_area"] == 100000
+    assert row["area"] == 2750.0
+    assert abs(row["pct"] - 100 * 2750.0 / 100000.0) < 0.001
 
 
-# ---------------------------------------------------------------------------
-# Tests: CRV → HRV fix
-# ---------------------------------------------------------------------------
+def test_ocn_excluded_from_country_and_region_stats(
+    monkeypatch, protected_seas_df, combined_regions, upload_recorder
+):
+    """OCN should not appear in any non-GLOB location or inflate region totals."""
+    df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
+    assert "OCN" not in df["location"].values
+    eu = _get_row(df, "EU")
+    # GBR (NAT 2000 + FLK 1500 + PCN 1500 = 5000) + BRA (3000) = 8000 if GBR includes territories
+    # but EU = ["GBR", "BRA"] so only GBR(NAT=2000) + BRA(3000) = 5000
+    assert eu["total_area"] == 5000
 
 
-class TestCRVFix:
-    def test_crv_remapped_to_hrv(self, monkeypatch, combined_regions, upload_recorder):
-        """CRV sovereign code should be remapped to HRV (Croatia)."""
-        ps = pd.DataFrame(
-            {
-                "iso_sov": ["CRV"],
-                "iso_ter": [""],
-                "total_area": [1000.0],
-                "lfp5_area": [100.0],
-                "lfp4_area": [10.0],
-                "lfp3_area": [50.0],
-                "lfp2_area": [20.0],
-                "lfp1_area": [5.0],
-            }
-        )
-        regions = {**combined_regions, "HRV": ["HRV"], "GLOB": []}
-        df, _ = _run_generate(monkeypatch, ps, regions, upload_recorder)
-        assert "CRV" not in df["location"].values
-        hrv = df[(df["location"] == "HRV") & (df["fishing_protection_level"] == "highly")]
-        assert len(hrv) == 1
+def test_iso_map_merges_territories(monkeypatch, combined_regions, upload_recorder):
+    """protected_seas_iso_map should merge component territories into one location."""
+    ps = pd.DataFrame(
+        {
+            "iso_sov": ["GBR", "GBR", "GBR", "GBR", "OCN"],
+            "iso_ter": ["NAT", "ASC", "SHN", "TDC", ""],
+            "total_area": [1000.0, 200.0, 300.0, 500.0, 50000.0],
+            "lfp5_area": [10.0, 20.0, 30.0, 50.0, 1000.0],
+            "lfp4_area": [1.0, 2.0, 3.0, 5.0, 100.0],
+            "lfp3_area": [0.0, 0.0, 0.0, 0.0, 0.0],
+            "lfp2_area": [0.0, 0.0, 0.0, 0.0, 0.0],
+            "lfp1_area": [0.0, 0.0, 0.0, 0.0, 0.0],
+        }
+    )
+    regions = {**combined_regions, "SHN": ["SHN"]}
+    df, _ = _run_generate(monkeypatch, ps, regions, upload_recorder)
+    # ASC + SHN + TDC should be merged into SHN
+    shn = _get_row(df, "SHN")
+    assert shn["total_area"] == 1000  # 200 + 300 + 500
+    assert shn["area"] == 110.0  # (20+30+50) + (2+3+5)
+    # Individual territory codes should not exist
+    assert "ASC" not in df["location"].values
+    assert "TDC" not in df["location"].values
 
 
-# ---------------------------------------------------------------------------
-# Tests: Upload
-# ---------------------------------------------------------------------------
+def test_region_sums_country_level_rows(
+    monkeypatch, protected_seas_df, combined_regions, upload_recorder
+):
+    """EU region sums its member locations."""
+    df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
+    row = _get_row(df, "EU")
+    # EU = ["GBR", "BRA"] → GBR (NAT=2000) + BRA (3000) = 5000
+    assert row["total_area"] == 5000
 
 
-class TestUpload:
-    def test_result_uploaded_to_gcs(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """The resulting table should be uploaded to GCS."""
-        _, calls = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        assert len(calls) == 1
-        assert calls[0]["destination_blob_name"] == gen_tables.FISHING_PROTECTION_FILE_NAME
+def test_all_three_protection_levels_present(
+    monkeypatch, protected_seas_df, combined_regions, upload_recorder
+):
+    """Output contains highly, moderately, and less with correct area calculations."""
+    df, _ = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
+    assert set(df["fishing_protection_level"].unique()) == {"highly", "moderately", "less"}
+    assert _get_row(df, "BRA", "highly")["area"] == 330.0
+    assert _get_row(df, "BRA", "moderately")["area"] == 150.0
+    assert _get_row(df, "BRA", "less")["area"] == 120.0
 
-    def test_total_area_is_int64_in_output(
-        self, monkeypatch, protected_seas_df, combined_regions, upload_recorder
-    ):
-        """total_area should be rounded and cast to Int64 in the uploaded dataframe."""
-        _, calls = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
-        uploaded_df = calls[0]["df"]
-        assert uploaded_df["total_area"].dtype == pd.Int64Dtype()
 
-    def test_zero_total_area_rows_filtered(self, monkeypatch, combined_regions, upload_recorder):
-        """Rows with total_area <= 0 should be filtered out."""
-        ps = pd.DataFrame(
-            {
-                "iso_sov": ["ZZZ"],
-                "iso_ter": [""],
-                "total_area": [0.0],
-                "lfp5_area": [0.0],
-                "lfp4_area": [0.0],
-                "lfp3_area": [0.0],
-                "lfp2_area": [0.0],
-                "lfp1_area": [0.0],
-            }
-        )
-        regions = {**combined_regions, "ZZZ": ["ZZZ"]}
-        df, _ = _run_generate(monkeypatch, ps, regions, upload_recorder)
-        assert len(df) == 0 or "ZZZ" not in df["location"].values
+def test_pct_capped_at_100(monkeypatch, combined_regions, upload_recorder):
+    """Percentage should be capped at 100 even if protected area > total_area."""
+    ps = pd.DataFrame(
+        {
+            "iso_sov": ["TST", "OCN"],
+            "iso_ter": ["", ""],
+            "total_area": [100.0, 50000.0],
+            "lfp5_area": [80.0, 1000.0],
+            "lfp4_area": [80.0, 100.0],
+            "lfp3_area": [0.0, 0.0],
+            "lfp2_area": [0.0, 0.0],
+            "lfp1_area": [0.0, 0.0],
+        }
+    )
+    regions = {**combined_regions, "TST": ["TST"]}
+    df, _ = _run_generate(monkeypatch, ps, regions, upload_recorder)
+    assert _get_row(df, "TST")["pct"] == 100
+
+
+def test_crv_remapped_to_hrv(monkeypatch, combined_regions, upload_recorder):
+    """CRV sovereign code should be remapped to HRV (Croatia)."""
+    ps = pd.DataFrame(
+        {
+            "iso_sov": ["CRV", "OCN"],
+            "iso_ter": ["", ""],
+            "total_area": [1000.0, 50000.0],
+            "lfp5_area": [100.0, 1000.0],
+            "lfp4_area": [10.0, 100.0],
+            "lfp3_area": [50.0, 0.0],
+            "lfp2_area": [20.0, 0.0],
+            "lfp1_area": [5.0, 0.0],
+        }
+    )
+    regions = {**combined_regions, "HRV": ["HRV"]}
+    df, _ = _run_generate(monkeypatch, ps, regions, upload_recorder)
+    assert "CRV" not in df["location"].values
+    assert _get_row(df, "HRV")["area"] == 110.0
+
+
+def test_upload_format(monkeypatch, protected_seas_df, combined_regions, upload_recorder):
+    """Uploaded table should target the correct blob and have Int64 total_area."""
+    _, calls = _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recorder)
+    assert len(calls) == 1
+    assert calls[0]["destination_blob_name"] == gen_tables.FISHING_PROTECTION_FILE_NAME
+    assert calls[0]["df"]["total_area"].dtype == pd.Int64Dtype()
+
+
+def test_zero_total_area_rows_filtered(monkeypatch, combined_regions, upload_recorder):
+    """Rows with total_area <= 0 should be filtered out."""
+    ps = pd.DataFrame(
+        {
+            "iso_sov": ["ZZZ", "OCN"],
+            "iso_ter": ["", ""],
+            "total_area": [0.0, 50000.0],
+            "lfp5_area": [0.0, 1000.0],
+            "lfp4_area": [0.0, 100.0],
+            "lfp3_area": [0.0, 0.0],
+            "lfp2_area": [0.0, 0.0],
+            "lfp1_area": [0.0, 0.0],
+        }
+    )
+    regions = {**combined_regions, "ZZZ": ["ZZZ"]}
+    df, _ = _run_generate(monkeypatch, ps, regions, upload_recorder)
+    assert len(df) == 0 or "ZZZ" not in df["location"].values

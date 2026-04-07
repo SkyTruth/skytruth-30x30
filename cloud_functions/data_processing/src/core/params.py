@@ -189,7 +189,7 @@ GLOBAL_MANGROVE_AREA_FILE_NAME = "intermediates/total_area/global_mangrove_area.
 HABITAT_PROTECTION_FILE_NAME = f"tables/habitat_protection_{today_formatted}.csv"
 FISHING_PROTECTION_FILE_NAME = f"tables/fishing_protection_{today_formatted}_test.csv"
 PROTECTION_COVERAGE_FILE_NAME = f"tables/protection_coverage_{today_formatted}.csv"
-PROTECTION_LEVEL_FILE_NAME = f"tables/protection_level_{today_formatted}.csv"
+PROTECTION_LEVEL_FILE_NAME = f"tables/protection_level_{today_formatted}_test.csv"
 
 # ------------------------------------------------------------
 #                            MISC
