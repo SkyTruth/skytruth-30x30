@@ -47,13 +47,6 @@ MARINE_PA_TILESET_FILE = f"maps/marine_pas_{today_formatted}.mbtiles"
 WDPA_TOLERANCE = 0.001
 
 # ------------------------
-# MPAtlas_old [Retired]
-# ------------------------
-#MPATLAS_TILESET_ID = "mpaatlas_tiles"
-#MPATLAST_TILESET_NAME = "mpa_atlas"
-#MPATLAS_TILESET_FILE = f"maps/mpa_atlas_{today_formatted}.mbtiles"
-
-# ------------------------
 # MPAtlas_New
 # ------------------------
 MPATLAS_TILESET_ID = "mpatlas"

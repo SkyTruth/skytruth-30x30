@@ -399,8 +399,11 @@ def dispatch_publisher(
             step_list = ["update_protection_coverage_stats"]
 
         case "generate_marine_protection_level_stats_table":
-            _ = generate_marine_protection_level_stats_table(verbose=verbose)
-            step_list = ["update_mpaa_protection_level_stats"]
+            updates = generate_marine_protection_level_stats_table(verbose=verbose)
+            if updates:
+                step_list = ["update_mpaa_protection_level_stats"]
+                if env == "production":
+                    step_list.extend(["create_and_update_mpatlas_tileset"])
 
         case "generate_fishing_protection_table":
             _ = generate_fishing_protection_table(verbose=verbose)
