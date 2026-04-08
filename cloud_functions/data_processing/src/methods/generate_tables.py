@@ -462,12 +462,10 @@ def generate_marine_protection_level_stats_table(
     def get_group_stats(df, loc, relations, protection_level="fully-highly-protected"):
         if loc == "GLOB":
             df_group = df
-            total_area = df["total_area"].sum()
-        elif loc in relations:
+            total_area = GLOBAL_MARINE_AREA_KM2
+        else:
             df_group = df[df["location"].isin(relations[loc])]
             total_area = df_group["total_area"].sum()
-        else:
-            return None
 
         if len(df_group) > 0:
             total_protected_area = df_group["protected_area"].sum()
