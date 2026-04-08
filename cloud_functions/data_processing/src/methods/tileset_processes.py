@@ -48,7 +48,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
             "designation": "designatio",
             "establishment_stage": "establishm",
             "country": "location_i",
-            "mpa_zone_id": "mpa_zone_i",
+            "zone_id": "zone_id",
             "protection_mpaguide_level": "protection",
             "implemented_date": "year",
         }
@@ -63,7 +63,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
         "designatio",
         "establishm",
         "location_i",
-        "mpa_zone_i",
+        "zone_id",
         "name",
         "protection",
         "protecti_1",
@@ -74,11 +74,11 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
 
     # simplify geometry to match same simplification of Protected Areas
     gdf["geometry"] = gdf["geometry"].simplify(TOLERANCES[0])
+    gdf.make_valid()
 
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
 
     return gdf
-
 
 def create_and_update_mpatlas_tileset(
     bucket: str = BUCKET,
