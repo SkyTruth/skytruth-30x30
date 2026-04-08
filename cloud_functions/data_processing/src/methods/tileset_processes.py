@@ -74,7 +74,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
 
     # simplify geometry to match same simplification of Protected Areas
     gdf["geometry"] = gdf["geometry"].simplify(TOLERANCES[0])
-    gdf.make_valid()
+    gdf["geometry"] = gdf["geometry"].make_valid()
 
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
 
