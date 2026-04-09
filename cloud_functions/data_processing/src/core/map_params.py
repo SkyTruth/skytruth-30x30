@@ -44,5 +44,11 @@ TERRESTRIAL_PA_TILESET_FILE = f"maps/terrestrial_pas_{today_formatted}.mbtiles"
 MARINE_PA_TILESET_ID = "marine_pas"
 MARINE_PA_TILESET_NAME = "Marine PAs"
 MARINE_PA_TILESET_FILE = f"maps/marine_pas_{today_formatted}.mbtiles"
-
 WDPA_TOLERANCE = 0.001
+
+# ------------------------
+# MPAtlas_New
+# ------------------------
+MPATLAS_TILESET_ID = "mpatlas"
+MPATLAST_TILESET_NAME = "MPATLAS"
+MPATLAS_TILESET_FILE = f"maps/mpatlas_{today_formatted}.mbtiles"

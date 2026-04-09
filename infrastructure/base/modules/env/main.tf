@@ -366,7 +366,6 @@ module "data_pipes_cloud_function" {
   available_cpu                    = var.data_processing_available_cpu
   max_instance_count               = var.data_processing_max_instance_count
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
-  additional_invokers              = [google_service_account.scheduler_invoker.email]
 }
 
 
@@ -493,7 +492,14 @@ resource "google_service_account" "scheduler_invoker" {
   display_name = "${var.project_name} Cloud Scheduler Invoker"
 }
 
+resource "google_cloud_run_service_iam_member" "scheduler_invoker" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+  service  = module.data_pipes_cloud_function.service_name
 
+  role   = "roles/run.invoker"
+  member = "serviceAccount:${google_service_account.scheduler_invoker.email}"
+}
 
 module "data_pipes_scheduler" {
   source                   = "../cloud_scheduler"
