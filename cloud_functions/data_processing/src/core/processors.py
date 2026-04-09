@@ -515,6 +515,7 @@ def fp_location(df: pd.DataFrame) -> pd.DataFrame:
         return df.drop(columns=["iso_ter"])
 
     df = df.copy()
+    df["iso_ter"] = df["iso_ter"].fillna("")
     return df.groupby("iso_sov", group_keys=False).apply(_process_one_country)
 
 

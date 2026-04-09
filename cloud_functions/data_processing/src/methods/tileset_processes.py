@@ -54,7 +54,9 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
         }
     )
 
-    # Create a new bucketed column based on the protection value, returning only 1. fully or highly or 2. less or unknown
+    # Create a new bucketed column based on the protection value, returning only
+    # 1. fully or highly or
+    # 2. less or unknown
     gdf["protecti_1"] = gdf["protection"].apply(
         lambda x: "fully or highly" if x in ["full", "high"] else "less or unknown"
     )
@@ -79,6 +81,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
 
     return gdf
+
 
 def create_and_update_mpatlas_tileset(
     bucket: str = BUCKET,
@@ -378,6 +381,7 @@ def create_and_update_protected_area_tileset(
     tileset_id: str,
     display_name: str,
     tolerance: float,
+    method: str,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -402,14 +406,21 @@ def create_and_update_protected_area_tileset(
             cfg,
             process=protected_area_process,
         )
-    except Exception as excep:
+    except Exception as e:
         logger.error(
             {
-                "message": "Error creating and updating Terrestrial Regions tileset",
-                "error": str(excep),
+                "message": f"Error creating and updating {display_name} tileset",
+                "error": str(e),
             }
         )
-        raise excep
+        retry_cfg = METHOD_RETRY_CONFIGS.get(method)
+        if retry_cfg:
+            raise ScheduleRetry(
+                delay_seconds=retry_cfg["delay_seconds"],
+                max_retries=retry_cfg["max_retries"],
+                message=f"{display_name} tileset update failed: {e}",
+            ) from e
+        raise
 
 
 def protected_area_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):

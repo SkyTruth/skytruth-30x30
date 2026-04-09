@@ -4,6 +4,7 @@ import pytest
 from shapely.geometry import Point
 
 import src.methods.tileset_processes as tp
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 
 
 @pytest.fixture
@@ -88,6 +89,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "tileset_id": "pas.id",
                 "display_name": "Protected Areas",
                 "tolerance": 3.2,
+                "method": "update_marine_protected_areas_tileset",
             },
             "pas.id.geojson",
             "_3.2.geojson",
@@ -353,6 +355,37 @@ def test_terrestrial_regions_process(monkeypatch):
     assert "location" not in result.columns
     assert "code" not in result.columns
     assert "geometry" in result.columns
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "update_marine_protected_areas_tileset",
+        "update_terrestrial_protected_areas_tileset",
+    ],
+)
+def test_protected_area_tileset_raises_schedule_retry_on_failure(method, monkeypatch):
+    """When the pipeline fails, ScheduleRetry is raised with the correct retry config."""
+
+    def mock_run_tileset_pipeline(cfg, *, process):
+        raise RuntimeError("auth error")
+
+    monkeypatch.setattr(tp, "run_tileset_pipeline", mock_run_tileset_pipeline, raising=True)
+
+    with pytest.raises(ScheduleRetry) as exc_info:
+        tp.create_and_update_protected_area_tileset(
+            bucket="bkt",
+            source_file="pas.geojson",
+            tileset_file="pas.mbtiles",
+            tileset_id="pas.id",
+            display_name="Protected Areas",
+            tolerance=3.2,
+            method=method,
+        )
+
+    cfg = METHOD_RETRY_CONFIGS[method]
+    assert exc_info.value.delay_seconds == cfg["delay_seconds"]
+    assert exc_info.value.max_retries == cfg["max_retries"]
 
 
 def test_protected_area_process():

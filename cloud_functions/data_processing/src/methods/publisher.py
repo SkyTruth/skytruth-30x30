@@ -527,6 +527,7 @@ def dispatch_publisher(
                 tileset_id=map_params.MARINE_PA_TILESET_ID,
                 display_name=map_params.MARINE_PA_TILESET_NAME,
                 tolerance=map_params.WDPA_TOLERANCE,
+                method="update_marine_protected_areas_tileset",
                 verbose=verbose,
             )
 
@@ -538,6 +539,7 @@ def dispatch_publisher(
                 tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
                 display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
                 tolerance=map_params.WDPA_TOLERANCE,
+                method="update_terrestrial_protected_areas_tileset",
                 verbose=verbose,
             )
 

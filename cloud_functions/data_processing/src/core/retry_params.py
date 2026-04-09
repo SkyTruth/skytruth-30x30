@@ -22,6 +22,14 @@ METHOD_RETRY_CONFIGS = {
         "delay_seconds": ONE_DAY,
         "max_retries": 7,
     },
+    "update_marine_protected_areas_tileset": {
+        "delay_seconds": ONE_HOUR,
+        "max_retries": 3,
+    },
+    "update_terrestrial_protected_areas_tileset": {
+        "delay_seconds": ONE_HOUR,
+        "max_retries": 3,
+    },
     "update_mpatlas_tileset": {
         "delay_seconds": ONE_HOUR,
         "max_retries": 3,

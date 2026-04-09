@@ -584,15 +584,13 @@ def generate_fishing_protection_table(
         df,
         loc,
         regions,
-        global_marine_area=361000000,
         fishing_protection_level="highly",
     ):
-        if loc == "GLOB":
-            df_group = df
-            total_area = global_marine_area
-        elif loc in regions:
+        if loc in regions:
             df_group = df[df["location"].isin(regions[loc])]
             total_area = df_group["total_area"].sum()
+        else:
+            return None
 
         return return_stats(df_group, total_area, fishing_protection_level, loc)
 
@@ -600,30 +598,40 @@ def generate_fishing_protection_table(
     if verbose:
         logger.info({"message": "loading country and region groupings"})
     combined_regions, _ = load_regions()
+    combined_regions["GLOB"] = ["GLOB"]
 
     if verbose:
         logger.info(
-            {
-                "message": f"downloading Protected Seas from gs://P{bucket}/{protected_seas_file_name}"
-            }
+            {"message": f"downloading Protected Seas from gs://{bucket}/{protected_seas_file_name}"}
         )
     protected_seas = read_dataframe(bucket, protected_seas_file_name)
-    protected_seas["iso_sov"] = protected_seas["iso_sov"].replace("CRV", "HRV")
+
+    # Map Protected Seas ISO codes that need to be combined into a single
+    # location on our end. Each key is the location code we use, and the
+    # values are the iso_ter codes from Protected Seas to sum into it.
+    # This is because we combine some small locations into a single location.
+    protected_seas_iso_map = {
+        "SHN": ["ASC", "SHN", "TDC"],  # Saint Helena, Ascension and Tristan da Cunha
+        "SJM": ["JMY", "SVB"],  # Svalbard and Jan Mayen
+        "FRA": ["NAT", "CPT"],  # Clipperton Island grouped into France national
+    }
+
+    # Map different ISO codes that protected seas uses for Croatia and Global Waters
+    protected_seas["iso_sov"] = protected_seas["iso_sov"].replace({"CRV": "HRV", "OCN": "GLOB"})
 
     if verbose:
         logger.info({"message": "processing fishing level protection"})
 
-    ps_dict = {
-        "iso_ter": "iso_ter",
-        "iso_sov": "iso_sov",
-        "total_area": "total_area",
-        "lfp5_area": "lfp5_area",
-        "lfp4_area": "lfp4_area",
-        "lfp3_area": "lfp3_area",
-        "lfp2_area": "lfp2_area",
-        "lfp1_area": "lfp1_area",
-    }
-    cols = [i for i in ps_dict]
+    ps_cols = [
+        "iso_ter",
+        "iso_sov",
+        "total_area",
+        "lfp5_area",
+        "lfp4_area",
+        "lfp3_area",
+        "lfp2_area",
+        "lfp1_area",
+    ]
 
     fishing_protection_levels = {
         "highly": ["lfp5_area", "lfp4_area"],
@@ -634,17 +642,25 @@ def generate_fishing_protection_table(
     if verbose:
         logger.info({"message": "processing fishing level protection"})
 
+    lfp_cols = ["lfp5_area", "lfp4_area", "lfp3_area", "lfp2_area", "lfp1_area"]
+
     ps_cl_fp = (
-        protected_seas[cols]
-        .rename(columns=ps_dict)
+        protected_seas[ps_cols]
         .pipe(fp_location)
         .pipe(add_protected_from_fishing_area, fishing_protection_levels)
         .pipe(add_protected_from_fishing_percent, fishing_protection_levels)
-        .pipe(
-            remove_columns,
-            ["lfp5_area", "lfp4_area", "lfp3_area", "lfp2_area", "lfp1_area"],
-        )
+        .pipe(remove_columns, lfp_cols)
     )
+
+    # Merge locations per protected_seas_iso_map: sum the component rows
+    # into a single row for the target location code.
+    for target_loc, source_locs in protected_seas_iso_map.items():
+        mask = ps_cl_fp["location"].isin(source_locs)
+        if not mask.any():
+            continue
+        merged_row = ps_cl_fp[mask].select_dtypes(include="number").sum()
+        merged_row["location"] = target_loc
+        ps_cl_fp = pd.concat([ps_cl_fp[~mask], pd.DataFrame([merged_row])], ignore_index=True)
 
     fishing_protection_table = pd.DataFrame()
     for level in fishing_protection_levels:
