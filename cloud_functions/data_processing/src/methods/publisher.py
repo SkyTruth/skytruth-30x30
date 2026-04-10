@@ -10,12 +10,12 @@ from google.protobuf import timestamp_pb2
 from src.core import map_params
 from src.core.commons import send_slack_alert
 from src.core.params import (
+    ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
+    ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     BUCKET,
     CHUNK_SIZE,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-    ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
-    ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     EEZ_FILE_NAME,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
@@ -34,6 +34,7 @@ from src.core.params import (
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
+from src.core.retry_params import DEFAULT_RETRY_CONFIG, ScheduleRetry
 from src.core.strapi import Strapi
 from src.methods.database_uploads import (
     upload_locations,
@@ -69,6 +70,7 @@ from src.methods.tileset_processes import (
     create_and_update_country_tileset,
     create_and_update_eez_tileset,
     create_and_update_marine_regions_tileset,
+    create_and_update_mpatlas_tileset,
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
@@ -257,7 +259,6 @@ def dispatch_publisher(
     method,
     task_config,
     data,
-    retry_config,
     trigger_next=False,
     env="staging",
     tolerance=TOLERANCES[0],
@@ -265,12 +266,6 @@ def dispatch_publisher(
 ):
     # By default, do not continue onto the next step
     step_list = None
-
-    # By default, if there is a step_list continue to next steps - default to True,
-    # but will be reset to False if method fails and retries are being handled with a
-    # scheduled task. This is so that if a process fails, cont will be set to false
-    # so the following steps are stopped.
-    cont = True
 
     match method:
         case "dry_run":
@@ -363,7 +358,7 @@ def dispatch_publisher(
         #     Downloads
         # ------------------
         case "download_mpatlas":
-            retry_config, cont = download_mpatlas(verbose=verbose)
+            download_mpatlas(verbose=verbose)
             step_list = ["generate_marine_protection_level_stats_table"]
 
         case "download_protected_seas":
@@ -375,7 +370,7 @@ def dispatch_publisher(
             step_list = ["generate_protection_coverage_stats_table"]
 
         case "download_protected_planet_pas":
-            retry_config, cont = download_and_process_protected_planet_pas(
+            download_and_process_protected_planet_pas(
                 verbose=verbose,
                 tolerance=tolerance,
                 batch_size=1000,
@@ -406,6 +401,8 @@ def dispatch_publisher(
         case "generate_marine_protection_level_stats_table":
             _ = generate_marine_protection_level_stats_table(verbose=verbose)
             step_list = ["update_mpaa_protection_level_stats"]
+            if env == "production":
+                step_list.extend(["update_mpatlas_tileset"])
 
         case "generate_fishing_protection_table":
             _ = generate_fishing_protection_table(verbose=verbose)
@@ -454,8 +451,7 @@ def dispatch_publisher(
         # ------------------
 
         case "update_locations":
-            resp = upload_locations(request=data, verbose=verbose)
-            return resp, retry_config
+            return upload_locations(request=data, verbose=verbose)
 
         case "update_protection_coverage_stats":
             client = Strapi()
@@ -463,7 +459,7 @@ def dispatch_publisher(
                 filename=PROTECTION_COVERAGE_FILE_NAME,
                 upload_function=client.upsert_protection_coverage_stats,
                 verbose=verbose,
-            ), retry_config
+            )
 
         case "update_mpaa_protection_level_stats":
             client = Strapi()
@@ -471,7 +467,7 @@ def dispatch_publisher(
                 filename=PROTECTION_LEVEL_FILE_NAME,
                 upload_function=client.upsert_mpaa_protection_level_stats,
                 verbose=verbose,
-            ), retry_config
+            )
 
         case "update_fishing_protection_stats":
             client = Strapi()
@@ -479,7 +475,7 @@ def dispatch_publisher(
                 filename=FISHING_PROTECTION_FILE_NAME,
                 upload_function=client.upsert_fishing_protection_level_stats,
                 verbose=verbose,
-            ), retry_config
+            )
 
         case "update_habitat_protection_stats":
             client = Strapi()
@@ -487,7 +483,7 @@ def dispatch_publisher(
                 filename=HABITAT_PROTECTION_FILE_NAME,
                 upload_function=client.upsert_habitat_stats,
                 verbose=verbose,
-            ), retry_config
+            )
 
         case "update_protected_areas":
             update_segment = data.get("UPDATE_SEGMENT", "all")
@@ -531,6 +527,7 @@ def dispatch_publisher(
                 tileset_id=map_params.MARINE_PA_TILESET_ID,
                 display_name=map_params.MARINE_PA_TILESET_NAME,
                 tolerance=map_params.WDPA_TOLERANCE,
+                method="update_marine_protected_areas_tileset",
                 verbose=verbose,
             )
 
@@ -542,16 +539,22 @@ def dispatch_publisher(
                 tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
                 display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
                 tolerance=map_params.WDPA_TOLERANCE,
+                method="update_terrestrial_protected_areas_tileset",
+                verbose=verbose,
+            )
+
+        case "update_mpatlas_tileset":
+            create_and_update_mpatlas_tileset(
                 verbose=verbose,
             )
 
         case _:
             logger.warning({"message": f"METHOD: {method} not a valid option"})
 
-    if trigger_next and cont and step_list:
+    if trigger_next and step_list:
         pipe_next_steps(step_list, task_config, LONG_RUNNING_TASKS, verbose=verbose)
 
-    return ("OK", 200), retry_config
+    return "OK", 200
 
 
 def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
@@ -560,7 +563,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
     Returns (message, status_code_like).
     """
 
-    st = datetime.now()
+    start_time = datetime.now()
 
     project = os.environ.get("PROJECT", "")
     env = os.environ.get("ENVIRONMENT", "")
@@ -569,25 +572,23 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
     method = data.get("METHOD", "dry_run")
     trigger_next = data.get("TRIGGER_NEXT", False)
     tolerance = data.get("TOLERANCE", TOLERANCES[0])
-    max_retries = data.get("MAX_RETRIES", 0)
+    max_retries = data.get("MAX_RETRIES", DEFAULT_RETRY_CONFIG["max_retries"])
     attempt = data.get("attempt", 1)
 
+    task_config = {
+        "PROJECT": project,
+        "LOCATION": location,
+        "QUEUE_NAME": data.get("QUEUE_NAME", ""),
+        "JOB_NAME": data.get("JOB_NAME", ""),
+        "TARGET_URL": data.get("TARGET_URL", ""),
+        "INVOKER_SA": data.get("INVOKER_SA", ""),
+        "TOLERANCE": tolerance,
+        "TRIGGER_NEXT": trigger_next,
+        "MAX_RETRIES": max_retries,
+        "attempt": attempt,
+    }
+
     try:
-        task_config = {
-            "PROJECT": project,
-            "LOCATION": location,
-            "QUEUE_NAME": data.get("QUEUE_NAME", ""),
-            "JOB_NAME": data.get("JOB_NAME", ""),
-            "TARGET_URL": data.get("TARGET_URL", ""),
-            "INVOKER_SA": data.get("INVOKER_SA", ""),
-            "TOLERANCE": tolerance,
-            "TRIGGER_NEXT": trigger_next,
-            "MAX_RETRIES": max_retries,
-            "attempt": attempt,
-        }
-
-        retry_config = {"delay_seconds": (attempt - 1) * 60, "max_retries": max_retries}
-
         logger.info({"message": f"Starting METHOD: {method}"})
 
         # Determine whether we are running inside a Cloud Run Job (RUN_PAYLOAD set)
@@ -606,11 +607,10 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
             return resp
 
         # Normal (non-long-running) execution path
-        resp, retry_config = dispatch_publisher(
+        resp = dispatch_publisher(
             method,
             task_config,
             data,
-            retry_config,
             trigger_next=trigger_next,
             env=env,
             tolerance=tolerance,
@@ -624,12 +624,39 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
 
         return json.dumps(resp), 200
 
-    except Exception as e:
-        retries = retry_config["max_retries"]
-        if attempt < retries + 1:
+    except ScheduleRetry as e:
+        if attempt < e.max_retries:
             logger.warning(
                 {
-                    "message": f"METHOD {method} failed attempt {attempt}: {e} of {retries + 1}",
+                    "message": (
+                        f"METHOD {method} failed"
+                        f" (attempt {attempt} of {e.max_retries})"
+                        " — scheduling retry"
+                    ),
+                    "error": str(e),
+                }
+            )
+            task_config["attempt"] = attempt + 1
+            task_config["MAX_RETRIES"] = e.max_retries
+            payload = {"METHOD": method, **task_config}
+            create_task(
+                payload=payload,
+                verbose=verbose,
+                delay_seconds=e.delay_seconds,
+            )
+            return f"Retrying in {e.delay_seconds} seconds", 202
+        else:
+            msg = f"METHOD {method} failed after {attempt} attempts"
+            logger.error({"message": msg, "error": str(e)})
+            send_slack_alert(webhook_url, f"{msg} on {env.upper()}")
+            return f"{msg}: {e}", 500
+
+    except Exception as e:
+        if attempt <= max_retries:
+            delay_seconds = DEFAULT_RETRY_CONFIG["delay_seconds"](attempt)
+            logger.warning(
+                {
+                    "message": (f"METHOD {method} failed attempt {attempt} of {max_retries}"),
                     "error": str(e),
                     "traceback": traceback.format_exc(),
                 }
@@ -637,9 +664,11 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
             task_config["attempt"] = attempt + 1
             payload = {"METHOD": method, **task_config}
             create_task(
-                payload=payload, verbose=verbose, delay_seconds=retry_config["delay_seconds"]
+                payload=payload,
+                verbose=verbose,
+                delay_seconds=delay_seconds,
             )
-            return "retrying", 202
+            return f"Retrying in {e.delay_seconds} seconds", 202
         else:
             logger.error(
                 {
@@ -649,11 +678,9 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
                 }
             )
             send_slack_alert(webhook_url, f"METHOD {method} failed on {env.upper()}")
-            return f"METHOD {method} failed after {attempt} attempts: {e}", 208
+            return f"METHOD {method} failed after {attempt} attempts: {e}", 500
 
     finally:
         release_memory(verbose=verbose)
-        fn = datetime.now()
-        logger.info(
-            {"message": f"{method} Completed in {(fn - st).total_seconds() / 60:.2f} minutes"}
-        )
+        elapsed = (datetime.now() - start_time).total_seconds() / 60
+        logger.info({"message": f"{method} Completed in {elapsed:.2f} minutes"})

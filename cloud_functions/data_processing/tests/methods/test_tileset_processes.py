@@ -4,6 +4,7 @@ import pytest
 from shapely.geometry import Point
 
 import src.methods.tileset_processes as tp
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 
 
 @pytest.fixture
@@ -88,10 +89,24 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "tileset_id": "pas.id",
                 "display_name": "Protected Areas",
                 "tolerance": 3.2,
+                "method": "update_marine_protected_areas_tileset",
             },
             "pas.id.geojson",
             "_3.2.geojson",
             tp.protected_area_process,
+        ),
+        (
+            "mpatlas",
+            {
+                "bucket": "bkt",
+                "source_file": "mpa.geojson",
+                "tileset_file": "mpa.mbtiles",
+                "tileset_id": "mpa.id",
+                "display_name": "MPAtlas",
+            },
+            "mpa.id.geojson",
+            ".geojson",  # no tolerance suffix since we pass source_file directly
+            tp.mpatlas_process,
         ),
     ],
 )
@@ -129,6 +144,8 @@ def test_wrappers_call_pipeline_with_expected_config(
         tp.create_and_update_terrestrial_regions_tileset(**kwargs)
     elif which == "protected":
         tp.create_and_update_protected_area_tileset(**kwargs)
+    elif which == "mpatlas":
+        tp.create_and_update_mpatlas_tileset(**kwargs)
     else:
         raise AssertionError("Unknown case")
 
@@ -142,6 +159,45 @@ def test_wrappers_call_pipeline_with_expected_config(
     )
     assert cfg.tileset_blob_name == kwargs["tileset_file"]
     assert cfg.bucket == kwargs["bucket"]
+
+
+def test_mpatlas_process():
+    gdf = gpd.GeoDataFrame(
+        {
+            "designation": ["MPA", "MPA", "MPA"],
+            "establishment_stage": ["implemented", "implemented", "implemented"],
+            "country": ["ABNJ", "ABNJ", "ABNJ"],
+            "zone_id": ["1", "2", "3"],
+            "protection_mpaguide_level": ["high", "full", "low"],
+            "name": ["A", "B", "C"],
+            "wdpa_id": ["1", "2", "3"],
+            "year": ["2017", "2018", "2019"],
+        },
+        geometry=gpd.GeoSeries.from_wkt(["POINT (0 0)", "POINT (1 1)", "POINT (2 2)"]),
+        crs="EPSG:4326",
+    )
+
+    out = tp.mpatlas_process(gdf.copy(), {"verbose": False})
+    expected = {
+        "designatio",
+        "establishm",
+        "location_i",
+        "zone_id",
+        "name",
+        "protection",
+        "protecti_1",
+        "wdpa_id",
+        "year",
+        "geometry",
+    }
+
+    # "high" and "full" → "fully or highly"
+    assert out.iloc[0]["protecti_1"] == "fully or highly"
+    assert out.iloc[1]["protecti_1"] == "fully or highly"
+
+    # anything else → "less or unknown"
+    assert out.iloc[2]["protecti_1"] == "less or unknown"
+    assert set(out.columns) == expected
 
 
 def test_eez_process_drops_expected_columns(mock_gdf):
@@ -299,6 +355,37 @@ def test_terrestrial_regions_process(monkeypatch):
     assert "location" not in result.columns
     assert "code" not in result.columns
     assert "geometry" in result.columns
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "update_marine_protected_areas_tileset",
+        "update_terrestrial_protected_areas_tileset",
+    ],
+)
+def test_protected_area_tileset_raises_schedule_retry_on_failure(method, monkeypatch):
+    """When the pipeline fails, ScheduleRetry is raised with the correct retry config."""
+
+    def mock_run_tileset_pipeline(cfg, *, process):
+        raise RuntimeError("auth error")
+
+    monkeypatch.setattr(tp, "run_tileset_pipeline", mock_run_tileset_pipeline, raising=True)
+
+    with pytest.raises(ScheduleRetry) as exc_info:
+        tp.create_and_update_protected_area_tileset(
+            bucket="bkt",
+            source_file="pas.geojson",
+            tileset_file="pas.mbtiles",
+            tileset_id="pas.id",
+            display_name="Protected Areas",
+            tolerance=3.2,
+            method=method,
+        )
+
+    cfg = METHOD_RETRY_CONFIGS[method]
+    assert exc_info.value.delay_seconds == cfg["delay_seconds"]
+    assert exc_info.value.max_retries == cfg["max_retries"]
 
 
 def test_protected_area_process():

@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
-RUN poetry self add poetry-plugin-export
+RUN pip install poetry-plugin-export
 
 # Set working directory
 WORKDIR /app
@@ -42,6 +42,6 @@ RUN pip install --upgrade pip && \
     pip install -r ./requirements.txt
 
 # Copy the rest of your function code
-COPY main.py src/ .
+COPY main.py src/ ./
 
 ENTRYPOINT ["functions-framework", "--target=main", "--debug", "--port=8080"]

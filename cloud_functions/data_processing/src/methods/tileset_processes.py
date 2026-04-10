@@ -15,6 +15,9 @@ from src.core.map_params import (
     MARINE_REGIONS_TILESET_FILE,
     MARINE_REGIONS_TILESET_ID,
     MARINE_REGIONS_TILESET_NAME,
+    MPATLAS_TILESET_FILE,
+    MPATLAS_TILESET_ID,
+    MPATLAST_TILESET_NAME,
     TERRESTRIAL_REGIONS_TILESET_FILE,
     TERRESTRIAL_REGIONS_TILESET_ID,
     TERRESTRIAL_REGIONS_TILESET_NAME,
@@ -25,15 +28,107 @@ from src.core.params import (
     EEZ_MULTIPLE_SOV_FILE_NAME,
     GADM_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
+    MPATLAS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
+    TOLERANCES,
 )
 from src.core.processors import add_translations
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
 from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
 
 logger = Logger()
+
+
+def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
+    gdf = gdf.rename(
+        columns={
+            "designation": "designatio",
+            "establishment_stage": "establishm",
+            "country": "location_i",
+            "zone_id": "zone_id",
+            "protection_mpaguide_level": "protection",
+            "implemented_date": "year",
+        }
+    )
+
+    # Create a new bucketed column based on the protection value, returning only
+    # 1. fully or highly or
+    # 2. less or unknown
+    gdf["protecti_1"] = gdf["protection"].apply(
+        lambda x: "fully or highly" if x in ["full", "high"] else "less or unknown"
+    )
+
+    keep = [
+        "designatio",
+        "establishm",
+        "location_i",
+        "zone_id",
+        "name",
+        "protection",
+        "protecti_1",
+        "wdpa_id",
+        "year",
+        "geometry",
+    ]
+
+    # simplify geometry to match same simplification of Protected Areas
+    gdf["geometry"] = gdf["geometry"].simplify(TOLERANCES[0])
+    gdf["geometry"] = gdf["geometry"].make_valid()
+
+    gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
+
+    return gdf
+
+
+def create_and_update_mpatlas_tileset(
+    bucket: str = BUCKET,
+    source_file: str = MPATLAS_FILE_NAME,
+    tileset_file: str = MPATLAS_TILESET_FILE,
+    tileset_id: str = MPATLAS_TILESET_ID,
+    display_name: str = MPATLAST_TILESET_NAME,
+    method: str = "update_mpatlas_tileset",
+    verbose: bool = False,
+    *,
+    keep_temp: bool = False,
+):
+    try:
+        if verbose:
+            logger.info({"message": f"Creating and updating {display_name} tileset..."})
+
+        cfg = TilesetConfig(
+            bucket=bucket,
+            tileset_blob_name=tileset_file,
+            tileset_id=tileset_id,
+            display_name=display_name,
+            local_geojson_name=f"{tileset_id}.geojson",
+            local_mbtiles_name=f"{tileset_id}.mbtiles",
+            source_file=source_file,
+            verbose=verbose,
+            keep_temp=keep_temp,
+        )
+
+        return run_tileset_pipeline(
+            cfg,
+            process=mpatlas_process,
+        )
+    except Exception as e:
+        logger.error(
+            {
+                "message": f"Error creating and updating {display_name} tileset",
+                "error": str(e),
+            }
+        )
+        retry_cfg = METHOD_RETRY_CONFIGS.get(method)
+        if retry_cfg:
+            raise ScheduleRetry(
+                delay_seconds=retry_cfg["delay_seconds"],
+                max_retries=retry_cfg["max_retries"],
+                message=f"{display_name} tileset update failed: {e}",
+            ) from e
+        raise
 
 
 def eez_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
@@ -286,6 +381,7 @@ def create_and_update_protected_area_tileset(
     tileset_id: str,
     display_name: str,
     tolerance: float,
+    method: str,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -310,14 +406,21 @@ def create_and_update_protected_area_tileset(
             cfg,
             process=protected_area_process,
         )
-    except Exception as excep:
+    except Exception as e:
         logger.error(
             {
-                "message": "Error creating and updating Terrestrial Regions tileset",
-                "error": str(excep),
+                "message": f"Error creating and updating {display_name} tileset",
+                "error": str(e),
             }
         )
-        raise excep
+        retry_cfg = METHOD_RETRY_CONFIGS.get(method)
+        if retry_cfg:
+            raise ScheduleRetry(
+                delay_seconds=retry_cfg["delay_seconds"],
+                max_retries=retry_cfg["max_retries"],
+                message=f"{display_name} tileset update failed: {e}",
+            ) from e
+        raise
 
 
 def protected_area_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):

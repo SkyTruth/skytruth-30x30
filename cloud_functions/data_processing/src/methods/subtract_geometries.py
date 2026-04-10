@@ -2,12 +2,14 @@ import geopandas as gpd
 import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
+
 from src.core.params import BUCKET
 from src.utils.gcp import (
-    read_json_df,                   # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
-    upload_gdf                      # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
+    read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
+    upload_gdf,  # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
 )
 from src.utils.logger import Logger
+
 logger = Logger()
 
 
@@ -88,7 +90,7 @@ def generate_total_area_minus_pa(
         filename=pa_file.replace(".geojson", f"_{tolerance}.geojson"),
         verbose=verbose,
     )
-    
+
     # Create one row per country
     pa["ISO3"] = pa["ISO3"].str.split(";")
     pa = pa.explode("ISO3")
@@ -118,7 +120,7 @@ def generate_total_area_minus_pa(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=out_file,
-        output_file_type='.parquet'
+        output_file_type=".parquet",
     )
 
     # Save to archive
