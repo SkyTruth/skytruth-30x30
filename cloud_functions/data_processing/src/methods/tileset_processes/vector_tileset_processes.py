@@ -37,7 +37,7 @@ from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
-from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
+from src.utils.mbtile_pipeline import MBTilesetConfig, run_tileset_pipeline
 
 logger = Logger()
 
@@ -98,7 +98,7 @@ def create_and_update_mpatlas_tileset(
         if verbose:
             logger.info({"message": f"Creating and updating {display_name} tileset..."})
 
-        cfg = TilesetConfig(
+        cfg = MBTilesetConfig(
             bucket=bucket,
             tileset_blob_name=tileset_file,
             tileset_id=tileset_id,
@@ -150,7 +150,7 @@ def create_and_update_eez_tileset(
         if verbose:
             logger.info({"message": "Creating and updating EEZ tileset..."})
 
-        cfg = TilesetConfig(
+        cfg = MBTilesetConfig(
             bucket=bucket,
             tileset_blob_name=tileset_file,
             tileset_id=tileset_id,
@@ -183,7 +183,7 @@ def create_and_update_marine_regions_tileset(
         if verbose:
             logger.info({"message": "Creating and updating EEZ tileset..."})
 
-        cfg = TilesetConfig(
+        cfg = MBTilesetConfig(
             bucket=bucket,
             tileset_blob_name=tileset_file,
             tileset_id=tileset_id,
@@ -254,7 +254,7 @@ def create_and_update_country_tileset(
         if verbose:
             logger.info({"message": "Creating and updating Country tileset..."})
 
-        cfg = TilesetConfig(
+        cfg = MBTilesetConfig(
             bucket=bucket,
             tileset_blob_name=tileset_file,
             tileset_id=tileset_id,
@@ -320,7 +320,7 @@ def create_and_update_terrestrial_regions_tileset(
         if verbose:
             logger.info({"message": "Creating and updating Terrestrial Regions tileset..."})
 
-        cfg = TilesetConfig(
+        cfg = MBTilesetConfig(
             bucket=bucket,
             tileset_blob_name=tileset_file,
             tileset_id=tileset_id,
@@ -390,7 +390,7 @@ def create_and_update_protected_area_tileset(
         if verbose:
             logger.info({"message": f"Creating and updating {display_name} tileset..."})
 
-        cfg = TilesetConfig(
+        cfg = MBTilesetConfig(
             bucket=bucket,
             tileset_blob_name=tileset_file,
             tileset_id=tileset_id,
@@ -428,47 +428,3 @@ def protected_area_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     gdf.drop(columns=list(set(gdf.columns) - set(properties)), inplace=True)
 
     return gdf
-
-
-# ------------------
-#   Raster Tilesets
-# ------------------
-
-
-def create_and_update_coral_reef_tileset(
-    bucket: str = "dev-cogs",
-    source_blob: str = "climate-resilient-corals.tif",
-    output_blob: str = "maps/coral_reef_prioritization.pmtiles",
-    display_name: str = "Coral Reef Prioritization",
-    color_ramp: str = "coral",
-    domain: tuple[float, float] = (0.0, 1.0),
-    max_zoom: int = 10,
-    verbose: bool = False,
-):
-    from src.utils.raster_tileset_pipeline import RasterTilesetConfig, run_raster_tileset_pipeline
-
-    try:
-        if verbose:
-            logger.info({"message": f"Creating and updating {display_name} raster tileset..."})
-
-        cfg = RasterTilesetConfig(
-            bucket=bucket,
-            source_blob=source_blob,
-            output_blob=output_blob,
-            display_name=display_name,
-            color_ramp=color_ramp,
-            domain=domain,
-            max_zoom=max_zoom,
-            verbose=verbose,
-        )
-
-        return run_raster_tileset_pipeline(cfg)
-
-    except Exception as e:
-        logger.error(
-            {
-                "message": f"Error creating and updating {display_name} raster tileset",
-                "error": str(e),
-            }
-        )
-        raise

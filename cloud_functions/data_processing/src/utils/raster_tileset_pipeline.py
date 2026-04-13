@@ -35,7 +35,7 @@ logger = Logger()
 
 
 @dataclass
-class RasterTilesetConfig:
+class PMTilesetConfig:
     bucket: str
     source_blob: str  # GCS path to the source COG (e.g., "cogs/coral.tif")
     output_blob: str  # GCS path for the PMTiles output (e.g., "tiles/coral.pmtiles")
@@ -51,12 +51,12 @@ class RasterTilesetConfig:
 
 def _lng_lat_to_tile(lng: float, lat: float, zoom: int) -> tuple[int, int]:
     """Convert lng/lat to tile x/y at given zoom level."""
-    n = 2**zoom
-    x = int((lng + 180.0) / 360.0 * n)
+    num = 2**zoom  # number of tiles on each axis given the zoom level
+    x = int((lng + 180.0) / 360.0 * num)
     lat_rad = math.radians(lat)
-    y = int((1.0 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2.0 * n)
-    x = max(0, min(n - 1, x))
-    y = max(0, min(n - 1, y))
+    y = int((1.0 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2.0 * num)
+    x = max(0, min(num - 1, x))
+    y = max(0, min(num - 1, y))
     return x, y
 
 
@@ -203,7 +203,7 @@ class PMTilesWriter:
         )
 
 
-def run_raster_tileset_pipeline(cfg: RasterTilesetConfig) -> dict[str, Any]:
+def run_raster_tileset_pipeline(cfg: PMTilesetConfig) -> dict[str, Any]:
     """
     Run the full pipeline: download COG → colorize → render tiles → PMTiles → upload to GCS.
 

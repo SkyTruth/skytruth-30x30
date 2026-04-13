@@ -7,8 +7,8 @@ import rasterio
 from rasterio.transform import from_bounds
 
 from src.utils.raster_tileset_pipeline import (
+    PMTilesetConfig,
     PMTilesWriter,
-    RasterTilesetConfig,
     _lng_lat_to_tile,
     _render_tile,
     _tile_bounds,
@@ -258,7 +258,7 @@ def test_pmtiles_writer_tiles_are_sorted(tmp_path):
 
 @pytest.fixture
 def pipeline_cfg(tmp_path):
-    return RasterTilesetConfig(
+    return PMTilesetConfig(
         bucket="fake-bucket",
         source_blob="cogs/test.tif",
         output_blob="tiles/test.pmtiles",

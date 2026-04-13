@@ -7,7 +7,7 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import Point
 
-from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
+from src.utils.mbtile_pipeline import MBTilesetConfig, run_tileset_pipeline
 
 
 @pytest.fixture
@@ -83,7 +83,7 @@ def cfg(tmp_path):
     """
     Base config; bucket points to a writable temp folder (pytest cleans tmp_path automatically).
     """
-    return TilesetConfig(
+    return MBTilesetConfig(
         bucket=str(tmp_path / "fake_bucket"),
         tileset_blob_name="tiles/eez.mbtiles",
         tileset_id="org.eeztile",
