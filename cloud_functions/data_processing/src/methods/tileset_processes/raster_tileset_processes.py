@@ -1,5 +1,8 @@
 from src.utils.logger import Logger
-from src.utils.raster_tileset_pipeline import PMTilesetConfig, run_raster_tileset_pipeline
+from src.utils.tileset_pipelines.raster_tile_pipeline import (
+    PMTilesetConfig,
+    run_raster_tileset_pipeline,
+)
 
 logger = Logger()
 

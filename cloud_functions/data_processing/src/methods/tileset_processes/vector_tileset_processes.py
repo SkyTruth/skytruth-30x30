@@ -37,7 +37,10 @@ from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
-from src.utils.mbtile_pipeline import MBTilesetConfig, run_tileset_pipeline
+from src.utils.tileset_pipelines.vector_tile_pipeline import (
+    MBTilesetConfig,
+    run_vector_tileset_pipeline,
+)
 
 logger = Logger()
 
@@ -110,7 +113,7 @@ def create_and_update_mpatlas_tileset(
             keep_temp=keep_temp,
         )
 
-        return run_tileset_pipeline(
+        return run_vector_tileset_pipeline(
             cfg,
             process=mpatlas_process,
         )
@@ -162,7 +165,7 @@ def create_and_update_eez_tileset(
             keep_temp=keep_temp,
         )
 
-        return run_tileset_pipeline(cfg, process=eez_process)
+        return run_vector_tileset_pipeline(cfg, process=eez_process)
 
     except Exception as excep:
         logger.error({"message": "Error creating and updating EEZ tileset", "error": str(excep)})
@@ -199,7 +202,7 @@ def create_and_update_marine_regions_tileset(
             },
         )
 
-        return run_tileset_pipeline(cfg, process=marine_regions_process)
+        return run_vector_tileset_pipeline(cfg, process=marine_regions_process)
     except Exception as excep:
         logger.error(
             {"message": "Error creating and updating Marine Region tileset", "error": str(excep)}
@@ -270,7 +273,7 @@ def create_and_update_country_tileset(
             },
         )
 
-        return run_tileset_pipeline(cfg, process=countries_process)
+        return run_vector_tileset_pipeline(cfg, process=countries_process)
     except Exception as excep:
         logger.error(
             {"message": "Error creating and updating Countries tileset", "error": str(excep)}
@@ -336,7 +339,7 @@ def create_and_update_terrestrial_regions_tileset(
             },
         )
 
-        return run_tileset_pipeline(cfg, process=terrestrial_regions_process)
+        return run_vector_tileset_pipeline(cfg, process=terrestrial_regions_process)
     except Exception as excep:
         logger.error(
             {
@@ -402,7 +405,7 @@ def create_and_update_protected_area_tileset(
             keep_temp=keep_temp,
         )
 
-        return run_tileset_pipeline(
+        return run_vector_tileset_pipeline(
             cfg,
             process=protected_area_process,
         )

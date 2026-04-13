@@ -115,14 +115,16 @@ def test_wrappers_call_pipeline_with_expected_config(
 ):
     calls = {}
 
-    def mock_run_tileset_pipeline(cfg, *, process):
+    def mock_run_vector_tileset_pipeline(cfg, *, process):
         calls["cfg"] = cfg
         calls["process"] = process
         return {"tileset_id": cfg.tileset_id, "gcs_blob": cfg.tileset_blob_name}
 
     monkeypatch.setattr(vtp, "EEZ_TOLERANCE", 5, raising=True)
     monkeypatch.setattr(vtp, "COUNTRIES_TOLERANCE", 7, raising=True)
-    monkeypatch.setattr(vtp, "run_tileset_pipeline", mock_run_tileset_pipeline, raising=True)
+    monkeypatch.setattr(
+        vtp, "run_vector_tileset_pipeline", mock_run_vector_tileset_pipeline, raising=True
+    )
 
     if which == "eez":
         tp.create_and_update_eez_tileset(**kwargs)
@@ -310,10 +312,12 @@ def test_terrestrial_regions_process(monkeypatch):
     ],
 )
 def test_protected_area_tileset_raises_schedule_retry_on_failure(method, monkeypatch):
-    def mock_run_tileset_pipeline(cfg, *, process):
+    def mock_run_vector_tileset_pipeline(cfg, *, process):
         raise RuntimeError("auth error")
 
-    monkeypatch.setattr(vtp, "run_tileset_pipeline", mock_run_tileset_pipeline, raising=True)
+    monkeypatch.setattr(
+        vtp, "run_vector_tileset_pipeline", mock_run_vector_tileset_pipeline, raising=True
+    )
 
     with pytest.raises(ScheduleRetry) as exc_info:
         tp.create_and_update_protected_area_tileset(

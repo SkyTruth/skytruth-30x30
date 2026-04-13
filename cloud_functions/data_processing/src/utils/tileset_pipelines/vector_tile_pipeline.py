@@ -65,7 +65,7 @@ def _upload_mapbox(temp_dir: Path, ctx: dict[str, Any]):
     )
 
 
-def run_tileset_pipeline(
+def run_vector_tileset_pipeline(
     cfg: MBTilesetConfig,
     *,
     process: Hook | None = None,

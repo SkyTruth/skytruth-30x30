@@ -8,7 +8,6 @@ Flow:
 4. Write tiles into a PMTiles archive
 5. Upload PMTiles file to GCS
 
-No GDAL CLI dependencies — uses rasterio and pmtiles Python libraries only.
 """
 
 import io

@@ -6,7 +6,7 @@ import pytest
 import rasterio
 from rasterio.transform import from_bounds
 
-from src.utils.raster_tileset_pipeline import (
+from src.utils.tileset_pipelines.raster_tile_pipeline import (
     PMTilesetConfig,
     PMTilesWriter,
     _lng_lat_to_tile,
@@ -291,12 +291,12 @@ def test_pipeline_end_to_end(pipeline_cfg, tmp_path, monkeypatch, janitor):
         uploaded["size"] = Path(file_name).stat().st_size
 
     monkeypatch.setattr(
-        "src.utils.raster_tileset_pipeline.download_file_from_gcs",
+        "src.utils.tileset_pipelines.raster_tile_pipeline.download_file_from_gcs",
         mock_download,
         raising=True,
     )
     monkeypatch.setattr(
-        "src.utils.raster_tileset_pipeline.upload_file_to_gcs",
+        "src.utils.tileset_pipelines.raster_tile_pipeline.upload_file_to_gcs",
         mock_upload,
         raising=True,
     )
@@ -328,12 +328,12 @@ def test_pipeline_cleans_up_temp(pipeline_cfg, tmp_path, monkeypatch):
         pass
 
     monkeypatch.setattr(
-        "src.utils.raster_tileset_pipeline.download_file_from_gcs",
+        "src.utils.tileset_pipelines.raster_tile_pipeline.download_file_from_gcs",
         mock_download,
         raising=True,
     )
     monkeypatch.setattr(
-        "src.utils.raster_tileset_pipeline.upload_file_to_gcs",
+        "src.utils.tileset_pipelines.raster_tile_pipeline.upload_file_to_gcs",
         mock_upload,
         raising=True,
     )
@@ -351,7 +351,7 @@ def test_pipeline_download_failure_propagates(pipeline_cfg, monkeypatch):
         raise OSError("GCS download failed")
 
     monkeypatch.setattr(
-        "src.utils.raster_tileset_pipeline.download_file_from_gcs",
+        "src.utils.tileset_pipelines.raster_tile_pipeline.download_file_from_gcs",
         mock_download_fail,
         raising=True,
     )
@@ -371,7 +371,7 @@ def test_pipeline_invalid_color_ramp_raises(pipeline_cfg, tmp_path, monkeypatch)
         shutil.copy(source_path, destination_file_name)
 
     monkeypatch.setattr(
-        "src.utils.raster_tileset_pipeline.download_file_from_gcs",
+        "src.utils.tileset_pipelines.raster_tile_pipeline.download_file_from_gcs",
         mock_download,
         raising=True,
     )
