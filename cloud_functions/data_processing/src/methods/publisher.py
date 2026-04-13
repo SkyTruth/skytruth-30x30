@@ -67,6 +67,7 @@ from src.methods.static_processes import (
 from src.methods.subtract_geometries import generate_total_area_minus_pa
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.tileset_processes import (
+    create_and_update_coral_reef_tileset,
     create_and_update_country_tileset,
     create_and_update_eez_tileset,
     create_and_update_marine_regions_tileset,
@@ -545,6 +546,11 @@ def dispatch_publisher(
 
         case "update_mpatlas_tileset":
             create_and_update_mpatlas_tileset(
+                verbose=verbose,
+            )
+
+        case "update_coral_reef_tileset":
+            create_and_update_coral_reef_tileset(
                 verbose=verbose,
             )
 
