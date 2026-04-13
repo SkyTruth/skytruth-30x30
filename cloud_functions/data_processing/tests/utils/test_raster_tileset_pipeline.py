@@ -1,5 +1,4 @@
 import contextlib
-import math
 from pathlib import Path
 
 import numpy as np
@@ -15,7 +14,6 @@ from src.utils.raster_tileset_pipeline import (
     _tile_bounds,
     run_raster_tileset_pipeline,
 )
-
 
 # ---------- Fixtures ----------
 
@@ -178,8 +176,15 @@ def test_render_tile_all_transparent_returns_none(tmp_path):
     data = np.zeros((4, 8, 8), dtype=np.uint8)  # all zeros including alpha
 
     with rasterio.open(
-        path, "w", driver="GTiff", dtype="uint8", count=4,
-        height=8, width=8, crs="EPSG:4326", transform=transform,
+        path,
+        "w",
+        driver="GTiff",
+        dtype="uint8",
+        count=4,
+        height=8,
+        width=8,
+        crs="EPSG:4326",
+        transform=transform,
     ) as dst:
         dst.write(data)
 
@@ -277,6 +282,7 @@ def test_pipeline_end_to_end(pipeline_cfg, tmp_path, monkeypatch, janitor):
 
     def mock_download(bucket_name, blob_name, destination_file_name, verbose=True):
         import shutil
+
         shutil.copy(source_path, destination_file_name)
 
     def mock_upload(bucket, file_name, blob_name):
@@ -315,6 +321,7 @@ def test_pipeline_cleans_up_temp(pipeline_cfg, tmp_path, monkeypatch):
 
     def mock_download(bucket_name, blob_name, destination_file_name, verbose=True):
         import shutil
+
         shutil.copy(source_path, destination_file_name)
 
     def mock_upload(bucket, file_name, blob_name):
@@ -360,6 +367,7 @@ def test_pipeline_invalid_color_ramp_raises(pipeline_cfg, tmp_path, monkeypatch)
 
     def mock_download(bucket_name, blob_name, destination_file_name, verbose=True):
         import shutil
+
         shutil.copy(source_path, destination_file_name)
 
     monkeypatch.setattr(
