@@ -7619,7 +7619,6 @@ export const LayerDatasetDataAttributesLayersDataItemAttributesType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export type LayerType = (typeof LayerType)[keyof typeof LayerType];
@@ -7629,7 +7628,6 @@ export const LayerType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export type LayerListResponseMetaPagination = {
@@ -7701,7 +7699,6 @@ export const LayerRequestDataType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export type LayerRequestData = {
@@ -7731,7 +7728,6 @@ export const LayerLocalizationRequestType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export interface LayerLocalizationRequest {
@@ -11414,7 +11410,6 @@ export const DatasetLayersDataItemAttributesType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export type DatasetListResponseMetaPagination = {
