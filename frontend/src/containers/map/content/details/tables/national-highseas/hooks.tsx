@@ -571,11 +571,19 @@ export const useData = (
   );
 
   const querySort = useMemo(() => {
+    // By default, we always sort by protected area name
+    let res = 'name:asc,environment.name:asc';
     if (sorting.length > 0) {
-      return `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}`;
+      res = `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}`;
+
+      // In addition to sorting by the column the user asked about, we'll also always sort by
+      // environment
+      if (sorting[0].id !== 'environment.name') {
+        res = `${res},environment.name:asc`;
+      }
     }
-    // By default, sort by protected area name
-    return 'name:asc';
+
+    return res;
   }, [sorting]);
 
   const queryFilters = useMemo(
@@ -729,7 +737,6 @@ export const useData = (
           fields: queryFields,
           populate: queryPopulate,
           filters: queryFilters,
-          sort: querySort,
         },
       },
       filters: {
