@@ -27,11 +27,11 @@ logger = Logger()
 
 @dataclass
 class PMTilesetConfig:
-    source_bucket: str 
-    source_blob: str 
+    source_bucket: str
+    source_blob: str
     output_bucket: str
     output_blob: str
-    display_name: str 
+    display_name: str
     color_ramp: str
     domain: tuple[float, float]  # (min, max) value range
     min_zoom: int = 0
