@@ -249,9 +249,7 @@ def run_raster_tileset_pipeline(config: PMTilesetConfig) -> dict[str, Any]:
         )
 
         if config.verbose:
-            logger.info(
-                {"message": f"Rendering tiles z{config.min_zoom}-z{config.max_zoom}..."}
-            )
+            logger.info({"message": f"Rendering tiles z{config.min_zoom}-z{config.max_zoom}..."})
 
         tile_count = _generate_pmtiles(
             str(colorized_local),

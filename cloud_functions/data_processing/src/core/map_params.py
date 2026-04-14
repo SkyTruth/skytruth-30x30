@@ -52,3 +52,12 @@ WDPA_TOLERANCE = 0.001
 MPATLAS_TILESET_ID = "mpatlas"
 MPATLAST_TILESET_NAME = "MPATLAS"
 MPATLAS_TILESET_FILE = f"maps/mpatlas_{today_formatted}.mbtiles"
+
+# ------------------------
+# Cimate Resilient Corals (WCS MERMAID)
+# ------------------------
+CORAL_REEF_TILESET_NAME = "Climate Resilient Corals"
+CORAL_REEF_TILESET_FILE = "climate_resilient_corals.pmtiles"
+CORAL_REEF_COLOR_RAMP = "coral"
+CORAL_REEF_DOMAIN = (0.0, 1.0)
+CORAL_REEF_MAX_ZOOM = 10

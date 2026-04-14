@@ -122,7 +122,11 @@ def colorize_raster(
                 # Normalize to 0-255 color_map index
                 nodata_mask = np.isnan(block)
                 normalized = np.clip((block - domain_min) / (domain_max - domain_min), 0, 1)
-                indices = (normalized * 255).astype(np.uint8)
+                
+                # NaN pixels produce invalid values during cast; they are
+                # overwritten to transparent below so the warning is safe to ignore.
+                with np.errstate(invalid="ignore"):
+                    indices = (normalized * 255).astype(np.uint8)
 
                 # Apply color_map
                 rgba = color_map[indices]  # shape: (H, W, 4)
