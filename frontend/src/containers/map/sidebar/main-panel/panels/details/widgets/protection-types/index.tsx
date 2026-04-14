@@ -51,9 +51,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
       filters: {
         slug: 'fully-highly-protected',
       },
-      populate: {
-        data_sources: true,
-      } as any,
+      populate: 'data_sources',
     },
     {
       query: {

@@ -5,7 +5,7 @@
 import { factories } from '@strapi/strapi';
 
 export type LocationMap = {
-  [slug: string]: number; // Maps MPAA protection level slug to ID
+  [slug: string]: string; // Maps MPAA protection level slug to documentId
 }
 
 export default factories
