@@ -1,5 +1,5 @@
 from src.methods.tileset_processes.raster_tileset_processes import (
-    create_and_update_coral_reef_tileset,
+    create_and_update_climate_resilient_coral_tileset,
 )
 from src.methods.tileset_processes.vector_tileset_processes import (
     countries_process,
@@ -31,5 +31,5 @@ __all__ = [
     "protected_area_process",
     "terrestrial_regions_process",
     # Raster
-    "create_and_update_coral_reef_tileset",
+    "create_and_update_climate_resilient_coral_tileset",
 ]

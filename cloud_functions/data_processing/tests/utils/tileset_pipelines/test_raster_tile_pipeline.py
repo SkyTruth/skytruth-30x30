@@ -259,8 +259,9 @@ def test_pmtiles_writer_tiles_are_sorted(tmp_path):
 @pytest.fixture
 def pipeline_cfg(tmp_path):
     return PMTilesetConfig(
-        bucket="fake-bucket",
+        source_bucket="fake-source-bucket",
         source_blob="cogs/test.tif",
+        output_bucket="fake-output-bucket",
         output_blob="tiles/test.pmtiles",
         display_name="Test Raster",
         color_ramp="coral",

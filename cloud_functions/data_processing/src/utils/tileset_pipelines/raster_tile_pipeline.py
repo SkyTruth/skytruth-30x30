@@ -24,7 +24,7 @@ from PIL import Image
 from pmtiles.tile import Compression, TileType, zxy_to_tileid
 from rasterio.enums import Resampling
 from rasterio.transform import from_bounds
-from rasterio.warp import reproject
+from rasterio.warp import reproject, transform_bounds
 
 from src.utils.gcp import download_file_from_gcs, upload_file_to_gcs
 from src.utils.logger import Logger
@@ -35,9 +35,10 @@ logger = Logger()
 
 @dataclass
 class PMTilesetConfig:
-    bucket: str
-    source_blob: str  # GCS path to the source COG (e.g., "cogs/coral.tif")
-    output_blob: str  # GCS path for the PMTiles output (e.g., "tiles/coral.pmtiles")
+    source_bucket: str  # GCS bucket where the raw raster lives
+    source_blob: str  # Blob path within source_bucket (e.g., "raw/coral.tif")
+    output_bucket: str  # GCS bucket for the PMTiles output
+    output_blob: str  # Blob path within output_bucket (e.g., "coral.pmtiles")
     display_name: str  # Human-readable name for logging
     color_ramp: str  # Color ramp name (e.g., "coral")
     domain: tuple[float, float]  # (min, max) value range
@@ -95,8 +96,10 @@ def _render_tile(
     if south >= source_bounds.top or north <= source_bounds.bottom:
         return None
 
-    # Target transform for the tile in EPSG:4326
-    tile_transform = from_bounds(west, south, east, north, tile_size, tile_size)
+    # Convert geographic tile bounds to Web Mercator (EPSG:3857) so tile pixels
+    # are uniformly spaced in Mercator space — matching how web map tiles work.
+    mercator_bounds = transform_bounds("EPSG:4326", "EPSG:3857", west, south, east, north)
+    tile_transform = from_bounds(*mercator_bounds, tile_size, tile_size)
 
     # Read and reproject source data into the tile
     tile_data = np.zeros((4, tile_size, tile_size), dtype=np.uint8)
@@ -108,7 +111,7 @@ def _render_tile(
             src_transform=source.transform,
             src_crs=source.crs,
             dst_transform=tile_transform,
-            dst_crs="EPSG:4326",
+            dst_crs="EPSG:3857",
             resampling=Resampling.nearest,
         )
 
@@ -229,7 +232,7 @@ def run_raster_tileset_pipeline(config: PMTilesetConfig) -> dict[str, Any]:
             logger.info({"message": f"Downloading {config.source_blob} from GCS..."})
 
         download_file_from_gcs(
-            bucket_name=config.bucket,
+            bucket_name=config.source_bucket,
             blob_name=config.source_blob,
             destination_file_name=str(source_local),
             verbose=config.verbose,
@@ -271,12 +274,12 @@ def run_raster_tileset_pipeline(config: PMTilesetConfig) -> dict[str, Any]:
             )
 
         upload_file_to_gcs(
-            bucket=config.bucket,
+            bucket=config.output_bucket,
             file_name=str(pmtiles_local),
             blob_name=config.output_blob,
         )
 
-        gcs_url = f"https://storage.googleapis.com/{config.bucket}/{config.output_blob}"
+        gcs_url = f"https://storage.googleapis.com/{config.output_bucket}/{config.output_blob}"
 
         if config.verbose:
             logger.info(

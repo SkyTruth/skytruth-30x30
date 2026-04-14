@@ -218,8 +218,7 @@ ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
 # ------------------------------------------------------------
 #                     Raster Data Sources
 # ------------------------------------------------------------
-RASTER_BUCKET = os.getenv("RASTER_BUCKET", "")
-CORAL_REEF_SOURCE_FILE = "climate-resilient-corals.tif"
+CORAL_REEF_SOURCE_FILE = "raw/climate_resilient_corals.tif"
 
 # ------------------------------------------------------------
 #                     Workflow Parameters

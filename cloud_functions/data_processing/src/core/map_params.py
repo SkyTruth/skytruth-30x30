@@ -11,6 +11,11 @@ MAPBOX_USER = os.environ.get("MAPBOX_USER", None)
 MAPBOX_TOKEN = os.environ.get("MAPBOX_TOKEN", None)
 
 # ------------------------
+# General PMTiles
+# ------------------------
+PMTILES_BUCKET = os.environ.get("PMTILES_BUCKET", "")
+
+# ------------------------
 # EEZ
 # ------------------------
 EEZ_TILESET_ID = "eez_v12"
@@ -58,6 +63,7 @@ MPATLAS_TILESET_FILE = f"maps/mpatlas_{today_formatted}.mbtiles"
 # ------------------------
 CORAL_REEF_TILESET_NAME = "Climate Resilient Corals"
 CORAL_REEF_TILESET_FILE = "climate_resilient_corals.pmtiles"
+CORAL_REEF_TILESET_ARCHIVE_FILE = f"maps/climate_resilient_corals_{today_formatted}.pmtiles"
 CORAL_REEF_COLOR_RAMP = "coral"
 CORAL_REEF_DOMAIN = (0.0, 1.0)
 CORAL_REEF_MAX_ZOOM = 10
