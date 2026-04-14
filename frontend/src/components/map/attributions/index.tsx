@@ -19,7 +19,9 @@ const Attributions: FC = () => {
           $in: activeLayers,
         },
       },
-      populate: 'metadata',
+      populate: {
+        metadata: true,
+      } as any,
     },
     {
       query: {

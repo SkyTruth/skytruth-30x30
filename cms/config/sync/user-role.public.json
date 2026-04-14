@@ -2,277 +2,277 @@
   "name": "Public",
   "description": "Default role given to unauthenticated user.",
   "type": "public",
-  "documentId": "tlwf5qp2xuc7xwb3r6a782yw",
+  "documentId": "uohcu7f3yfh1sjbqu4r1ievu",
   "locale": null,
   "permissions": [
     {
       "action": "api::aggregated-stat.aggregated-stat.getStats",
-      "documentId": "u4np529qiqcpwasx9o0jbsfi",
+      "documentId": "rnt6gl2x54o7804mw9i98ggi",
       "locale": null
     },
     {
       "action": "api::contact-detail.contact-detail.find",
-      "documentId": "eajl1v51dfs0trrmf2xrwapq",
+      "documentId": "tun703apb54w1v8pvn2sdt63",
       "locale": null
     },
     {
       "action": "api::data-info.data-info.find",
-      "documentId": "cb26ol4w145zj3r0h31y7mhl",
+      "documentId": "apqdpd720v1t0nxkag2e453i",
       "locale": null
     },
     {
       "action": "api::data-info.data-info.findOne",
-      "documentId": "dogyzles6i326ipx5qr4ujeg",
+      "documentId": "krhla2lacqrgzko60i9i6ecb",
       "locale": null
     },
     {
       "action": "api::data-source.data-source.find",
-      "documentId": "k3zeul02r6pete41foemr4ik",
+      "documentId": "wv6h5b33b0xhhaejbvvwzjte",
       "locale": null
     },
     {
       "action": "api::data-source.data-source.findOne",
-      "documentId": "e8wwmn5tzbi7nmdd0q5p63wq",
+      "documentId": "ca85h0fr3lu2dbws3ciuthez",
       "locale": null
     },
     {
       "action": "api::data-tool-ecosystem.data-tool-ecosystem.find",
-      "documentId": "yiaabzc9irzxzp6ygo8dfi4s",
+      "documentId": "nv0mrepszb2xhh6jbhqwcmw1",
       "locale": null
     },
     {
       "action": "api::data-tool-ecosystem.data-tool-ecosystem.findOne",
-      "documentId": "ski4czj5x0louuc8gxqykxkc",
+      "documentId": "ty1rcpslyv86k3kkhyolbkcf",
       "locale": null
     },
     {
       "action": "api::data-tool-language.data-tool-language.find",
-      "documentId": "vj6rajwh1ckpwlgilhxx61g7",
+      "documentId": "ctwk57o8jobrs2siceqmq2x5",
       "locale": null
     },
     {
       "action": "api::data-tool-language.data-tool-language.findOne",
-      "documentId": "crz2ezktjymalcpa4dol7jl9",
+      "documentId": "njpyms2mwgagnd5r3luqpa9r",
       "locale": null
     },
     {
       "action": "api::data-tool-resource-type.data-tool-resource-type.find",
-      "documentId": "lhuxheer05rp9m3oye9l0f04",
+      "documentId": "a1i6nznenhsikexouh36ps4z",
       "locale": null
     },
     {
       "action": "api::data-tool-resource-type.data-tool-resource-type.findOne",
-      "documentId": "vhbamk7plhy7u66cea3ttizq",
+      "documentId": "ptqm6reglpem77s1pf06hgdv",
       "locale": null
     },
     {
       "action": "api::data-tool.data-tool.find",
-      "documentId": "eyzaaobfp944g9gwsh6i7tnr",
+      "documentId": "u0yutwkln7qzopr1vmut5xox",
       "locale": null
     },
     {
       "action": "api::data-tool.data-tool.findOne",
-      "documentId": "ly6vw6zjoe01ajlxz3x8ezja",
+      "documentId": "udhmhf65cjtud9gtz4476xw5",
       "locale": null
     },
     {
       "action": "api::dataset.dataset.find",
-      "documentId": "r3319q26op09oc05xlkky6w1",
+      "documentId": "m5v4whkyg9iyoasng4j8pyli",
       "locale": null
     },
     {
       "action": "api::dataset.dataset.findOne",
-      "documentId": "pahi83zmzhiixh3kr8y5emyt",
+      "documentId": "za2f292mqxh2zn2fsp445wvn",
       "locale": null
     },
     {
       "action": "api::environment.environment.find",
-      "documentId": "i8be5we0botpo3f2u5hy7t6w",
+      "documentId": "eqsoy8evt7y6xb561aiy5yo4",
       "locale": null
     },
     {
       "action": "api::environment.environment.findOne",
-      "documentId": "q5kuoltg3mqnxue96ljtxnc0",
+      "documentId": "rfe3l0to8meg5rnza7rb890w",
       "locale": null
     },
     {
       "action": "api::feature-flag.feature-flag.find",
-      "documentId": "abxw460e3jq7snmrbho7qj0l",
+      "documentId": "lljvrzux81lo4res5zauapum",
       "locale": null
     },
     {
       "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.find",
-      "documentId": "gxkeap3tfx8ml8g3o1k2pjgv",
+      "documentId": "tzfqs5uz0a7mreuzydr70amj",
       "locale": null
     },
     {
       "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.findOne",
-      "documentId": "nvoxhnoeu2fl4w847fa6u08j",
+      "documentId": "fijkjf2onk8ob1guqhfo8x5l",
       "locale": null
     },
     {
       "action": "api::fishing-protection-level.fishing-protection-level.find",
-      "documentId": "t0g6tjnqq5cwnvj1hqgzs8u4",
+      "documentId": "d52pu9h0p2n6ibwb2z836orb",
       "locale": null
     },
     {
       "action": "api::fishing-protection-level.fishing-protection-level.findOne",
-      "documentId": "sahw7kyvcirzdk5pz0dxome2",
+      "documentId": "p59sowdz52rvjz54kl4xebqy",
       "locale": null
     },
     {
       "action": "api::habitat-stat.habitat-stat.find",
-      "documentId": "v0rk8dy0mm92zjplx5e8z2d8",
+      "documentId": "bfv9xqyztjxip1g3x09ww0xj",
       "locale": null
     },
     {
       "action": "api::habitat-stat.habitat-stat.findOne",
-      "documentId": "u8sw6zaxl64i5hljvb7fioy9",
+      "documentId": "doqtawe73d47hx2jct8l857w",
       "locale": null
     },
     {
       "action": "api::habitat.habitat.find",
-      "documentId": "t4y95gajnz7qg1ldliz3nm5v",
+      "documentId": "icvezaldez3d8xpuhyr0ytpo",
       "locale": null
     },
     {
       "action": "api::habitat.habitat.findOne",
-      "documentId": "qdygwh6be1w69vt2gu0rfcmt",
+      "documentId": "s6qvgi96vxxq4mt2393mrn4l",
       "locale": null
     },
     {
       "action": "api::layer.layer.find",
-      "documentId": "dztnb2xwzit64w9ujqaspce7",
+      "documentId": "v9wbvzcrvyrdleorcl51ib4o",
       "locale": null
     },
     {
       "action": "api::layer.layer.findOne",
-      "documentId": "rgqyyqg3ayp86k9f6hyv5qng",
+      "documentId": "bjuwczmk8op1s1njm942nxos",
       "locale": null
     },
     {
       "action": "api::location.location.find",
-      "documentId": "jzjwmmkosyojlb1k2tw4avg7",
+      "documentId": "srbum1a5d2ux99el7z49z6h7",
       "locale": null
     },
     {
       "action": "api::location.location.findOne",
-      "documentId": "v5cxy8l68013zlhgxf3drqje",
+      "documentId": "c2tqrr0awa2jrneetd99qyc1",
       "locale": null
     },
     {
       "action": "api::mpa-iucn-category.mpa-iucn-category.find",
-      "documentId": "fg0yh9hd5i5523wr9r8dwsju",
+      "documentId": "f3jabz8f3mmoacufgphl4jaq",
       "locale": null
     },
     {
       "action": "api::mpa-iucn-category.mpa-iucn-category.findOne",
-      "documentId": "dvfypbtliz74lowmruxwfpqa",
+      "documentId": "cz349n4uhr0qrm4slzddza6m",
       "locale": null
     },
     {
       "action": "api::mpaa-establishment-stage.mpaa-establishment-stage.find",
-      "documentId": "x48ac2uazpo77l9sl9zl33j4",
+      "documentId": "otazv5t7frhwyidlz1k0h78n",
       "locale": null
     },
     {
       "action": "api::mpaa-establishment-stage.mpaa-establishment-stage.findOne",
-      "documentId": "lnipjbgif3it48iz2yibdle3",
+      "documentId": "jigc899uk7wjoadbkzzzdugv",
       "locale": null
     },
     {
       "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.find",
-      "documentId": "gvxrr1djzfz755eleq2ty3gd",
+      "documentId": "dcteypyrc00k8q8w3ibwz87o",
       "locale": null
     },
     {
       "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.findOne",
-      "documentId": "yxfxivqy4vnnbi3dci845yyd",
+      "documentId": "wal1196ydboz6r17fusuef7d",
       "locale": null
     },
     {
       "action": "api::mpaa-protection-level.mpaa-protection-level.find",
-      "documentId": "efn1ofmocwsgs6irma5mij0o",
+      "documentId": "v63sje0hwx8vcvh7gmhdweon",
       "locale": null
     },
     {
       "action": "api::mpaa-protection-level.mpaa-protection-level.findOne",
-      "documentId": "mcodoobfbwpoexe26flicy6z",
+      "documentId": "ljizlxy8fhvbyenyr6d5jmv1",
       "locale": null
     },
     {
       "action": "api::pa.pa.find",
-      "documentId": "ewwlabu5f01a4ccjrzu47flb",
+      "documentId": "djs8h1kzzlvuqowc8fyfk3o6",
       "locale": null
     },
     {
       "action": "api::pa.pa.findOne",
-      "documentId": "shoxu71sgavuwo9nrhce92v0",
+      "documentId": "ey81gjtpovvwgnc0cdwacnob",
       "locale": null
     },
     {
       "action": "api::protection-coverage-stat.protection-coverage-stat.find",
-      "documentId": "lz0yjkq8lr4618rvnmdv2p0u",
+      "documentId": "tshviimjupgml2qyevclobss",
       "locale": null
     },
     {
       "action": "api::protection-coverage-stat.protection-coverage-stat.findOne",
-      "documentId": "b6t6hk0q0fdgczyy26lx2owd",
+      "documentId": "ecaatkpa8swu07wtqwgs73i0",
       "locale": null
     },
     {
       "action": "api::protection-status.protection-status.find",
-      "documentId": "iu65aus5nxotl3jfpnqrr2oc",
+      "documentId": "yok1ffiwce88r2hnssbehp9b",
       "locale": null
     },
     {
       "action": "api::protection-status.protection-status.findOne",
-      "documentId": "bdyjzdhg79clmty12hu6gsj6",
+      "documentId": "df19qxl8a0h1gn4lsrca3v6o",
       "locale": null
     },
     {
       "action": "api::static-indicator.static-indicator.find",
-      "documentId": "jcipdnkj49r9nze56g1prcek",
+      "documentId": "p89qff51zcqorl6xdbo1is79",
       "locale": null
     },
     {
       "action": "api::static-indicator.static-indicator.findOne",
-      "documentId": "cwl50lfo02m8rmhy4d3n5uv9",
+      "documentId": "ufesa8ohv8bp7lk6elcxxce4",
       "locale": null
     },
     {
       "action": "plugin::users-permissions.auth.callback",
-      "documentId": "qyc95apvhgowabhd9qy4262r",
+      "documentId": "zhdw56oivrdk7n21w7n9ogto",
       "locale": null
     },
     {
       "action": "plugin::users-permissions.auth.connect",
-      "documentId": "vl33pphtij9sesunhy271ii4",
+      "documentId": "k4kif11firle76av0wwie9p7",
       "locale": null
     },
     {
       "action": "plugin::users-permissions.auth.emailConfirmation",
-      "documentId": "b634ey7yxzmuvxxw55pt4n1u",
+      "documentId": "o8srwqcxnsl8e8tz7g72wvqh",
       "locale": null
     },
     {
       "action": "plugin::users-permissions.auth.forgotPassword",
-      "documentId": "q7880t42160n5be684en0hge",
+      "documentId": "g9pvkbbby8sdz93i401v8rhj",
       "locale": null
     },
     {
       "action": "plugin::users-permissions.auth.register",
-      "documentId": "hib4k0i9kywciepulfycoxhf",
+      "documentId": "mj8pdztjdo8niyn3z7ys48p2",
       "locale": null
     },
     {
       "action": "plugin::users-permissions.auth.resetPassword",
-      "documentId": "ge14zobddcj4xtxa4iozq3un",
+      "documentId": "fdnr11aq3d8sr1r6jpgx6z81",
       "locale": null
     },
     {
       "action": "plugin::users-permissions.auth.sendEmailConfirmation",
-      "documentId": "hsv4rethy5cxvjyph1to1uat",
+      "documentId": "r23e7lu4obifdfbs9ma9jsvh",
       "locale": null
     }
   ]

@@ -35,7 +35,9 @@ const Intro: FCWithMessages<IntroProps> = ({ onScrollClick }) => {
         location: true,
         environment: true,
       } as any,
-      sort: 'year:desc',
+      sort: {
+        year: 'desc',
+      } as any,
     },
     {
       query: {

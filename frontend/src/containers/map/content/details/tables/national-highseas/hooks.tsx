@@ -117,6 +117,7 @@ const useFiltersOptions = () => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
+      'pagination[limit]': -1,
     },
     {
       query: {
@@ -135,6 +136,7 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['title', 'slug'],
+      'pagination[limit]': -1,
     },
     {
       query: {
@@ -160,6 +162,7 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
+      'pagination[limit]': -1,
     },
     {
       query: {
@@ -178,7 +181,7 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
-      sort: 'name:asc',
+      'pagination[limit]': -1,
     },
     {
       query: {
@@ -199,6 +202,7 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
+      'pagination[limit]': -1,
     },
     {
       query: {
@@ -219,6 +223,7 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
+      'pagination[limit]': -1,
     },
     {
       query: {
@@ -572,11 +577,18 @@ export const useData = (
 
   const querySort = useMemo(() => {
     // By default, we always sort by protected area name
+    let res = 'name:asc,environment.name:asc';
     if (sorting.length > 0) {
-      return `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}`;
+      res = `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}`;
+
+      // In addition to sorting by the column the user asked about, we'll also always sort by
+      // environment
+      if (sorting[0].id !== 'environment.name') {
+        res = `${res},environment.name:asc`;
+      }
     }
 
-    return 'name:asc';
+    return res;
   }, [sorting]);
 
   const queryFilters = useMemo(
@@ -630,7 +642,7 @@ export const useData = (
             const environment = pa.environment;
             const localizedEnvironment = [
               environment,
-              ...(environment?.localizations?.map((environment) => environment) ?? []),
+              ...((environment as any)?.localizations?.map((environment) => environment) ?? []),
             ].find((data) => data?.locale === locale);
 
             const dataSource = pa.data_source;
@@ -642,7 +654,7 @@ export const useData = (
             const protectionStatus = pa.protection_status;
             const localizedProtectionStatus = [
               protectionStatus,
-              ...(protectionStatus?.localizations?.map((protectionStatus) => protectionStatus) ??
+              ...((protectionStatus as any)?.localizations?.map((protectionStatus) => protectionStatus) ??
                 []),
             ].find((data) => data?.locale === locale);
 
@@ -663,7 +675,7 @@ export const useData = (
             const mpaaProtectionLevel = pa.mpaa_protection_level;
             const localizedMpaaProtectionLevel = [
               mpaaProtectionLevel,
-              ...(mpaaProtectionLevel?.localizations?.map(
+              ...((mpaaProtectionLevel as any)?.localizations?.map(
                 (mpaaProtectionLevel) => mpaaProtectionLevel
               ) ?? []),
             ].find((data) => data?.locale === locale);

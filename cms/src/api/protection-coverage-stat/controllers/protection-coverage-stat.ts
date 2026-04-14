@@ -23,10 +23,10 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
             // find the most recently updated record and return its updatedAt date
             const updatedAtQuery = {
                 ...query,
-                fields: ['updatedAt'],
-                sort: 'updatedAt:desc',
+                fields: ['updatedAt'] as any,
+                sort: { updatedAt: 'desc' } as any,
                 limit: 1
-            } as any;
+            };
             const updatedAt = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).findMany(updatedAtQuery).then((data) => {
                 return data[0]?.updatedAt ?? null;
             });

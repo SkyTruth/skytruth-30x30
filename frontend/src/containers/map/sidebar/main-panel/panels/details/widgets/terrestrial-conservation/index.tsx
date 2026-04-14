@@ -77,7 +77,9 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
       filters: {
         slug: 'coverage-widget',
       },
-      populate: 'data_sources',
+      populate: {
+        data_sources: true,
+      } as any,
     },
     {
       query: {

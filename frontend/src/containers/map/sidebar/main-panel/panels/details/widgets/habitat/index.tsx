@@ -157,7 +157,9 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       filters: {
         slug: `habitat-widget-${tab}`,
       },
-      populate: 'data_sources',
+      populate: {
+        data_sources: true,
+      } as any,
     },
     {
       query: {

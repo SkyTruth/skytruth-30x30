@@ -200,7 +200,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
 
       children.forEach(child => {
         toUpdateRelations[paIdentifier].children.push({
-          documentId: child?.documentId,
+          id: child?.documentId,
           key: this.makePAKey(child)
         })
       })
