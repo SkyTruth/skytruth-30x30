@@ -49,59 +49,65 @@ class PMTilesetConfig:
 
 
 def _lng_lat_to_tile(lng: float, lat: float, zoom: int) -> tuple[int, int]:
-    """Convert lng/lat to tile x/y at given zoom level."""
-    num = 2**zoom  # number of tiles on each axis given the zoom level
-    x = int((lng + 180.0) / 360.0 * num)
+    """
+    Convert lng/lat to tile x/y at given zoom level
+    using the slippy mapo tiling scheme. See:
+    https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Implementations
+    """
+    num_tiles = 2**zoom
+    tile_x = int((lng + 180.0) / 360.0 * num_tiles)
     lat_rad = math.radians(lat)
-    y = int((1.0 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2.0 * num)
-    x = max(0, min(num - 1, x))
-    y = max(0, min(num - 1, y))
-    return x, y
+    tile_y = int(
+        (1.0 - math.log(math.tan(lat_rad) + 1 / math.cos(lat_rad)) / math.pi) / 2.0 * num_tiles
+    )
+    tile_x = max(0, min(num_tiles - 1, tile_x))
+    tile_y = max(0, min(num_tiles - 1, tile_y))
+    return tile_x, tile_y
 
 
-def _tile_bounds(x: int, y: int, z: int) -> tuple[float, float, float, float]:
+def _tile_bounds(tile_x: int, tile_y: int, zoom: int) -> tuple[float, float, float, float]:
     """Get the web mercator tile bounds in EPSG:4326 (west, south, east, north)."""
-    n = 2**z
-    west = x / n * 360.0 - 180.0
-    east = (x + 1) / n * 360.0 - 180.0
-    north = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))
-    south = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n))))
+    num_tiles = 2**zoom
+    west = tile_x / num_tiles * 360.0 - 180.0
+    east = (tile_x + 1) / num_tiles * 360.0 - 180.0
+    north = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * tile_y / num_tiles))))
+    south = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (tile_y + 1) / num_tiles))))
     return west, south, east, north
 
 
 def _render_tile(
-    src: rasterio.DatasetReader,
-    x: int,
-    y: int,
-    z: int,
+    source: rasterio.DatasetReader,
+    tile_x: int,
+    tile_y: int,
+    zoom: int,
     tile_size: int,
 ) -> bytes | None:
     """
     Render a single map tile from the source RGBA GeoTIFF.
     Returns PNG bytes, or None if the tile has no data.
     """
-    west, south, east, north = _tile_bounds(x, y, z)
+    west, south, east, north = _tile_bounds(tile_x, tile_y, zoom)
 
     # Check if tile intersects source bounds
-    src_bounds = src.bounds
-    if west >= src_bounds.right or east <= src_bounds.left:
+    source_bounds = source.bounds
+    if west >= source_bounds.right or east <= source_bounds.left:
         return None
-    if south >= src_bounds.top or north <= src_bounds.bottom:
+    if south >= source_bounds.top or north <= source_bounds.bottom:
         return None
 
     # Target transform for the tile in EPSG:4326
-    dst_transform = from_bounds(west, south, east, north, tile_size, tile_size)
+    tile_transform = from_bounds(west, south, east, north, tile_size, tile_size)
 
     # Read and reproject source data into the tile
     tile_data = np.zeros((4, tile_size, tile_size), dtype=np.uint8)
 
     for band_idx in range(1, 5):  # RGBA = bands 1-4
         reproject(
-            source=rasterio.band(src, band_idx),
+            source=rasterio.band(source, band_idx),
             destination=tile_data[band_idx - 1],
-            src_transform=src.transform,
-            src_crs=src.crs,
-            dst_transform=dst_transform,
+            src_transform=source.transform,
+            src_crs=source.crs,
+            dst_transform=tile_transform,
             dst_crs="EPSG:4326",
             resampling=Resampling.nearest,
         )
@@ -110,14 +116,13 @@ def _render_tile(
     if tile_data[3].max() == 0:
         return None
 
-    # Convert to PNG via PIL
-    # Rearrange from (4, H, W) to (H, W, 4)
-    img_data = np.moveaxis(tile_data, 0, -1)
-    img = Image.fromarray(img_data)
+    # Convert to PNG via PIL — rearrange from (4, H, W) to (H, W, 4)
+    pixel_data = np.moveaxis(tile_data, 0, -1)
+    image = Image.fromarray(pixel_data)
 
-    buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True)
-    return buf.getvalue()
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()
 
 
 def _generate_pmtiles(
@@ -135,32 +140,32 @@ def _generate_pmtiles(
     """
     tile_count = 0
 
-    with rasterio.open(colorized_path) as src:
-        src_bounds = src.bounds
+    with rasterio.open(colorized_path) as source:
+        source_bounds = source.bounds
 
-        with open(pmtiles_path, "wb") as f:
-            writer = PMTilesWriter(f)
+        with open(pmtiles_path, "wb") as output_file:
+            writer = PMTilesWriter(output_file)
 
-            for z in range(min_zoom, max_zoom + 1):
+            for zoom in range(min_zoom, max_zoom + 1):
                 # Calculate tile range that covers the source bounds
-                x_min, y_min = _lng_lat_to_tile(src_bounds.left, src_bounds.top, z)
-                x_max, y_max = _lng_lat_to_tile(src_bounds.right, src_bounds.bottom, z)
+                x_min, y_min = _lng_lat_to_tile(source_bounds.left, source_bounds.top, zoom)
+                x_max, y_max = _lng_lat_to_tile(source_bounds.right, source_bounds.bottom, zoom)
 
                 if verbose:
                     total_at_zoom = (x_max - x_min + 1) * (y_max - y_min + 1)
                     logger.info(
                         {
-                            "message": f"Rendering zoom {z}: "
+                            "message": f"Rendering zoom {zoom}: "
                             f"x=[{x_min}..{x_max}], y=[{y_min}..{y_max}], "
                             f"~{total_at_zoom} tiles"
                         }
                     )
 
-                for x in range(x_min, x_max + 1):
-                    for y in range(y_min, y_max + 1):
-                        png_data = _render_tile(src, x, y, z, tile_size)
+                for tile_x in range(x_min, x_max + 1):
+                    for tile_y in range(y_min, y_max + 1):
+                        png_data = _render_tile(source, tile_x, tile_y, zoom, tile_size)
                         if png_data:
-                            tile_id = zxy_to_tileid(z, x, y)
+                            tile_id = zxy_to_tileid(zoom, tile_x, tile_y)
                             writer.write_tile(tile_id, png_data)
                             tile_count += 1
 
@@ -170,10 +175,10 @@ def _generate_pmtiles(
                     "tile_compression": Compression.NONE,
                     "min_zoom": min_zoom,
                     "max_zoom": max_zoom,
-                    "min_lon_e7": int(src_bounds.left * 1e7),
-                    "min_lat_e7": int(src_bounds.bottom * 1e7),
-                    "max_lon_e7": int(src_bounds.right * 1e7),
-                    "max_lat_e7": int(src_bounds.top * 1e7),
+                    "min_lon_e7": int(source_bounds.left * 1e7),
+                    "min_lat_e7": int(source_bounds.bottom * 1e7),
+                    "max_lon_e7": int(source_bounds.right * 1e7),
+                    "max_lat_e7": int(source_bounds.top * 1e7),
                 }
             )
 
@@ -183,8 +188,8 @@ def _generate_pmtiles(
 class PMTilesWriter:
     """Minimal PMTiles v3 writer using the pmtiles library."""
 
-    def __init__(self, f):
-        self.f = f
+    def __init__(self, output_file):
+        self.output_file = output_file
         self.entries: list[tuple[int, bytes]] = []
 
     def write_tile(self, tile_id: int, data: bytes):
@@ -193,8 +198,8 @@ class PMTilesWriter:
     def finalize(self, header: dict):
         from pmtiles.writer import Writer as _Writer
 
-        writer = _Writer(self.f)
-        for tile_id, data in sorted(self.entries, key=lambda e: e[0]):
+        writer = _Writer(self.output_file)
+        for tile_id, data in sorted(self.entries, key=lambda entry: entry[0]):
             writer.write_tile(tile_id, data)
         writer.finalize(
             header=header,
@@ -202,7 +207,7 @@ class PMTilesWriter:
         )
 
 
-def run_raster_tileset_pipeline(cfg: PMTilesetConfig) -> dict[str, Any]:
+def run_raster_tileset_pipeline(config: PMTilesetConfig) -> dict[str, Any]:
     """
     Run the full pipeline: download COG → colorize → render tiles → PMTiles → upload to GCS.
 
@@ -210,8 +215,8 @@ def run_raster_tileset_pipeline(cfg: PMTilesetConfig) -> dict[str, Any]:
     Configure the frontend layer in Strapi with type "cog" and config:
         { "url": "https://storage.googleapis.com/{bucket}/{output_blob}" }
     """
-    if cfg.verbose:
-        logger.info({"message": f"Starting raster tileset pipeline for {cfg.display_name}..."})
+    if config.verbose:
+        logger.info({"message": f"Starting raster tileset pipeline for {config.display_name}..."})
 
     temp_dir = Path(tempfile.mkdtemp())
 
@@ -220,87 +225,87 @@ def run_raster_tileset_pipeline(cfg: PMTilesetConfig) -> dict[str, Any]:
         colorized_local = temp_dir / "colorized.tif"
         pmtiles_local = temp_dir / "output.pmtiles"
 
-        # 1. Download source COG from GCS
-        if cfg.verbose:
-            logger.info({"message": f"Downloading {cfg.source_blob} from GCS..."})
+        if config.verbose:
+            logger.info({"message": f"Downloading {config.source_blob} from GCS..."})
 
         download_file_from_gcs(
-            bucket_name=cfg.bucket,
-            blob_name=cfg.source_blob,
+            bucket_name=config.bucket,
+            blob_name=config.source_blob,
             destination_file_name=str(source_local),
-            verbose=cfg.verbose,
+            verbose=config.verbose,
         )
 
-        # 2. Colorize Float32 → RGBA
-        if cfg.verbose:
-            logger.info({"message": f"Colorizing with ramp={cfg.color_ramp}, domain={cfg.domain}"})
+        if config.verbose:
+            logger.info(
+                {"message": f"Colorizing with ramp={config.color_ramp}, domain={config.domain}"}
+            )
 
         colorize_raster(
             input_path=str(source_local),
             output_path=str(colorized_local),
-            color_ramp_name=cfg.color_ramp,
-            domain=cfg.domain,
-            verbose=cfg.verbose,
+            color_ramp_name=config.color_ramp,
+            domain=config.domain,
+            verbose=config.verbose,
         )
 
-        # 3. Render tiles and write PMTiles
-        if cfg.verbose:
-            logger.info({"message": f"Rendering tiles z{cfg.min_zoom}-z{cfg.max_zoom}..."})
+        if config.verbose:
+            logger.info(
+                {"message": f"Rendering tiles z{config.min_zoom}-z{config.max_zoom}..."}
+            )
 
         tile_count = _generate_pmtiles(
             str(colorized_local),
             str(pmtiles_local),
-            cfg.min_zoom,
-            cfg.max_zoom,
-            cfg.tile_size,
-            cfg.verbose,
+            config.min_zoom,
+            config.max_zoom,
+            config.tile_size,
+            config.verbose,
         )
 
-        # 4. Upload PMTiles to GCS
         pmtiles_size_mb = pmtiles_local.stat().st_size / (1024 * 1024)
-        if cfg.verbose:
+        if config.verbose:
             logger.info(
                 {
-                    "message": f"Uploading PMTiles to GCS: {cfg.output_blob}",
+                    "message": f"Uploading PMTiles to GCS: {config.output_blob}",
                     "size_mb": round(pmtiles_size_mb, 1),
                     "tile_count": tile_count,
                 }
             )
 
         upload_file_to_gcs(
-            bucket=cfg.bucket,
+            bucket=config.bucket,
             file_name=str(pmtiles_local),
-            blob_name=cfg.output_blob,
+            blob_name=config.output_blob,
         )
 
-        gcs_url = f"https://storage.googleapis.com/{cfg.bucket}/{cfg.output_blob}"
+        gcs_url = f"https://storage.googleapis.com/{config.bucket}/{config.output_blob}"
 
-        if cfg.verbose:
+        if config.verbose:
             logger.info(
                 {
-                    "message": f"Pipeline complete for {cfg.display_name}",
+                    "message": f"Pipeline complete for {config.display_name}",
                     "tile_count": tile_count,
                     "gcs_url": gcs_url,
                 }
             )
 
         return {
-            "output_blob": cfg.output_blob,
+            "output_blob": config.output_blob,
             "gcs_url": gcs_url,
             "tile_count": tile_count,
             "size_mb": round(pmtiles_size_mb, 1),
-            "temp_dir": str(temp_dir) if cfg.keep_temp else None,
+            "temp_dir": str(temp_dir) if config.keep_temp else None,
         }
 
-    except Exception as e:
+    except Exception as error:
         logger.error(
             {
-                "message": f"Raster tileset pipeline failed for {cfg.display_name}",
-                "error": str(e),
+                "message": f"Raster tileset pipeline failed for {config.display_name}",
+                "error": str(error),
             }
         )
         raise
 
     finally:
-        if not cfg.keep_temp:
+        if not config.keep_temp:
             shutil.rmtree(temp_dir, ignore_errors=True)
