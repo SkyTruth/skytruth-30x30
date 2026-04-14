@@ -323,10 +323,15 @@ resource "google_storage_bucket" "pmtiles_bucket" {
   }
 }
 
+resource "google_storage_bucket_iam_member" "pmtiles_public_read" {
+  bucket = google_storage_bucket.pmtiles_bucket.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
 locals {
   data_processing_env = {
     BUCKET              = google_storage_bucket.data_bucket.name
-    RASTER_BUCKET       = google_storage_bucket.pmtiles_bucket.name
     DATABASE_HOST       = module.database.database_host
     DATABASE_NAME       = module.database.database_name
     DATABASE_USERNAME   = module.database.database_user
@@ -336,6 +341,7 @@ locals {
     STRAPI_USERNAME     = var.backend_write_user
     LOCATION            = var.gcp_region
     ENVIRONMENT         = var.environment
+    PMTILES_BUCKET      = google_storage_bucket.pmtiles_bucket.name
   }
 
   data_processing_secrets = [{

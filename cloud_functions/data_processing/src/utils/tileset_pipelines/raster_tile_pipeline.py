@@ -1,13 +1,5 @@
 """
 Pipeline for colorizing a COG and converting it to PMTiles for static hosting on GCS.
-
-Flow:
-1. Download source COG from GCS
-2. Colorize Float32 → RGBA GeoTIFF
-3. Render PNG tiles at each zoom level using rasterio
-4. Write tiles into a PMTiles archive
-5. Upload PMTiles file to GCS
-
 """
 
 import io
@@ -35,12 +27,12 @@ logger = Logger()
 
 @dataclass
 class PMTilesetConfig:
-    source_bucket: str  # GCS bucket where the raw raster lives
-    source_blob: str  # Blob path within source_bucket (e.g., "raw/coral.tif")
-    output_bucket: str  # GCS bucket for the PMTiles output
-    output_blob: str  # Blob path within output_bucket (e.g., "coral.pmtiles")
-    display_name: str  # Human-readable name for logging
-    color_ramp: str  # Color ramp name (e.g., "coral")
+    source_bucket: str 
+    source_blob: str 
+    output_bucket: str
+    output_blob: str
+    display_name: str 
+    color_ramp: str
     domain: tuple[float, float]  # (min, max) value range
     min_zoom: int = 0
     max_zoom: int = 10  # Max zoom level for tile generation
@@ -52,7 +44,7 @@ class PMTilesetConfig:
 def _lng_lat_to_tile(lng: float, lat: float, zoom: int) -> tuple[int, int]:
     """
     Convert lng/lat to tile x/y at given zoom level
-    using the slippy mapo tiling scheme. See:
+    using the slippy map tiling scheme. See:
     https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Implementations
     """
     num_tiles = 2**zoom
@@ -101,7 +93,6 @@ def _render_tile(
     mercator_bounds = transform_bounds("EPSG:4326", "EPSG:3857", west, south, east, north)
     tile_transform = from_bounds(*mercator_bounds, tile_size, tile_size)
 
-    # Read and reproject source data into the tile
     tile_data = np.zeros((4, tile_size, tile_size), dtype=np.uint8)
 
     for band_idx in range(1, 5):  # RGBA = bands 1-4

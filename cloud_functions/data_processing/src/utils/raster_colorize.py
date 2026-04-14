@@ -1,8 +1,8 @@
 """
-Utilities for colorizing single-band Float32 GeoTIFFs to RGBA for Mapbox upload.
+Utilities for colorizing single-band Float32 GeoTIFFs to RGBA for tileset generation
 
 Reads a COG from GCS, applies a color ramp to map continuous values to RGBA,
-and writes a compressed RGBA GeoTIFF suitable for upload to Mapbox as a raster tileset.
+and writes a compressed RGBA GeoTIFF suitable for tileset generation.
 """
 
 from dataclasses import dataclass
