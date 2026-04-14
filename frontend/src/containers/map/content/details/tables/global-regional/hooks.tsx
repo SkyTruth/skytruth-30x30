@@ -65,9 +65,7 @@ const useTooltips = () => {
   const { data: dataInfo } = useGetDataInfos(
     {
       locale,
-      populate: {
-        data_sources: true,
-      } as any,
+      populate: 'data_sources',
       filters: {
         slug: {
           $in: Object.entries(TOOLTIP_MAPPING).map((entry) => entry[1]),
@@ -112,7 +110,6 @@ const useFiltersOptions = () => {
       locale,
       // @ts-ignore
       fields: ['name', 'slug'],
-      'pagination[limit]': -1,
     },
     {
       query: {
