@@ -93,7 +93,7 @@ const MainMap: FCWithMessages = () => {
     },
     {
       query: {
-        select: ({ data }) => data.map(item => item?.slug),
+        select: ({ data }) => data.map((item) => item?.slug),
       },
     }
   );

@@ -19,10 +19,7 @@ import GlobeIcon from '@/styles/icons/globe.svg';
 import MagnifyingGlassIcon from '@/styles/icons/magnifying-glass.svg';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
-import {
-  LocationGroupsItem,
-  Location,
-} from '@/types/generated/strapi.schemas';
+import { LocationGroupsItem, Location } from '@/types/generated/strapi.schemas';
 
 import LocationDropdown from './location-dropdown';
 import LocationTypeToggle from './type-toggle';

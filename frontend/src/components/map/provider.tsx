@@ -47,7 +47,10 @@ export const DeckMapboxOverlayProvider = ({
   const addLayer = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (layer: any) => {
-      const newLayers = [...layersRef.current.filter((l) => l.documentId !== layer.documentId), layer];
+      const newLayers = [
+        ...layersRef.current.filter((l) => l.documentId !== layer.documentId),
+        layer,
+      ];
 
       layersRef.current = newLayers;
       return OVERLAY.setProps({ layers: newLayers });

@@ -69,10 +69,7 @@ export default function useMapLocationBounds() {
       pendingLocationChangeRef.current = false;
 
       const bounds: BBox[] = data.reduce((acc, loc) => {
-        const {
-          marine_bounds = null, 
-          terrestrial_bounds = null,
-        } = loc;
+        const { marine_bounds = null, terrestrial_bounds = null } = loc;
         switch (tab) {
           case 'marine':
             if (marine_bounds) {
