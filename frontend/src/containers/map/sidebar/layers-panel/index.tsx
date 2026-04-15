@@ -13,7 +13,7 @@ import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear do
 import { FCWithMessages } from '@/types';
 import { MapTypes } from '@/types/map';
 
-import { mapTypeAtom } from '../../store';
+import { customLayersAtom, mapTypeAtom } from '../../store';
 
 import { SWITCH_LABEL_CLASSES } from './constants';
 import CustomLayerGroup from './custom-layers/custom-layer-group';
@@ -28,6 +28,7 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
   const [datasets, { isLoading }] = useDatasetsByEnvironment();
 
   const [mapType] = useAtom(mapTypeAtom);
+  const [customLayers] = useAtom(customLayersAtom);
 
   // TECH-3372: tear down
   const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
@@ -66,12 +67,11 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
           implementations.
       */}
 
-      {
-        // TODO: TECH-3372 remove feature flag check
-        mapType === MapTypes.ConservationBuilder && isCustomLayersActive ? (
-          <CustomLayerGroup name="Custom Layers" isOpen={true} />
-        ) : null
-      }
+      {mapType === MapTypes.ConservationBuilder &&
+      isCustomLayersActive && // TODO: TECH-3372 remove feature flag check
+      Object.keys(customLayers).length > 0 ? (
+        <CustomLayerGroup name={t('custom-layers')} isOpen={true} />
+      ) : null}
       <LayersGroup
         name={t('basemap')}
         datasets={datasets.basemap}

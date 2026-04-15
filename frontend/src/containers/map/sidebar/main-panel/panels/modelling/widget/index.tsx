@@ -70,6 +70,7 @@ WidgetLegend.messages = ['containers.map-sidebar-main-panel'];
 
 const ModellingWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
+  const tUploads = useTranslations('services.uploads');
   const locale = useLocale();
   const locationNameField = useNameField();
 
@@ -80,8 +81,12 @@ const ModellingWidget: FCWithMessages = () => {
   const {
     status: modellingStatus,
     data: modellingData,
-    errorMessage,
+    errorMessage: errorMessageKey,
   } = useAtomValue(modellingAtom);
+
+  const errorMessage = errorMessageKey
+    ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0], { environment: tab })
+    : undefined;
   const { status: drawStatus } = useAtomValue(drawStateAtom);
 
   // Tooltips with mapping
@@ -203,17 +208,25 @@ const ModellingWidget: FCWithMessages = () => {
             enabled:
               Boolean(modellingData?.locations_area) && ['marine', 'terrestrial'].includes(tab),
             select: ({ data }) => {
-              if (!data) return null;
+              if (!data?.length) return null;
 
               // existing protected area
               const protectedArea = data?.[0]?.attributes.protected_area ?? 0;
-              // total area
-              const totalArea = Number(data?.[0]?.attributes.total_area ?? 0);
+              const currentLoc = data?.[0]?.attributes?.location?.data?.attributes;
+
+              // Fallback area if location isn't in WDPA
+              const fallBackArea =
+                tab === 'marine'
+                  ? currentLoc?.total_marine_area
+                  : currentLoc?.total_terrestrial_area;
+
+              const totalArea = Number(data?.[0]?.attributes.total_area ?? fallBackArea);
               // total custom protected area (analysis)
-              const location = data?.[0]?.attributes?.location?.data?.attributes;
-              const customArea = modellingData.locations_area.find(
-                ({ code }) => code === location?.code
-              ).protected_area;
+              const CLoc = modellingData.locations_area.find(
+                ({ code }) => code === currentLoc?.code
+              );
+
+              const customArea = CLoc.protected_area;
               // If custom area exceeds total unprotected area, cap it to the total unprotected area
               // necessary because of rounding errors and differences in data resolutions
               const totalCustomArea =
@@ -228,7 +241,7 @@ const ModellingWidget: FCWithMessages = () => {
               const totalPercentage = totalCustomAreaPercentage + totalExistingAreaPercentage;
 
               return {
-                location,
+                location: currentLoc,
                 totalArea,
                 totalProtectedArea,
                 protectedArea,
@@ -248,7 +261,7 @@ const ModellingWidget: FCWithMessages = () => {
   const loading = modellingStatus === 'running' || drawStatus === 'uploading';
   const error = modellingStatus === 'error';
   const loadingMessage =
-    drawStatus === 'uploading' ? t('uploading-shape-to-map') : t('loading-data');
+    drawStatus === 'uploading' ? t('uploading-layer-to-map') : t('loading-data');
 
   // @ts-expect-error will check later
   const nationalLevelContributions: {
@@ -280,7 +293,7 @@ const ModellingWidget: FCWithMessages = () => {
 
   return (
     <Widget
-      className="border-b border-black py-0"
+      className="border-black py-0"
       noData={!nationalLevelContributions}
       loading={loading}
       loadingMessage={loadingMessage}
@@ -371,6 +384,7 @@ const ModellingWidget: FCWithMessages = () => {
 
 ModellingWidget.messages = [
   'containers.map-sidebar-main-panel',
+  'services.uploads',
   ...Widget.messages,
   ...WidgetLegend.messages,
   ...StackedHorizontalBarChart.messages,

@@ -1,14 +1,19 @@
-import { useEffect } from 'react';
+import { FC, useEffect, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
+import type { GeoJSONObject } from '@turf/turf';
 import axios, { isAxiosError } from 'axios';
 import type { Feature } from 'geojson';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { useTranslations } from 'next-intl';
 
-import { modellingAtom, drawStateAtom } from '@/containers/map/store';
+import { conservationStatsImpressed } from '@/components/analytics/heap';
+import {
+  modellingAtom,
+  customLayersAtom,
+  modellingCustomLayerIdAtom,
+} from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { FCWithMessages } from '@/types';
+import { extractPolygons } from '@/lib/utils/file-upload';
 import { ModellingData } from '@/types/modelling';
 
 const fetchModelling = async (tab: string, feature: Feature) => {
@@ -18,59 +23,84 @@ const fetchModelling = async (tab: string, feature: Feature) => {
   });
 };
 
-const Modelling: FCWithMessages = () => {
-  const t = useTranslations('components.widget');
-
-  const { feature, revision } = useAtomValue(drawStateAtom);
+const Modelling: FC = () => {
+  const modellingLayerId = useAtomValue(modellingCustomLayerIdAtom);
+  const customLayers = useAtomValue(customLayersAtom);
   const setModellingState = useSetAtom(modellingAtom);
 
   const [{ tab }] = useSyncMapContentSettings();
 
-  const getErrorMessage = (error) => {
-    if (error.includes('Invalid input geometry')) {
-      return t('invalid-geometry');
+  const modellingLayer = modellingLayerId ? customLayers[modellingLayerId] : null;
+
+  const feature = useMemo(() => {
+    if (!modellingLayer) return null;
+    try {
+      return extractPolygons(modellingLayer.feature as GeoJSONObject).feature;
+    } catch {
+      return null;
     }
-    return error;
+  }, [modellingLayer]);
+
+  const getErrorMessageKey = (req: unknown): string => {
+    if (!isAxiosError(req)) return 'general-stats-error';
+
+    const status = req.response?.status;
+    const error = req.response?.data?.error as string;
+
+    if (status === 400) {
+      if (error?.includes('Invalid geometry')) return 'invalid-geometry';
+      return 'invalid-geometry';
+    }
+
+    return 'general-stats-error';
   };
 
   const { isFetching, isSuccess, data } = useQuery(
-    ['modelling', tab, revision, feature],
+    ['modelling', tab, modellingLayerId],
     () => fetchModelling(tab, feature),
     {
       enabled: Boolean(feature) && ['marine', 'terrestrial'].includes(tab),
       select: ({ data }) => data,
       refetchOnWindowFocus: false,
+      staleTime: Infinity,
       retry: false,
       onError: (req) => {
-        if (isAxiosError(req)) {
-          setModellingState((prevState) => ({
-            ...prevState,
-            status: 'error',
-            errorMessage:
-              req.response?.status === 400 ? getErrorMessage(req.response?.data.error) : undefined,
-          }));
-        } else {
-          setModellingState((prevState) => ({
-            ...prevState,
-            status: 'error',
-            errorMessage: undefined,
-          }));
-        }
+        setModellingState((prevState) => ({
+          ...prevState,
+          status: 'error',
+          errorMessage: getErrorMessageKey(req),
+        }));
       },
     }
   );
 
   useEffect(() => {
-    setModellingState((prevState) => ({
-      ...prevState,
-      ...(isSuccess && { status: 'success', data }),
-      ...(isFetching && { status: 'running' }),
-    }));
-  }, [setModellingState, isFetching, isSuccess, data]);
+    if (isFetching) {
+      setModellingState((prevState) => ({ ...prevState, status: 'running' }));
+    } else if (isSuccess) {
+      if (data?.locations_area?.length > 0) {
+        setModellingState((prevState) => ({ ...prevState, status: 'success', data }));
+        conservationStatsImpressed({
+          countries: data.locations_area.flatMap((loc) => loc.code),
+          environment: tab,
+          area: data.total_area,
+        });
+      } else {
+        setModellingState((prevState) => ({
+          ...prevState,
+          status: 'error',
+          errorMessage: 'no-intersection-error',
+        }));
+
+        conservationStatsImpressed({
+          countries: [],
+          environment: tab,
+        });
+      }
+    }
+  }, [setModellingState, isFetching, isSuccess, data, tab]);
 
   return null;
 };
-
-Modelling.messages = ['components.widget'];
 
 export default Modelling;

@@ -57,6 +57,7 @@ from src.core.processors import (
     choose_pa_area,
     match_old_pa_naming_convantion,
 )
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
@@ -173,9 +174,13 @@ def download_mpatlas(
             verbose=verbose,
             alert_message="failed to download MPAtlas zone stats",
         )
-    except RetryFailed:
-        # If downloading MPAtlas fails, try the next day for up to 3 days
-        return {"delay_seconds": 60 * 60 * 24, "max_retries": 3}, False
+    except RetryFailed as e:
+        cfg = METHOD_RETRY_CONFIGS["download_mpatlas"]
+        raise ScheduleRetry(
+            delay_seconds=cfg["delay_seconds"],
+            max_retries=cfg["max_retries"],
+            message=f"MPAtlas download failed: {e}",
+        ) from e
 
     if verbose:
         logger.info({"message": f"loading MPAtlas from {mpatlas_filename}"})
@@ -210,7 +215,6 @@ def download_mpatlas(
         project_id=project_id,
         verbose=verbose,
     )
-    return None, True
 
 
 def download_protected_seas(
@@ -521,8 +525,12 @@ def download_and_process_protected_planet_pas(
     # Do not send alert unless it fails all retries
     status = download_file_with_progress(wdpa_url, base_zip_path, verbose=verbose)
     if not status:
-        logger.error({"message": f"Failed to download {wdpa_url}"})
-        return {"delay_seconds": 60 * 60 * 24, "max_retries": 7}, False
+        cfg = METHOD_RETRY_CONFIGS["download_protected_planet_pas"]
+        raise ScheduleRetry(
+            delay_seconds=cfg["delay_seconds"],
+            max_retries=cfg["max_retries"],
+            message=f"Failed to download {wdpa_url}",
+        )
 
     show_container_mem("After download")
 
@@ -610,13 +618,11 @@ def download_and_process_protected_planet_pas(
         )
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
     except RetryFailed:
-        return None, False
+        raise
 
     # Clean up memory
     df = pd.DataFrame()
     del df
-
-    return None, True
 
 
 def download_protected_planet_global(

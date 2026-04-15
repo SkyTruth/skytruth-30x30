@@ -1,6 +1,5 @@
 import { MapLayerMouseEvent } from 'react-map-gl';
 
-import { Feature } from 'geojson';
 import { atom } from 'jotai';
 import { atomWithReset } from 'jotai/utils';
 
@@ -13,6 +12,9 @@ import type { ModellingData } from '@/types/modelling';
 
 export const sidebarAtom = atom(true);
 export const layersAtom = atom(false);
+export const screenshotOpenAtom = atom<boolean>(false);
+export const legendOpenAtom = atom<boolean>(true);
+export const legendReadyAtom = atom<boolean>(true);
 
 // ? Map state
 export const mapTypeAtom = atom<MapTypes>(MapTypes.ProgressTracker);
@@ -25,14 +27,10 @@ export const popupAtom = atom<Partial<MapLayerMouseEvent | null>>({});
 export const drawStateAtom = atomWithReset<{
   active: boolean;
   status: 'idle' | 'drawing' | 'uploading' | 'success';
-  feature: Feature;
-  revision: number;
   source?: 'draw' | 'upload' | null;
 }>({
   active: false,
   status: 'idle',
-  feature: null,
-  revision: 0,
   source: null,
 });
 export const allActiveLayersAtom = atom<Array<string>>([]);

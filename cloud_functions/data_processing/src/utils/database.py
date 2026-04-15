@@ -97,7 +97,8 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
         # Update table in PostgreSQL
         with conn.connect() as connection:
             # Subdivide complex geometries (max 10,000 vertices each)
-            connection.execute(text(f"""
+            connection.execute(
+                text(f"""
             WITH complex_areas AS (
                 DELETE from data.{table_name}
                 WHERE ST_NPoints(the_geom) > 10000
@@ -107,17 +108,22 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
                 SELECT location,
                     ST_Multi(ST_Subdivide(the_geom, 10000)) as the_geom
                 FROM complex_areas;
-            """))
+            """)
+            )
 
             # Add primary key
-            connection.execute(text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;"))
+            connection.execute(
+                text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;")
+            )
 
             # Create GIST index for fast spatial querying
-            connection.execute(text(f"""
+            connection.execute(
+                text(f"""
                 CREATE INDEX gist_{table_name}_geom
                 ON data.{table_name}
                 USING GIST (the_geom);
-            """))
+            """)
+            )
 
             connection.execute(text(f"ANALYZE data.{table_name};"))
             connection.commit()

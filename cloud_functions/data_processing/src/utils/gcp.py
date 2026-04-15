@@ -308,7 +308,7 @@ def upload_gdf(
     bucket_name: str,
     gdf: gpd.GeoDataFrame,
     destination_blob_name: str,
-    output_file_type: str = '.geojson',
+    output_file_type: str = ".geojson",
     project_id: str = PROJECT,
     verbose: bool = True,
     timeout: int = 600,
@@ -337,11 +337,11 @@ def upload_gdf(
     if verbose:
         print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
 
-    if output_file_type == '.geojson':
+    if output_file_type == ".geojson":
         with tempfile.NamedTemporaryFile(suffix=".geojson") as tmp_file:
             gdf.to_file(tmp_file.name, driver="GeoJSON")
             bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
-    elif output_file_type == '.parquet':
+    elif output_file_type == ".parquet":
         with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp_file:
             gdf.to_parquet(tmp_file.name)
             bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
@@ -697,7 +697,7 @@ def read_parquet_from_gcs(bucket_name: str, filename: str, verbose: bool = True)
 
     if verbose:
         print(f"Reading Parquet from {gcs_path}")
-    
+
     gdf = gpd.read_parquet(gcs_path)
 
     return gdf
