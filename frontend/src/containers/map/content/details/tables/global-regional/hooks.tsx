@@ -220,8 +220,8 @@ export const useColumns = (
         },
       },
       {
-        id: 'protected-area',
-        accessorKey: 'protected-area',
+        id: 'protected_area',
+        accessorKey: 'protected_area',
         header: ({ column }) => (
           <HeaderItem>
             <SortingButton column={column} />
