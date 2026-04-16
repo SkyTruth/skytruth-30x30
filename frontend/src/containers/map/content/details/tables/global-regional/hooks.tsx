@@ -386,14 +386,14 @@ export const useData = (
   );
 
   // By default, we always sort by location
-  let sort = 'location.name:asc,environment.name:asc';
+  let sort = 'environment.name:asc,location.name:asc';
   if (sorting.length > 0) {
     sort = `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}`;
 
     // In addition to sorting by the column the user asked about, we'll also always sort by
     // environment
     if (sorting[0].id !== 'environment.name') {
-      sort = `${sort},environment.name:asc`;
+      sort = `environment.name:asc,${sort}`;
     }
   }
 
