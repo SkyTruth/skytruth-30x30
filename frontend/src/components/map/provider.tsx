@@ -9,7 +9,7 @@ import { CustomMapProps } from '@/components/map/types';
 interface DeckMapboxOverlayContext {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   addLayer: (layer: any) => void;
-  removeLayer: (documentId: string) => void;
+  removeLayer: (id: string) => void;
 }
 
 const Context = createContext<DeckMapboxOverlayContext>({
@@ -47,10 +47,7 @@ export const DeckMapboxOverlayProvider = ({
   const addLayer = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (layer: any) => {
-      const newLayers = [
-        ...layersRef.current.filter((l) => l.documentId !== layer.documentId),
-        layer,
-      ];
+      const newLayers = [...layersRef.current.filter((l) => l.id !== layer.id), layer];
 
       layersRef.current = newLayers;
       return OVERLAY.setProps({ layers: newLayers });
@@ -59,8 +56,8 @@ export const DeckMapboxOverlayProvider = ({
   );
 
   const removeLayer = useCallback(
-    (documentId: string) => {
-      const newLayers = [...layersRef.current.filter((l) => l.documentId !== documentId)];
+    (id: string) => {
+      const newLayers = [...layersRef.current.filter((l) => l.id !== id)];
 
       layersRef.current = newLayers;
       OVERLAY.setProps({ layers: newLayers });
