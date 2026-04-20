@@ -11,6 +11,7 @@ from src.core.map_params import (
     PMTILES_BUCKET,
 )
 from src.core.params import BUCKET, CORAL_REEF_SOURCE_FILE
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 
 
 @pytest.fixture
@@ -97,13 +98,19 @@ def test_wrapper_custom_params(mock_pipeline):
     assert archive_upload["blob_name"] == "custom/archive.pmtiles"
 
 
-def test_wrapper_propagates_errors(monkeypatch):
-    """Pipeline errors should bubble up."""
+def test_wrapper_raises_schedule_retry_on_failure(monkeypatch):
+    """When the pipeline fails, ScheduleRetry is raised with the correct retry config."""
 
     def mock_run(config):
         raise RuntimeError("pipeline failed")
 
     monkeypatch.setattr(rtp, "run_raster_tileset_pipeline", mock_run, raising=True)
 
-    with pytest.raises(RuntimeError, match="pipeline failed"):
+    method = "update_climate_resilient_coral_tileset"
+    with pytest.raises(ScheduleRetry) as exc_info:
         rtp.create_and_update_climate_resilient_coral_tileset()
+
+    retry_cfg = METHOD_RETRY_CONFIGS[method]
+    assert exc_info.value.delay_seconds == retry_cfg["delay_seconds"]
+    assert exc_info.value.max_retries == retry_cfg["max_retries"]
+    assert "pipeline failed" in str(exc_info.value)

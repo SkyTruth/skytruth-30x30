@@ -8,6 +8,7 @@ from src.core.map_params import (
     PMTILES_BUCKET,
 )
 from src.core.params import BUCKET, CORAL_REEF_SOURCE_FILE
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import upload_file_to_gcs
 from src.utils.logger import Logger
 from src.utils.tileset_pipelines.raster_tile_pipeline import (
@@ -29,6 +30,7 @@ def create_and_update_climate_resilient_coral_tileset(
     color_ramp: str = CORAL_REEF_COLOR_RAMP,
     domain: tuple[float, float] = CORAL_REEF_DOMAIN,
     max_zoom: int = CORAL_REEF_MAX_ZOOM,
+    method: str = "update_climate_resilient_coral_tileset",
     verbose: bool = False,
 ):
     try:
@@ -70,4 +72,11 @@ def create_and_update_climate_resilient_coral_tileset(
                 "error": str(error),
             }
         )
+        retry_cfg = METHOD_RETRY_CONFIGS.get(method)
+        if retry_cfg:
+            raise ScheduleRetry(
+                delay_seconds=retry_cfg["delay_seconds"],
+                max_retries=retry_cfg["max_retries"],
+                message=f"{display_name} tileset update failed: {error}",
+            ) from error
         raise
