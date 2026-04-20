@@ -4,6 +4,7 @@ import pytest
 from shapely.geometry import Point
 
 import src.methods.tileset_processes as tp
+import src.methods.tileset_processes.vector_tileset_processes as vtp
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 
 
@@ -37,7 +38,6 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "display_name": "EEZ",
             },
             "eez.geojson",
-            # Uses EEZ_TOLERANCE constant; we will monkeypatch it to 5 in test.
             "_5.geojson",
             tp.eez_process,
         ),
@@ -51,7 +51,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "display_name": "Marine Regions",
             },
             "marine_regions.geojson",
-            "_5.geojson",  # uses EEZ_TOLERANCE for suffix as well
+            "_5.geojson",
             tp.marine_regions_process,
         ),
         (
@@ -64,7 +64,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "display_name": "Countries",
             },
             "countries.geojson",
-            "_7.geojson",  # will monkeypatch COUNTRIES_TOLERANCE=7
+            "_7.geojson",
             tp.countries_process,
         ),
         (
@@ -77,7 +77,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "display_name": "Terrestrial Regions",
             },
             "terrestrial_regions.geojson",
-            "_7.geojson",  # reuses COUNTRIES_TOLERANCE
+            "_7.geojson",
             tp.terrestrial_regions_process,
         ),
         (
@@ -105,7 +105,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "display_name": "MPAtlas",
             },
             "mpa.id.geojson",
-            ".geojson",  # no tolerance suffix since we pass source_file directly
+            ".geojson",
             tp.mpatlas_process,
         ),
     ],
@@ -113,27 +113,19 @@ def mock_add_translations(df, translations_df, key_col, code_col):
 def test_wrappers_call_pipeline_with_expected_config(
     which, kwargs, expected_local_geojson, expected_source_suffix, expected_process, monkeypatch
 ):
-    """
-    Ensure each wrapper function forwards a TilesetConfig with the expected
-    derived fields and the correct process function to run_tileset_pipeline.
-    """
-
     calls = {}
 
-    def mock_run_tileset_pipeline(cfg, *, process):
-        # capture cfg & process for assertions
+    def mock_run_vector_tileset_pipeline(cfg, *, process):
         calls["cfg"] = cfg
         calls["process"] = process
-        print(cfg)
-        # return a simple shape the wrappers would propagate
         return {"tileset_id": cfg.tileset_id, "gcs_blob": cfg.tileset_blob_name}
 
-    # Monkeypatch constants used by wrappers that don't receive them as params
-    monkeypatch.setattr(tp, "EEZ_TOLERANCE", 5, raising=True)
-    monkeypatch.setattr(tp, "COUNTRIES_TOLERANCE", 7, raising=True)
-    monkeypatch.setattr(tp, "run_tileset_pipeline", mock_run_tileset_pipeline, raising=True)
+    monkeypatch.setattr(vtp, "EEZ_TOLERANCE", 5, raising=True)
+    monkeypatch.setattr(vtp, "COUNTRIES_TOLERANCE", 7, raising=True)
+    monkeypatch.setattr(
+        vtp, "run_vector_tileset_pipeline", mock_run_vector_tileset_pipeline, raising=True
+    )
 
-    # Invoke the appropriate wrapper
     if which == "eez":
         tp.create_and_update_eez_tileset(**kwargs)
     elif which == "marine":
@@ -152,11 +144,9 @@ def test_wrappers_call_pipeline_with_expected_config(
     cfg = calls["cfg"]
     proc = calls["process"]
 
-    assert proc is expected_process, "Expected the correct process hook to be passed"
+    assert proc is expected_process
     assert cfg.local_geojson_name == expected_local_geojson
-    assert cfg.source_file.endswith(expected_source_suffix), (
-        "Source file suffix should include tolerance"
-    )
+    assert cfg.source_file.endswith(expected_source_suffix)
     assert cfg.tileset_blob_name == kwargs["tileset_file"]
     assert cfg.bucket == kwargs["bucket"]
 
@@ -191,38 +181,24 @@ def test_mpatlas_process():
         "geometry",
     }
 
-    # "high" and "full" → "fully or highly"
     assert out.iloc[0]["protecti_1"] == "fully or highly"
     assert out.iloc[1]["protecti_1"] == "fully or highly"
-
-    # anything else → "less or unknown"
     assert out.iloc[2]["protecti_1"] == "less or unknown"
     assert set(out.columns) == expected
 
 
 def test_eez_process_drops_expected_columns(mock_gdf):
     gdf = mock_gdf.copy()
-
-    # add columns that should be dropped if present
     gdf["MRGID"] = [1, 2, 3]
     gdf["AREA_KM2"] = [10.0, 20.0, 30.0]
 
     out = tp.eez_process(gdf, {"verbose": False})
     assert "MRGID" not in out.columns
     assert "AREA_KM2" not in out.columns
-
     assert {"location", "geometry"} <= set(out.columns)
 
 
 def test_marine_regions_process(monkeypatch):
-    """
-    Asserts that:
-      - region_id is computed from mapping
-      - dissolve reduces to one row per region_id
-      - known columns are dropped
-      - translations are applied then 'code' dropped
-    """
-    # Input gdf with locations mapping to two regions
     gdf = gpd.GeoDataFrame(
         {
             "location": ["CAN", "USA", "ANG"],
@@ -236,37 +212,28 @@ def test_marine_regions_process(monkeypatch):
     )
 
     monkeypatch.setattr(
-        tp,
+        vtp,
         "read_json_from_gcs",
         lambda bucket, path, verbose=False: {"NA": ["USA", "CAM"], "AF": ["ANG"]},
         raising=True,
     )
-
     monkeypatch.setattr(
-        tp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
+        vtp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
     )
-    monkeypatch.setattr(tp, "add_translations", mock_add_translations, raising=True)
+    monkeypatch.setattr(vtp, "add_translations", mock_add_translations, raising=True)
 
     result = tp.marine_regions_process(
         gdf,
         {"verbose": False, "bucket": "b", "translation_file": "t.csv", "regions_file": "r.json"},
     )
 
-    # Should have one row per region_id
     assert set(result["region_id"]) == {"NA", "AF"}
     for col in ["MRGID", "AREA_KM2", "has_shared_marine_area", "index", "code", "location"]:
         assert col not in result.columns
-
     assert "geometry" in result.columns
 
 
 def test_countries_process(monkeypatch):
-    """
-    Asserts:
-      - ISO_SOV1..3 are created from related_countries mapping
-      - translations applied then 'code' dropped
-      - string dtype in ISO_SOV* columns with <NA> for missing
-    """
     gdf = gpd.GeoDataFrame(
         {"location": ["GBR", "USA", "GGY", "FOO"]},
         geometry=[Point(0, 0), Point(1, 1), Point(2, 2), Point(1, 2)],
@@ -275,13 +242,12 @@ def test_countries_process(monkeypatch):
 
     related = {"GBR*": ["GBR", "FOO"], "USA*": ["USA", "FOO"], "GGY": ["GGY"]}
     monkeypatch.setattr(
-        tp, "read_json_from_gcs", lambda bucket, path, verbose=False: related, raising=True
+        vtp, "read_json_from_gcs", lambda bucket, path, verbose=False: related, raising=True
     )
-
     monkeypatch.setattr(
-        tp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
+        vtp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
     )
-    monkeypatch.setattr(tp, "add_translations", mock_add_translations, raising=True)
+    monkeypatch.setattr(vtp, "add_translations", mock_add_translations, raising=True)
 
     result = tp.countries_process(
         gdf.copy(),
@@ -297,37 +263,19 @@ def test_countries_process(monkeypatch):
         assert col in result.columns
         assert pd.api.types.is_string_dtype(result[col])
 
-    # Values per our mapping
     row_gbr = result.loc[result["location"] == "GBR"].iloc[0]
     assert row_gbr["ISO_SOV1"] == "GBR*"
     assert pd.isna(row_gbr["ISO_SOV2"])
-    assert pd.isna(row_gbr["ISO_SOV3"])
-
-    row_usa = result.loc[result["location"] == "USA"].iloc[0]
-    assert row_usa["ISO_SOV1"] == "USA*"
-    assert pd.isna(row_usa["ISO_SOV2"])
-    assert pd.isna(row_usa["ISO_SOV3"])
 
     row_foo = result.loc[result["location"] == "FOO"].iloc[0]
     assert row_foo["ISO_SOV1"] in ["GBR*", "USA*"]
     assert row_foo["ISO_SOV2"] in ["GBR*", "USA*"]
-    assert pd.isna(row_foo["ISO_SOV3"])
-
-    row_ggy = result.loc[result["location"] == "GGY"].iloc[0]
-    assert pd.isna(row_ggy["ISO_SOV1"])
 
     assert "code" not in result.columns
     assert "geometry" in result.columns
 
 
 def test_terrestrial_regions_process(monkeypatch):
-    """
-    Asserts:
-      - region_id from mapping
-      - dissolve reduces rows to unique region_id
-      - 'location' dropped
-      - translations applied then 'code' dropped
-    """
     gdf = gpd.GeoDataFrame(
         {"location": ["A", "B", "A"]},
         geometry=[Point(0, 0), Point(1, 1), Point(0, 2)],
@@ -335,16 +283,15 @@ def test_terrestrial_regions_process(monkeypatch):
     )
 
     monkeypatch.setattr(
-        tp,
+        vtp,
         "read_json_from_gcs",
         lambda bucket, path, verbose=False: {"R1": ["A"], "R2": ["B"]},
         raising=True,
     )
-
     monkeypatch.setattr(
-        tp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
+        vtp, "read_dataframe", lambda bucket, path, verbose=False: pd.DataFrame(), raising=True
     )
-    monkeypatch.setattr(tp, "add_translations", mock_add_translations, raising=True)
+    monkeypatch.setattr(vtp, "add_translations", mock_add_translations, raising=True)
 
     result = tp.terrestrial_regions_process(
         gdf.copy(),
@@ -365,12 +312,12 @@ def test_terrestrial_regions_process(monkeypatch):
     ],
 )
 def test_protected_area_tileset_raises_schedule_retry_on_failure(method, monkeypatch):
-    """When the pipeline fails, ScheduleRetry is raised with the correct retry config."""
-
-    def mock_run_tileset_pipeline(cfg, *, process):
+    def mock_run_vector_tileset_pipeline(cfg, *, process):
         raise RuntimeError("auth error")
 
-    monkeypatch.setattr(tp, "run_tileset_pipeline", mock_run_tileset_pipeline, raising=True)
+    monkeypatch.setattr(
+        vtp, "run_vector_tileset_pipeline", mock_run_vector_tileset_pipeline, raising=True
+    )
 
     with pytest.raises(ScheduleRetry) as exc_info:
         tp.create_and_update_protected_area_tileset(

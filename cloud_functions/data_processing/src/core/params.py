@@ -216,6 +216,11 @@ ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
 )
 
 # ------------------------------------------------------------
+#                     Raster Data Sources
+# ------------------------------------------------------------
+CORAL_REEF_SOURCE_FILE = "raw/climate_resilient_corals.tif"
+
+# ------------------------------------------------------------
 #                     Workflow Parameters
 # ------------------------------------------------------------
 LONG_RUNNING_TASKS = [

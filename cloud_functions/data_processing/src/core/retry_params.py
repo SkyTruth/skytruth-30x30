@@ -34,6 +34,10 @@ METHOD_RETRY_CONFIGS = {
         "delay_seconds": ONE_HOUR,
         "max_retries": 3,
     },
+    "update_climate_resilient_coral_tileset": {
+        "delay_seconds": ONE_HOUR,
+        "max_retries": 3,
+    },
 }
 
 
