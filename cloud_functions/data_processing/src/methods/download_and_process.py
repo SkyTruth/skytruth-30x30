@@ -32,6 +32,7 @@ from src.core.params import (
     ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
+    ARCHIVE_RAW_WDPA_FILE_NAME,
     BUCKET,
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
@@ -64,6 +65,7 @@ from src.utils.gcp import (
     save_file_bucket,
     upload_dataframe,
     upload_gdf,
+    upload_file_to_gcs
 )
 from src.utils.logger import Logger
 from src.utils.resource_handling import (
@@ -271,6 +273,7 @@ def download_and_process_protected_planet_pas(
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     meta_file_name: str = WDPA_META_FILE_NAME,
+    archive_wdpa_file_name: str = ARCHIVE_RAW_WDPA_FILE_NAME,
     tolerance: float = TOLERANCES[0],
     verbose: bool = True,
     bucket: str = BUCKET,
@@ -533,6 +536,15 @@ def download_and_process_protected_planet_pas(
         )
 
     show_container_mem("After download")
+
+    # Save to archive in GCS
+    if verbose:
+        logger.info({"message": f"Saving to archive at {archive_wdpa_file_name}"})
+    upload_file_to_gcs(
+        bucket = bucket, 
+        file_name = base_zip_path, 
+        blob_name = archive_wdpa_file_name,
+    )
 
     if verbose:
         logger.info({"message": f"unzipping {base_zip_path}"})
