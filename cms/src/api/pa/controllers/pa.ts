@@ -32,13 +32,13 @@ export type PA = {
   zone_id?: number | null;
   coverage?: number | null;
   children?: string[] | null;
-  data_source?: number | null;
-  environment?: number | null;
-  protection_status?: number | null;
-  iucn_category?: number | null;
-  location?: number | null;
-  mpaa_protection_level?: number | null;
-  mpaa_establishment_stage?: number | null;
+  data_source?: string | null;
+  environment?: string | null;
+  protection_status?: string | null;
+  iucn_category?: string | null;
+  location?: string | null;
+  mpaa_protection_level?: string | null;
+  mpaa_establishment_stage?: string | null;
   parent?: string | null;
   created_at?: Date;
   updated_at?: Date;
@@ -48,6 +48,19 @@ export type InputPA = {
   parent: PARelations,
   children: PARelations[],
 } & PA
+
+/**
+ * Build a relation payload for a localized (i18n-enabled) target content type.
+ * Strapi v5 (5.38) does not reliably honor the documented "default locale" fallback
+ * when a bare documentId string is passed as a relation value — the link table can
+ * end up pointing at an arbitrary locale variant. Passing { documentId, locale }
+ * explicitly pins the link to the English row. Returns null for a falsy input so
+ * optional relations remain unset.
+ */
+const toLocalizedRelation = (map: IDMap, value: string) => {
+  if (!value) return null;
+  return { documentId: map[value], locale: 'en' };
+};
 
 
 export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
@@ -170,15 +183,17 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             await strapi.documents("api::pa.pa").update({
               documentId: documentId,
               data: {
-                data_source: dataSourceMap[data_source],
-                environment: environmentMap[environment],
+                data_source: toLocalizedRelation(dataSourceMap, data_source),
+                environment: toLocalizedRelation(environmentMap, environment),
                 location: locationMap[location],
-                iucn_category: iucn_category ? mpaaIucnCategoryMap[iucn_category] : iucn_category,
-                mpaa_establishment_stage: mpaa_establishment_stage ?
-                  mpaaEstablishmentStageMap[mpaa_establishment_stage]: mpaa_establishment_stage,
-                mpaa_protection_level: mpaa_protection_level ?
-                  mpaaProtectionLevelMap[mpaa_protection_level]: mpaa_protection_level,
-                protection_status: protectionStatusMap[protection_status],
+                iucn_category: toLocalizedRelation(mpaaIucnCategoryMap, iucn_category),
+                mpaa_establishment_stage: toLocalizedRelation(
+                  mpaaEstablishmentStageMap, mpaa_establishment_stage
+                ),
+                mpaa_protection_level: toLocalizedRelation(
+                  mpaaProtectionLevelMap, mpaa_protection_level
+                ),
+                protection_status: toLocalizedRelation(protectionStatusMap, protection_status),
                 ...attributes
               }
             })
@@ -193,15 +208,17 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
                 bbox,
                 coverage,
                 name,
-                data_source: dataSourceMap[data_source],
-                environment: environmentMap[environment],
+                data_source: toLocalizedRelation(dataSourceMap, data_source),
+                environment: toLocalizedRelation(environmentMap, environment),
                 location: locationMap[location],
-                iucn_category: iucn_category ? mpaaIucnCategoryMap[iucn_category] : iucn_category,
-                mpaa_establishment_stage: mpaa_establishment_stage ?
-                  mpaaEstablishmentStageMap[mpaa_establishment_stage]: mpaa_establishment_stage,
-                mpaa_protection_level: mpaa_protection_level ?
-                  mpaaProtectionLevelMap[mpaa_protection_level]: mpaa_protection_level,
-                protection_status: protectionStatusMap[protection_status],
+                iucn_category: toLocalizedRelation(mpaaIucnCategoryMap, iucn_category),
+                mpaa_establishment_stage: toLocalizedRelation(
+                  mpaaEstablishmentStageMap, mpaa_establishment_stage
+                ),
+                mpaa_protection_level: toLocalizedRelation(
+                  mpaaProtectionLevelMap, mpaa_protection_level
+                ),
+                protection_status: toLocalizedRelation(protectionStatusMap, protection_status),
                 ...optionalAttributes
               }
             })

@@ -2,7 +2,7 @@
   "name": "Super Admin",
   "code": "strapi-super-admin",
   "description": "Super Admins can access and manage all features and settings.",
-  "documentId": "lrs5r9zuzj1kofcovu9ddzlo",
+  "documentId": "j5a1lcpml6ghi5yp5v58c0oa",
   "locale": null,
   "permissions": [
     {
@@ -17,15 +17,15 @@
           "registration"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "g0s6aih4zu39jetvtzucxg89",
+      "documentId": "jecr2kal76vvd48y2uj2o8ty",
       "locale": null
     },
     {
@@ -33,15 +33,15 @@
       "subject": "api::contact-detail.contact-detail",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "qqdzuunptopvuzrq9n81w8c7",
+      "documentId": "bhvqufjjvec1oq0dmclmpw0g",
       "locale": null
     },
     {
@@ -49,42 +49,19 @@
       "subject": "api::contact-detail.contact-detail",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "vlzzz62ry6zwp2ikvm814kj5",
+      "documentId": "hht60b0vp8x9f3u0x1zx3b9m",
       "locale": null
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::contact-detail.contact-detail",
-      "properties": {
-        "fields": [
-          "name",
-          "address",
-          "phone",
-          "email",
-          "registration"
-        ],
-        "locales": [
-          "fr",
-          "es",
-          "pt",
-          "en"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "documentId": "r061t6bt6hettrrx48n1u6jz",
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::contact-detail.contact-detail",
       "properties": {
         "fields": [
@@ -95,15 +72,38 @@
           "registration"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "w60dpwcjeycpueeuqxyjyeea",
+      "documentId": "wydzcxg0478o3z961toxqbjb",
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::contact-detail.contact-detail",
+      "properties": {
+        "fields": [
+          "name",
+          "address",
+          "phone",
+          "email",
+          "registration"
+        ],
+        "locales": [
+          "en",
+          "es",
+          "fr",
+          "pt"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "documentId": "ajn5fc6chnmlw5e9avujyyly",
       "locale": null
     },
     {
@@ -116,15 +116,15 @@
           "data_sources"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "aaukadsgu0zslnn625224e1k",
+      "documentId": "xk2hacgy5ebp0dvykuy8ttu1",
       "locale": null
     },
     {
@@ -132,15 +132,15 @@
       "subject": "api::data-info.data-info",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "s8aw7umzhrqxbp0jshi3ddqz",
+      "documentId": "i14d2t25gmqhgua9dnlfjicd",
       "locale": null
     },
     {
@@ -148,40 +148,19 @@
       "subject": "api::data-info.data-info",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "renk54ilh8i3e9knop4ohrz0",
+      "documentId": "l0rv0h0v2jpzazhdefpv1kl3",
       "locale": null
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::data-info.data-info",
-      "properties": {
-        "fields": [
-          "slug",
-          "content",
-          "data_sources"
-        ],
-        "locales": [
-          "fr",
-          "es",
-          "pt",
-          "en"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "documentId": "abki5hzs5h8raqwgh6si15k5",
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::data-info.data-info",
       "properties": {
         "fields": [
@@ -190,15 +169,36 @@
           "data_sources"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "sea1jh3tme2jsy033ifzn3bn",
+      "documentId": "awe1kx6pi7jx6vd98u5h7sih",
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::data-info.data-info",
+      "properties": {
+        "fields": [
+          "slug",
+          "content",
+          "data_sources"
+        ],
+        "locales": [
+          "en",
+          "es",
+          "fr",
+          "pt"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "documentId": "k6wwdjhh185cr4ukqilo43cz",
       "locale": null
     },
     {
@@ -211,15 +211,15 @@
           "url"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ck7dilid8v3u3vdsjxe0cvff",
+      "documentId": "cu5dhm1cwhgv90k8xjwjbjvh",
       "locale": null
     },
     {
@@ -227,15 +227,15 @@
       "subject": "api::data-source.data-source",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ou5f3qih2teomznnvq67t129",
+      "documentId": "kdbuh5m8z21eqr2mclmzn8v2",
       "locale": null
     },
     {
@@ -243,15 +243,15 @@
       "subject": "api::data-source.data-source",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xst4sufaro5lqkism1g7f88q",
+      "documentId": "s2x4ypuwp9y11vn93fw7nim8",
       "locale": null
     },
     {
@@ -264,15 +264,15 @@
           "url"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "z68o8d0x2mjj082drc5flus9",
+      "documentId": "ng75l2dqop14enmg062p9yvb",
       "locale": null
     },
     {
@@ -285,15 +285,15 @@
           "url"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "n7zcvfun4n17plhke22626yt",
+      "documentId": "pm1rbdowvon6p4utd5133xtg",
       "locale": null
     },
     {
@@ -304,15 +304,15 @@
           "name"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "z5hfy01lzappbzophwt7korm",
+      "documentId": "qcj12l793znpdilp7bfne5wb",
       "locale": null
     },
     {
@@ -320,15 +320,15 @@
       "subject": "api::data-tool-ecosystem.data-tool-ecosystem",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "lfi5yv82kooxb6vlvdbgsyc9",
+      "documentId": "elc8et7y5cqkoxvtv1n0n6nm",
       "locale": null
     },
     {
@@ -336,15 +336,15 @@
       "subject": "api::data-tool-ecosystem.data-tool-ecosystem",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "alq3ymkl5gry3zmqis05hjbu",
+      "documentId": "ibototn3883syrcar59y5bcn",
       "locale": null
     },
     {
@@ -355,15 +355,15 @@
           "name"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "viemsl9fwhlpk06aaa1hmki5",
+      "documentId": "zwtyrxh8jx518gmsa9l9fqaz",
       "locale": null
     },
     {
@@ -374,15 +374,15 @@
           "name"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "jd9ze0z8f984c3kkicgazsht",
+      "documentId": "oozflj6qgy7rl6dvnv08mm4s",
       "locale": null
     },
     {
@@ -395,15 +395,15 @@
           "data_tool"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "rdlxym1a3rdmyivl3q94s05f",
+      "documentId": "b9bccjlbkio008oj2c3uuypp",
       "locale": null
     },
     {
@@ -411,15 +411,15 @@
       "subject": "api::data-tool-language.data-tool-language",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xvgplced9eztuzt6iyj28t4r",
+      "documentId": "osm5u8zwhrn0f42kua16dkm9",
       "locale": null
     },
     {
@@ -427,15 +427,15 @@
       "subject": "api::data-tool-language.data-tool-language",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "lhwos7mtlsqz0f292o5ubj18",
+      "documentId": "czcfpx8e1bxpj81kwetu4bpy",
       "locale": null
     },
     {
@@ -448,15 +448,15 @@
           "data_tool"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "fprt2010qjxasftv4nk8d90c",
+      "documentId": "h3g52ilpvb085gisfsroa0f2",
       "locale": null
     },
     {
@@ -469,15 +469,15 @@
           "data_tool"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "vcizfmk6ni1ra531jmlfn273",
+      "documentId": "gk4b77u2htgvks87rb1w6si0",
       "locale": null
     },
     {
@@ -488,15 +488,15 @@
           "name"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "i59khymajw64hwpbz48305l5",
+      "documentId": "sf4dupe170690lsf7inil8ka",
       "locale": null
     },
     {
@@ -504,15 +504,15 @@
       "subject": "api::data-tool-resource-type.data-tool-resource-type",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "jdjegzehdi38jtjc8u381rwd",
+      "documentId": "q17fxoxxz4xfgrjjb8hax5u1",
       "locale": null
     },
     {
@@ -520,15 +520,15 @@
       "subject": "api::data-tool-resource-type.data-tool-resource-type",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "gbi8ivygbyg146nlkjgdayyo",
+      "documentId": "vv74dk1vjicpyml83xp7hvnx",
       "locale": null
     },
     {
@@ -539,15 +539,15 @@
           "name"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "m00fzg0jz8b7cu35wq91qpym",
+      "documentId": "tilawmncoqp3jm69ujycncx1",
       "locale": null
     },
     {
@@ -558,15 +558,15 @@
           "name"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "lodymzjvqp1o2nl60t15nlx9",
+      "documentId": "eg8zij7xjvr8j3c0fegzcgzs",
       "locale": null
     },
     {
@@ -583,15 +583,15 @@
           "data_tool_ecosystems"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "k3flnh5iwb16co61m0ohhz85",
+      "documentId": "ue2qrvte39d4v1d30xgafje2",
       "locale": null
     },
     {
@@ -599,15 +599,15 @@
       "subject": "api::data-tool.data-tool",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "a4b7hubi5vxbpwm1838xzh3o",
+      "documentId": "c578ee23jnlkps33yqx2htih",
       "locale": null
     },
     {
@@ -615,44 +615,19 @@
       "subject": "api::data-tool.data-tool",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "cteau1g0d7hixzik3g90s3jd",
+      "documentId": "h8xeva2fxeqpceceqdzzju3l",
       "locale": null
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::data-tool.data-tool",
-      "properties": {
-        "fields": [
-          "name",
-          "description",
-          "site",
-          "languages",
-          "data_tool_resource_types",
-          "geography",
-          "data_tool_ecosystems"
-        ],
-        "locales": [
-          "fr",
-          "es",
-          "pt",
-          "en"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "documentId": "hdqvvtmn1okdntdpol7y34e0",
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::data-tool.data-tool",
       "properties": {
         "fields": [
@@ -665,15 +640,40 @@
           "data_tool_ecosystems"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "w2d6uqg8gh04j0d2h62tj8vp",
+      "documentId": "fc2tewabexm6nkitor3g2xu1",
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::data-tool.data-tool",
+      "properties": {
+        "fields": [
+          "name",
+          "description",
+          "site",
+          "languages",
+          "data_tool_resource_types",
+          "geography",
+          "data_tool_ecosystems"
+        ],
+        "locales": [
+          "en",
+          "es",
+          "fr",
+          "pt"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "documentId": "ketlq2ond26d5iqcqywkmduc",
       "locale": null
     },
     {
@@ -686,15 +686,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "cylgi313nngvyxg1o12tol73",
+      "documentId": "l5ctpce3z7ekjkwyx0kwx1e8",
       "locale": null
     },
     {
@@ -702,15 +702,15 @@
       "subject": "api::dataset.dataset",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "nh150dwy9zcm4gz9qhimnz0o",
+      "documentId": "mfdnblri7i8jvv9qrfuxw55v",
       "locale": null
     },
     {
@@ -718,15 +718,15 @@
       "subject": "api::dataset.dataset",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uzp7fzkvp9gno3gdufo4r0g0",
+      "documentId": "vtebve0t4ha54nyq2nz6qa32",
       "locale": null
     },
     {
@@ -739,15 +739,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "lt63colv1tdiekesgcznbrqk",
+      "documentId": "suuh2cyfaxqvjasczlyheqtt",
       "locale": null
     },
     {
@@ -760,15 +760,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "daxggsw6flkr9phtw6ayi58h",
+      "documentId": "lxyzg2nxrzvwoqkqao0d344w",
       "locale": null
     },
     {
@@ -780,15 +780,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "savm2zaru418cuh1yn9u4uis",
+      "documentId": "lo8n3izxm9fn7deh1wgpyqv8",
       "locale": null
     },
     {
@@ -796,15 +796,15 @@
       "subject": "api::environment.environment",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "mv1kq4da9h6ol7h0zgagwoop",
+      "documentId": "zdo4ss170ks7g90ggpmlpvmi",
       "locale": null
     },
     {
@@ -812,15 +812,15 @@
       "subject": "api::environment.environment",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "iy6ya8xi4jatpegv5pxj48r1",
+      "documentId": "h5odd9d8y281v22gkcwr3909",
       "locale": null
     },
     {
@@ -832,15 +832,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "roroqcswxexlcd0ic7i391ae",
+      "documentId": "rqobqpdi6nvfmic6915zo922",
       "locale": null
     },
     {
@@ -852,15 +852,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "osyft6ztwbiq3shli0onmtir",
+      "documentId": "op22rm0snc0stlsf56v2haa1",
       "locale": null
     },
     {
@@ -877,7 +877,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "gj8i6ffi87n5hwjzwk8tbqdc",
+      "documentId": "mmvz8ty71jcaefkqmdic3j7t",
       "locale": null
     },
     {
@@ -886,7 +886,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "m00l0304g65pcn2vokua103w",
+      "documentId": "m60kgycgcxltksrm78j26t3m",
       "locale": null
     },
     {
@@ -895,7 +895,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "wcxx4o9x2fqhnfah5iaz5alz",
+      "documentId": "anfx9rxedzlgbkoibq2l9rdy",
       "locale": null
     },
     {
@@ -912,7 +912,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "s3d37swdtuaxhv1pfhqiiaw8",
+      "documentId": "ba9d153tmh21aogarq0nuwkt",
       "locale": null
     },
     {
@@ -929,7 +929,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "qrew5gu1s9w1t27xo18s9w8b",
+      "documentId": "ejcanx5d76n8tlpiv04w2pzn",
       "locale": null
     },
     {
@@ -946,7 +946,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "u15ny4rhk9yv3pbgcfkmvew8",
+      "documentId": "uvb6igs9l65rpunuwbvvqe1m",
       "locale": null
     },
     {
@@ -955,7 +955,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "n1ohvjsapv6iqspmexy3ly9y",
+      "documentId": "xuw7lh9h79x6y1vrxk6n303f",
       "locale": null
     },
     {
@@ -964,7 +964,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "hkr2y4jlz3kc5spusvtwlzfy",
+      "documentId": "wjmtfgcdphwl6iradny9edtj",
       "locale": null
     },
     {
@@ -981,7 +981,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "do4l11lrz6nm652aj6fdl3x5",
+      "documentId": "mq7b7sccg2dqcq2jeunrdhib",
       "locale": null
     },
     {
@@ -998,7 +998,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "q02ktuf5005nd853aem2t67o",
+      "documentId": "w9auynjigx2kzngukwbecb5s",
       "locale": null
     },
     {
@@ -1011,15 +1011,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "aaz2vp0q3zsru5se07hzt7jm",
+      "documentId": "bcuph6b1jaatoynh4j76nh9d",
       "locale": null
     },
     {
@@ -1027,15 +1027,15 @@
       "subject": "api::fishing-protection-level.fishing-protection-level",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "q2frtmeujhbg5v8j0ne79tsm",
+      "documentId": "tv84ozbfitdnd7kaezf7t7na",
       "locale": null
     },
     {
@@ -1043,15 +1043,15 @@
       "subject": "api::fishing-protection-level.fishing-protection-level",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "iit7gt18yk5onbeycm8vcr4d",
+      "documentId": "nqhc1zinqf3524vmnsep7lza",
       "locale": null
     },
     {
@@ -1064,15 +1064,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ae534v30i1nj6d2rzodilic2",
+      "documentId": "flwyryeoouidt04dqgchewir",
       "locale": null
     },
     {
@@ -1085,15 +1085,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ww45wcgrr8de967ls9mr4uq1",
+      "documentId": "m1xx5u4gqyfu90wljmfrzc6a",
       "locale": null
     },
     {
@@ -1111,7 +1111,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "x34dplqs9fl092idwq6gtbvk",
+      "documentId": "x0fit531rh4xhpfklrqr5j8n",
       "locale": null
     },
     {
@@ -1120,7 +1120,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uq60u2qyz3kzp04uvbnh8m7p",
+      "documentId": "ylm9s9o7gqxm0r779hvo1xrb",
       "locale": null
     },
     {
@@ -1129,7 +1129,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "pts7d5varjmb1bw2ihnlzgjp",
+      "documentId": "sai2uupkrjqh5bppx7p3zkaa",
       "locale": null
     },
     {
@@ -1147,7 +1147,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "p5cbm791d61vvctql6cfoxv4",
+      "documentId": "rwo83cml8gnd2y77bri0z101",
       "locale": null
     },
     {
@@ -1165,7 +1165,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "wccb9xwvts2vp1x21ekrqqbl",
+      "documentId": "z1wr77zw712d8kfjn9xcwjhe",
       "locale": null
     },
     {
@@ -1178,15 +1178,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "qmin24zasbarozmpouaqx80y",
+      "documentId": "c99mws7yr0pzmuzqxqx2pfma",
       "locale": null
     },
     {
@@ -1194,15 +1194,15 @@
       "subject": "api::habitat.habitat",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ek6nm5okpw7opu8fgwchc3by",
+      "documentId": "e9ntg9udjxubzwoynt87bohq",
       "locale": null
     },
     {
@@ -1210,15 +1210,15 @@
       "subject": "api::habitat.habitat",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "wzwzwsned4fvsck8rm7ajczy",
+      "documentId": "ycp2c744xjq94e8nitb4a889",
       "locale": null
     },
     {
@@ -1231,15 +1231,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ysjxz79rixrkwsk55zte94fp",
+      "documentId": "f1jrjovl61aqrv3bys7zq5gz",
       "locale": null
     },
     {
@@ -1252,15 +1252,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "x469zu3oqk7vubqqwfihj412",
+      "documentId": "qnaikwvpiy4oqcp9sk9zgv2d",
       "locale": null
     },
     {
@@ -1290,15 +1290,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "wgpt0hf381x0gzr2lpbiu1gy",
+      "documentId": "dred867w1fs8tq6b4i4kof09",
       "locale": null
     },
     {
@@ -1306,15 +1306,15 @@
       "subject": "api::layer.layer",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "tcrmouyh3cx1na3jutz92c5c",
+      "documentId": "wp0mpaeayfvogektt89bj43k",
       "locale": null
     },
     {
@@ -1322,15 +1322,15 @@
       "subject": "api::layer.layer",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "rq0acn0ojueglf706w12y070",
+      "documentId": "c97flukeyxw71h85dzoakrya",
       "locale": null
     },
     {
@@ -1360,15 +1360,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "g6ia1caq16vpz6i8rp459oh2",
+      "documentId": "o69izhyn0llh87235zzsg4a4",
       "locale": null
     },
     {
@@ -1398,15 +1398,15 @@
           "slug"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "jr2bijdxeb7jxyclvac7pcub",
+      "documentId": "ct9z8gvzql559yjt5a13c977",
       "locale": null
     },
     {
@@ -1437,7 +1437,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "jp1p9sohlwrjfj5elvvmk3vz",
+      "documentId": "hkqh7gxj4rul7pv73dmxa4qp",
       "locale": null
     },
     {
@@ -1446,7 +1446,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ha4ncfhitf9ptslre0d466we",
+      "documentId": "wsww7hwlub7uponmab44phsp",
       "locale": null
     },
     {
@@ -1455,42 +1455,11 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "t73zv6d578054irln5b9c5bi",
+      "documentId": "s8cj8lcamrfvudtfglof0fx2",
       "locale": null
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::location.location",
-      "properties": {
-        "fields": [
-          "code",
-          "name",
-          "total_marine_area",
-          "type",
-          "groups",
-          "members",
-          "fishing_protection_level_stats",
-          "mpaa_protection_level_stats",
-          "protection_coverage_stats",
-          "marine_bounds",
-          "total_terrestrial_area",
-          "terrestrial_bounds",
-          "name_es",
-          "name_fr",
-          "marine_target",
-          "marine_target_year",
-          "pas",
-          "name_pt",
-          "has_shared_marine_area"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "documentId": "rtfn594v087w032k8yjgnnte",
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::location.location",
       "properties": {
         "fields": [
@@ -1517,7 +1486,38 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uypystgcu0uv17d0doxik9gm",
+      "documentId": "uvgw1wiwdkknslzssy43x4cf",
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::location.location",
+      "properties": {
+        "fields": [
+          "code",
+          "name",
+          "total_marine_area",
+          "type",
+          "groups",
+          "members",
+          "fishing_protection_level_stats",
+          "mpaa_protection_level_stats",
+          "protection_coverage_stats",
+          "marine_bounds",
+          "total_terrestrial_area",
+          "terrestrial_bounds",
+          "name_es",
+          "name_fr",
+          "marine_target",
+          "marine_target_year",
+          "pas",
+          "name_pt",
+          "has_shared_marine_area"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "documentId": "wihuqa46o5siu7uta8nur0sl",
       "locale": null
     },
     {
@@ -1530,15 +1530,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "bahe25w26u3qzjllo99bxpr9",
+      "documentId": "i12s9u918sfrl78rptmjjoxp",
       "locale": null
     },
     {
@@ -1546,15 +1546,15 @@
       "subject": "api::mpa-iucn-category.mpa-iucn-category",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "yknsgl1x48741hfeh00hdyq9",
+      "documentId": "o2sps14v9rw1pou4gzap883r",
       "locale": null
     },
     {
@@ -1562,15 +1562,15 @@
       "subject": "api::mpa-iucn-category.mpa-iucn-category",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "v87k86gzm3cnrapvw429daq7",
+      "documentId": "j0ojknlsn3me28m3fgarykho",
       "locale": null
     },
     {
@@ -1583,15 +1583,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "m75cjq2r1e0zy3hidimzznnq",
+      "documentId": "ngdz8aqejz8rjj3c9u4bp6v9",
       "locale": null
     },
     {
@@ -1604,15 +1604,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "qouop90ivj1t7iboj2395hop",
+      "documentId": "unq8i8rxsuboiqessa56eox9",
       "locale": null
     },
     {
@@ -1625,15 +1625,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "gyam9ybc9j2nlavtmoaiug3u",
+      "documentId": "h4vmkxu3flo6mwnbxys2xlp1",
       "locale": null
     },
     {
@@ -1641,15 +1641,15 @@
       "subject": "api::mpaa-establishment-stage.mpaa-establishment-stage",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "dxmwr7lzic3r7tle1s6jrjrn",
+      "documentId": "pp7mp4h9rjy0m6f6uzymkdug",
       "locale": null
     },
     {
@@ -1657,15 +1657,15 @@
       "subject": "api::mpaa-establishment-stage.mpaa-establishment-stage",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "cs1gkt0vkoaeaheyia6d4ti6",
+      "documentId": "nlyxwinirv9g1nj48bn5dfk5",
       "locale": null
     },
     {
@@ -1678,15 +1678,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "g3vfrm7p77dxdh039jhqgber",
+      "documentId": "w4o03jp38barjrw3o2lcg9ly",
       "locale": null
     },
     {
@@ -1699,15 +1699,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uoekjvxroojie8o04yyoe0um",
+      "documentId": "msyyrmcbhu7e7rgym5m0vhd9",
       "locale": null
     },
     {
@@ -1724,7 +1724,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "py72t8apukl8abu0nwoifbke",
+      "documentId": "xlfhc7haud0mp2na67gqhcrj",
       "locale": null
     },
     {
@@ -1733,7 +1733,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "c7e7amlpg6czdp2h2hnlfl1c",
+      "documentId": "dpsgs2gpy4ewg9qcewahne03",
       "locale": null
     },
     {
@@ -1742,7 +1742,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "alpg5qh403jr563utoss4f70",
+      "documentId": "dw8ro0tew2sfllqgj27broqn",
       "locale": null
     },
     {
@@ -1759,7 +1759,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "fqfnseilw66atqdkj7scfhf7",
+      "documentId": "m3lglpyoeros2pcsoe91edwc",
       "locale": null
     },
     {
@@ -1776,7 +1776,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "vxb05r0epoyavkbf0fxzaj1a",
+      "documentId": "uf7z49d36poev0cqgeeilbqb",
       "locale": null
     },
     {
@@ -1789,15 +1789,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ttjyntmri2hoe5jcjlbcs4ax",
+      "documentId": "ag9vz22h61ycvk4mcrlqhmt4",
       "locale": null
     },
     {
@@ -1805,15 +1805,15 @@
       "subject": "api::mpaa-protection-level.mpaa-protection-level",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "piic7rocvw559jty615ffetb",
+      "documentId": "hak9i2lo83l1ae8h25uad8n6",
       "locale": null
     },
     {
@@ -1821,15 +1821,15 @@
       "subject": "api::mpaa-protection-level.mpaa-protection-level",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "htjv9gmj0aqxmey6cn7arztl",
+      "documentId": "mif2kn6yol0qi3tk08y56x4v",
       "locale": null
     },
     {
@@ -1842,15 +1842,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "sxtrcp0qmkks9t10zdv3r5so",
+      "documentId": "nthjuzgnzq10mmw0imubaa78",
       "locale": null
     },
     {
@@ -1863,15 +1863,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "kw76ftdoueoylwr6kasipc4b",
+      "documentId": "k8k9gei93nrbm0qqm3gs37r7",
       "locale": null
     },
     {
@@ -1901,7 +1901,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "j97yh8x1nyaw98o4i5sljjmo",
+      "documentId": "aklhu3gxqnwi0qoy1xyhlcdp",
       "locale": null
     },
     {
@@ -1910,7 +1910,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xj0k9gta6obpng2466q8yu1j",
+      "documentId": "jpqlo7yvx79odea68ddkq1ra",
       "locale": null
     },
     {
@@ -1919,7 +1919,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "k430zekrp29dl5kw4awb8m6f",
+      "documentId": "m1m4zofyv9t9qpl53f4z4yoz",
       "locale": null
     },
     {
@@ -1949,7 +1949,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ubkcyhglonhnfc0b9o2adc75",
+      "documentId": "h8zf29ht3huqcxhlfzji97kp",
       "locale": null
     },
     {
@@ -1979,7 +1979,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "zxlo7cwghkhypfx2nvb13s9d",
+      "documentId": "raof1stog18adj6vc83rnvtx",
       "locale": null
     },
     {
@@ -2002,7 +2002,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ng0av8iwn0rd7ulcokq4knt2",
+      "documentId": "a5npjshn1qy99zi77np7ij4g",
       "locale": null
     },
     {
@@ -2011,7 +2011,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "bm5e17pkeswzwe9t9mfog2xe",
+      "documentId": "clwl2ajhgwigj45tim77oedv",
       "locale": null
     },
     {
@@ -2020,7 +2020,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "t53v5ku20q505osboiad4t74",
+      "documentId": "u8ksndninl3wnm8xaukf7mtp",
       "locale": null
     },
     {
@@ -2043,7 +2043,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "he6qwwxkjh7vw4co5sug7e2m",
+      "documentId": "bf8m851rr1mcugtg8crq677q",
       "locale": null
     },
     {
@@ -2066,7 +2066,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "tdobrmbdpjc7pojalwp7seg2",
+      "documentId": "ppv2u3rw7v2sgpxwbze494dc",
       "locale": null
     },
     {
@@ -2079,15 +2079,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ibc160nvrgdcrp5mvcvbixi9",
+      "documentId": "je2seaygps1f6i1lb3tngdat",
       "locale": null
     },
     {
@@ -2095,15 +2095,15 @@
       "subject": "api::protection-status.protection-status",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "j4ycvuolf3m4ejxh8u0k64t6",
+      "documentId": "dto83dhqi9svic3dle7cizbf",
       "locale": null
     },
     {
@@ -2111,15 +2111,15 @@
       "subject": "api::protection-status.protection-status",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "igx4yburi1xtki464o0doxi2",
+      "documentId": "dijkcabxnhpwm2mmjhco9n3e",
       "locale": null
     },
     {
@@ -2132,15 +2132,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "vr4rp7wdoqfqqf3qfqngz8up",
+      "documentId": "jjtmdnpkku24cbsiftqfe61i",
       "locale": null
     },
     {
@@ -2153,15 +2153,15 @@
           "info"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "z3bpqv2b8o46yl0k1j9h184l",
+      "documentId": "rzbummqogt46fsx1tl7vyt6k",
       "locale": null
     },
     {
@@ -2175,15 +2175,15 @@
           "description"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xrsl61x5h8xlasaydxppxwft",
+      "documentId": "w4lt8xp63crmv7glzf9xhtlf",
       "locale": null
     },
     {
@@ -2191,15 +2191,15 @@
       "subject": "api::static-indicator.static-indicator",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "rmao1hlyxwnxqp13yqjyet2a",
+      "documentId": "jpzqe6tp3ybetan6aow0xd0k",
       "locale": null
     },
     {
@@ -2207,15 +2207,15 @@
       "subject": "api::static-indicator.static-indicator",
       "properties": {
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "y40xc1q5qg3t72uzovx1s9b1",
+      "documentId": "pcn39ymhb10jr9dqg8n6okgz",
       "locale": null
     },
     {
@@ -2229,15 +2229,15 @@
           "description"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "pit8numt00z6y5qnt3c67xlz",
+      "documentId": "qcrvhd8oof6u4gwqv1r07axs",
       "locale": null
     },
     {
@@ -2251,15 +2251,15 @@
           "description"
         ],
         "locales": [
-          "fr",
+          "en",
           "es",
-          "pt",
-          "en"
+          "fr",
+          "pt"
         ]
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ptqqqtwvz6t19tkpgc5h62q7",
+      "documentId": "kn8jejudyk4cmjgrd3pm1q5f",
       "locale": null
     },
     {
@@ -2268,7 +2268,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uflhwz5520hzhkumkr9e5xik",
+      "documentId": "dnaffxiycgsa8u46o9r707sy",
       "locale": null
     },
     {
@@ -2277,7 +2277,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "d4argr22t5lc84cvbzlud33g",
+      "documentId": "bncbt4tcwc5yj74wprjqqj6b",
       "locale": null
     },
     {
@@ -2286,7 +2286,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uy8cu1nj2i2t53q23e1y9vl0",
+      "documentId": "oq1gsngh0nu5ai6sxaqdh7ld",
       "locale": null
     },
     {
@@ -2295,7 +2295,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "i0ihm36d3sf3k6zvb65lpd6q",
+      "documentId": "d13nn323ictxgnu7gjanq0js",
       "locale": null
     },
     {
@@ -2304,7 +2304,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ngzfjlpt6o5s3sq92lulv00p",
+      "documentId": "muyjvsmm07q1mq2fucvuyak4",
       "locale": null
     },
     {
@@ -2313,7 +2313,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xkwcqt821zuzxrfmog1m7mo8",
+      "documentId": "wjjp2sir0j3rnym5sfv4quub",
       "locale": null
     },
     {
@@ -2322,7 +2322,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "h1xcypyxnskczre2kg1kueay",
+      "documentId": "x4hesk5a58sblltex7mbdgs3",
       "locale": null
     },
     {
@@ -2331,7 +2331,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "f4z6oo2ra2mlwylj4oyipskm",
+      "documentId": "duvht3zpq1eg9r52y7p5xiw6",
       "locale": null
     },
     {
@@ -2340,7 +2340,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "vy0471482ox9hnrotx1ys5c0",
+      "documentId": "esg239x1ic1evypjdsnth2bx",
       "locale": null
     },
     {
@@ -2349,7 +2349,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ge3fazs82a0xhzntj930oc28",
+      "documentId": "q94pef3vhvcq5ruju1oq11cb",
       "locale": null
     },
     {
@@ -2358,7 +2358,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ojryhuentpvj78bd084ff3ow",
+      "documentId": "pzcbjc5mmz2cz5m3qmee3u4w",
       "locale": null
     },
     {
@@ -2367,7 +2367,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xp8rcpff6mixdph5aagfrpxo",
+      "documentId": "gg89vvmvqdi6ou59ehf57w7y",
       "locale": null
     },
     {
@@ -2376,7 +2376,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "qwfwl9eopc3hq7ejza8vkrb2",
+      "documentId": "tymoki6bcpllb9e0hsuvg38o",
       "locale": null
     },
     {
@@ -2385,7 +2385,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "i8fwv807at0sckaoibt5k6f7",
+      "documentId": "nzbh72wqjbdyzya0hfttdlxv",
       "locale": null
     },
     {
@@ -2394,7 +2394,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xs7ws49h6gmut5v4eikbarrr",
+      "documentId": "hydz6y7q7ho7z57qjc6i25cm",
       "locale": null
     },
     {
@@ -2403,7 +2403,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "x9y4f9ks2kf7yrhsw776qfhf",
+      "documentId": "ah7cus5wsbtaiiosbf5clmnq",
       "locale": null
     },
     {
@@ -2412,7 +2412,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "zark35v1rlkkjs4qqphqyllf",
+      "documentId": "bemw0jn0c26ucoyqx1l4jjuv",
       "locale": null
     },
     {
@@ -2421,7 +2421,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "a6f6o4ty2835ako9qrywz822",
+      "documentId": "vlulss7xkvimrkm4cypf47gc",
       "locale": null
     },
     {
@@ -2430,7 +2430,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "p36zk59lblvu8ilo39hvue03",
+      "documentId": "igpznzb7swbevi6d2yzs9p9e",
       "locale": null
     },
     {
@@ -2439,7 +2439,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "titxb855u5hndbr34ryu1y6x",
+      "documentId": "lbs9h8btxgjboofhntuacrbi",
       "locale": null
     },
     {
@@ -2448,7 +2448,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "b465ijjfgyj3vttxx2dzvyo7",
+      "documentId": "d0hrdh8v5ox2jp67atnzllao",
       "locale": null
     },
     {
@@ -2457,7 +2457,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "rnoo5ag2kuavwml05aq8gk7h",
+      "documentId": "nozq7b9zc44khqaom7evoz7c",
       "locale": null
     },
     {
@@ -2466,7 +2466,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "sb09pxjs4n6c4die2b0qucja",
+      "documentId": "f3tq5jgxq87p2n30svukea4h",
       "locale": null
     },
     {
@@ -2475,7 +2475,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "nbp3dhnru1gh6gqoz3onnoto",
+      "documentId": "elmg3rmsnyn8me4ftp5jknpa",
       "locale": null
     },
     {
@@ -2484,7 +2484,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ov9qktqylfj6wuz2jzn1nnq6",
+      "documentId": "kyirkf4du5pykc46udrvaenr",
       "locale": null
     },
     {
@@ -2493,7 +2493,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "up3ozm5grwa0fr2pv5wel5ai",
+      "documentId": "vetx4jjim1rd6b8ba5zqrx6b",
       "locale": null
     },
     {
@@ -2502,7 +2502,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "vt1r2xhe48vgjiplktug15lb",
+      "documentId": "xnh24ta6xwdjvcpgylmsjxkx",
       "locale": null
     },
     {
@@ -2511,7 +2511,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xi2caklldkzf41izr398pk01",
+      "documentId": "va08uxo3aoqwttn76ki1pd0f",
       "locale": null
     },
     {
@@ -2520,7 +2520,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "tbx3v2s9autio9j7sporgbso",
+      "documentId": "zhrmwgv61u5s4tv1ejjjkhxl",
       "locale": null
     },
     {
@@ -2529,7 +2529,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "q230lkqgbtpg9ea847g354uu",
+      "documentId": "fs04y6rj85d8mogn4ekrcurt",
       "locale": null
     },
     {
@@ -2538,7 +2538,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "v2mwb67z0cnsjysrjjc9yffc",
+      "documentId": "r9w1x8vlax9syj8cms4rh52q",
       "locale": null
     },
     {
@@ -2559,7 +2559,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "evd2q19ucwaxt2wszyfvhwlw",
+      "documentId": "ezyiifclpvj5owxnapijf6ye",
       "locale": null
     },
     {
@@ -2568,7 +2568,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "x7xov9lf1r6aewud7ie8yyv6",
+      "documentId": "xjgtejxs0q8ymmz9bz88res2",
       "locale": null
     },
     {
@@ -2577,7 +2577,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "wuqs07c3wskjwpdqsjjhvnai",
+      "documentId": "ijogzjkm1ok8a21ll8r30rjx",
       "locale": null
     },
     {
@@ -2598,7 +2598,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "q2uv47v5z6xwp7rpsvenjaiw",
+      "documentId": "yb5gluiorhyucv6b9qv29ryy",
       "locale": null
     },
     {
@@ -2619,7 +2619,7 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "vhcpe4djb2wss5f4h1gkenw5",
+      "documentId": "au0kn5xqciqe9m5ujcswwmy0",
       "locale": null
     },
     {
@@ -2628,7 +2628,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "knf9j0915np266ql1jv9tned",
+      "documentId": "yg1kwfhy2kxe5ct2x6qc4gs6",
       "locale": null
     },
     {
@@ -2637,7 +2637,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "evpyicbu9n80cjk7cu7pxmpk",
+      "documentId": "y5f7f17sgb1x1g274d02hp8x",
       "locale": null
     },
     {
@@ -2646,7 +2646,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "yf2g4tckx1xtk1qqub3tw4j5",
+      "documentId": "wbq1d2qnr20bdkcmpv85ppr7",
       "locale": null
     },
     {
@@ -2655,7 +2655,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "pb8fqnux2l1z40goc4hblari",
+      "documentId": "ajsc1z9d5w3tjb0f06bz4uvm",
       "locale": null
     },
     {
@@ -2664,7 +2664,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "khc2rhn8397t26o8apb7skwo",
+      "documentId": "swbli8e2nc49pqt4d0qokjf3",
       "locale": null
     },
     {
@@ -2673,7 +2673,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "y2dynu9mm0kniv2ggfvvvskd",
+      "documentId": "csqdynqd4xhzjut5bd5ng0nm",
       "locale": null
     },
     {
@@ -2682,7 +2682,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "djx1yq7kje212rp46oqh94xc",
+      "documentId": "chmwrxdbtpe0u0zvlr4pzftc",
       "locale": null
     },
     {
@@ -2691,7 +2691,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "dwt8qr19i5gdjmpgt9me10sw",
+      "documentId": "bdcg1glr5excbqp36w4hkofo",
       "locale": null
     },
     {
@@ -2700,7 +2700,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "k95pvvjqvzdvzpgx7epr2rje",
+      "documentId": "d4arnrfnkb27r4m793k3g6kn",
       "locale": null
     },
     {
@@ -2709,7 +2709,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "jd73ezhile52dzpxkwo8ur11",
+      "documentId": "dehny7fssfgfmeesxtcjfzey",
       "locale": null
     },
     {
@@ -2718,7 +2718,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "gxe67bq8y7879ksnaen86k46",
+      "documentId": "fl8crbc95i578wz95eocsvyn",
       "locale": null
     },
     {
@@ -2727,7 +2727,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "f1xe22ygvuvzgd6m672ds1kf",
+      "documentId": "gqbfra9l9p8xtuqmybht2ix2",
       "locale": null
     },
     {
@@ -2736,7 +2736,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "j7mjr7cc1r0e5iid6rlh2e67",
+      "documentId": "lsbbdezvv9kff6760g0im0i2",
       "locale": null
     },
     {
@@ -2745,7 +2745,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "k0t75zcrvpsfbdqlqur3ev4p",
+      "documentId": "s9yaxf2rbj6urw6dnejltcmh",
       "locale": null
     },
     {
@@ -2754,7 +2754,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xcmy480s9ky3g2it2ovun361",
+      "documentId": "e7uhg3zuo6u1i3fgyr3ouz4t",
       "locale": null
     },
     {
@@ -2763,7 +2763,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "u8l032as7p4udmjupr2unyvb",
+      "documentId": "cdt2z7oiv56gjkfw2jdqmur2",
       "locale": null
     },
     {
@@ -2772,7 +2772,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "dycz1m7rls0ge6p2ww33sls7",
+      "documentId": "pra8mr6l5z0fwhga59jir2ky",
       "locale": null
     },
     {
@@ -2781,7 +2781,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "kfmau63jyi2rm5le16dd25wg",
+      "documentId": "ay57sth0ijgroc7lt51vbymw",
       "locale": null
     },
     {
@@ -2790,7 +2790,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "je04rinn2sq7lixgj8vpgqjd",
+      "documentId": "iptiuna2frl9jnoaqrjxoxet",
       "locale": null
     },
     {
@@ -2799,7 +2799,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "gn19gsoowg7t5pmip7d6kjzj",
+      "documentId": "ol0etjt1ftapt9d4e8llvl42",
       "locale": null
     },
     {
@@ -2808,7 +2808,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "zf9cq7xkxcla6mt40sinaxeh",
+      "documentId": "ljo1rl4vp29l6hwnznnyhfw7",
       "locale": null
     },
     {
@@ -2817,7 +2817,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "z5gmnyj41drrmqzzsb4l1s3t",
+      "documentId": "s8ywqmcys0lcksgg19q9hbju",
       "locale": null
     },
     {
@@ -2826,7 +2826,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "r5qo1snj0l8t3e8j8xhy1oc4",
+      "documentId": "oubswwdz291fai15f0fdb5jz",
       "locale": null
     },
     {
@@ -2835,7 +2835,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "kqsl7r5icuimwq56mnbvfhqr",
+      "documentId": "da68tim7g14x86v4znvpmkdm",
       "locale": null
     },
     {
@@ -2844,7 +2844,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "mc5xnpatqe7w2cet4njmt8eb",
+      "documentId": "hrzimgx3x0opnc0uh8c7sqw0",
       "locale": null
     },
     {
@@ -2853,7 +2853,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "zvre2lfz529d94hvgzubzv9u",
+      "documentId": "x8ck0g7t70pq1pykhzhrb7hj",
       "locale": null
     },
     {
@@ -2862,7 +2862,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "eygnt6o6hn19hjcrkfhm0l8z",
+      "documentId": "jtmakyk33havuxrbmqaom6gf",
       "locale": null
     },
     {
@@ -2871,7 +2871,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "r6q7guoudyrlezvpgqmfq2px",
+      "documentId": "nq2934e1rdfn8wsx391h4o2l",
       "locale": null
     },
     {
@@ -2880,7 +2880,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "itjfqvr3zpqx1mqighsfnss7",
+      "documentId": "t0gml5bx6ex0uvxe6yp4vpup",
       "locale": null
     },
     {
@@ -2889,7 +2889,7 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "hc3tkjn1kb0bp4x5c3i1soxs",
+      "documentId": "rtzgodgvjpmgxwd3grlk85fy",
       "locale": null
     }
   ]

@@ -20,9 +20,9 @@ def get_unique_identifier(row, cols):
 
 def get_identifier(pa, cols, current_db):
     """
-    get database ID associated with a unique identifier (combination
+    get Strapi documentId associated with a unique identifier (combination
     of environment, wdpaid, wdpa_pid, zone_id, location) if one exists. Used to
-    add id to parent/children columns
+    add documentId to parent/children columns
     """
     if not isinstance(pa, dict):
         return None
@@ -31,12 +31,12 @@ def get_identifier(pa, cols, current_db):
     identifier = get_unique_identifier(pa, cols)
 
     if len(current_db) > 0:
-        match = current_db.loc[current_db["identifier"] == identifier, "id"]
-        _id = int(match.iloc[0]) if not match.empty else None
+        match = current_db.loc[current_db["identifier"] == identifier, "documentId"]
+        _document_id = match.iloc[0] if not match.empty else None
     else:
-        _id = None
+        _document_id = None
 
-    return {**pa, "id": _id}
+    return {**pa, "documentId": _document_id}
 
 
 def get_identifier_children(children, cols, current_db):
@@ -96,11 +96,12 @@ def relation_diff_index(
 
     True if:
       * Only one side is None.
-      * (Non-list case) Only one side has an 'id' != None.
-      * (Non-list case) Both have 'id' but the 'id' values differ.
+      * (Non-list case) Only one side has a 'documentId' != None.
+      * (Non-list case) Both have 'documentId' but the values differ.
       * (List case) Lists have different lengths.
-      * (List case) Any dict in either list has 'id' == None.
-      * (List case) Any 'id' present in one list is not present in the other (order-insensitive).
+      * (List case) Any dict in either list has 'documentId' == None.
+      * (List case) Any 'documentId' present in one list is not present in the other
+        (order-insensitive).
     """
 
     right_series = df_right[column].reindex_like(df_left)
@@ -114,20 +115,20 @@ def relation_diff_index(
         return isinstance(value, (list, tuple))
 
     def extract_single_id(value: dict[str, Any]) -> Any | None:
-        return value.get("id")
+        return value.get("documentId")
 
     def extract_list_ids_and_flags(
         value: Iterable[dict[str, Any]],
     ) -> tuple[list[Any | None], bool]:
         """
         From a list/tuple of dicts, return:
-          - list of 'id' values (may include None)
-          - flag: True if any dict has 'id' == None
+          - list of 'documentId' values (may include None)
+          - flag: True if any dict has 'documentId' == None
         """
         ids: list[Any | None] = []
         any_none_id = False
         for item in value:
-            current_id = item.get("id", None)
+            current_id = item.get("documentId", None)
             if current_id is None:
                 any_none_id = True
             ids.append(current_id)
@@ -161,7 +162,7 @@ def relation_diff_index(
             left_id = extract_single_id(left_cell)
             right_id = extract_single_id(right_cell)
 
-            # Only one side has an 'id' not None
+            # Only one side has a 'documentId' not None
             # PA has an existing parent and update has a net-new PA as the parent
             if (left_id is not None) ^ (right_id is not None):
                 difference_flags.append(True)
@@ -186,7 +187,7 @@ def relation_diff_index(
             difference_flags.append(True)
             continue
 
-        # Any dict has id == None on either side
+        # Any dict has documentId == None on either side
         # Adding a net-new PA to the relationship list
         if left_has_none_id or right_has_none_id:
             difference_flags.append(True)
