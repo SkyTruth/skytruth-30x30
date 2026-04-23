@@ -2,9 +2,6 @@ import pandas as pd
 import pytest
 
 import src.methods.generate_tables as gen_tables
-from src.core.params import (
-    GLOBAL_TERRESTRIAL_AREA_KM2,
-)
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -168,3 +165,12 @@ def test_global_contribution(
     row = _get_row(df, "GLOB")
     # global_contribution = coverage
     assert row["global_contribution"] == 10
+
+
+def test_total_area_abnj(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder):
+    """ABNJ total_area should be global_ocean_area * global_ocean_percentage / 100"""
+    df, _ = _run_generate(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder)
+    row = _get_row(df, "ABNJ")
+    # global_ocean_area = 36_319_197 / (10.0 / 100) = 363_191_970
+    # total_area = 363_191_970 * 64.0 / 100 = 232_442_860.8
+    assert row["total_area"] == 232_442_861

@@ -18,7 +18,6 @@ from src.core.params import (
     FISHING_PROTECTION_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
-    GLOBAL_MARINE_AREA_KM2,
     HABITAT_PROTECTION_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
@@ -351,6 +350,7 @@ def generate_protection_coverage_stats_table(
             return df
         else:
             total_area = get_value(global_stats, "high_seas_pa_coverage_area")
+            global_ocean_area = oecms_pas / (coverage / 100)
             oecms = get_value(wdpa_global, "total_ocean_area_oecms") - get_value(
                 wdpa_global, "national_waters_oecms_coverage_area"
             )
@@ -358,16 +358,17 @@ def generate_protection_coverage_stats_table(
                 wdpa_global, "national_waters_oecms_pas_coverage_area"
             )
             pas = oecms_pas - oecms
+            coverage = get_value(global_stats, "high_seas_pa_coverage_percentage")
             high_seas_dict = {
                 "location": "ABNJ",
                 "environment": environment,
                 "protected_area": total_area,
                 "protected_areas_count": -9999,
-                "coverage": get_value(global_stats, "high_seas_pa_coverage_percentage"),
+                "coverage": coverage,
                 "pas": 100 * pas / oecms_pas,
                 "oecms": 100 * oecms / oecms_pas,
-                "global_contribution": 100 * total_area / GLOBAL_MARINE_AREA_KM2,
-                "total_area": GLOBAL_MARINE_AREA_KM2
+                "global_contribution": 100 * total_area / global_ocean_area,
+                "total_area": global_ocean_area
                 * get_value(wdpa_global, "global_ocean_percentage")
                 / 100,
             }
