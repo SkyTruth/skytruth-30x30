@@ -293,7 +293,9 @@ def generate_protection_coverage_stats_table(
                     / (df_group["pas_count"] + df_group["oecm_count"]).sum()
                 )
             global_area = (
-                #total WDPA number is calcualted from 2 provided values: protection and total * percentage
+                #total WDPA number is calculated from 2 provided values:
+                #protection and total coverage * percentage
+
                 total_protected_area / (coverage / 100)
                 if df_group.iloc[0]["environment"] == "marine"
                 else GLOBAL_TERRESTRIAL_AREA_KM2
