@@ -1,12 +1,17 @@
 import _ from "lodash";
 
 /**
- * Workaround for a bug in @strapi/plugin-documentation: 
+ * Workaround for a bug in @strapi/plugin-documentation:
  * https://github.com/strapi/strapi/issues/22808 where the schema
  * generator uses a shared `typeMap` to prevent circular references. Any
  * relation target already expanded elsewhere in the recursive tree is
  * reduced to just `{ id, documentId }`. This post-processes the generated
  * OpenAPI spec and restores full properties for those truncated relations.
+ *
+ * Note: localized content types are missing `locale` / `localizations` at
+ * several nesting levels. This is handled with a narrow client-side type
+ * helper (see `frontend/src/lib/pick-localized.ts`) rather than a broad
+ * server-side patch, since only a couple of hooks consume localizations.
  */
 
 interface SchemaProperty {

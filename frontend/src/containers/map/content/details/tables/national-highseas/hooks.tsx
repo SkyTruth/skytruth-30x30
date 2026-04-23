@@ -9,6 +9,7 @@ import HeaderItem from '@/containers/map/content/details/table/header-item';
 import { cellFormatter } from '@/containers/map/content/details/table/helpers';
 import SortingButton from '@/containers/map/content/details/table/sorting-button';
 import TooltipButton from '@/containers/map/content/details/table/tooltip-button';
+import { pickLocalized } from '@/lib/utils/pick-localized';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import { useGetDataSources } from '@/types/generated/data-source';
 import { useGetEnvironments } from '@/types/generated/environment';
@@ -634,46 +635,15 @@ export const useData = (
       return [
         data.data?.map((item): NationalHighseasTableColumns => {
           const getData = (pa: Pa | PaChildrenItem) => {
-            const environment = pa.environment;
-            const localizedEnvironment = [
-              environment,
-              ...(environment?.localizations?.map((environment) => environment) ?? []),
-            ].find((data) => data?.locale === locale);
-
-            const dataSource = pa.data_source;
-            const localizedDataSource = [
-              dataSource,
-              ...(dataSource?.localizations.map((dataSource) => dataSource) ?? []),
-            ].find((data) => data?.locale === locale);
-
-            const protectionStatus = pa.protection_status;
-            const localizedProtectionStatus = [
-              protectionStatus,
-              ...(protectionStatus?.localizations?.map((protectionStatus) => protectionStatus) ??
-                []),
-            ].find((data) => data?.locale === locale);
-
-            const iucnCategory = pa.iucn_category;
-            const localizedIucnCategory = [
-              iucnCategory,
-              ...(iucnCategory?.localizations.map((iucnCategory) => iucnCategory) ?? []),
-            ].find((data) => data?.locale === locale);
-
-            const mpaaEstablishmentStage = pa.mpaa_establishment_stage;
-            const localizedMpaaEstablishmentStage = [
-              mpaaEstablishmentStage,
-              ...(mpaaEstablishmentStage?.localizations.map(
-                (mpaaEstablishmentStage) => mpaaEstablishmentStage
-              ) ?? []),
-            ].find((data) => data?.locale === locale);
-
-            const mpaaProtectionLevel = pa.mpaa_protection_level;
-            const localizedMpaaProtectionLevel = [
-              mpaaProtectionLevel,
-              ...(mpaaProtectionLevel?.localizations?.map(
-                (mpaaProtectionLevel) => mpaaProtectionLevel
-              ) ?? []),
-            ].find((data) => data?.locale === locale);
+            const localizedEnvironment = pickLocalized(pa.environment, locale);
+            const localizedDataSource = pickLocalized(pa.data_source, locale);
+            const localizedProtectionStatus = pickLocalized(pa.protection_status, locale);
+            const localizedIucnCategory = pickLocalized(pa.iucn_category, locale);
+            const localizedMpaaEstablishmentStage = pickLocalized(
+              pa.mpaa_establishment_stage,
+              locale
+            );
+            const localizedMpaaProtectionLevel = pickLocalized(pa.mpaa_protection_level, locale);
 
             return {
               name: pa.name,

@@ -18,6 +18,7 @@ import {
   useSyncCustomRegion,
 } from '@/containers/map/content/map/sync-settings';
 import useNameField from '@/hooks/use-name-field';
+import { pickLocalized } from '@/lib/utils/pick-localized';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 import { useGetDataInfos } from '@/types/generated/data-info';
@@ -481,10 +482,7 @@ export const useData = (
               const location = item.location;
               const environment = item.environment;
 
-              const localizedEnvironment = [
-                environment,
-                ...(environment.localizations.map((environment) => environment) ?? []),
-              ].find((data) => data.locale === locale);
+              const localizedEnvironment = pickLocalized(environment, locale);
 
               return {
                 location: {
