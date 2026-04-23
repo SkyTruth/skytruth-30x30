@@ -293,7 +293,8 @@ def generate_protection_coverage_stats_table(
                     / (df_group["pas_count"] + df_group["oecm_count"]).sum()
                 )
             global_area = (
-                GLOBAL_MARINE_AREA_KM2
+                #total WDPA number is calcualted from 2 provided values: protection and total * percentage
+                total_protected_area / (coverage / 100)
                 if df_group.iloc[0]["environment"] == "marine"
                 else GLOBAL_TERRESTRIAL_AREA_KM2
             )
@@ -332,21 +333,20 @@ def generate_protection_coverage_stats_table(
         oecms_pas = get_value(global_stats, f"total_{environment2}_area_oecms_pas")
         oecms = get_value(global_stats, f"total_{environment2}_area_oecms")
         pas = oecms_pas - oecms
+        coverage = get_value(
+                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage")
 
         global_dict = {
             "location": "GLOB",
             "environment": environment,
             "protected_area": get_value(global_stats, f"total_{environment2}_area_oecms_pas"),
             "protected_areas_count": get_value(global_stats, f"total_{environment}_oecms_pas"),
-            "coverage": get_value(
-                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
-            ),
+            #
+            "coverage": coverage,
             "pas": 100 * pas / oecms_pas,
             "oecms": 100 * oecms / oecms_pas,
-            "global_contribution": get_value(
-                global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
-            ),
-            "total_area": GLOBAL_MARINE_AREA_KM2
+            "global_contribution": coverage,
+            "total_area": oecms_pas / (coverage/100)
             if environment2 == "ocean"
             else GLOBAL_TERRESTRIAL_AREA_KM2,
         }
@@ -460,6 +460,7 @@ def generate_marine_protection_level_stats_table(
     verbose: bool = True,
 ):
     def get_group_stats(df, loc, relations, protection_level="fully-highly-protected"):
+        #this is where we do all the summing right now 
         if loc == "GLOB":
             df_group = df
             total_area = GLOBAL_MARINE_AREA_KM2

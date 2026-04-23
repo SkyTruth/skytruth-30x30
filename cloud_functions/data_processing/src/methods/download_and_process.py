@@ -75,7 +75,7 @@ logger = Logger()
 pyarrow.set_memory_pool(pyarrow.default_memory_pool())
 pyarrow.default_memory_pool().release_unused()
 
-
+#download_mpatlas_global will look very similar to the country function 
 def download_mpatlas_country(
     bucket: str = BUCKET,
     project: str = PROJECT,
@@ -174,6 +174,9 @@ def download_mpatlas(
             verbose=verbose,
             alert_message="failed to download MPAtlas zone stats",
         )
+
+#will need something here like download_mpatlas_global 
+
     except RetryFailed as e:
         cfg = METHOD_RETRY_CONFIGS["download_mpatlas"]
         raise ScheduleRetry(
