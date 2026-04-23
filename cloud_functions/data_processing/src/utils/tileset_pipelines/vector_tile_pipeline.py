@@ -17,7 +17,7 @@ logger = Logger()
 
 
 @dataclass
-class TilesetConfig:
+class MBTilesetConfig:
     bucket: str
     tileset_blob_name: str
     tileset_id: str
@@ -65,8 +65,8 @@ def _upload_mapbox(temp_dir: Path, ctx: dict[str, Any]):
     )
 
 
-def run_tileset_pipeline(
-    cfg: TilesetConfig,
+def run_vector_tileset_pipeline(
+    cfg: MBTilesetConfig,
     *,
     process: Hook | None = None,
     check_credentials: Callable = _check_mapbox_credentials,

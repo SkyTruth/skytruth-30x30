@@ -7,7 +7,10 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import Point
 
-from src.utils.mbtile_pipeline import TilesetConfig, run_tileset_pipeline
+from src.utils.tileset_pipelines.vector_tile_pipeline import (
+    MBTilesetConfig,
+    run_vector_tileset_pipeline,
+)
 
 
 @pytest.fixture
@@ -83,7 +86,7 @@ def cfg(tmp_path):
     """
     Base config; bucket points to a writable temp folder (pytest cleans tmp_path automatically).
     """
-    return TilesetConfig(
+    return MBTilesetConfig(
         bucket=str(tmp_path / "fake_bucket"),
         tileset_blob_name="tiles/eez.mbtiles",
         tileset_id="org.eeztile",
@@ -130,12 +133,12 @@ def test_success_end_to_end_outcomes(keep_temp, cfg, small_gdf, monkeypatch, jan
     cfg.keep_temp = keep_temp
 
     monkeypatch.setattr(
-        "src.utils.mbtile_pipeline.read_json_df",
+        "src.utils.tileset_pipelines.vector_tile_pipeline.read_json_df",
         lambda bucket, blob, verbose=False: small_gdf.copy(),
         raising=True,
     )
 
-    result = run_tileset_pipeline(
+    result = run_vector_tileset_pipeline(
         cfg,
         process=mock_process,
         check_credentials=lambda: None,
@@ -172,13 +175,13 @@ def test_raises_when_mbtiles_missing(cfg, small_gdf, monkeypatch):
     All writes occur under tmp_path, so no explicit cleanup needed.
     """
     monkeypatch.setattr(
-        "src.utils.mbtile_pipeline.read_json_df",
+        "src.utils.tileset_pipelines.vector_tile_pipeline.read_json_df",
         lambda bucket, blob, verbose=False: small_gdf.copy(),
         raising=True,
     )
 
     with pytest.raises(FileNotFoundError):
-        run_tileset_pipeline(
+        run_vector_tileset_pipeline(
             cfg,
             process=mock_process,
             check_credentials=lambda: None,
@@ -193,13 +196,13 @@ def test_credentials_error_bubbles_up(cfg, small_gdf, monkeypatch):
     If the credentials checker raises, the pipeline should propagate the error.
     """
     monkeypatch.setattr(
-        "src.utils.mbtile_pipeline.read_json_df",
+        "src.utils.tileset_pipelines.vector_tile_pipeline.read_json_df",
         lambda bucket, blob, verbose=False: small_gdf.copy(),
         raising=True,
     )
 
     with pytest.raises(RuntimeError, match="bad creds"):
-        run_tileset_pipeline(
+        run_vector_tileset_pipeline(
             cfg,
             process=lambda gdf, ctx: gdf,
             check_credentials=lambda: (_ for _ in ()).throw(RuntimeError("bad creds")),
@@ -214,13 +217,13 @@ def test_read_json_df_error_bubbles_up(cfg, monkeypatch):
     If the input read fails, the pipeline should propagate the exception from read_json_df.
     """
     monkeypatch.setattr(
-        "src.utils.mbtile_pipeline.read_json_df",
+        "src.utils.tileset_pipelines.vector_tile_pipeline.read_json_df",
         lambda bucket, blob, verbose=False: (_ for _ in ()).throw(OSError("gcs read failed")),
         raising=True,
     )
 
     with pytest.raises(IOError, match="gcs read failed"):
-        run_tileset_pipeline(
+        run_vector_tileset_pipeline(
             cfg,
             process=lambda gdf, ctx: gdf,  # never reached
             check_credentials=lambda: None,
@@ -240,7 +243,7 @@ def test_process_is_applied_and_extra_ctx_is_merged(cfg, small_gdf, monkeypatch,
     cfg.extra = {"variant": "testA"}
 
     monkeypatch.setattr(
-        "src.utils.mbtile_pipeline.read_json_df",
+        "src.utils.tileset_pipelines.vector_tile_pipeline.read_json_df",
         lambda bucket, blob, verbose=False: small_gdf.copy(),
         raising=True,
     )
@@ -251,7 +254,7 @@ def test_process_is_applied_and_extra_ctx_is_merged(cfg, small_gdf, monkeypatch,
         gdf["variant"] = ctx["variant"]
         return gdf
 
-    result = run_tileset_pipeline(
+    result = run_vector_tileset_pipeline(
         cfg,
         process=mock_process,
         check_credentials=lambda: None,
