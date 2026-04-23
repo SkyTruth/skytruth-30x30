@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -6,6 +5,7 @@ import src.methods.generate_tables as gen_tables
 from src.core.params import (
     GLOBAL_TERRESTRIAL_AREA_KM2,
 )
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -126,23 +126,29 @@ def _get_row(df, location, environment="marine"):
 # Tests
 # ---------------------------------------------------------------------------
 
-def test_total_area_marine(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder):
+def test_total_area_marine(monkeypatch, wdpa_country, wdpa_global, 
+                            combined_regions, upload_recorder):
     """use back calculation correctly for global area in marine env"""
-    df, _ = _run_generate(monkeypatch,  wdpa_country, wdpa_global, combined_regions, upload_recorder)
+    df, _ = _run_generate(monkeypatch,  wdpa_country, wdpa_global, 
+                        combined_regions, upload_recorder)
     row = _get_row(df, "GLOB")
     # total area = oecms_pas / (coverage / 100)
     assert row["total_area"] == 363_191_970
 
-def test_total_area_terrestrial(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder):
+def test_total_area_terrestrial(monkeypatch, wdpa_country, 
+                                wdpa_global, combined_regions, upload_recorder):
     """use back calculation correctly for global area in marine env"""
-    df, _ = _run_generate(monkeypatch,  wdpa_country, wdpa_global, combined_regions, upload_recorder)
+    df, _ = _run_generate(monkeypatch,  wdpa_country, 
+                            wdpa_global, combined_regions, upload_recorder)
     row = _get_row(df, "GLOB", environment="terrestrial")
     # total area = GLOBAL_TERRESTRIAL_AREA_KM2
     assert row["total_area"] == GLOBAL_TERRESTRIAL_AREA_KM2
 
-def test_global_contribution(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder):
+def test_global_contribution(monkeypatch, wdpa_country, 
+                            wdpa_global, combined_regions, upload_recorder):
     """use back calculation correctly for global area in marine env"""
-    df, _ = _run_generate(monkeypatch,  wdpa_country, wdpa_global, combined_regions, upload_recorder)
+    df, _ = _run_generate(monkeypatch,  wdpa_country, 
+                            wdpa_global, combined_regions, upload_recorder)
     row = _get_row(df, "GLOB")
     # global_contribution = coverage
     assert row["global_contribution"] == 10
