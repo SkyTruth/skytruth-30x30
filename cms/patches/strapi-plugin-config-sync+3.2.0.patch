@@ -1,5 +1,6 @@
-# Patching teh config sync addition of documentId as it causes a ton of
-# unneccesary diff noise in PRs.Can be removed when 
+# Patching the config sync plug in to remove the 
+# addition of documentId as it causes a ton of
+# unneccesary diff noise in PRs. Can be removed when 
 # https://github.com/pluginpal/strapi-plugin-config-sync/issues/190
 # is resolved
 
