@@ -10,11 +10,7 @@
  * to the variant that actually declares `localizations` (here, `Environment`),
  * giving callers access to `.name`, `.slug`, etc. without casts.
  */
-type Localized<T> = T extends unknown
-  ? 'localizations' extends keyof T
-    ? T
-    : never
-  : never;
+type Localized<T> = T extends unknown ? ('localizations' extends keyof T ? T : never) : never;
 
 export function pickLocalized<T extends object>(
   entity: T | null | undefined,
@@ -26,5 +22,7 @@ export function pickLocalized<T extends object>(
     localizations?: Array<T & { locale?: string | null }> | null;
   };
   if (typedEntity.locale === locale) return typedEntity as Localized<T>;
-  return typedEntity.localizations?.find((loc) => loc?.locale === locale) as Localized<T> | undefined;
+  return typedEntity.localizations?.find((loc) => loc?.locale === locale) as
+    | Localized<T>
+    | undefined;
 }
