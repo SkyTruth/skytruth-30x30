@@ -22,19 +22,21 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
 
             // find the most recently updated record and return its updatedAt date
             const updatedAtQuery = {
-                ...query,
+                ...query as any,
                 fields: ['updatedAt'],
                 sort: 'updatedAt:desc',
-                limit: 1
-            } as any;
-            const updatedAt = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).findMany(updatedAtQuery).then((data) => {
-                return data[0]?.updatedAt ?? null;
-            });
+                pagination: { limit: 1 },
+            };
+            const updatedAt = await strapi
+                .documents(PROTECTION_COVERAGE_STAT_NAMESPACE)
+                .findMany(updatedAtQuery)
+                .then((data) => data[0]?.updatedAt ?? null);
 
             const dataQuery = {
-                ...query,
-                pagination: { pageSize: 1000000, page: 1 } // Max allowed by the API config. Will paginate after sorting
-            } as any;
+                ...query as any,
+                // Max allowed by the API config. Will paginate after sorting
+                pagination: { pageSize: 1000000, page: 1 }
+            };
             delete dataQuery.sort; // We will sort the data after we get it
             ctx.query = dataQuery;
             // run the original find function without pagination or sorting

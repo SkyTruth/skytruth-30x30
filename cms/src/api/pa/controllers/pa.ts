@@ -72,7 +72,9 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
 
       // First, we get the list of all the parents (no pagination) for which at least one child
       // matches the filters. No sorting.
-      const { parent, ...filtersWithoutParentProperty } = (ctx.query.filters ?? {}) as any;
+      
+      // @ts-ignore
+      const { parent, ...filtersWithoutParentProperty } = (ctx.query.filters ?? {});
 
       const parentIds = (await strapi.documents('api::pa.pa').findMany({
         fields: ['documentId'],
