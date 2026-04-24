@@ -72,7 +72,7 @@ const MainMap: FCWithMessages = () => {
     {
       query: {
         enabled: !!layersInteractive.length,
-        select: ({ data }) => data,
+        select: ({ data }) => data as LayerTyped[],
       },
     }
   );
@@ -93,7 +93,7 @@ const MainMap: FCWithMessages = () => {
     },
     {
       query: {
-        select: ({ data }) => data.map(({ attributes }) => attributes?.slug),
+        select: ({ data }) => data.map((item) => item?.slug),
       },
     }
   );
@@ -180,8 +180,7 @@ const MainMap: FCWithMessages = () => {
       if (
         layersInteractive.length &&
         layersInteractiveData.some((l) => {
-          const attributes = l.attributes as LayerTyped;
-          return attributes?.interaction_config?.events.some((ev) => ev.type === 'click');
+          return l?.interaction_config?.events.some((ev) => ev.type === 'click');
         })
       ) {
         const p = Object.assign({}, e, { features: e.features ?? [] });

@@ -8,12 +8,12 @@ export default factories.createCoreService('api::protection-status.protection-st
   ({ strapi }) => ({
   async getProtectionStatusMap(): Promise<IDMap> {
     const statuses = await strapi.db.query('api::protection-status.protection-status').findMany({
-      select: ['id', 'slug'],
+      select: ['documentId', 'slug'],
     });
 
     const protectionStatusMap: IDMap = {};
     statuses.forEach((status) => {
-      protectionStatusMap[status.slug] = status.id;
+      protectionStatusMap[status.slug] = status.documentId;
     });
 
     return protectionStatusMap;

@@ -12,7 +12,7 @@ import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear do
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
-import { LayerListResponseDataItem, LegendLegendComponent } from '@/types/generated/strapi.schemas';
+import { Layer, LegendLegendComponent } from '@/types/generated/strapi.schemas';
 import { LayerTyped, ParamsConfig } from '@/types/layers';
 
 import LegendItem from './item';
@@ -29,7 +29,7 @@ const Legend: FCWithMessages = () => {
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
   const isCustomLayersActive = useFeatureFlag('is_custom_layers_active'); // TECH-3372: tear down
 
-  const layersQuery = useGetLayers<LayerListResponseDataItem[]>(
+  const layersQuery = useGetLayers<Layer[]>(
     {
       locale,
       sort: 'title:asc',
@@ -52,10 +52,10 @@ const Legend: FCWithMessages = () => {
       query: {
         select: ({ data }) =>
           data
-            .filter(({ attributes: { slug } }) => activeLayers.includes(slug))
+            .filter((item) => activeLayers.includes(item.slug))
             .sort((a, b) => {
-              const indexA = activeLayers.indexOf(a.attributes.slug);
-              const indexB = activeLayers.indexOf(b.attributes.slug);
+              const indexA = activeLayers.indexOf(a.slug);
+              const indexB = activeLayers.indexOf(b.slug);
               return indexA - indexB;
             }),
         placeholderData: { data: [] },
@@ -218,16 +218,16 @@ const Legend: FCWithMessages = () => {
           if (customLayers[slug] && !isCustomLayersActive) return null;
 
           if (!customLayers[slug] && layersQuery.data?.length) {
-            const layer = layersQuery.data.filter((layer) => layer.attributes.slug === slug)[0];
+            const layer = layersQuery.data.filter((layer) => layer.slug === slug)[0];
 
             // Short circuit to catch when allActiveLayers state updates and the layersQuery
             // hasn't yet returned the corresponding data
             if (!layer) return null;
 
-            legend_config = layer.attributes.legend_config;
-            params_config = layer.attributes.params_config;
+            legend_config = layer.legend_config;
+            params_config = layer.params_config;
 
-            title = layer.attributes.title;
+            title = layer.title;
             isVisible = layerSettings[slug]?.visibility !== false;
             opacity = layerSettings[slug]?.opacity ?? 1;
           } else {

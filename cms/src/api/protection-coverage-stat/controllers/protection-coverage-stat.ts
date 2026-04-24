@@ -22,19 +22,21 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
 
             // find the most recently updated record and return its updatedAt date
             const updatedAtQuery = {
-                ...query,
-                fields: ['updatedAt'] as any,
-                sort: { updatedAt: 'desc' } as any,
-                limit: 1
+                ...query as any,
+                fields: ['updatedAt'],
+                sort: 'updatedAt:desc',
+                pagination: { limit: 1 },
             };
-            const updatedAt = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).findMany(updatedAtQuery).then((data) => {
-                return data[0]?.updatedAt ?? null;
-            });
+            const updatedAt = await strapi
+                .documents(PROTECTION_COVERAGE_STAT_NAMESPACE)
+                .findMany(updatedAtQuery)
+                .then((data) => data[0]?.updatedAt ?? null);
 
             const dataQuery = {
-                ...query,
-                pagination: { pageSize: 1000000, page: 1 } // Max allowed by the API config. Will paginate after sorting
-            } as any;
+                ...query as any,
+                // Max allowed by the API config. Will paginate after sorting
+                pagination: { pageSize: 1000000, page: 1 }
+            };
             delete dataQuery.sort; // We will sort the data after we get it
             ctx.query = dataQuery;
             // run the original find function without pagination or sorting
@@ -259,7 +261,7 @@ interface ProtectionCoverageStatResponse
  * Helper method to get data from a nested object using a string path. Similar to Lodash's get, except it 
  *  also looks for data and attributes keys where appropriate
  * @param data Returned data from the API
- * @param path String path to the desired value, e.g. 'data.attributes.name'
+ * @param path String path to the desired value, e.g. 'data.name'
  * @returns 
  */
 function getValueByPath(
@@ -273,11 +275,11 @@ function getValueByPath(
         if (acc[key]) {
             return acc[key];
         }
-        if (acc?.attributes) {
-            return acc.attributes[key];
+        if (acc) {
+            return acc[key];
         }
         if (acc?.data) {
-            return acc.data?.attributes[key];
+            return acc.data[key];
         }
 
     }, data);

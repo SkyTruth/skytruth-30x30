@@ -135,9 +135,9 @@ const ModellingWidget: FCWithMessages = () => {
           if (!data) return null;
 
           // existing global protected area
-          const protectedArea = data?.[0].attributes.protected_area ?? 0;
+          const protectedArea = data?.[0].protected_area ?? 0;
           // total area
-          const totalArea = Number(data?.[0].attributes.total_area ?? 0);
+          const totalArea = Number(data?.[0].total_area ?? 0);
           // total custom protected areas (analysis)
           const totalCustomAreas = modellingData.locations_area.reduce((acc, location) => {
             return acc + location.protected_area;
@@ -211,8 +211,8 @@ const ModellingWidget: FCWithMessages = () => {
               if (!data?.length) return null;
 
               // existing protected area
-              const protectedArea = data?.[0]?.attributes.protected_area ?? 0;
-              const currentLoc = data?.[0]?.attributes?.location?.data?.attributes;
+              const protectedArea = data?.[0]?.protected_area ?? 0;
+              const currentLoc = data?.[0]?.location;
 
               // Fallback area if location isn't in WDPA
               const fallBackArea =
@@ -220,7 +220,7 @@ const ModellingWidget: FCWithMessages = () => {
                   ? currentLoc?.total_marine_area
                   : currentLoc?.total_terrestrial_area;
 
-              const totalArea = Number(data?.[0]?.attributes.total_area ?? fallBackArea);
+              const totalArea = Number(data?.[0]?.total_area ?? fallBackArea);
               // total custom protected area (analysis)
               const CLoc = modellingData.locations_area.find(
                 ({ code }) => code === currentLoc?.code

@@ -11,7 +11,8 @@ import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
 export interface Source {
-  id: number;
+  documentId: string;
+  slug: string;
   title: string;
   url: string;
 }
@@ -83,8 +84,8 @@ const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
         {Array.isArray(sources) && (
           <div className="">
             <span>{t('data-sources:')} </span>
-            {sources.map(({ id, title, url }, index) => (
-              <Fragment key={id}>
+            {sources.map(({ documentId, title, url }, index) => (
+              <Fragment key={documentId}>
                 {renderSource(url, title)}
                 {index < sources.length - 1 && <span>, </span>}
               </Fragment>

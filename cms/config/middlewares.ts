@@ -17,6 +17,7 @@ export default [
   },
   'strapi::poweredBy',
   'strapi::query',
+  'global::v4-compat-query',
   {
     name: 'strapi::body',
     config: {

@@ -92,12 +92,10 @@ const SidebarDetails: FCWithMessages = () => {
 
   const mapLocationRelations = useCallback(
     (relation: string) => {
-      const mappedLocs = locationsData?.data[0]?.attributes[relation]?.data?.map(
-        ({ attributes }) => ({
-          code: attributes?.code,
-          name: attributes?.[locationNameField],
-        })
-      );
+      const mappedLocs = locationsData?.data[0]?.[relation]?.map((item) => ({
+        code: item?.code,
+        name: item?.[locationNameField],
+      }));
       return mappedLocs;
     },
     [locationsData?.data, locationNameField]
@@ -105,7 +103,7 @@ const SidebarDetails: FCWithMessages = () => {
 
   const titleCountry = useMemo(() => {
     if (isCustomRegion) {
-      return locationsData?.data?.find((loc) => loc?.attributes.code === CUSTOM_REGION_CODE);
+      return locationsData?.data?.find((loc) => loc?.code === CUSTOM_REGION_CODE);
     }
     return locationsData?.data[0];
   }, [locationsData, isCustomRegion]);
@@ -117,13 +115,13 @@ const SidebarDetails: FCWithMessages = () => {
     const members = [];
     const hasSharedMarineArea = [];
     for (const country of locationsData?.data) {
-      if (country.attributes.code !== CUSTOM_REGION_CODE) {
+      if (country.code !== CUSTOM_REGION_CODE) {
         members.push({
-          code: country.attributes.code,
-          name: country.attributes[locationNameField],
+          code: country.code,
+          name: country[locationNameField],
         });
-        if (country.attributes.has_shared_marine_area) {
-          hasSharedMarineArea.push(country.attributes[locationNameField]);
+        if (country.has_shared_marine_area) {
+          hasSharedMarineArea.push(country[locationNameField]);
         }
       }
     }
@@ -178,7 +176,7 @@ const SidebarDetails: FCWithMessages = () => {
             'min-h-[1.75rem] text-xl': containerScroll > 0,
           })}
         >
-          {titleCountry?.attributes?.[locationNameField]}
+          {titleCountry?.[locationNameField]}
         </h1>
         <LocationSelector
           theme="orange"
@@ -235,7 +233,7 @@ const SidebarDetails: FCWithMessages = () => {
       <div className="shrink-0 border-t border-t-black bg-white px-4 py-5 md:px-8">
         <DetailsButton
           disabled={isCustomRegion && !customRegionLocations?.size}
-          locationType={titleCountry?.attributes.type}
+          locationType={titleCountry?.type}
         />
       </div>
     </Tabs>

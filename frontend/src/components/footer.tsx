@@ -15,7 +15,7 @@ const Footer: FCWithMessages = () => {
     { locale },
     {
       query: {
-        select: ({ data }) => data?.attributes,
+        select: ({ data }) => data,
         placeholderData: { data: {} },
       },
     }

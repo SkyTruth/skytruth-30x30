@@ -31,22 +31,21 @@ const Intro: FCWithMessages<IntroProps> = ({ onScrollClick }) => {
           $eq: true,
         },
       },
-      populate: 'location,environment',
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      'sort[year]': 'desc',
+      populate: {
+        location: true,
+        environment: true,
+      },
+      sort: 'year:desc',
     },
     {
       query: {
-        placeholderData: { terrestrial: '−', marine: '−' },
         select: ({ data }) => {
           const terrestrialCoverage = data?.find(
-            (d) => d.attributes.environment.data.attributes.slug === 'terrestrial'
-          )?.attributes.coverage;
+            (d) => d.environment?.slug === 'terrestrial'
+          )?.coverage;
 
-          const marineCoverage = data?.find(
-            (d) => d.attributes.environment.data.attributes.slug === 'marine'
-          )?.attributes.coverage;
+          const marineCoverage = data?.find((d) => d.environment?.slug === 'marine')?.coverage;
 
           return {
             terrestrial:
@@ -109,12 +108,12 @@ const Intro: FCWithMessages<IntroProps> = ({ onScrollClick }) => {
         <div className="border-l border-t border-white md:w-[40%] md:border-t-0">
           <div className="flex h-full flex-col border-r">
             <SidebarItem
-              percentage={protectionStatsData.marine}
+              percentage={protectionStatsData?.marine ?? '−'}
               text={t('current-ocean-protected-area')}
               icon="icon1"
             />
             <SidebarItem
-              percentage={protectionStatsData.terrestrial}
+              percentage={protectionStatsData?.terrestrial ?? '−'}
               text={t('current-total-protected-area')}
               icon="icon2"
             />
