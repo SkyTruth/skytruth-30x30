@@ -2,7 +2,6 @@
   "name": "Editor",
   "code": "strapi-editor",
   "description": "Editors can manage and publish contents including those of other users.",
-  "documentId": "xneuljuj06uzqqgzlka5qhyl",
   "locale": null,
   "permissions": [
     {
@@ -20,7 +19,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "dzkr3nteq85w2w7s4gh0u2e5",
       "locale": null
     },
     {
@@ -35,7 +33,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ndobajw3tpp8mevk1e0sscif",
       "locale": null
     },
     {
@@ -50,7 +47,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uyoczw4w5vmgtvpp5cne4hxy",
       "locale": null
     },
     {
@@ -68,7 +64,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "eeyr5db1ljjwlulvr81yw2fh",
       "locale": null
     },
     {
@@ -86,7 +81,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "m9jj9xjp1g2ht75kx68y7kzu",
       "locale": null
     },
     {
@@ -106,7 +100,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "mcgaf5pl4nocpetkilk98d47",
       "locale": null
     },
     {
@@ -121,31 +114,10 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "q0ps4arriu6d8g32iebbjjuy",
       "locale": null
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::data-info.data-info",
-      "properties": {
-        "fields": [
-          "slug",
-          "content",
-          "data_sources"
-        ],
-        "locales": [
-          "en",
-          "es",
-          "fr"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "documentId": "ei2y63ktw657pku7nx20vyhk",
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::data-info.data-info",
       "properties": {
         "fields": [
@@ -161,7 +133,25 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "qb6tsynibph8f6ahnt18fbp7",
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::data-info.data-info",
+      "properties": {
+        "fields": [
+          "slug",
+          "content",
+          "data_sources"
+        ],
+        "locales": [
+          "en",
+          "es",
+          "fr"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
       "locale": null
     },
     {
@@ -181,7 +171,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "kzf93r6ccmmriots7bvq0jwm",
       "locale": null
     },
     {
@@ -196,31 +185,10 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xg4vp0pzlb8erdqzm1lmyzpt",
       "locale": null
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::data-source.data-source",
-      "properties": {
-        "fields": [
-          "slug",
-          "title",
-          "url"
-        ],
-        "locales": [
-          "en",
-          "es",
-          "fr"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "documentId": "soxt625okr6dumafsqlii3lq",
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::data-source.data-source",
       "properties": {
         "fields": [
@@ -236,7 +204,25 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "yn71jvg1ituphi7j98mb9bmd",
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::data-source.data-source",
+      "properties": {
+        "fields": [
+          "slug",
+          "title",
+          "url"
+        ],
+        "locales": [
+          "en",
+          "es",
+          "fr"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
       "locale": null
     },
     {
@@ -254,7 +240,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "hx1afxi6x765hkrbv0gughpy",
       "locale": null
     },
     {
@@ -269,7 +254,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "f4wpvphstvdwu017zggl91tc",
       "locale": null
     },
     {
@@ -284,7 +268,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xr4ttaai3zakhb56gc5smyvi",
       "locale": null
     },
     {
@@ -302,7 +285,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ct7dyispiatmuwnyr30r5nbu",
       "locale": null
     },
     {
@@ -320,7 +302,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "jo684zd8u72zhwmpz1j5ju4b",
       "locale": null
     },
     {
@@ -340,7 +321,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "d8maz61z4y9bgns46su1fpli",
       "locale": null
     },
     {
@@ -355,7 +335,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "smb9e91k9n7giayydyvhbhlb",
       "locale": null
     },
     {
@@ -370,7 +349,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "awop9ouq4yhvz9ng9o5uen4h",
       "locale": null
     },
     {
@@ -390,7 +368,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "j4dg1hybzn3m1k6vrdw10i3m",
       "locale": null
     },
     {
@@ -410,7 +387,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "dn5vf8w9kk1pvcv3zzze4y3t",
       "locale": null
     },
     {
@@ -428,7 +404,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "y1mcb8nh4fnr9hgwujxwafhn",
       "locale": null
     },
     {
@@ -443,7 +418,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "b8eq9yv06ugzbjjfanlgow0l",
       "locale": null
     },
     {
@@ -458,7 +432,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "j0aqgzm5v9nvbsp36zkk5kjt",
       "locale": null
     },
     {
@@ -476,7 +449,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "iphhy2wq9z8ze5o4r93wolx8",
       "locale": null
     },
     {
@@ -494,7 +466,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "h5hurbodd4c625lmw7bhlfv0",
       "locale": null
     },
     {
@@ -518,7 +489,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "nz0shj7110fnk6gqr50yzx4y",
       "locale": null
     },
     {
@@ -533,7 +503,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "slsoliil7zotxhboe4mjs2y3",
       "locale": null
     },
     {
@@ -548,7 +517,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "z4jozm1uqfxt179077d4f1i3",
       "locale": null
     },
     {
@@ -572,7 +540,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "watfhmxvf7kspes2d2cfts7u",
       "locale": null
     },
     {
@@ -596,7 +563,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ra39g03ja8az4hi0egzv2kpp",
       "locale": null
     },
     {
@@ -616,7 +582,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xm95d2tyvhspin0gthfo1si5",
       "locale": null
     },
     {
@@ -631,7 +596,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "e3xf6s8e2qsck46rnxo9y2sl",
       "locale": null
     },
     {
@@ -646,7 +610,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "faxi0kvm1re8yk6tlcdrmr18",
       "locale": null
     },
     {
@@ -666,7 +629,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "dgp4hzukzjq5mwbgjv4kyzxw",
       "locale": null
     },
     {
@@ -686,7 +648,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "u5s3yzar59fr4gadipu183st",
       "locale": null
     },
     {
@@ -705,7 +666,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uryb8zy1q0ty27ou000329ls",
       "locale": null
     },
     {
@@ -720,7 +680,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "wgdihcxe0im6i6awwksjvmkv",
       "locale": null
     },
     {
@@ -739,7 +698,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "vvs04xzbvrwe5mdk1pn3mjl3",
       "locale": null
     },
     {
@@ -758,7 +716,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "z2fhgk69grjivumqbdgbk706",
       "locale": null
     },
     {
@@ -775,7 +732,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ycd06ont5qnfmp7drqrb93us",
       "locale": null
     },
     {
@@ -784,7 +740,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "v9v8d1zqa4jnkm0o5buvp6a7",
       "locale": null
     },
     {
@@ -793,7 +748,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "l05k5xucjmcngpua01817299",
       "locale": null
     },
     {
@@ -810,7 +764,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ppslfr5gu0k4v5p3helxt4mq",
       "locale": null
     },
     {
@@ -827,7 +780,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xzwx8suppepgrrwzems76czr",
       "locale": null
     },
     {
@@ -844,7 +796,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "gmzp9vk587ewiqj8av6ln7rw",
       "locale": null
     },
     {
@@ -853,7 +804,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "yecrtii82ajxf4egydmfn0lg",
       "locale": null
     },
     {
@@ -870,7 +820,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "g4l7jh2bzd120nvqdnm6ym7m",
       "locale": null
     },
     {
@@ -887,7 +836,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "b226u6iojlu6v082nalax3ct",
       "locale": null
     },
     {
@@ -907,7 +855,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "jr596cq721f4e28h8ewp17ur",
       "locale": null
     },
     {
@@ -922,7 +869,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "za81x8qks5x8mxc04xjltnt5",
       "locale": null
     },
     {
@@ -942,7 +888,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "peci8d15pjn0ey6gipknnhv5",
       "locale": null
     },
     {
@@ -962,7 +907,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "jjqgyo3q4zc1ol1jof0jvpf6",
       "locale": null
     },
     {
@@ -980,7 +924,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "yca4np1duc3xwtkqaegkgmqt",
       "locale": null
     },
     {
@@ -989,7 +932,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "shy87fg73sxp8qqqazyhqn6v",
       "locale": null
     },
     {
@@ -1007,7 +949,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "m2d0mrrm02vihynf7fefr0zm",
       "locale": null
     },
     {
@@ -1025,7 +966,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xj178zj6u3yvzfxfq3h6iylw",
       "locale": null
     },
     {
@@ -1045,7 +985,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "gwq8c430b72zhxm5jhhea7ep",
       "locale": null
     },
     {
@@ -1060,7 +999,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "aunqa9iv3i52ibr2ecln9yyw",
       "locale": null
     },
     {
@@ -1080,7 +1018,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "eqz1j7rka5xckv80wt4arqr0",
       "locale": null
     },
     {
@@ -1100,7 +1037,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "yjiko17mhsew975c541gerx4",
       "locale": null
     },
     {
@@ -1137,7 +1073,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "kcdpvctb5ml7q8p1weuyr631",
       "locale": null
     },
     {
@@ -1152,7 +1087,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "fq4zduq2zufyh6g9b3a5geqk",
       "locale": null
     },
     {
@@ -1167,7 +1101,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ws316d29q6funy3wuowvmp1m",
       "locale": null
     },
     {
@@ -1204,7 +1137,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "m45kwg1roo3zha107mj0yfsv",
       "locale": null
     },
     {
@@ -1241,7 +1173,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "zso0x6zmmu0e9gctys56netu",
       "locale": null
     },
     {
@@ -1270,7 +1201,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ftxew7dly5imctxfp79f5dkz",
       "locale": null
     },
     {
@@ -1279,7 +1209,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "xup9h93od3rzzco9ohy6mxss",
       "locale": null
     },
     {
@@ -1308,7 +1237,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "q6awyym6wz6iddt4lyipgi77",
       "locale": null
     },
     {
@@ -1337,7 +1265,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "p0bx06cq3ey4skevsalm5l2d",
       "locale": null
     },
     {
@@ -1357,7 +1284,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "y3fq10jt9wd4jmwpm6t5k16f",
       "locale": null
     },
     {
@@ -1372,7 +1298,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "oimtbhsz61ait73s6qy7lu74",
       "locale": null
     },
     {
@@ -1392,7 +1317,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "frtv4sjqvam21cblz2vp7u1i",
       "locale": null
     },
     {
@@ -1412,7 +1336,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "i0h4x8egavhyelwv1bqpgm6j",
       "locale": null
     },
     {
@@ -1432,7 +1355,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "dtlxtooyyixw3oejjb84frap",
       "locale": null
     },
     {
@@ -1447,7 +1369,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ax8ap1s5fd70sr082tmr1xo0",
       "locale": null
     },
     {
@@ -1467,7 +1388,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "tvsrubg9ugxzlsi7za5htuq4",
       "locale": null
     },
     {
@@ -1487,7 +1407,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ta555drjpye518kzcs08ao6s",
       "locale": null
     },
     {
@@ -1504,7 +1423,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "d83vrgasffqonm5fjbe54e83",
       "locale": null
     },
     {
@@ -1513,7 +1431,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "c88nprely1tbumbau77ys9fr",
       "locale": null
     },
     {
@@ -1530,7 +1447,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "mr7qe59n15bg55k6y4jvbh1w",
       "locale": null
     },
     {
@@ -1547,7 +1463,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "tvj5gnto85s4mzwglcu6xc8l",
       "locale": null
     },
     {
@@ -1567,7 +1482,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "n9khuer2ntxd8hywbeact7me",
       "locale": null
     },
     {
@@ -1582,7 +1496,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "k2mg6cqwe61zaxsfa6e4eler",
       "locale": null
     },
     {
@@ -1602,7 +1515,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "msciq6h16v4m9q0xal3rkfw9",
       "locale": null
     },
     {
@@ -1622,7 +1534,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "dwbhte7p28h26i8iofnhd5vf",
       "locale": null
     },
     {
@@ -1650,7 +1561,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "yq38gf7grorgp2iq8nuoidzq",
       "locale": null
     },
     {
@@ -1659,7 +1569,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ydksycyqwdzkzzlde39a6bum",
       "locale": null
     },
     {
@@ -1687,7 +1596,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "lodgfjsr3uqzsxvn4dlx8fgx",
       "locale": null
     },
     {
@@ -1715,7 +1623,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "hwz4amw3agqehencoeknp89e",
       "locale": null
     },
     {
@@ -1738,7 +1645,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ohgdojxj42wrdgjqof0y2i5n",
       "locale": null
     },
     {
@@ -1747,7 +1653,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ot4scqn86trl7w2vvhj5b4zl",
       "locale": null
     },
     {
@@ -1770,7 +1675,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "mwgncutfp37y0cjj9v9z5fsl",
       "locale": null
     },
     {
@@ -1793,7 +1697,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "sq4dzdqcczxltaioyhs1w3ea",
       "locale": null
     },
     {
@@ -1813,7 +1716,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "x4k3mwzmnmby9y1jl5y82phj",
       "locale": null
     },
     {
@@ -1828,7 +1730,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "p0ub4dehepzr1tie67e55xsl",
       "locale": null
     },
     {
@@ -1848,7 +1749,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "od3xvqdhr8zuxy8pyp36rca3",
       "locale": null
     },
     {
@@ -1868,7 +1768,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "w8iemjgqwfk6hgkpzpqeoc44",
       "locale": null
     },
     {
@@ -1889,7 +1788,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "cx2f65embl0w77de1lssg9kw",
       "locale": null
     },
     {
@@ -1904,7 +1802,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "h7kt5zm4vddleb7m7xxy3plg",
       "locale": null
     },
     {
@@ -1919,7 +1816,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "w8gh13xtpa4aecllfqojhx6v",
       "locale": null
     },
     {
@@ -1940,7 +1836,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "uyl9nluykhpydpojffp6lwgc",
       "locale": null
     },
     {
@@ -1961,7 +1856,6 @@
       },
       "conditions": [],
       "actionParameters": {},
-      "documentId": "z7qs4rza8dhhl213gnpv07hh",
       "locale": null
     },
     {
@@ -1970,7 +1864,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "gm793tjr59rlnntpab73qjlz",
       "locale": null
     },
     {
@@ -1979,7 +1872,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "r7gymqxwxjetv56mlq6d0q39",
       "locale": null
     },
     {
@@ -1988,7 +1880,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "kejn8ksg9rd9ha22ktns4ug0",
       "locale": null
     },
     {
@@ -1997,7 +1888,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "obk4m1w6bbat0gu2dmqnpuao",
       "locale": null
     },
     {
@@ -2006,7 +1896,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "nm59zalug32jc3eq9q1tdri6",
       "locale": null
     },
     {
@@ -2015,7 +1904,6 @@
       "properties": {},
       "conditions": [],
       "actionParameters": {},
-      "documentId": "ubwh537bba9ieixw4h0vuuth",
       "locale": null
     }
   ]
