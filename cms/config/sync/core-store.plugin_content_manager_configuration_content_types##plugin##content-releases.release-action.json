@@ -6,6 +6,7 @@
       "filterable": true,
       "searchable": true,
       "pageSize": 10,
+      "relationOpenMode": "modal",
       "mainField": "contentType",
       "defaultSortBy": "contentType",
       "defaultSortOrder": "ASC"
@@ -177,6 +178,10 @@
         ],
         [
           {
+            "name": "entryDocumentId",
+            "size": 6
+          },
+          {
             "name": "release",
             "size": 6
           }
@@ -185,10 +190,6 @@
           {
             "name": "isEntryValid",
             "size": 4
-          },
-          {
-            "name": "entryDocumentId",
-            "size": 6
           }
         ]
       ]

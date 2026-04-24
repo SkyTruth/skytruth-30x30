@@ -6,6 +6,7 @@
       "filterable": true,
       "searchable": true,
       "pageSize": 10,
+      "relationOpenMode": "modal",
       "mainField": "name",
       "defaultSortBy": "name",
       "defaultSortOrder": "ASC"

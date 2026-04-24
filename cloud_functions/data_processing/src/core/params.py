@@ -117,8 +117,7 @@ WDPA_URL = (
     "https://d1gam3xoknrgr2.cloudfront.net/current/"
     f"WDPA_WDOECM_{today_formatted}_Public_all_shp.zip"
 )
-WDPA_FILE_NAME = "raw/WDPA_Public.zip"
-ARCHIVE_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
+ARCHIVE_RAW_WDPA_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_Public.zip"
 WDPA_COUNTRY_LEVEL_FILE_NAME = "raw/WDPA_country_level.csv"
 ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_country_level.csv"
 WDPA_GLOBAL_LEVEL_FILE_NAME = "raw/WDPA_global_level.csv"
@@ -214,6 +213,11 @@ ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA = (
 ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
     f"archive/conservation_builder/gadm_minus_pa_{today_formatted}.parquet"
 )
+
+# ------------------------------------------------------------
+#                     Raster Data Sources
+# ------------------------------------------------------------
+CORAL_REEF_SOURCE_FILE = "raw/climate_resilient_corals.tif"
 
 # ------------------------------------------------------------
 #                     Workflow Parameters
