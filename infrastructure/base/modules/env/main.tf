@@ -303,6 +303,32 @@ resource "google_storage_bucket" "data_bucket" {
   }
 }
 
+resource "google_storage_bucket" "pmtiles_bucket" {
+  name                        = "${var.project_name}-pm-tiles"
+  location                    = var.gcp_region
+  project                     = var.gcp_project_id
+  force_destroy               = false
+  uniform_bucket_level_access = true
+
+  cors {
+    origin          = ["http://localhost:3000", local.frontend_lb_url]
+    method          = ["GET", "HEAD"]
+    response_header = ["Content-Type", "Range", "Content-Range"]
+    max_age_seconds = 3600
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "google_storage_bucket_iam_member" "pmtiles_public_read" {
+  bucket = google_storage_bucket.pmtiles_bucket.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
 locals {
   data_processing_env = {
     BUCKET              = google_storage_bucket.data_bucket.name
@@ -315,6 +341,7 @@ locals {
     STRAPI_USERNAME     = var.backend_write_user
     LOCATION            = var.gcp_region
     ENVIRONMENT         = var.environment
+    PMTILES_BUCKET      = google_storage_bucket.pmtiles_bucket.name
   }
 
   data_processing_secrets = [{
@@ -407,6 +434,18 @@ resource "google_storage_bucket_iam_member" "job_writer" {
 resource "google_storage_bucket_iam_member" "job_bucket_viewer" {
   bucket = google_storage_bucket.data_bucket.name
   role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
+resource "google_storage_bucket_iam_member" "function_pmtiles_writer" {
+  bucket = google_storage_bucket.pmtiles_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
+}
+
+resource "google_storage_bucket_iam_member" "job_pmtiles_writer" {
+  bucket = google_storage_bucket.pmtiles_bucket.name
+  role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
 }
 
