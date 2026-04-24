@@ -6290,7 +6290,6 @@ export const LayerDatasetLayersItemType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export type LayerDatasetLayersItemId = string | number;
@@ -6304,7 +6303,6 @@ export const LayerType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export type LayerId = string | number;
@@ -6342,7 +6340,6 @@ export const LayerRequestDataType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export type LayerRequestData = {
@@ -6360,36 +6357,6 @@ export type LayerRequestData = {
   locale?: string;
   localizations?: LayerRequestDataLocalizationsItem[];
 };
-
-export type LayerLocalizationRequestEnvironment = number | string;
-
-export type LayerLocalizationRequestDataset = number | string;
-
-export type LayerLocalizationRequestType =
-  (typeof LayerLocalizationRequestType)[keyof typeof LayerLocalizationRequestType];
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const LayerLocalizationRequestType = {
-  mapbox: 'mapbox',
-  deckgl: 'deckgl',
-  carto: 'carto',
-  cog: 'cog',
-} as const;
-
-export interface LayerLocalizationRequest {
-  title: string;
-  type?: LayerLocalizationRequestType;
-  config: unknown;
-  params_config: unknown;
-  interaction_config?: unknown;
-  metadata?: DocumentationMetadataComponent;
-  dataset?: LayerLocalizationRequestDataset;
-  legend_config?: LegendLegendComponent;
-  default?: boolean;
-  environment?: LayerLocalizationRequestEnvironment;
-  slug: string;
-  locale: string;
-}
 
 export type HabitatStatResponseMeta = { [key: string]: any };
 
@@ -9439,7 +9406,6 @@ export const DatasetLayersItemType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
-  cog: 'cog',
 } as const;
 
 export type DatasetLayersItemId = string | number;

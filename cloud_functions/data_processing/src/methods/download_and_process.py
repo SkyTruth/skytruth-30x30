@@ -30,9 +30,9 @@ from src.core.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
     ARCHIVE_PROTECTED_SEAS_FILE_NAME,
+    ARCHIVE_RAW_WDPA_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
-    ARCHIVE_RAW_WDPA_FILE_NAME,
     BUCKET,
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
@@ -64,8 +64,8 @@ from src.utils.gcp import (
     read_json_from_gcs,
     save_file_bucket,
     upload_dataframe,
+    upload_file_to_gcs,
     upload_gdf,
-    upload_file_to_gcs
 )
 from src.utils.logger import Logger
 from src.utils.resource_handling import (
@@ -541,9 +541,9 @@ def download_and_process_protected_planet_pas(
     if verbose:
         logger.info({"message": f"Saving to archive at {archive_wdpa_file_name}"})
     upload_file_to_gcs(
-        bucket = bucket, 
-        file_name = base_zip_path, 
-        blob_name = archive_wdpa_file_name,
+        bucket=bucket,
+        file_name=base_zip_path,
+        blob_name=archive_wdpa_file_name,
     )
 
     if verbose:
