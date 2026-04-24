@@ -12,10 +12,7 @@ import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
-import {
-  Dataset,
-  Layer,
-} from '@/types/generated/strapi.schemas';
+import { Dataset, Layer } from '@/types/generated/strapi.schemas';
 
 import {
   COLLAPSIBLE_TRIGGER_ICONS_CLASSES,
@@ -52,11 +49,7 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
   const [{ tab }] = useSyncMapContentSettings();
 
   const datasetsLayerSlugs = useMemo(() => {
-    return (
-      datasets
-        ?.map(( item ) => item?.layers?.map(({ slug }) => slug))
-        ?.flat() || []
-    );
+    return datasets?.map((item) => item?.layers?.map(({ slug }) => slug))?.flat() || [];
   }, [datasets]);
 
   const numActiveDatasetsLayers = useMemo(() => {
@@ -145,7 +138,10 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
                             checked={isActive}
                             onCheckedChange={onCheckedChange}
                           />
-                          <Label htmlFor={`${layer.documentId}-switch`} className={SWITCH_LABEL_CLASSES}>
+                          <Label
+                            htmlFor={`${layer.documentId}-switch`}
+                            className={SWITCH_LABEL_CLASSES}
+                          >
                             {layer.title}
                           </Label>
                         </span>

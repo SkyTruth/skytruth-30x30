@@ -18,6 +18,7 @@ import {
   useSyncCustomRegion,
 } from '@/containers/map/content/map/sync-settings';
 import useNameField from '@/hooks/use-name-field';
+import { pickLocalized } from '@/lib/utils/pick-localized';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 import { useGetDataInfos } from '@/types/generated/data-info';
@@ -220,8 +221,8 @@ export const useColumns = (
         },
       },
       {
-        id: 'protected-area',
-        accessorKey: 'protected-area',
+        id: 'protected_area',
+        accessorKey: 'protected_area',
         header: ({ column }) => (
           <HeaderItem>
             <SortingButton column={column} />
@@ -386,14 +387,14 @@ export const useData = (
   );
 
   // By default, we always sort by location
-  let sort = 'location.name:asc,environment.name:asc';
+  let sort = 'environment.name:asc,location.name:asc';
   if (sorting.length > 0) {
     sort = `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}`;
 
     // In addition to sorting by the column the user asked about, we'll also always sort by
     // environment
     if (sorting[0].id !== 'environment.name') {
-      sort = `${sort},environment.name:asc`;
+      sort = `environment.name:asc,${sort}`;
     }
   }
 
@@ -481,10 +482,7 @@ export const useData = (
               const location = item.location;
               const environment = item.environment;
 
-              const localizedEnvironment = [
-                environment,
-                ...(environment.localizations.map((environment) => environment) ?? []),
-              ].find((data) => data.locale === locale);
+              const localizedEnvironment = pickLocalized(environment, locale);
 
               return {
                 location: {

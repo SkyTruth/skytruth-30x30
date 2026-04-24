@@ -52,7 +52,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
     if (!searchTerm) return filteredLocations;
 
     const query = normalize(searchTerm);
-    return filteredLocations.filter(( item ) => {
+    return filteredLocations.filter((item) => {
       const name = item?.[nameField];
       return normalize(name).includes(query);
     });
@@ -67,7 +67,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
       />
       <CommandEmpty>{t('no-result')}</CommandEmpty>
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
-        {visibleLocations.map(( item , idx) => {
+        {visibleLocations.map((item, idx) => {
           const { code, type } = item;
           const locationName = item?.[nameField];
 

@@ -1,0 +1,33 @@
+# Patching teh config sync addition of documentId as it causes a ton of
+# unneccesary diff noise in PRs.Can be removed when 
+# https://github.com/pluginpal/strapi-plugin-config-sync/issues/190
+# is resolved
+
+diff --git a/node_modules/strapi-plugin-config-sync/dist/server/index.js b/node_modules/strapi-plugin-config-sync/dist/server/index.js
+index 529c96a..2ac0c52 100644
+--- a/node_modules/strapi-plugin-config-sync/dist/server/index.js
++++ b/node_modules/strapi-plugin-config-sync/dist/server/index.js
+@@ -62,6 +62,7 @@ const sanitizeConfig = ({
+ }) => {
+   delete config2._id;
+   delete config2.id;
++  delete config2.documentId;
+   delete config2.updatedAt;
+   delete config2.createdAt;
+   delete config2.publishedAt;
+@@ -70,6 +71,7 @@ const sanitizeConfig = ({
+     config2[relation].map((relationEntity) => {
+       delete relationEntity._id;
+       delete relationEntity.id;
++      delete relationEntity.documentId;
+       delete relationEntity.updatedAt;
+       delete config2.publishedAt;
+       delete relationEntity.createdAt;
+@@ -87,6 +89,7 @@ const sanitizeConfig = ({
+     const recursiveSanitizeConfig = (recursivedSanitizedConfig) => {
+       delete recursivedSanitizedConfig._id;
+       delete recursivedSanitizedConfig.id;
++      delete recursivedSanitizedConfig.documentId;
+       delete recursivedSanitizedConfig.updatedAt;
+       delete recursivedSanitizedConfig.createdAt;
+       Object.keys(recursivedSanitizedConfig).map((key, index2) => {

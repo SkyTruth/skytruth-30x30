@@ -600,11 +600,11 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
 
         # This prevents long-running tasks from being launched recursively.
         is_job = bool(os.environ.get("RUN_PAYLOAD"))
-        if (not is_job) and method in LONG_RUNNING_TASKS:
-            payload = {"METHOD": method, **task_config, **data}
-            resp = long_running_tasks(payload, timeout=5, verbose=verbose)
-            logger.info({"message": f"METHOD: {method} triggered as long-running task"})
-            return resp
+        # if (not is_job) and method in LONG_RUNNING_TASKS:
+        #     payload = {"METHOD": method, **task_config, **data}
+        #     resp = long_running_tasks(payload, timeout=5, verbose=verbose)
+        #     logger.info({"message": f"METHOD: {method} triggered as long-running task"})
+        #     return resp
 
         # Normal (non-long-running) execution path
         resp = dispatch_publisher(

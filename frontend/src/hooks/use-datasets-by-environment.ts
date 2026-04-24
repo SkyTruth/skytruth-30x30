@@ -34,8 +34,8 @@ export default function useDatasetsByEnvironment() {
   const datasets = useMemo(() => {
     // Basemap dataset is displayed separately in the panel, much like terrestrial/maritime.
     // We need to split it out from the datasets we're processing in order to display this correctly.
-    const basemapDataset = data?.filter(dataset => dataset?.slug === 'basemap');
-    const nonBasemapDatasets = data?.filter(dataset => dataset?.slug !== 'basemap');
+    const basemapDataset = data?.filter((dataset) => dataset?.slug === 'basemap');
+    const nonBasemapDatasets = data?.filter((dataset) => dataset?.slug !== 'basemap');
 
     // A dataset can contain layers with different environments assigned, we want
     // to pick only the layers for the environment we're displaying.
