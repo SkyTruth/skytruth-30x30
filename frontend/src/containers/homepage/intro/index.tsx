@@ -31,10 +31,11 @@ const Intro: FCWithMessages<IntroProps> = ({ onScrollClick }) => {
           $eq: true,
         },
       },
+      // @ts-ignore
       populate: {
         location: true,
         environment: true,
-      } as any,
+      },
       sort: 'year:desc',
     },
     {

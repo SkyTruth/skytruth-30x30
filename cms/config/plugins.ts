@@ -146,7 +146,7 @@ export default {
             if (path.includes("{id}")) {
               // add `populate` as params
               if (generatedDocumentationDraft.paths[path].get) {
-                if (!generatedDocumentationDraft.paths[path].get.parameters.find((param: { name: string }) => param.name === "populate")) {
+                if (!generatedDocumentationDraft.paths[path].get.parameters.find((param) => param.name === "populate")) {
                   generatedDocumentationDraft.paths[path].get.parameters.push(
                     {
                       "name": "populate",
