@@ -1,4 +1,4 @@
-FROM node:18.17-bullseye-slim as build
+FROM node:24-bookworm-slim AS build
 
 RUN apt-get update -y && \
   apt-get upgrade -y && \
@@ -9,11 +9,10 @@ RUN apt-get update -y && \
   zlib1g-dev \
   libpng-dev \
   nasm bash \
-  libvips-dev \
   git \
   && apt-get clean
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 WORKDIR /app
 
@@ -39,13 +38,12 @@ RUN yarn install
 RUN yarn build
 
 # Copy only the built files into the final image
-FROM node:18.17-bullseye-slim AS runner
+FROM node:24-bookworm-slim AS runner
 RUN apt-get update -y && \
   apt-get upgrade -y && \
-  apt-get install -y libvips-dev && \
   apt-get clean
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 WORKDIR /app
 
