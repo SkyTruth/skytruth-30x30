@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl';
 import useNameField from '@/hooks/use-name-field';
 import { formatPercentage, formatKM } from '@/lib/utils/formats';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
-import { ProtectionCoverageStatListResponseDataItem } from '@/types/generated/strapi.schemas';
+import { ProtectionCoverageStat } from '@/types/generated/strapi.schemas';
 
 export type FormattedStat = {
   location: string;
@@ -28,7 +28,7 @@ const useFormattedStats = (
   const nameField = useNameField();
 
   const { data: protectionCoverageStats, isFetching } = useGetProtectionCoverageStats<
-    ProtectionCoverageStatListResponseDataItem[]
+    ProtectionCoverageStat[]
   >(
     {
       locale,
@@ -74,9 +74,9 @@ const useFormattedStats = (
   const formattedStats = useMemo(() => {
     if (protectionCoverageStats?.length > 0) {
       const stats = protectionCoverageStats.map((item, idx) => {
-        const iso = item?.attributes?.location?.data?.attributes?.['code'] ?? locationCodes[idx];
-        const location = item?.attributes?.location?.data?.attributes?.[nameField ?? iso];
-        const coverage = item?.attributes?.coverage;
+        const iso = item?.location?.['code'] ?? locationCodes[idx];
+        const location = item?.location?.[nameField ?? iso];
+        const coverage = item?.coverage;
         const percentage =
           coverage !== null && coverage !== undefined
             ? formatPercentage(locale, coverage, {
@@ -84,13 +84,13 @@ const useFormattedStats = (
               })
             : DEFAULT_VALUE;
 
-        const pArea = item?.attributes?.protected_area;
+        const pArea = item?.protected_area;
         const protectedArea =
           pArea !== null && pArea !== undefined ? formatKM(locale, pArea) : DEFAULT_VALUE;
 
         const tArea =
-          item?.attributes?.total_area ??
-          item?.attributes?.location?.data?.attributes?.[
+          item?.total_area ??
+          item?.location?.[
             environment === 'marine' ? 'total_marine_area' : 'total_terrestrial_area'
           ];
 

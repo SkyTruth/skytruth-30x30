@@ -5,7 +5,7 @@
 import { factories } from '@strapi/strapi'
 
 export type PARelations = {
-  id?: number;
+  documentId?: string;
   wdpaid?: number;
   wdpa_p_id?: string;
   zone_id?: number;
@@ -15,14 +15,14 @@ export type PARelations = {
 }
 
 export type ToUpdateRelations = {
-  id?: {
+  documentId?: {
     children: PARelations[]
     parent: PARelations
   }
 }
 
 export type PA = {
-  id?: number;
+  documentId?: string;
   year?: number;
   name?: string;
   area?: number;
@@ -31,15 +31,15 @@ export type PA = {
   wdpa_p_id?: string | null;
   zone_id?: number | null;
   coverage?: number | null;
-  children?: number[] | null;
-  data_source?: number | null;
-  environment?: number | null;
-  protection_status?: number | null;
-  iucn_category?: number | null;
-  location?: number | null;
-  mpaa_protection_level?: number | null;
-  mpaa_establishment_stage?: number | null;
-  parent?: number | null;
+  children?: string[] | null;
+  data_source?: string | null;
+  environment?: string | null;
+  protection_status?: string | null;
+  iucn_category?: string | null;
+  location?: string | null;
+  mpaa_protection_level?: string | null;
+  mpaa_establishment_stage?: string | null;
+  parent?: string | null;
   created_at?: Date;
   updated_at?: Date;
 };
@@ -48,6 +48,19 @@ export type InputPA = {
   parent: PARelations,
   children: PARelations[],
 } & PA
+
+/**
+ * Build a relation payload for a localized (i18n-enabled) target content type.
+ * Strapi v5 (5.38) does not reliably honor the documented "default locale" fallback
+ * when a bare documentId string is passed as a relation value — the link table can
+ * end up pointing at an arbitrary locale variant. Passing { documentId, locale }
+ * explicitly pins the link to the English row. Returns null for a falsy input so
+ * optional relations remain unset.
+ */
+const toLocalizedRelation = (map: IDMap, value: string) => {
+  if (!value) return null;
+  return { documentId: map[value], locale: 'en' };
+};
 
 
 export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
@@ -59,13 +72,15 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
 
       // First, we get the list of all the parents (no pagination) for which at least one child
       // matches the filters. No sorting.
-      const { parent, ...filtersWithoutParentProperty } = ctx.query.filters ?? {};
+      
+      // @ts-ignore
+      const { parent, ...filtersWithoutParentProperty } = (ctx.query.filters ?? {});
 
-      const parentIds = (await strapi.entityService.findMany('api::pa.pa', {
-        fields: ['id'],
+      const parentIds = (await strapi.documents('api::pa.pa').findMany({
+        fields: ['documentId'],
         populate: {
           parent: {
-            fields: ['id'],
+            fields: ['documentId'],
           },
         },
         filters: {
@@ -81,7 +96,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
           ],
         },
         limit: -1,
-      }) as { id: number; parent: { id: number } }[]).map((d) => d.parent.id);
+      }) as { documentId: string; parent: { documentId: string } }[]).map((d) => d.parent.documentId);
 
       const uniqueParentIds = [...new Set(parentIds)];
 
@@ -104,7 +119,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
                 $or: [
                   filtersWithoutParentProperty,
                   {
-                    id: {
+                    documentId: {
                       $in: uniqueParentIds,
                     },
                   },
@@ -144,7 +159,6 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
 
       await strapi.db.transaction(async () => {
         for (const pa of data) {
-
           const areRelationsValid = strapi.service('api::pa.pa')
             .validateFields(pa, idMaps, errors);
           
@@ -152,9 +166,10 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             continue;
           }
 
-          const updatedPA = strapi.service('api::pa.pa').checkParentChild(pa, toUpdateRelations)
+          const updatedPA = strapi.service('api::pa.pa')
+            .checkParentChild(pa, toUpdateRelations)
           const {
-            id,
+            documentId,
             data_source,
             environment,
             location,
@@ -166,18 +181,21 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
           } = updatedPA as PA;
 
           // Record exists, update in place
-          if (id) {
-            await strapi.entityService.update("api::pa.pa", id, {
+          if (documentId) {
+            await strapi.documents("api::pa.pa").update({
+              documentId: documentId,
               data: {
-                data_source: dataSourceMap[data_source],
-                environment: environmentMap[environment],
+                data_source: toLocalizedRelation(dataSourceMap, data_source),
+                environment: toLocalizedRelation(environmentMap, environment),
                 location: locationMap[location],
-                iucn_category: iucn_category ? mpaaIucnCategoryMap[iucn_category] : iucn_category,
-                mpaa_establishment_stage: mpaa_establishment_stage ?
-                  mpaaEstablishmentStageMap[mpaa_establishment_stage]: mpaa_establishment_stage,
-                mpaa_protection_level: mpaa_protection_level ?
-                  mpaaProtectionLevelMap[mpaa_protection_level]: mpaa_protection_level,
-                protection_status: protectionStatusMap[protection_status],
+                iucn_category: toLocalizedRelation(mpaaIucnCategoryMap, iucn_category),
+                mpaa_establishment_stage: toLocalizedRelation(
+                  mpaaEstablishmentStageMap, mpaa_establishment_stage
+                ),
+                mpaa_protection_level: toLocalizedRelation(
+                  mpaaProtectionLevelMap, mpaa_protection_level
+                ),
+                protection_status: toLocalizedRelation(protectionStatusMap, protection_status),
                 ...attributes
               }
             })
@@ -186,21 +204,23 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
           } else {
             //Break the required fields out just to keep the type checker happy
             const { name, area, bbox, coverage, ...optionalAttributes } = attributes;
-            const newPA = await strapi.entityService.create("api::pa.pa", {
+            const newPA = await strapi.documents("api::pa.pa").create({
               data: {
                 area,
                 bbox,
                 coverage,
                 name,
-                data_source: dataSourceMap[data_source],
-                environment: environmentMap[environment],
+                data_source: toLocalizedRelation(dataSourceMap, data_source),
+                environment: toLocalizedRelation(environmentMap, environment),
                 location: locationMap[location],
-                iucn_category: iucn_category ? mpaaIucnCategoryMap[iucn_category] : iucn_category,
-                mpaa_establishment_stage: mpaa_establishment_stage ?
-                  mpaaEstablishmentStageMap[mpaa_establishment_stage]: mpaa_establishment_stage,
-                mpaa_protection_level: mpaa_protection_level ?
-                  mpaaProtectionLevelMap[mpaa_protection_level]: mpaa_protection_level,
-                protection_status: protectionStatusMap[protection_status],
+                iucn_category: toLocalizedRelation(mpaaIucnCategoryMap, iucn_category),
+                mpaa_establishment_stage: toLocalizedRelation(
+                  mpaaEstablishmentStageMap, mpaa_establishment_stage
+                ),
+                mpaa_protection_level: toLocalizedRelation(
+                  mpaaProtectionLevelMap, mpaa_protection_level
+                ),
+                protection_status: toLocalizedRelation(protectionStatusMap, protection_status),
                 ...optionalAttributes
               }
             })
@@ -210,14 +230,14 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
              * return relational fields
              */ 
             const paKey = strapi.service('api::pa.pa').makePAKey(updatedPA);
-            newIdMap[paKey] = +newPA.id;
+            newIdMap[paKey] = newPA.documentId;
 
             /**
              * If the newly created Pa has relations to update later add its 
              * new ID update relations map
              */
             if (toUpdateRelations[paKey]) {
-              toUpdateRelations[+newPA.id] = toUpdateRelations[paKey];
+              toUpdateRelations[newPA.documentId] = toUpdateRelations[paKey];
               delete toUpdateRelations[paKey]
             }
             created++;
@@ -230,15 +250,15 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
        */
       for (const toUpdate in toUpdateRelations) {
         const relations = toUpdateRelations[toUpdate];
-        const id = Number.isNaN(+toUpdate) ? newIdMap[toUpdate] : toUpdate;
 
-        const children = relations?.children?.map(child => child?.id ? 
-          child.id : 
+        const children = relations?.children?.map(child => child?.documentId ? 
+          child.documentId : 
           newIdMap[child.key])
         
         const parent = relations?.parent?.key ? newIdMap[relations.parent.key] : null;
 
-        await strapi.entityService.update('api::pa.pa', id, {
+        await strapi.documents('api::pa.pa').update({
+          documentId: toUpdate,
           data: {
             ...(children ? { children } : {}),
             ...(parent ? { parent } : null)
@@ -268,17 +288,18 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
         return ctx.badRequest('Invalid method. Only DELETE is supported for bulk patch.');
       }
       const ids = ctx.request.body.data.ids; 
-      const knex = strapi.db.connection;
       const errors = [];
       const deleted = [];
 
-      await knex.transaction(async (trx) => {
-        for (const id of ids) {
-          const deleteResponse = await trx('pas').where({ id }).delete(['id']);
-          if (!deleteResponse || deleteResponse.length === 0) {
-            errors.push({msg: "Failed to delete PA with ID " + id });
-          } else {
-            deleted.push(deleteResponse[0].id)
+      await strapi.db.transaction(async () => {
+        for (const documentId of ids) {
+          try {
+            await strapi.documents('api::pa.pa').delete({
+              documentId: documentId,
+            });
+            deleted.push(documentId);
+          } catch (error) {
+            errors.push({ msg: `Failed to delete PA with documentId ${documentId}`, error: error.message });
           }
         }
       });

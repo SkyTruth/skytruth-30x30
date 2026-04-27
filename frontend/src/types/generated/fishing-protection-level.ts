@@ -4,12 +4,10 @@
  * DOCUMENTATION
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type {
   UseQueryOptions,
-  UseMutationOptions,
   QueryFunction,
-  MutationFunction,
   UseQueryResult,
   QueryKey,
 } from '@tanstack/react-query';
@@ -19,11 +17,9 @@ import type {
   GetFishingProtectionLevelsParams,
   FishingProtectionLevelResponse,
   GetFishingProtectionLevelsIdParams,
-  FishingProtectionLevelLocalizationResponse,
-  FishingProtectionLevelLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
-import type { ErrorType, BodyType } from '../../services/api/index';
+import type { ErrorType } from '../../services/api/index';
 
 // eslint-disable-next-line
 type SecondParameter<T extends (...args: any) => any> = T extends (
@@ -175,75 +171,4 @@ export const useGetFishingProtectionLevelsId = <
   query.queryKey = queryOptions.queryKey;
 
   return query;
-};
-
-export const postFishingProtectionLevelsIdLocalizations = (
-  id: number,
-  fishingProtectionLevelLocalizationRequest: BodyType<FishingProtectionLevelLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<FishingProtectionLevelLocalizationResponse>(
-    {
-      url: `/fishing-protection-levels/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: fishingProtectionLevelLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostFishingProtectionLevelsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postFishingProtectionLevelsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<FishingProtectionLevelLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postFishingProtectionLevelsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<FishingProtectionLevelLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postFishingProtectionLevelsIdLocalizations>>,
-    { id: number; data: BodyType<FishingProtectionLevelLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postFishingProtectionLevelsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostFishingProtectionLevelsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postFishingProtectionLevelsIdLocalizations>>
->;
-export type PostFishingProtectionLevelsIdLocalizationsMutationBody =
-  BodyType<FishingProtectionLevelLocalizationRequest>;
-export type PostFishingProtectionLevelsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostFishingProtectionLevelsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postFishingProtectionLevelsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<FishingProtectionLevelLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostFishingProtectionLevelsIdLocalizationsMutationOptions(options);
-
-  return useMutation(mutationOptions);
 };

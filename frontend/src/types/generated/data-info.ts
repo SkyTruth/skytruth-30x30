@@ -20,8 +20,6 @@ import type {
   DataInfoResponse,
   DataInfoRequest,
   GetDataInfosIdParams,
-  DataInfoLocalizationResponse,
-  DataInfoLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -280,75 +278,6 @@ export const usePutDataInfosId = <TError = ErrorType<Error>, TContext = unknown>
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getPutDataInfosIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postDataInfosIdLocalizations = (
-  id: number,
-  dataInfoLocalizationRequest: BodyType<DataInfoLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<DataInfoLocalizationResponse>(
-    {
-      url: `/data-infos/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: dataInfoLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostDataInfosIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataInfosIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataInfoLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postDataInfosIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<DataInfoLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postDataInfosIdLocalizations>>,
-    { id: number; data: BodyType<DataInfoLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postDataInfosIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostDataInfosIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postDataInfosIdLocalizations>>
->;
-export type PostDataInfosIdLocalizationsMutationBody = BodyType<DataInfoLocalizationRequest>;
-export type PostDataInfosIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostDataInfosIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataInfosIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataInfoLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostDataInfosIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

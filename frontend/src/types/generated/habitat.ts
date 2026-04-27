@@ -4,12 +4,10 @@
  * DOCUMENTATION
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type {
   UseQueryOptions,
-  UseMutationOptions,
   QueryFunction,
-  MutationFunction,
   UseQueryResult,
   QueryKey,
 } from '@tanstack/react-query';
@@ -19,11 +17,9 @@ import type {
   GetHabitatsParams,
   HabitatResponse,
   GetHabitatsIdParams,
-  HabitatLocalizationResponse,
-  HabitatLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
-import type { ErrorType, BodyType } from '../../services/api/index';
+import type { ErrorType } from '../../services/api/index';
 
 // eslint-disable-next-line
 type SecondParameter<T extends (...args: any) => any> = T extends (
@@ -150,74 +146,4 @@ export const useGetHabitatsId = <
   query.queryKey = queryOptions.queryKey;
 
   return query;
-};
-
-export const postHabitatsIdLocalizations = (
-  id: number,
-  habitatLocalizationRequest: BodyType<HabitatLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<HabitatLocalizationResponse>(
-    {
-      url: `/habitats/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: habitatLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostHabitatsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postHabitatsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<HabitatLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postHabitatsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<HabitatLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postHabitatsIdLocalizations>>,
-    { id: number; data: BodyType<HabitatLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postHabitatsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostHabitatsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postHabitatsIdLocalizations>>
->;
-export type PostHabitatsIdLocalizationsMutationBody = BodyType<HabitatLocalizationRequest>;
-export type PostHabitatsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostHabitatsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postHabitatsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<HabitatLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostHabitatsIdLocalizationsMutationOptions(options);
-
-  return useMutation(mutationOptions);
 };

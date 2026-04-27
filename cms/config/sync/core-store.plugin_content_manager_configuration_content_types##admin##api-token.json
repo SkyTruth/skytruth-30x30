@@ -76,6 +76,20 @@
           "sortable": true
         }
       },
+      "encryptedKey": {
+        "edit": {
+          "label": "encryptedKey",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "encryptedKey",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "lastUsedAt": {
         "edit": {
           "label": "lastUsedAt",
@@ -190,6 +204,14 @@
           "searchable": true,
           "sortable": true
         }
+      },
+      "documentId": {
+        "edit": {},
+        "list": {
+          "label": "documentId",
+          "searchable": true,
+          "sortable": true
+        }
       }
     },
     "layouts": {
@@ -238,6 +260,12 @@
           {
             "name": "lifespan",
             "size": 4
+          }
+        ],
+        [
+          {
+            "name": "encryptedKey",
+            "size": 6
           }
         ]
       ]

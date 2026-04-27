@@ -20,8 +20,6 @@ import type {
   StaticIndicatorResponse,
   StaticIndicatorRequest,
   GetStaticIndicatorsIdParams,
-  StaticIndicatorLocalizationResponse,
-  StaticIndicatorLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -351,76 +349,6 @@ export const useDeleteStaticIndicatorsId = <
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteStaticIndicatorsIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postStaticIndicatorsIdLocalizations = (
-  id: number,
-  staticIndicatorLocalizationRequest: BodyType<StaticIndicatorLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<StaticIndicatorLocalizationResponse>(
-    {
-      url: `/static-indicators/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: staticIndicatorLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostStaticIndicatorsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postStaticIndicatorsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<StaticIndicatorLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postStaticIndicatorsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<StaticIndicatorLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postStaticIndicatorsIdLocalizations>>,
-    { id: number; data: BodyType<StaticIndicatorLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postStaticIndicatorsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostStaticIndicatorsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postStaticIndicatorsIdLocalizations>>
->;
-export type PostStaticIndicatorsIdLocalizationsMutationBody =
-  BodyType<StaticIndicatorLocalizationRequest>;
-export type PostStaticIndicatorsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostStaticIndicatorsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postStaticIndicatorsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<StaticIndicatorLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostStaticIndicatorsIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

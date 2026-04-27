@@ -20,8 +20,6 @@ import type {
   DataToolLanguageResponse,
   DataToolLanguageRequest,
   GetDataToolLanguagesIdParams,
-  DataToolLanguageLocalizationResponse,
-  DataToolLanguageLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -351,76 +349,6 @@ export const useDeleteDataToolLanguagesId = <
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteDataToolLanguagesIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postDataToolLanguagesIdLocalizations = (
-  id: number,
-  dataToolLanguageLocalizationRequest: BodyType<DataToolLanguageLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<DataToolLanguageLocalizationResponse>(
-    {
-      url: `/data-tool-languages/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: dataToolLanguageLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostDataToolLanguagesIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataToolLanguagesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataToolLanguageLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postDataToolLanguagesIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<DataToolLanguageLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postDataToolLanguagesIdLocalizations>>,
-    { id: number; data: BodyType<DataToolLanguageLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postDataToolLanguagesIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostDataToolLanguagesIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postDataToolLanguagesIdLocalizations>>
->;
-export type PostDataToolLanguagesIdLocalizationsMutationBody =
-  BodyType<DataToolLanguageLocalizationRequest>;
-export type PostDataToolLanguagesIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostDataToolLanguagesIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataToolLanguagesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataToolLanguageLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostDataToolLanguagesIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

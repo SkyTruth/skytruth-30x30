@@ -4,12 +4,10 @@
  * DOCUMENTATION
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type {
   UseQueryOptions,
-  UseMutationOptions,
   QueryFunction,
-  MutationFunction,
   UseQueryResult,
   QueryKey,
 } from '@tanstack/react-query';
@@ -19,11 +17,9 @@ import type {
   GetProtectionStatusesParams,
   ProtectionStatusResponse,
   GetProtectionStatusesIdParams,
-  ProtectionStatusLocalizationResponse,
-  ProtectionStatusLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
-import type { ErrorType, BodyType } from '../../services/api/index';
+import type { ErrorType } from '../../services/api/index';
 
 // eslint-disable-next-line
 type SecondParameter<T extends (...args: any) => any> = T extends (
@@ -164,75 +160,4 @@ export const useGetProtectionStatusesId = <
   query.queryKey = queryOptions.queryKey;
 
   return query;
-};
-
-export const postProtectionStatusesIdLocalizations = (
-  id: number,
-  protectionStatusLocalizationRequest: BodyType<ProtectionStatusLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<ProtectionStatusLocalizationResponse>(
-    {
-      url: `/protection-statuses/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: protectionStatusLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostProtectionStatusesIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postProtectionStatusesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<ProtectionStatusLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postProtectionStatusesIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<ProtectionStatusLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postProtectionStatusesIdLocalizations>>,
-    { id: number; data: BodyType<ProtectionStatusLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postProtectionStatusesIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostProtectionStatusesIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postProtectionStatusesIdLocalizations>>
->;
-export type PostProtectionStatusesIdLocalizationsMutationBody =
-  BodyType<ProtectionStatusLocalizationRequest>;
-export type PostProtectionStatusesIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostProtectionStatusesIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postProtectionStatusesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<ProtectionStatusLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostProtectionStatusesIdLocalizationsMutationOptions(options);
-
-  return useMutation(mutationOptions);
 };

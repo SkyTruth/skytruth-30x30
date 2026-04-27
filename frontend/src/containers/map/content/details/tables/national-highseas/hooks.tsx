@@ -9,6 +9,7 @@ import HeaderItem from '@/containers/map/content/details/table/header-item';
 import { cellFormatter } from '@/containers/map/content/details/table/helpers';
 import SortingButton from '@/containers/map/content/details/table/sorting-button';
 import TooltipButton from '@/containers/map/content/details/table/tooltip-button';
+import { pickLocalized } from '@/lib/utils/pick-localized';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import { useGetDataSources } from '@/types/generated/data-source';
 import { useGetEnvironments } from '@/types/generated/environment';
@@ -19,7 +20,7 @@ import { useGetPas } from '@/types/generated/pa';
 import { useGetProtectionStatuses } from '@/types/generated/protection-status';
 import {
   Pa,
-  PaChildrenDataItemAttributes,
+  PaChildrenItem,
   PaListResponse,
   PaListResponseMetaPagination,
 } from '@/types/generated/strapi.schemas';
@@ -98,7 +99,7 @@ const useTooltips = () => {
   } = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes;
+    const tooltip = dataInfo.find((item) => item.slug === value);
 
     if (!tooltip) return;
 
@@ -117,14 +118,13 @@ const useFiltersOptions = () => {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
-      'pagination[limit]': -1,
     },
     {
       query: {
         select: ({ data }) =>
           data.map((environment) => ({
-            name: environment.attributes.name,
-            value: environment.attributes.slug,
+            name: environment.name,
+            value: environment.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -136,15 +136,14 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['title', 'slug'],
-      'pagination[limit]': -1,
     },
     {
       query: {
         select: ({ data }) =>
           data
             .map((dataSource) => ({
-              name: dataSource.attributes.title,
-              value: dataSource.attributes.slug,
+              name: dataSource.title,
+              value: dataSource.slug,
             }))
             .filter(({ value }) =>
               // ? Even though there are more data sources, we limit the display to these
@@ -162,14 +161,13 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
-      'pagination[limit]': -1,
     },
     {
       query: {
         select: ({ data }) =>
           data.map((protectionStatus) => ({
-            name: protectionStatus.attributes.name,
-            value: protectionStatus.attributes.slug,
+            name: protectionStatus.name,
+            value: protectionStatus.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -181,14 +179,14 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
-      'pagination[limit]': -1,
+      sort: 'name:asc',
     },
     {
       query: {
         select: ({ data }) =>
           data.map((iucnCategory) => ({
-            name: iucnCategory.attributes.name,
-            value: iucnCategory.attributes.slug,
+            name: iucnCategory.name,
+            value: iucnCategory.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -202,14 +200,13 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
-      'pagination[limit]': -1,
     },
     {
       query: {
         select: ({ data }) =>
           data.map((mpaaEstablishmentStage) => ({
-            name: mpaaEstablishmentStage.attributes.name,
-            value: mpaaEstablishmentStage.attributes.slug,
+            name: mpaaEstablishmentStage.name,
+            value: mpaaEstablishmentStage.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -223,7 +220,6 @@ const useFiltersOptions = () => {
       locale, // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'slug'],
-      'pagination[limit]': -1,
     },
     {
       query: {
@@ -235,12 +231,12 @@ const useFiltersOptions = () => {
                * sense as filters. They are just used internally for aggregating protection stats
                */
               (mpaaProtectionLevel) =>
-                mpaaProtectionLevel.attributes.slug !== 'fully-highly-protected' &&
-                mpaaProtectionLevel.attributes.slug !== 'less-protected-unknown'
+                mpaaProtectionLevel.slug !== 'fully-highly-protected' &&
+                mpaaProtectionLevel.slug !== 'less-protected-unknown'
             )
             .map((mpaaProtectionLevel) => ({
-              name: mpaaProtectionLevel.attributes.name,
-              value: mpaaProtectionLevel.attributes.slug,
+              name: mpaaProtectionLevel.name,
+              value: mpaaProtectionLevel.slug,
             })),
         placeholderData: { data: [] },
       },
@@ -637,51 +633,17 @@ export const useData = (
   const processData = useCallback(
     (data: PaListResponse) => {
       return [
-        data.data?.map(({ attributes }): NationalHighseasTableColumns => {
-          const getData = (pa: Pa | PaChildrenDataItemAttributes) => {
-            const environment = pa.environment?.data?.attributes;
-            const localizedEnvironment = [
-              environment,
-              ...(environment?.localizations.data.map((environment) => environment.attributes) ??
-                []),
-            ].find((data) => data?.locale === locale);
-
-            const dataSource = pa.data_source?.data?.attributes;
-            const localizedDataSource = [
-              dataSource,
-              ...(dataSource?.localizations.data.map((dataSource) => dataSource.attributes) ?? []),
-            ].find((data) => data?.locale === locale);
-
-            const protectionStatus = pa.protection_status?.data?.attributes;
-            const localizedProtectionStatus = [
-              protectionStatus,
-              ...(protectionStatus?.localizations.data.map(
-                (protectionStatus) => protectionStatus.attributes
-              ) ?? []),
-            ].find((data) => data?.locale === locale);
-
-            const iucnCategory = pa.iucn_category?.data?.attributes;
-            const localizedIucnCategory = [
-              iucnCategory,
-              ...(iucnCategory?.localizations.data.map((iucnCategory) => iucnCategory.attributes) ??
-                []),
-            ].find((data) => data?.locale === locale);
-
-            const mpaaEstablishmentStage = pa.mpaa_establishment_stage?.data?.attributes;
-            const localizedMpaaEstablishmentStage = [
-              mpaaEstablishmentStage,
-              ...(mpaaEstablishmentStage?.localizations.data.map(
-                (mpaaEstablishmentStage) => mpaaEstablishmentStage.attributes
-              ) ?? []),
-            ].find((data) => data?.locale === locale);
-
-            const mpaaProtectionLevel = pa.mpaa_protection_level?.data?.attributes;
-            const localizedMpaaProtectionLevel = [
-              mpaaProtectionLevel,
-              ...(mpaaProtectionLevel?.localizations.data.map(
-                (mpaaProtectionLevel) => mpaaProtectionLevel.attributes
-              ) ?? []),
-            ].find((data) => data?.locale === locale);
+        data.data?.map((item): NationalHighseasTableColumns => {
+          const getData = (pa: Pa | PaChildrenItem) => {
+            const localizedEnvironment = pickLocalized(pa.environment, locale);
+            const localizedDataSource = pickLocalized(pa.data_source, locale);
+            const localizedProtectionStatus = pickLocalized(pa.protection_status, locale);
+            const localizedIucnCategory = pickLocalized(pa.iucn_category, locale);
+            const localizedMpaaEstablishmentStage = pickLocalized(
+              pa.mpaa_establishment_stage,
+              locale
+            );
+            const localizedMpaaProtectionLevel = pickLocalized(pa.mpaa_protection_level, locale);
 
             return {
               name: pa.name,
@@ -715,10 +677,10 @@ export const useData = (
           };
 
           return {
-            ...getData(attributes),
-            ...(attributes.children.data.length > 0
+            ...getData(item),
+            ...(item.children?.length > 0
               ? {
-                  subRows: attributes.children.data.map(({ attributes }) => getData(attributes)),
+                  subRows: item.children.map((item) => getData(item)),
                 }
               : {}),
           };
@@ -745,7 +707,6 @@ export const useData = (
           fields: queryFields,
           populate: queryPopulate,
           filters: queryFilters,
-          sort: querySort,
         },
       },
       filters: {

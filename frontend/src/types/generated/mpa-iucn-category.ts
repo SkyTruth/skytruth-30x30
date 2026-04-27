@@ -20,8 +20,6 @@ import type {
   MpaIucnCategoryResponse,
   MpaIucnCategoryRequest,
   GetMpaIucnCategoriesIdParams,
-  MpaIucnCategoryLocalizationResponse,
-  MpaIucnCategoryLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -351,76 +349,6 @@ export const useDeleteMpaIucnCategoriesId = <
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteMpaIucnCategoriesIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postMpaIucnCategoriesIdLocalizations = (
-  id: number,
-  mpaIucnCategoryLocalizationRequest: BodyType<MpaIucnCategoryLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<MpaIucnCategoryLocalizationResponse>(
-    {
-      url: `/mpa-iucn-categories/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: mpaIucnCategoryLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostMpaIucnCategoriesIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<MpaIucnCategoryLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<MpaIucnCategoryLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>,
-    { id: number; data: BodyType<MpaIucnCategoryLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postMpaIucnCategoriesIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostMpaIucnCategoriesIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>
->;
-export type PostMpaIucnCategoriesIdLocalizationsMutationBody =
-  BodyType<MpaIucnCategoryLocalizationRequest>;
-export type PostMpaIucnCategoriesIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostMpaIucnCategoriesIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<MpaIucnCategoryLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostMpaIucnCategoriesIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

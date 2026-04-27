@@ -18,6 +18,7 @@ import {
   useSyncCustomRegion,
 } from '@/containers/map/content/map/sync-settings';
 import useNameField from '@/hooks/use-name-field';
+import { pickLocalized } from '@/lib/utils/pick-localized';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 import { useGetDataInfos } from '@/types/generated/data-info';
@@ -87,15 +88,13 @@ const useTooltips = () => {
   } = {};
 
   Object.entries(TOOLTIP_MAPPING).map(([key, value]) => {
-    const tooltip = dataInfo.find(({ attributes }) => attributes.slug === value)?.attributes;
+    const tooltip = dataInfo.find((item) => item.slug === value);
 
     if (!tooltip) return;
-    const sources = !!tooltip?.data_sources?.data?.length
-      ? tooltip?.data_sources?.data.map(
-          ({ id, attributes: { slug, title = null, url = null } }) => {
-            return { id, slug, url, title };
-          }
-        )
+    const sources = !!tooltip?.data_sources?.length
+      ? tooltip?.data_sources?.map(({ documentId, slug, title = null, url = null }) => {
+          return { documentId, slug, url, title };
+        })
       : null;
 
     tooltips[key] = { text: tooltip?.content, sources };
@@ -112,14 +111,13 @@ const useFiltersOptions = () => {
       locale,
       // @ts-ignore
       fields: ['name', 'slug'],
-      'pagination[limit]': -1,
     },
     {
       query: {
         select: ({ data }) =>
           data.map((environment) => ({
-            name: environment.attributes.name,
-            value: environment.attributes.slug,
+            name: environment.name,
+            value: environment.slug,
           })),
         placeholderData: { data: [] },
       },
@@ -223,8 +221,8 @@ export const useColumns = (
         },
       },
       {
-        id: 'protected-area',
-        accessorKey: 'protected-area',
+        id: 'protected_area',
+        accessorKey: 'protected_area',
         header: ({ column }) => (
           <HeaderItem>
             <SortingButton column={column} />
@@ -383,20 +381,20 @@ export const useData = (
     },
     {
       query: {
-        select: ({ data }) => data[0]?.attributes.type,
+        select: ({ data }) => data[0]?.type,
       },
     }
   );
 
   // By default, we always sort by location
-  let sort = 'location.name:asc,environment.name:asc';
+  let sort = 'environment.name:asc,location.name:asc';
   if (sorting.length > 0) {
     sort = `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}`;
 
     // In addition to sorting by the column the user asked about, we'll also always sort by
     // environment
     if (sorting[0].id !== 'environment.name') {
-      sort = `${sort},environment.name:asc`;
+      sort = `environment.name:asc,${sort}`;
     }
   }
 
@@ -480,15 +478,11 @@ export const useData = (
         keepPreviousData: true,
         select: (data) => {
           return [
-            data.data?.map(({ attributes }): GlobalRegionalTableColumns => {
-              const location = attributes.location?.data.attributes;
-              const environment = attributes.environment?.data.attributes;
+            data.data?.map((item): GlobalRegionalTableColumns => {
+              const location = item.location;
+              const environment = item.environment;
 
-              const localizedEnvironment = [
-                environment,
-                ...(environment.localizations.data.map((environment) => environment.attributes) ??
-                  []),
-              ].find((data) => data.locale === locale);
+              const localizedEnvironment = pickLocalized(environment, locale);
 
               return {
                 location: {
@@ -498,18 +492,18 @@ export const useData = (
                   name_pt: location?.name_pt,
                   code: location.code,
                   mpaa_protection_level_stats: {
-                    percentage: location?.mpaa_protection_level_stats?.data?.attributes.percentage,
+                    percentage: location?.mpaa_protection_level_stats?.percentage,
                   },
                 },
                 environment: {
                   name: localizedEnvironment.name,
                   slug: localizedEnvironment.slug,
                 },
-                coverage: attributes.coverage,
-                protected_area: attributes.protected_area,
-                pas: attributes.pas,
-                oecms: attributes.oecms,
-                global_contribution: attributes.global_contribution,
+                coverage: item.coverage,
+                protected_area: item.protected_area,
+                pas: item.pas,
+                oecms: item.oecms,
+                global_contribution: item.global_contribution,
               };
             }) ?? [],
             data.meta?.pagination ?? {},

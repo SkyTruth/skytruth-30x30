@@ -10,15 +10,15 @@ export default factories
       const fishingProtectionLevels = await strapi.db
         .query('api::fishing-protection-level.fishing-protection-level')
         .findMany({
-          select: ['id', 'slug'],
+          select: ['documentId', 'slug'],
           where: {
             locale: 'en'
           }
-        }) as { id: number; slug: string }[];
+        }) as { documentId: string; slug: string }[];
 
       const fishingProtectionLevelMap: IDMap = {};
       fishingProtectionLevels.forEach((level) => {
-        fishingProtectionLevelMap[level.slug] = level.id;
+        fishingProtectionLevelMap[level.slug] = level.documentId;
       });
       return fishingProtectionLevelMap;
     }

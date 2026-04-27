@@ -69,8 +69,8 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     {
       query: {
         select: ({ data }) => ({
-          source: (data[0].attributes as LayerTyped)?.config?.source,
-          environment: data[0].attributes?.environment?.data?.attributes.slug,
+          source: (data[0] as LayerTyped)?.config?.source,
+          environment: data[0]?.environment.slug,
         }),
       },
     }
