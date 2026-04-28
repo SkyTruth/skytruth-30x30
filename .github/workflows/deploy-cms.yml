@@ -59,6 +59,70 @@ jobs:
           docker tag "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:latest"
           docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:latest"
 
+      # TODO(post-v4-to-v5-migration): remove the `Set up Cloud SDK` step and
+      # the `Run DB migration as one-shot Cloud Run Job` step once v4→v5 is
+      # complete in prod. After that, normal Service startup runs schema-sync
+      # in seconds and the Job is no longer load-bearing. Also delete the
+      # `${SERVICE}-migrate` Cloud Run Jobs in staging + prod, and remove
+      # the `{ENV}_CMS_CLOUDSQL_INSTANCE` / `{ENV}_CMS_VPC_CONNECTOR` GitHub
+      # secrets if nothing else uses them. See paired TODOs in
+      # cms/scripts/migrate.js and cms/Dockerfile.prod.
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: '>= 516.0.0'
+
+      # Run Strapi v5 internal migrations as a one-shot Cloud Run Job before
+      # deploying the Service. The Job runs in the same region as Cloud SQL
+      # so the per-row document_id backfill that's slow over the proxy
+      # finishes in minutes. The Service deploy that follows boots fast
+      # because every internal migration is already committed.
+      #
+      # Idempotent: re-runs are no-ops once strapi_migrations is populated.
+      # Connectivity flags (Cloud SQL instance + VPC connector) are pinned
+      # via {ENV}_CMS_CLOUDSQL_INSTANCE and {ENV}_CMS_VPC_CONNECTOR secrets
+      # rather than extracted from the live Service. Set the secret to an
+      # empty string for any flag your environment doesn't use.
+      - name: Run DB migration as one-shot Cloud Run Job
+        env:
+          REPOSITORY: ${{ secrets[format('{0}_CMS_REPOSITORY', steps.env.outputs.environment)] }}
+          SERVICE: ${{ secrets[format('{0}_CMS_SERVICE', steps.env.outputs.environment)] }}
+          CLOUDSQL_INSTANCE: ${{ secrets[format('{0}_CMS_CLOUDSQL_INSTANCE', steps.env.outputs.environment)] }}
+          VPC_CONNECTOR: ${{ secrets[format('{0}_CMS_VPC_CONNECTOR', steps.env.outputs.environment)] }}
+        run: |
+          set -euo pipefail
+          IMAGE="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${SERVICE}:${{ github.sha }}"
+          JOB_NAME="${SERVICE}-migrate"
+
+          DEPLOY_ARGS=(
+            "$JOB_NAME"
+            --image="$IMAGE"
+            --region="${{ env.REGION }}"
+            --project="${{ env.PROJECT_ID }}"
+            --task-timeout=3600
+            --max-retries=0
+            --memory=2Gi
+            --cpu=2
+            --command=node
+            --args=scripts/migrate.js
+          )
+          if [[ -n "${CLOUDSQL_INSTANCE}" ]]; then
+            DEPLOY_ARGS+=(--set-cloudsql-instances="${CLOUDSQL_INSTANCE}")
+          fi
+          if [[ -n "${VPC_CONNECTOR}" ]]; then
+            DEPLOY_ARGS+=(--vpc-connector="${VPC_CONNECTOR}")
+          fi
+
+          # Create or update the Job (idempotent).
+          gcloud run jobs deploy "${DEPLOY_ARGS[@]}"
+
+          # Execute and wait. Non-zero exit fails the workflow, which means
+          # the Service deploy step never runs against a half-migrated DB.
+          gcloud run jobs execute "$JOB_NAME" \
+            --region="${{ env.REGION }}" \
+            --project="${{ env.PROJECT_ID }}" \
+            --wait
+
       - name: Deploy to Cloud Run
         env:
           REPOSITORY: ${{ secrets[format('{0}_CMS_REPOSITORY', steps.env.outputs.environment)] }}
