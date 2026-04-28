@@ -69,5 +69,11 @@ jobs:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
+          # `--cpu-boost` doubles CPU during the startup window so v5
+          # auto-migrations finish faster. `--startup-probe` extends the
+          # boot grace period to the platform max (240s = 24 * 10s) using
+          # a TCP probe against Strapi's listen port; the probe only
+          # succeeds once Strapi finishes migrations and starts serving.
+          flags: --cpu-boost --startup-probe=tcpSocket.port=1337,periodSeconds=10,failureThreshold=24,timeoutSeconds=5
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}
