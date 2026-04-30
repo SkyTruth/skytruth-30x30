@@ -1,0 +1,26 @@
+diff --git a/node_modules/@localazy/strapi-plugin/dist/_chunks/index-C15Goe6p.mjs b/node_modules/@localazy/strapi-plugin/dist/_chunks/index-C15Goe6p.mjs
+index 680de83..cda658f 100644
+--- a/node_modules/@localazy/strapi-plugin/dist/_chunks/index-C15Goe6p.mjs
++++ b/node_modules/@localazy/strapi-plugin/dist/_chunks/index-C15Goe6p.mjs
+@@ -2470,7 +2470,7 @@ const createStrapiApiAxiosInstance = (baseUrl = null) => {
+     baseUrl = `${BASE_PLUGIN_PATH}`;
+   }
+   const instance = axios.create({
+-    baseURL: `${baseUrl}`
++    baseURL: `${(window.strapi?.backendURL || "").replace(/\/$/, "")}${baseUrl}`
+   });
+   instance.interceptors.request.use(
+     async (config) => {
+diff --git a/node_modules/@localazy/strapi-plugin/dist/_chunks/index-Q3-srfXc.js b/node_modules/@localazy/strapi-plugin/dist/_chunks/index-Q3-srfXc.js
+index 217fba3..e11ae60 100644
+--- a/node_modules/@localazy/strapi-plugin/dist/_chunks/index-Q3-srfXc.js
++++ b/node_modules/@localazy/strapi-plugin/dist/_chunks/index-Q3-srfXc.js
+@@ -2495,7 +2495,7 @@ const createStrapiApiAxiosInstance = (baseUrl = null) => {
+     baseUrl = `${BASE_PLUGIN_PATH}`;
+   }
+   const instance = axios.create({
+-    baseURL: `${baseUrl}`
++    baseURL: `${(window.strapi?.backendURL || "").replace(/\/$/, "")}${baseUrl}`
+   });
+   instance.interceptors.request.use(
+     async (config) => {
