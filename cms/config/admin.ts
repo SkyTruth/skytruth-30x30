@@ -1,16 +1,20 @@
 export default ({ env }) => {
-  // Behind the /cms-prefixing LB, Strapi v5 needs admin.url + cookie path
-  // to include the prefix or auth redirects 404 and the session cookie's
-  // Path scope misses /cms/admin. CMS_URL is set by Terraform in deployed
-  // envs and unset locally.
+  // CMS_URL is e.g. 'https://.../cms/'. admin.url must be a full URL —
+  // a bare path gets re-prefixed by server.url (urls.js:38), making
+  // admin.path /cms/cms/admin and 404'ing every admin request. With a
+  // same-origin full URL, Strapi subtracts the common prefix and derives
+  // admin.path = '/admin', matching what reaches the container after the
+  // LB rewrites /cms/* -> /*. The cookie path is the public-facing path
+  // so the browser scopes the session cookie to /cms/admin/*.
   const cmsUrl = env('CMS_URL');
-  const adminPath = cmsUrl ? `${new URL(cmsUrl).pathname}admin` : '/admin';
+  const adminUrl = cmsUrl ? `${cmsUrl}admin` : '/admin';
+  const cookiePath = adminUrl.startsWith('http') ? new URL(adminUrl).pathname : adminUrl;
 
   return {
-    url: adminPath,
+    url: adminUrl,
     auth: {
       secret: env('ADMIN_JWT_SECRET'),
-      cookie: { path: adminPath },
+      cookie: { path: cookiePath },
     },
     apiToken: { salt: env('API_TOKEN_SALT') },
     transfer: { token: { salt: env('TRANSFER_TOKEN_SALT') } },
