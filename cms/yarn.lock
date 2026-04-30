@@ -2055,9 +2055,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@localazy/strapi-plugin@npm:1.0.8":
-  version: 1.0.8
-  resolution: "@localazy/strapi-plugin@npm:1.0.8"
+"@localazy/strapi-plugin@npm:1.1.2":
+  version: 1.1.2
+  resolution: "@localazy/strapi-plugin@npm:1.1.2"
   dependencies:
     shelljs: ^0.8.5
     ws: ^8.18.0
@@ -2070,7 +2070,7 @@ __metadata:
     styled-components: ^6.1.14
   bin:
     strapi-plugin: install/index.mjs
-  checksum: 879ca74275979a1ec8eebf4ed256a945318a6440fecb46173e5d3dbaf92f0e171f864f0a9b5ce8debe2f3b6afb46c615d661b5eabb77c48b82bd9f0ac13370ce
+  checksum: cbcc46f5f10b195f417d519181212165e2fe9b700fde8fbea3fb5fb5fb55aa6d4c85fbaec876c6bad48b0ba6b820d19e61f40280a0e069dbb5e45012c28cbbed
   languageName: node
   linkType: hard
 
@@ -3780,7 +3780,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@serverless-app-scaffold/cms@workspace:."
   dependencies:
-    "@localazy/strapi-plugin": 1.0.8
+    "@localazy/strapi-plugin": 1.1.2
     "@strapi/plugin-documentation": 5.44.0
     "@strapi/plugin-users-permissions": 5.44.0
     "@strapi/strapi": 5.44.0

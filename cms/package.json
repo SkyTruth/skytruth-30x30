@@ -13,7 +13,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@localazy/strapi-plugin": "1.0.8",
+    "@localazy/strapi-plugin": "1.1.2",
     "@strapi/plugin-documentation": "5.44.0",
     "@strapi/plugin-users-permissions": "5.44.0",
     "@strapi/strapi": "5.44.0",
