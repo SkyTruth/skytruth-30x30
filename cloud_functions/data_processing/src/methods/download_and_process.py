@@ -29,6 +29,7 @@ from src.core.commons import (
 from src.core.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
+    ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
     ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     ARCHIVE_RAW_WDPA_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
@@ -37,6 +38,8 @@ from src.core.params import (
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_GLOBAL_API_URL,
+    MPATLAS_GLOBAL_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     MPATLAS_URL,
     PP_API_KEY,
@@ -90,6 +93,29 @@ def download_mpatlas_country(
     data = response.json()
 
     upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
+    duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+
+
+def download_mpatlas_global(
+    bucket: str = BUCKET,
+    project: str = PROJECT,
+    url: str = MPATLAS_GLOBAL_API_URL,
+    current_filename: str = MPATLAS_GLOBAL_FILE_NAME,
+    archive_filename: str = ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
+):
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+
+    row = {k: v for k, v in data.items() if not isinstance(v, (dict, list))}
+    for entry in data["mpaguide_status"]["total"]:
+        key = entry["key"]
+        row[f"mpaguide_total_{key}_km2"] = entry["km2"]
+        row[f"mpaguide_total_{key}_percent"] = entry["percent"]
+
+    upload_dataframe(
+        bucket, pd.DataFrame([row]), archive_filename, project_id=project, verbose=True
+    )
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
 
 
@@ -147,6 +173,9 @@ def download_mpatlas(
     mpatlas_country_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
     mpatlas_country_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    mpatlas_global_url: str = MPATLAS_GLOBAL_API_URL,
+    mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME,
+    archive_mpatlas_global_file_name: str = ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
     verbose: bool = True,
     project_id: str = PROJECT,
 ) -> None:
@@ -165,6 +194,16 @@ def download_mpatlas(
             current_filename=mpatlas_country_file_name,
             archive_filename=archive_mpatlas_country_file_name,
             alert_message="failed to download MPAtlas country stats",
+        )
+
+        retry_and_alert(
+            download_mpatlas_global,
+            bucket=bucket,
+            project=project,
+            url=mpatlas_global_url,
+            current_filename=mpatlas_global_file_name,
+            archive_filename=archive_mpatlas_global_file_name,
+            alert_message="failed to download MPAtlas global stats",
         )
 
         retry_and_alert(

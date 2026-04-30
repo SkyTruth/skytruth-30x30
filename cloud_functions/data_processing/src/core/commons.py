@@ -24,6 +24,7 @@ from src.core.params import (
     CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_GLOBAL_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -179,6 +180,12 @@ def load_mpatlas_country(
     df["wdpa_marine_km2"] = df["wdpa_marine_km2"].apply(pd.to_numeric, errors="coerce")
 
     return df
+
+
+def load_mpatlas_global(
+    bucket: str = BUCKET, mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME
+):
+    return read_dataframe(bucket, mpatlas_global_file_name)
 
 
 def load_wdpa_global(
