@@ -161,7 +161,7 @@ export const usePostStaticIndicators = <TError = ErrorType<Error>, TContext = un
   return useMutation(mutationOptions);
 };
 export const getStaticIndicatorsId = (
-  id: number,
+  id: string,
   params?: GetStaticIndicatorsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -173,7 +173,7 @@ export const getStaticIndicatorsId = (
 };
 
 export const getGetStaticIndicatorsIdQueryKey = (
-  id: number,
+  id: string,
   params?: GetStaticIndicatorsIdParams
 ) => {
   return [`/static-indicators/${id}`, ...(params ? [params] : [])] as const;
@@ -183,7 +183,7 @@ export const getGetStaticIndicatorsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getStaticIndicatorsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetStaticIndicatorsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getStaticIndicatorsId>>, TError, TData>;
@@ -213,7 +213,7 @@ export const useGetStaticIndicatorsId = <
   TData = Awaited<ReturnType<typeof getStaticIndicatorsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetStaticIndicatorsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getStaticIndicatorsId>>, TError, TData>;
@@ -230,7 +230,7 @@ export const useGetStaticIndicatorsId = <
 };
 
 export const putStaticIndicatorsId = (
-  id: number,
+  id: string,
   staticIndicatorRequest: BodyType<StaticIndicatorRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -252,21 +252,21 @@ export const getPutStaticIndicatorsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putStaticIndicatorsId>>,
     TError,
-    { id: number; data: BodyType<StaticIndicatorRequest> },
+    { id: string; data: BodyType<StaticIndicatorRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putStaticIndicatorsId>>,
   TError,
-  { id: number; data: BodyType<StaticIndicatorRequest> },
+  { id: string; data: BodyType<StaticIndicatorRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putStaticIndicatorsId>>,
-    { id: number; data: BodyType<StaticIndicatorRequest> }
+    { id: string; data: BodyType<StaticIndicatorRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -286,7 +286,7 @@ export const usePutStaticIndicatorsId = <TError = ErrorType<Error>, TContext = u
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putStaticIndicatorsId>>,
     TError,
-    { id: number; data: BodyType<StaticIndicatorRequest> },
+    { id: string; data: BodyType<StaticIndicatorRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -295,7 +295,7 @@ export const usePutStaticIndicatorsId = <TError = ErrorType<Error>, TContext = u
 
   return useMutation(mutationOptions);
 };
-export const deleteStaticIndicatorsId = (id: number, options?: SecondParameter<typeof API>) => {
+export const deleteStaticIndicatorsId = (id: string, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/static-indicators/${id}`, method: 'delete' }, options);
 };
 
@@ -306,21 +306,21 @@ export const getDeleteStaticIndicatorsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteStaticIndicatorsId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteStaticIndicatorsId>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteStaticIndicatorsId>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -343,7 +343,7 @@ export const useDeleteStaticIndicatorsId = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteStaticIndicatorsId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
