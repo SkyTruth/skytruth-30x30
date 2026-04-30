@@ -1,0 +1,38 @@
+diff --git a/node_modules/@localazy/strapi-plugin/dist/_chunks/strapi-api-base-Bem_CGuz.mjs b/node_modules/@localazy/strapi-plugin/dist/_chunks/strapi-api-base-Bem_CGuz.mjs
+index 2fb1b87..d3c803b 100644
+--- a/node_modules/@localazy/strapi-plugin/dist/_chunks/strapi-api-base-Bem_CGuz.mjs
++++ b/node_modules/@localazy/strapi-plugin/dist/_chunks/strapi-api-base-Bem_CGuz.mjs
+@@ -2392,11 +2392,11 @@ const createStrapiApiAxiosInstance = (baseUrl = null) => {
+   if (baseUrl === null) {
+     baseUrl = `${BASE_PLUGIN_PATH}`;
+   }
+-  const instance = axios.create({
+-    baseURL: `${baseUrl}`
+-  });
++  const instance = axios.create();
+   instance.interceptors.request.use(
+     async (config) => {
++      const backendURL = (window.strapi?.backendURL || "").replace(/\/$/, "");
++      config.baseURL = `${backendURL}${baseUrl}`;
+       config.headers.set({
+         Accept: "application/json",
+         "Content-Type": "application/json",
+diff --git a/node_modules/@localazy/strapi-plugin/dist/_chunks/strapi-api-base-W_bUTSlY.js b/node_modules/@localazy/strapi-plugin/dist/_chunks/strapi-api-base-W_bUTSlY.js
+index ee96be1..3e0c356 100644
+--- a/node_modules/@localazy/strapi-plugin/dist/_chunks/strapi-api-base-W_bUTSlY.js
++++ b/node_modules/@localazy/strapi-plugin/dist/_chunks/strapi-api-base-W_bUTSlY.js
+@@ -2393,11 +2393,11 @@ const createStrapiApiAxiosInstance = (baseUrl = null) => {
+   if (baseUrl === null) {
+     baseUrl = `${BASE_PLUGIN_PATH}`;
+   }
+-  const instance = axios.create({
+-    baseURL: `${baseUrl}`
+-  });
++  const instance = axios.create();
+   instance.interceptors.request.use(
+     async (config) => {
++      const backendURL = (window.strapi?.backendURL || "").replace(/\/$/, "");
++      config.baseURL = `${backendURL}${baseUrl}`;
+       config.headers.set({
+         Accept: "application/json",
+         "Content-Type": "application/json",
