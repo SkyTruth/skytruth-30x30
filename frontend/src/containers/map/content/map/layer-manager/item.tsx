@@ -60,7 +60,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
     return map;
   }, [customRegionLocations]);
 
-const { type, config, params_config } = (layer as LayerTyped) ?? ({} as LayerTyped);
+  const { type, config, params_config } = (layer as LayerTyped) ?? ({} as LayerTyped);
 
   const configParams = useMemo(
     () => ({
@@ -108,7 +108,7 @@ const { type, config, params_config } = (layer as LayerTyped) ?? ({} as LayerTyp
   );
 
   if (type === 'pmtiles') {
-    const url: string | undefined = (config?.source as any)?.url;
+    const url: string | undefined = config?.source?.url;
     if (!url) return null;
     return (
       <PmtilesLayer

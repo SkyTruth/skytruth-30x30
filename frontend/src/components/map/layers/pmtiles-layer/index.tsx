@@ -23,13 +23,7 @@ type PmtilesTileLayerProps = TileLayerProps<RasterTileData> & { beforeId?: strin
 
 const DEFAULT_MAX_ZOOM = 14;
 
-const PmtilesLayer = ({
-  id,
-  beforeId,
-  url,
-  opacity = 1,
-  visibility = true,
-}: PmtilesLayerProps) => {
+const PmtilesLayer = ({ id, beforeId, url, opacity = 1, visibility = true }: PmtilesLayerProps) => {
   const deckId = `${id}-deck`;
   const { addLayer, removeLayer } = useDeckMapboxOverlayContext();
 
