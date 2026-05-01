@@ -77,6 +77,8 @@ const PmtilesLayer = ({ id, beforeId, url, opacity = 1, visibility = true }: Pmt
           id: `${props.id}-bitmap`,
           image: props.tile.content,
           bounds: [west, south, east, north],
+          opacity: props.opacity,
+          visible: props.visible,
         });
       },
     };
