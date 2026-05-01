@@ -7,6 +7,7 @@ import { useLocale } from 'next-intl';
 
 import DeckJsonLayer from '@/components/map/layers/deck-json-layer';
 import MapboxLayer from '@/components/map/layers/mapbox-layer';
+import PmtilesLayer from '@/components/map/layers/pmtiles-layer';
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { layersInteractiveAtom, layersInteractiveIdsAtom } from '@/containers/map/store';
 import useResolvedConfig from '@/hooks/use-resolved-config';
@@ -26,7 +27,6 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
 
   const { data: layer } = useGetLayers(
     {
-      // @ts-ignore
       filters: {
         slug: {
           $eq: slug,
@@ -60,7 +60,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
     return map;
   }, [customRegionLocations]);
 
-  const { type, config, params_config } = (layer as LayerTyped) ?? ({} as LayerTyped);
+const { type, config, params_config } = (layer as LayerTyped) ?? ({} as LayerTyped);
 
   const configParams = useMemo(
     () => ({
@@ -106,6 +106,20 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
     },
     [layer, slug, setLayersInteractive, setLayersInteractiveIds]
   );
+
+  if (type === 'pmtiles') {
+    const url: string | undefined = (config?.source as any)?.url;
+    if (!url) return null;
+    return (
+      <PmtilesLayer
+        id={`${slug}-layer`}
+        beforeId={beforeId}
+        url={url}
+        opacity={(settings.opacity as number) ?? 1}
+        visibility={(settings.visibility as boolean) ?? true}
+      />
+    );
+  }
 
   if (!parsedConfig) {
     return null;

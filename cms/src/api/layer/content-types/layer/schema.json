@@ -30,7 +30,8 @@
       "enum": [
         "mapbox",
         "deckgl",
-        "carto"
+        "carto",
+        "pmtiles"
       ],
       "pluginOptions": {
         "i18n": {

@@ -21,11 +21,12 @@
     "@deck.gl/json": "8.9.31",
     "@deck.gl/layers": "8.9.31",
     "@deck.gl/mapbox": "8.9.31",
-    "@loaders.gl/core": "^3.4.14",
-    "@loaders.gl/kml": "^3.4.14",
-    "@loaders.gl/loader-utils": "^3.4.14",
-    "@loaders.gl/shapefile": "^3.4.14",
-    "@loaders.gl/zip": "^3.4.14",
+    "@loaders.gl/core": "^4.4.1",
+    "@loaders.gl/kml": "^4.4.1",
+    "@loaders.gl/loader-utils": "^4.4.1",
+    "@loaders.gl/pmtiles": "^4.4.1",
+    "@loaders.gl/shapefile": "^4.4.1",
+    "@loaders.gl/zip": "^4.4.1",
     "@localazy/cdn-client": "^1.5.2",
     "@mapbox/mapbox-gl-draw": "1.4.3",
     "@radix-ui/react-accordion": "^1.1.2",
@@ -115,5 +116,8 @@
   },
   "husky": {
     "pre-commit": "yarn lint"
+  },
+  "resolutions": {
+    "@math.gl/types": "^4.1.0"
   }
 }

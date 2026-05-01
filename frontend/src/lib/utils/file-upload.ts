@@ -273,13 +273,15 @@ export async function convertFilesToGeojson(files: File[]): Promise<FeatureColle
 
   try {
     content = (await load(fileToParse, loader, {
+      kml: {
+        shape: 'geojson-table',
+      },
       gis: {
-        format: 'geojson',
         // In case of Shapefile, if a .prj file is uploaded, we want to reproject the geometry
         reproject: true,
       },
       shp: {
-        shape: 'geojson',
+        shape: 'geojson-table',
         // Shapefiles can hold up to 4 dimensions (XYZM). By default all dimensions are parsed;
         // when set to 2 only the X and Y dimensions are parsed. If not set, the resulting geometry
         // will not match the GeoJSON Specification (RFC 7946) and Google Maps will crash.
