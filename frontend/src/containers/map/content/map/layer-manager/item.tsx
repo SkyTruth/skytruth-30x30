@@ -108,7 +108,8 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
   );
 
   if (type === 'pmtiles') {
-    const url: string | undefined = config?.source?.url;
+    const source = config?.source;
+    const url = source && 'url' in source ? source.url : undefined;
     if (!url) return null;
     return (
       <PmtilesLayer
