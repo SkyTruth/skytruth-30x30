@@ -94,11 +94,26 @@ jobs:
           IMAGE="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${REPOSITORY}/${SERVICE}:${{ github.sha }}"
           JOB_NAME="${SERVICE}-migrate"
 
+          # Mirror the Service's runtime service account so the Job inherits
+          # roles/cloudsql.client (and any other DB-access bindings) without
+          # requiring a separate secret. The Service is the source of truth:
+          # if it can reach the DB, the Job using the same SA will too.
+          SERVICE_ACCOUNT=$(gcloud run services describe "$SERVICE" \
+            --region="${{ env.REGION }}" \
+            --project="${{ env.PROJECT_ID }}" \
+            --format='value(spec.template.spec.serviceAccountName)')
+          if [[ -z "${SERVICE_ACCOUNT}" ]]; then
+            echo "::error::Could not resolve service account from Service '$SERVICE'."
+            exit 1
+          fi
+          echo "Using service account: ${SERVICE_ACCOUNT}"
+
           DEPLOY_ARGS=(
             "$JOB_NAME"
             --image="$IMAGE"
             --region="${{ env.REGION }}"
             --project="${{ env.PROJECT_ID }}"
+            --service-account="${SERVICE_ACCOUNT}"
             --task-timeout=3600
             --max-retries=0
             --memory=2Gi
@@ -110,7 +125,11 @@ jobs:
             DEPLOY_ARGS+=(--set-cloudsql-instances="${CLOUDSQL_INSTANCE}")
           fi
           if [[ -n "${VPC_CONNECTOR}" ]]; then
-            DEPLOY_ARGS+=(--vpc-connector="${VPC_CONNECTOR}")
+            # Match the Service's egress (`all-traffic`) so the Job uses the
+            # exact same network path to the private-IP DB. Without this,
+            # gcloud defaults to `private-ranges-only` — usually fine for a
+            # 10.x.x.x DB but a needless source of drift from the Service.
+            DEPLOY_ARGS+=(--vpc-connector="${VPC_CONNECTOR}" --vpc-egress=all-traffic)
           fi
 
           # Create or update the Job (idempotent).
@@ -133,11 +152,5 @@ jobs:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
-          # `--cpu-boost` doubles CPU during the startup window so v5
-          # auto-migrations finish faster. `--startup-probe` extends the
-          # boot grace period to the platform max (240s = 24 * 10s) using
-          # a TCP probe against Strapi's listen port; the probe only
-          # succeeds once Strapi finishes migrations and starts serving.
-          flags: --cpu-boost --startup-probe=tcpSocket.port=1337,periodSeconds=10,failureThreshold=24,timeoutSeconds=5
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}
