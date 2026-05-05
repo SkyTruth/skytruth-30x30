@@ -12,6 +12,7 @@ from tqdm.auto import tqdm
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
+    CLIMATE_RES_CORAL_SOURCE_FILE,
     EEZ_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
@@ -22,13 +23,19 @@ from src.core.params import (
     WDPA_MARINE_FILE_NAME,
 )
 from src.core.processors import clean_geometries
+from src.core.raster_pa_stats import compute_class_areas_by_country
 from src.utils.gcp import (
+    download_file_from_gcs,
     load_zipped_shapefile_from_gcs,
     read_json_df,
     read_json_from_gcs,
 )
 from src.utils.geo import get_area_km2
 from src.utils.logger import Logger
+
+# Climate-resilient corals raster: 1 = climate-resilient corals, 0 = other corals.
+CLIMATE_RESILIENT_CORALS_CLASS_MAP = {0: "other-corals", 1: "climate-resilient-corals"}
+CLIMATE_RESILIENT_CORALS_HABITATS = ("climate-resilient-corals", "other-corals")
 
 logger = Logger()
 
@@ -280,6 +287,98 @@ def create_ocean_habitat_subtable(
     return pd.concat(ocean_habitats_group, axis=0, ignore_index=True)
 
 
+def _rollup_corals_subtable(
+    total_stats: pd.DataFrame,
+    protected_stats: pd.DataFrame,
+    combined_regions: dict,
+    habitats: tuple = CLIMATE_RESILIENT_CORALS_HABITATS,
+) -> pd.DataFrame:
+    """Roll per-country class areas up to combined_regions and reshape into subtable rows."""
+
+    def _sum(df: pd.DataFrame, locs: list | None, habitat: str) -> float:
+        if habitat not in df.columns or df.empty:
+            return 0.0
+        if locs is None:
+            return float(df[habitat].sum())
+        return float(df.loc[df["country"].isin(locs), habitat].sum())
+
+    rows = []
+    for habitat in habitats:
+        for loc in combined_regions:
+            members = None if loc == "GLOB" else combined_regions[loc]
+            rows.append(
+                {
+                    "location": loc,
+                    "habitat": habitat,
+                    "environment": "marine",
+                    "protected_area": _sum(protected_stats, members, habitat),
+                    "total_area": _sum(total_stats, members, habitat),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def create_climate_resilient_corals_subtable(
+    marine_protected_areas: gpd.GeoDataFrame,
+    combined_regions: dict,
+    eez_file: str = EEZ_FILE_NAME,
+    coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
+    tolerance: float = marine_tolerance,
+    bucket: str = BUCKET,
+    n_jobs: int = -1,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """Compute climate-resilient-coral and other-coral protection per country/region.
+
+    Loads EEZs (simplified to `tolerance`), downloads the binary coral raster,
+    runs both a country-total pass (no PA filter) and a protected pass (filtered
+    by `marine_protected_areas`), then rolls country results up to
+    `combined_regions` to match the other marine habitat subtables.
+
+    `marine_protected_areas` is expected to be the dissolved/cleaned WDPA marine
+    GeoDataFrame produced by `process_marine_habitats`, with `location` already
+    set to the country ISO3.
+    """
+    if verbose:
+        logger.info({"message": "loading EEZs for coral coverage"})
+    eez_file_name = eez_file.replace(".geojson", f"_{tolerance}.geojson")
+    eez = read_json_df(bucket, eez_file_name, verbose=verbose)
+
+    if verbose:
+        logger.info({"message": f"downloading coral raster from {coral_source_file}"})
+    local_raster_path = coral_source_file.split("/")[-1]
+    download_file_from_gcs(bucket, coral_source_file, local_raster_path, verbose=False)
+
+    if verbose:
+        logger.info({"message": "computing total coral class areas per EEZ"})
+    total_stats = compute_class_areas_by_country(
+        raster_path=local_raster_path,
+        regions_gdf=eez,
+        class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
+        region_col="location",
+        polygons_gdf=None,
+        include_zero=True,
+        n_jobs=n_jobs,
+        verbose=verbose,
+    )
+
+    if verbose:
+        logger.info({"message": "computing protected coral class areas per EEZ"})
+    protected_stats = compute_class_areas_by_country(
+        raster_path=local_raster_path,
+        regions_gdf=eez,
+        class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
+        region_col="location",
+        polygons_gdf=marine_protected_areas,
+        polygon_country_col="location",
+        include_zero=True,
+        n_jobs=n_jobs,
+        verbose=verbose,
+    )
+
+    return _rollup_corals_subtable(total_stats, protected_stats, combined_regions)
+
+
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
     counts = gdf[key].value_counts()
 
@@ -351,8 +450,20 @@ def process_marine_habitats(
         global_mangrove_area_file_name,
     )
 
+    if verbose:
+        logger.info({"message": "getting climate-resilient corals subtable"})
+
+    corals_subtable = create_climate_resilient_corals_subtable(
+        marine_protected_areas,
+        combined_regions,
+        eez_file=eez_file,
+        tolerance=tolerance,
+        bucket=bucket,
+        verbose=verbose,
+    )
+
     marine_habitats = pd.concat(
-        (ocean_habitats_subtable, seamounts_subtable, mangroves_subtable), axis=0
+        (ocean_habitats_subtable, seamounts_subtable, mangroves_subtable, corals_subtable), axis=0
     )
 
     return marine_habitats

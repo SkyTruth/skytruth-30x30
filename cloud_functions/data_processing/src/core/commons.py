@@ -149,11 +149,16 @@ def safe_union(df, batch_size=1000, simplify_tolerance=1000):
     return unary_union(parts)
 
 
-def get_cover_areas(src, geom, identifier, id_col, land_cover_classes):
+def get_cover_areas(src, geom, identifier, id_col, land_cover_classes, include_zero: bool = False):
     out_image, out_transform = mask(src, geom, crop=True, filled=False)
     valid_mask = ~out_image.mask[0]
 
-    if np.all(out_image[0] <= 0):
+    if not valid_mask.any():
+        return None
+    # Default short-circuit treats 0 as "no class" (terrestrial reclass output);
+    # callers with binary 0/1 rasters (e.g., climate-resilient corals) must pass
+    # include_zero=True so zero-valued pixels are counted as a real class.
+    if not include_zero and np.all(out_image[0] <= 0):
         return None
 
     # Compute area per pixel using latitude-varying resolution

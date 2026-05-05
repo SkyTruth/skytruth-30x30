@@ -578,6 +578,8 @@ def rename_habitats(df: pd.DataFrame) -> pd.DataFrame:
         "seagrasses": "seagrasses",
         "mangroves": "mangroves",
         "seamounts": "seamounts",
+        "climate-resilient-corals": "climate-resilient-corals",
+        "other-corals": "other-corals",
         "Artificial": "artificial",
         "Forest": "forest",
         "Grassland": "grassland",

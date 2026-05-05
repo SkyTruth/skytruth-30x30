@@ -10,7 +10,7 @@ from src.core.map_params import (
     CORAL_REEF_TILESET_NAME,
     PMTILES_BUCKET,
 )
-from src.core.params import BUCKET, CORAL_REEF_SOURCE_FILE
+from src.core.params import BUCKET, CLIMATE_RES_CORAL_SOURCE_FILE
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 
 
@@ -51,7 +51,7 @@ def test_wrapper_uses_constants(mock_pipeline):
 
     config = mock_pipeline["pipeline"]
     assert config.source_bucket == BUCKET
-    assert config.source_blob == CORAL_REEF_SOURCE_FILE
+    assert config.source_blob == CLIMATE_RES_CORAL_SOURCE_FILE
     assert config.output_bucket == PMTILES_BUCKET
     assert config.output_blob == CORAL_REEF_TILESET_FILE
     assert config.display_name == CORAL_REEF_TILESET_NAME
