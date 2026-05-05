@@ -28,7 +28,6 @@ import {
   drawStateAtom,
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
 import { createCustomLayer } from '@/lib/utils/create-custom-layer';
@@ -54,9 +53,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const getUploadErrorMessage = useUploadErrorMessage({
     maxFileSize: MAX_CUSTOM_LAYER_SIZE,
   });
-
-  // TECH-3372: tear down
-  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
   const queryClient = useQueryClient();
   const [{ tab }] = useSyncMapContentSettings();
@@ -251,36 +247,28 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
   const isDrawing = active || status === 'drawing';
   const isDrawDisabled = isUploadProcessing || (!isDrawing && isAtMaxLayers);
-  const hasCompletedDraw = !isCustomLayersActive && status === 'success';
 
   return (
     <div className={cn('flex w-full flex-col font-mono', className)}>
-      {
-        // TODO: TECH-3372 remove feature flag check
-        isCustomLayersActive ? (
-          <>
-            <label htmlFor="upload-layer" className="sr-only">
-              {t('upload-layer')}
-            </label>
-            <Input
-              id="upload-layer"
-              ref={uploadInputRef}
-              type="file"
-              multiple
-              accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
-              className="hidden"
-              onChange={onUploadChange}
-              disabled={isUploadDisabled}
-              aria-describedby={uploadError ? 'modelling-button-error' : undefined}
-              aria-invalid={Boolean(uploadError)}
-            />
-          </>
-        ) : null
-      }
+      <label htmlFor="upload-layer" className="sr-only">
+        {t('upload-layer')}
+      </label>
+      <Input
+        id="upload-layer"
+        ref={uploadInputRef}
+        type="file"
+        multiple
+        accept={supportedFileformats.map((ext) => `.${ext}`).join(',')}
+        className="hidden"
+        onChange={onUploadChange}
+        disabled={isUploadDisabled}
+        aria-describedby={uploadError ? 'modelling-button-error' : undefined}
+        aria-invalid={Boolean(uploadError)}
+      />
 
       <div className="flex w-full flex-col space-y-2">
         <div className="flex w-full gap-3 px-5">
-          {hasCompletedDraw ? (
+          {status === 'success' ? (
             <>
               <Button
                 variant="blue"
@@ -330,35 +318,30 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
                   )}
                 </Tooltip>
               </TooltipProvider>
-              {
-                // TODO: TECH-3372 remove feature flag check
-                isCustomLayersActive ? (
-                  <TooltipProvider>
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <span className="w-full">
-                          <Button
-                            className={COMMON_BUTTON_CLASSES}
-                            size="full"
-                            type="button"
-                            onClick={onOpenUploadPicker}
-                            disabled={isUploadDisabled}
-                            aria-controls="upload-layer"
-                          >
-                            <Upload className="mr-3 h-4 w-4" aria-hidden />
-                            {t('upload-layer')}
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {isAtMaxLayers && (
-                        <TooltipContent>
-                          {t('max-layers-reached', { max: MAX_CUSTOM_LAYERS })}
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : null
-              }
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <span className="w-full">
+                      <Button
+                        className={COMMON_BUTTON_CLASSES}
+                        size="full"
+                        type="button"
+                        onClick={onOpenUploadPicker}
+                        disabled={isUploadDisabled}
+                        aria-controls="upload-layer"
+                      >
+                        <Upload className="mr-3 h-4 w-4" aria-hidden />
+                        {t('upload-layer')}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {isAtMaxLayers && (
+                    <TooltipContent>
+                      {t('max-layers-reached', { max: MAX_CUSTOM_LAYERS })}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </>
           )}
         </div>

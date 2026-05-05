@@ -10,7 +10,6 @@ import {
   modellingCustomLayerIdAtom,
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
@@ -30,8 +29,6 @@ const SidebarModelling: FCWithMessages = () => {
   const [modellingCustomLayerId, setModellingCustomLayerId] = useAtom(modellingCustomLayerIdAtom);
   const customLayers = useAtomValue(customLayersAtom);
   const [{ tab }, setSettings] = useSyncMapContentSettings();
-
-  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active'); // TODO: TECH-3372 Teardown
 
   const showIntro = useMemo(() => modellingStatus === 'idle', [modellingStatus]);
 
@@ -78,7 +75,7 @@ const SidebarModelling: FCWithMessages = () => {
                 t('custom-area')}
           </h1>
         </div>
-        {!showIntro && isCustomLayersActive ? (
+        {!showIntro ? (
           <button
             type="button"
             className="mt-2 text-left underline"
