@@ -47,6 +47,25 @@ const nextConfig = {
       },
     ];
   },
+  redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/progress-tracker',
+        permanent: true,
+      },
+      {
+        source: '/about',
+        destination: 'https://skytruth.org/30x30/why',
+        permanent: true,
+      },
+      {
+        source: '/knowledge-hub',
+        destination: 'https://skytruth.org/30x30/why',
+        permanent: true,
+      },
+    ];
+  },
   i18n: {
     locales: ['en', 'es', 'fr', 'pt'],
     defaultLocale: 'en',

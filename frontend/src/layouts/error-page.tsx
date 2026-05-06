@@ -37,7 +37,7 @@ const ErrorPageLayout: FCWithMessages<ErrorPageLayoutProps> = ({
             <h2 className="my-4 mt-4 text-4xl md:mb-8 md:text-5xl">{title}</h2>
             <p>{description}</p>
             <Link
-              href={PAGES.homepage}
+              href={PAGES.progressTracker}
               className="mt-6 inline-block bg-black px-8 py-3 font-mono text-xs uppercase text-white md:mt-4"
             >
               {t('go-to-homepage')}
