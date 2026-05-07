@@ -1197,9 +1197,7 @@ export interface ApiLayerLayer extends Struct.CollectionTypeSchema {
           localized: true;
         };
       }>;
-    type: Schema.Attribute.Enumeration<
-      ['mapbox', 'deckgl', 'carto', 'pmtiles']
-    > &
+    type: Schema.Attribute.Enumeration<['mapbox', 'deckgl', 'carto']> &
       Schema.Attribute.SetPluginOptions<{
         i18n: {
           localized: false;
