@@ -98,24 +98,26 @@ def download_mpatlas_country(
 
 def download_mpatlas_global(
     bucket: str = BUCKET,
-    project: str = PROJECT,
     url: str = MPATLAS_GLOBAL_API_URL,
     current_filename: str = MPATLAS_GLOBAL_FILE_NAME,
     archive_filename: str = ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
+    verbose: bool = True,
 ):
     response = requests.get(url)
     response.raise_for_status()
-    data = response.json()
-
-    row = {k: v for k, v in data.items() if not isinstance(v, (dict, list))}
-    for entry in data["mpaguide_status"]["total"]:
-        key = entry["key"]
-        row[f"mpaguide_total_{key}_km2"] = entry["km2"]
-        row[f"mpaguide_total_{key}_percent"] = entry["percent"]
-
-    upload_dataframe(
-        bucket, pd.DataFrame([row]), archive_filename, project_id=project, verbose=True
+    
+    if verbose:
+        logger.info(
+            {"message": f"saving MPAtlas Global API Data to gs://{bucket}/{archive_filename}"}
+        )
+    save_file_bucket(
+        response.content,
+        response.headers.get("Content-Type"),
+        archive_filename,
+        bucket,
+        verbose=verbose,
     )
+
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
 
 

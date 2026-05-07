@@ -27,17 +27,13 @@ def api_response():
 
 
 @patch("src.methods.download_and_process.duplicate_blob")
-@patch("src.methods.download_and_process.upload_dataframe")
+@patch("src.methods.download_and_process.save_file_bucket")
 @patch("src.methods.download_and_process.requests.get")
-def test_get_request(mock_get, mock_upload, mock_duplicate, api_response):
+def test_get_request(mock_get, mock_save, mock_duplicate, api_response):
     # Configure the mock response
     mock_get.return_value.status_code = 200
     mock_get.return_value.json.return_value = api_response
 
     download.download_mpatlas_global()
-    df = mock_upload.call_args[0][1]
 
-    assert "mpaguide_total_if_km2" in df.columns
-    assert "mpaguide_status" not in df.columns
-    assert "total_km2" in df.columns
-    assert df["total_km2"].iloc[0] == 363046756
+    assert mock_save.call_args[0][0] == mock_get.return_value.content 

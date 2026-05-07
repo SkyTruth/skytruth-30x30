@@ -98,8 +98,8 @@ MPATLAS_COUNTRY_LEVEL_API_URL = "https://mpatlas.org/api/v1/internal/countries"
 MPATLAS_COUNTRY_LEVEL_FILE_NAME = "raw/mpatlas_country_level.csv"
 ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME = f"archive/raw/mpatlas_{today_formatted}_country_level.csv"
 MPATLAS_GLOBAL_API_URL = "https://mpatlas.org/api/v1/internal/summary"
-MPATLAS_GLOBAL_FILE_NAME = "raw/mpatlas_global.csv"
-ARCHIVE_MPATLAS_GLOBAL_FILE_NAME = f"archive/raw/mpatlas_{today_formatted}_global.csv"
+MPATLAS_GLOBAL_FILE_NAME = "raw/mpatlas_global.json"
+ARCHIVE_MPATLAS_GLOBAL_FILE_NAME = f"archive/raw/mpatlas_{today_formatted}_global.json"
 
 # ------------------------------------------------------------
 #                 Protected Seas
