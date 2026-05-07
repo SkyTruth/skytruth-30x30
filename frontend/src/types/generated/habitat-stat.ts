@@ -91,7 +91,7 @@ export const useGetHabitatStats = <
 };
 
 export const getHabitatStatsId = (
-  id: number,
+  id: string,
   params?: GetHabitatStatsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -102,7 +102,7 @@ export const getHabitatStatsId = (
   );
 };
 
-export const getGetHabitatStatsIdQueryKey = (id: number, params?: GetHabitatStatsIdParams) => {
+export const getGetHabitatStatsIdQueryKey = (id: string, params?: GetHabitatStatsIdParams) => {
   return [`/habitat-stats/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -110,7 +110,7 @@ export const getGetHabitatStatsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getHabitatStatsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetHabitatStatsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getHabitatStatsId>>, TError, TData>;
@@ -140,7 +140,7 @@ export const useGetHabitatStatsId = <
   TData = Awaited<ReturnType<typeof getHabitatStatsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetHabitatStatsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getHabitatStatsId>>, TError, TData>;

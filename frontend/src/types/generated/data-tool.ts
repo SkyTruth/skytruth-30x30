@@ -22,8 +22,6 @@ import type {
   DataToolResponse,
   DataToolRequest,
   GetDataToolsIdParams,
-  DataToolLocalizationResponse,
-  DataToolLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -159,7 +157,7 @@ export const usePostDataTools = <TError = ErrorType<Error>, TContext = unknown>(
   return useMutation(mutationOptions);
 };
 export const getDataToolsId = (
-  id: number,
+  id: string,
   params?: GetDataToolsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -170,7 +168,7 @@ export const getDataToolsId = (
   );
 };
 
-export const getGetDataToolsIdQueryKey = (id: number, params?: GetDataToolsIdParams) => {
+export const getGetDataToolsIdQueryKey = (id: string, params?: GetDataToolsIdParams) => {
   return [`/data-tools/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -178,7 +176,7 @@ export const getGetDataToolsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getDataToolsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetDataToolsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataToolsId>>, TError, TData>;
@@ -206,7 +204,7 @@ export const useGetDataToolsId = <
   TData = Awaited<ReturnType<typeof getDataToolsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetDataToolsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataToolsId>>, TError, TData>;
@@ -223,7 +221,7 @@ export const useGetDataToolsId = <
 };
 
 export const putDataToolsId = (
-  id: number,
+  id: string,
   dataToolRequest: BodyType<DataToolRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -245,21 +243,21 @@ export const getPutDataToolsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataToolsId>>,
     TError,
-    { id: number; data: BodyType<DataToolRequest> },
+    { id: string; data: BodyType<DataToolRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putDataToolsId>>,
   TError,
-  { id: number; data: BodyType<DataToolRequest> },
+  { id: string; data: BodyType<DataToolRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putDataToolsId>>,
-    { id: number; data: BodyType<DataToolRequest> }
+    { id: string; data: BodyType<DataToolRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -277,7 +275,7 @@ export const usePutDataToolsId = <TError = ErrorType<Error>, TContext = unknown>
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataToolsId>>,
     TError,
-    { id: number; data: BodyType<DataToolRequest> },
+    { id: string; data: BodyType<DataToolRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -286,7 +284,7 @@ export const usePutDataToolsId = <TError = ErrorType<Error>, TContext = unknown>
 
   return useMutation(mutationOptions);
 };
-export const deleteDataToolsId = (id: number, options?: SecondParameter<typeof API>) => {
+export const deleteDataToolsId = (id: string, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/data-tools/${id}`, method: 'delete' }, options);
 };
 
@@ -297,21 +295,21 @@ export const getDeleteDataToolsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDataToolsId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteDataToolsId>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteDataToolsId>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -331,81 +329,12 @@ export const useDeleteDataToolsId = <TError = ErrorType<Error>, TContext = unkno
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDataToolsId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteDataToolsIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postDataToolsIdLocalizations = (
-  id: number,
-  dataToolLocalizationRequest: BodyType<DataToolLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<DataToolLocalizationResponse>(
-    {
-      url: `/data-tools/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: dataToolLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostDataToolsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataToolsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataToolLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postDataToolsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<DataToolLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postDataToolsIdLocalizations>>,
-    { id: number; data: BodyType<DataToolLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postDataToolsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostDataToolsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postDataToolsIdLocalizations>>
->;
-export type PostDataToolsIdLocalizationsMutationBody = BodyType<DataToolLocalizationRequest>;
-export type PostDataToolsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostDataToolsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataToolsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataToolLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostDataToolsIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

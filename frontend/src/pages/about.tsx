@@ -83,15 +83,15 @@ const About: FCWithMessages = ({
 
   const protectedLandIndicator: StaticIndicator = useMemo(() => {
     return staticIndicators?.data?.find(
-      ({ attributes }) => attributes.slug === 'terrestrial-inland-areas-protected'
-    )?.attributes;
+      (item) => item.slug === 'terrestrial-inland-areas-protected'
+    );
   }, [staticIndicators]);
 
   const protectedLandPercentage = useMemo(() => {
     const protectionCoverageStatsData = protectionCoverageStats?.data;
 
     if (!protectionCoverageStatsData?.length) return null;
-    return protectionCoverageStatsData[0].attributes.coverage;
+    return protectionCoverageStatsData[0].coverage;
   }, [protectionCoverageStats]);
 
   return (

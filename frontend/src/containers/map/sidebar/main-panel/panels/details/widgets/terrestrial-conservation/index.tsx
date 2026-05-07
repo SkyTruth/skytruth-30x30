@@ -13,7 +13,7 @@ import { FCWithMessages } from '@/types';
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type {
-  LocationGroupsDataItemAttributes,
+  LocationGroupsItem,
   AggregatedStats,
   AggregatedStatsEnvelope,
 } from '@/types/generated/strapi.schemas';
@@ -21,7 +21,7 @@ import type {
 import MissingCountriesList from '../widget-alerts/MissingCountriesList';
 
 type TerrestrialConservationWidgetProps = {
-  location: LocationGroupsDataItemAttributes;
+  location: LocationGroupsItem;
 };
 
 const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidgetProps> = ({
@@ -65,8 +65,8 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   }, [data, location]);
 
   const missingLocations = useMemo(() => {
-    const included = new Set(aggregatedData?.locations ?? []);
-    const total = new Set(locations.split(','));
+    const included = new Set<string>(aggregatedData?.locations ?? []);
+    const total = new Set<string>(locations.split(','));
 
     return [...total.difference(included)];
   }, [aggregatedData, locations]);
@@ -84,14 +84,13 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
         select: ({ data }) =>
           data[0]
             ? {
-                info: data[0].attributes.content,
-                sources: data[0].attributes?.data_sources?.data?.map(
-                  ({ id, attributes: { title, url } }) => ({
-                    id,
-                    title,
-                    url,
-                  })
-                ),
+                info: data[0].content,
+                sources: data[0].data_sources?.map(({ documentId, slug, title, url }) => ({
+                  documentId,
+                  slug,
+                  title,
+                  url,
+                })),
               }
             : undefined,
       },

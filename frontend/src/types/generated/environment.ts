@@ -20,8 +20,6 @@ import type {
   EnvironmentResponse,
   EnvironmentRequest,
   GetEnvironmentsIdParams,
-  EnvironmentLocalizationResponse,
-  EnvironmentLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -161,7 +159,7 @@ export const usePostEnvironments = <TError = ErrorType<Error>, TContext = unknow
   return useMutation(mutationOptions);
 };
 export const getEnvironmentsId = (
-  id: number,
+  id: string,
   params?: GetEnvironmentsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -172,7 +170,7 @@ export const getEnvironmentsId = (
   );
 };
 
-export const getGetEnvironmentsIdQueryKey = (id: number, params?: GetEnvironmentsIdParams) => {
+export const getGetEnvironmentsIdQueryKey = (id: string, params?: GetEnvironmentsIdParams) => {
   return [`/environments/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -180,7 +178,7 @@ export const getGetEnvironmentsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getEnvironmentsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetEnvironmentsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getEnvironmentsId>>, TError, TData>;
@@ -210,7 +208,7 @@ export const useGetEnvironmentsId = <
   TData = Awaited<ReturnType<typeof getEnvironmentsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetEnvironmentsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getEnvironmentsId>>, TError, TData>;
@@ -227,7 +225,7 @@ export const useGetEnvironmentsId = <
 };
 
 export const putEnvironmentsId = (
-  id: number,
+  id: string,
   environmentRequest: BodyType<EnvironmentRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -249,21 +247,21 @@ export const getPutEnvironmentsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putEnvironmentsId>>,
     TError,
-    { id: number; data: BodyType<EnvironmentRequest> },
+    { id: string; data: BodyType<EnvironmentRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putEnvironmentsId>>,
   TError,
-  { id: number; data: BodyType<EnvironmentRequest> },
+  { id: string; data: BodyType<EnvironmentRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putEnvironmentsId>>,
-    { id: number; data: BodyType<EnvironmentRequest> }
+    { id: string; data: BodyType<EnvironmentRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -283,7 +281,7 @@ export const usePutEnvironmentsId = <TError = ErrorType<Error>, TContext = unkno
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putEnvironmentsId>>,
     TError,
-    { id: number; data: BodyType<EnvironmentRequest> },
+    { id: string; data: BodyType<EnvironmentRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -292,7 +290,7 @@ export const usePutEnvironmentsId = <TError = ErrorType<Error>, TContext = unkno
 
   return useMutation(mutationOptions);
 };
-export const deleteEnvironmentsId = (id: number, options?: SecondParameter<typeof API>) => {
+export const deleteEnvironmentsId = (id: string, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/environments/${id}`, method: 'delete' }, options);
 };
 
@@ -303,21 +301,21 @@ export const getDeleteEnvironmentsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteEnvironmentsId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteEnvironmentsId>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteEnvironmentsId>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -337,81 +335,12 @@ export const useDeleteEnvironmentsId = <TError = ErrorType<Error>, TContext = un
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteEnvironmentsId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteEnvironmentsIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postEnvironmentsIdLocalizations = (
-  id: number,
-  environmentLocalizationRequest: BodyType<EnvironmentLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<EnvironmentLocalizationResponse>(
-    {
-      url: `/environments/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: environmentLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostEnvironmentsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<EnvironmentLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<EnvironmentLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>,
-    { id: number; data: BodyType<EnvironmentLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postEnvironmentsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostEnvironmentsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>
->;
-export type PostEnvironmentsIdLocalizationsMutationBody = BodyType<EnvironmentLocalizationRequest>;
-export type PostEnvironmentsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostEnvironmentsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postEnvironmentsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<EnvironmentLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostEnvironmentsIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

@@ -18,7 +18,7 @@ const CardFiltersEcosystems: FCWithMessages = (): JSX.Element => {
     },
     {
       query: {
-        select: ({ data }) => data.map(({ attributes }) => attributes.name),
+        select: ({ data }) => data.map((item) => item.name),
       },
     }
   );

@@ -52,27 +52,21 @@ export default factories
               });
               continue;
             }
-            await strapi.entityService.create(
-              FISHING_PROTECTION_LEVEL_STATS_NAMESPACE,
-              {
-                data: {
-                  area,
-                  pct,
-                  total_area,
-                  location: locationMap[stat.location],
-                  fishing_protection_level: fishingProtectionLevelMap[stat.fishing_protection_level],
-                },
-              }
-            );
+            await strapi.documents(FISHING_PROTECTION_LEVEL_STATS_NAMESPACE).create({
+              data: {
+                area,
+                pct,
+                total_area,
+                location: locationMap[stat.location],
+                fishing_protection_level: fishingProtectionLevelMap[stat.fishing_protection_level],
+              },
+            });
           } else {
             // Update existing record
-            await strapi.entityService.update(
-              FISHING_PROTECTION_LEVEL_STATS_NAMESPACE,
-              statsMap[statKey],
-              {
-                data: { area, pct, total_area },
-              }
-            );
+            await strapi.documents(FISHING_PROTECTION_LEVEL_STATS_NAMESPACE).update({
+              documentId: statsMap[statKey],
+              data: { area, pct, total_area }
+            });
           }
         }
         return ctx.send({

@@ -1,3 +1,3 @@
 type IDMap = {
-  [key: string]: number;
+  [key: string]: string;
 }

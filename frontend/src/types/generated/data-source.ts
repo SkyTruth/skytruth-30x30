@@ -20,8 +20,6 @@ import type {
   DataSourceResponse,
   DataSourceRequest,
   GetDataSourcesIdParams,
-  DataSourceLocalizationResponse,
-  DataSourceLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -161,7 +159,7 @@ export const usePostDataSources = <TError = ErrorType<Error>, TContext = unknown
   return useMutation(mutationOptions);
 };
 export const getDataSourcesId = (
-  id: number,
+  id: string,
   params?: GetDataSourcesIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -172,7 +170,7 @@ export const getDataSourcesId = (
   );
 };
 
-export const getGetDataSourcesIdQueryKey = (id: number, params?: GetDataSourcesIdParams) => {
+export const getGetDataSourcesIdQueryKey = (id: string, params?: GetDataSourcesIdParams) => {
   return [`/data-sources/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -180,7 +178,7 @@ export const getGetDataSourcesIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getDataSourcesId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetDataSourcesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataSourcesId>>, TError, TData>;
@@ -208,7 +206,7 @@ export const useGetDataSourcesId = <
   TData = Awaited<ReturnType<typeof getDataSourcesId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetDataSourcesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataSourcesId>>, TError, TData>;
@@ -225,7 +223,7 @@ export const useGetDataSourcesId = <
 };
 
 export const putDataSourcesId = (
-  id: number,
+  id: string,
   dataSourceRequest: BodyType<DataSourceRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -247,21 +245,21 @@ export const getPutDataSourcesIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataSourcesId>>,
     TError,
-    { id: number; data: BodyType<DataSourceRequest> },
+    { id: string; data: BodyType<DataSourceRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putDataSourcesId>>,
   TError,
-  { id: number; data: BodyType<DataSourceRequest> },
+  { id: string; data: BodyType<DataSourceRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putDataSourcesId>>,
-    { id: number; data: BodyType<DataSourceRequest> }
+    { id: string; data: BodyType<DataSourceRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -281,81 +279,12 @@ export const usePutDataSourcesId = <TError = ErrorType<Error>, TContext = unknow
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataSourcesId>>,
     TError,
-    { id: number; data: BodyType<DataSourceRequest> },
+    { id: string; data: BodyType<DataSourceRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getPutDataSourcesIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postDataSourcesIdLocalizations = (
-  id: number,
-  dataSourceLocalizationRequest: BodyType<DataSourceLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<DataSourceLocalizationResponse>(
-    {
-      url: `/data-sources/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: dataSourceLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostDataSourcesIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataSourcesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataSourceLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postDataSourcesIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<DataSourceLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postDataSourcesIdLocalizations>>,
-    { id: number; data: BodyType<DataSourceLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postDataSourcesIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostDataSourcesIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postDataSourcesIdLocalizations>>
->;
-export type PostDataSourcesIdLocalizationsMutationBody = BodyType<DataSourceLocalizationRequest>;
-export type PostDataSourcesIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostDataSourcesIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDataSourcesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DataSourceLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostDataSourcesIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

@@ -20,11 +20,11 @@ export default function useMapDefaultLayers() {
 
   const defaultLayerSlugs = useMemo(() => {
     const datasetsDefaultLayerIds = (datasets = []) => {
-      return datasets.reduce((acc, { attributes }) => {
-        const layersData = attributes?.layers?.data;
+      return datasets.reduce((acc, dataset) => {
+        const layersData = dataset?.layers;
 
         const defaultLayerSlugs = layersData.reduce(
-          (acc, { attributes }) => (attributes?.default ? [...acc, attributes.slug] : acc),
+          (acc, layers) => (layers?.default ? [...acc, layers.slug] : acc),
           []
         );
         return [...acc, ...defaultLayerSlugs];

@@ -20,8 +20,6 @@ import type {
   DatasetResponse,
   DatasetRequest,
   GetDatasetsIdParams,
-  DatasetLocalizationResponse,
-  DatasetLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -156,7 +154,7 @@ export const usePostDatasets = <TError = ErrorType<Error>, TContext = unknown>(o
   return useMutation(mutationOptions);
 };
 export const getDatasetsId = (
-  id: number,
+  id: string,
   params?: GetDatasetsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -164,7 +162,7 @@ export const getDatasetsId = (
   return API<DatasetResponse>({ url: `/datasets/${id}`, method: 'get', params, signal }, options);
 };
 
-export const getGetDatasetsIdQueryKey = (id: number, params?: GetDatasetsIdParams) => {
+export const getGetDatasetsIdQueryKey = (id: string, params?: GetDatasetsIdParams) => {
   return [`/datasets/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -172,7 +170,7 @@ export const getGetDatasetsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getDatasetsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetDatasetsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDatasetsId>>, TError, TData>;
@@ -200,7 +198,7 @@ export const useGetDatasetsId = <
   TData = Awaited<ReturnType<typeof getDatasetsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetDatasetsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDatasetsId>>, TError, TData>;
@@ -217,7 +215,7 @@ export const useGetDatasetsId = <
 };
 
 export const putDatasetsId = (
-  id: number,
+  id: string,
   datasetRequest: BodyType<DatasetRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -239,21 +237,21 @@ export const getPutDatasetsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDatasetsId>>,
     TError,
-    { id: number; data: BodyType<DatasetRequest> },
+    { id: string; data: BodyType<DatasetRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putDatasetsId>>,
   TError,
-  { id: number; data: BodyType<DatasetRequest> },
+  { id: string; data: BodyType<DatasetRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putDatasetsId>>,
-    { id: number; data: BodyType<DatasetRequest> }
+    { id: string; data: BodyType<DatasetRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -271,7 +269,7 @@ export const usePutDatasetsId = <TError = ErrorType<Error>, TContext = unknown>(
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDatasetsId>>,
     TError,
-    { id: number; data: BodyType<DatasetRequest> },
+    { id: string; data: BodyType<DatasetRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -280,7 +278,7 @@ export const usePutDatasetsId = <TError = ErrorType<Error>, TContext = unknown>(
 
   return useMutation(mutationOptions);
 };
-export const deleteDatasetsId = (id: number, options?: SecondParameter<typeof API>) => {
+export const deleteDatasetsId = (id: string, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/datasets/${id}`, method: 'delete' }, options);
 };
 
@@ -291,21 +289,21 @@ export const getDeleteDatasetsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDatasetsId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteDatasetsId>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteDatasetsId>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -325,81 +323,12 @@ export const useDeleteDatasetsId = <TError = ErrorType<Error>, TContext = unknow
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDatasetsId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteDatasetsIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postDatasetsIdLocalizations = (
-  id: number,
-  datasetLocalizationRequest: BodyType<DatasetLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<DatasetLocalizationResponse>(
-    {
-      url: `/datasets/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: datasetLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostDatasetsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDatasetsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DatasetLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postDatasetsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<DatasetLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postDatasetsIdLocalizations>>,
-    { id: number; data: BodyType<DatasetLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postDatasetsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostDatasetsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postDatasetsIdLocalizations>>
->;
-export type PostDatasetsIdLocalizationsMutationBody = BodyType<DatasetLocalizationRequest>;
-export type PostDatasetsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostDatasetsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postDatasetsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<DatasetLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostDatasetsIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

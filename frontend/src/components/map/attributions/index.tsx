@@ -25,7 +25,7 @@ const Attributions: FC = () => {
       query: {
         enabled: !!activeLayers.length,
         select: ({ data }) =>
-          data.map(({ attributes: { metadata } }) => metadata?.source).filter((source) => !!source),
+          data.map(({ metadata }) => metadata?.source).filter((source) => !!source),
       },
     }
   );
