@@ -398,11 +398,9 @@ def convert_poly_to_multi(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     df = df.copy()
     df["geometry"] = df["geometry"].apply(
-        lambda x: MultiPolygon([x])
-        if isinstance(x, Polygon)
-        else x
-        if isinstance(x, MultiPolygon)
-        else x
+        lambda x: (
+            MultiPolygon([x]) if isinstance(x, Polygon) else x if isinstance(x, MultiPolygon) else x
+        )
     )
     return df
 
