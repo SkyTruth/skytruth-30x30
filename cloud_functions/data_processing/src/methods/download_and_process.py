@@ -105,7 +105,7 @@ def download_mpatlas_global(
 ):
     response = requests.get(url)
     response.raise_for_status()
-    
+
     if verbose:
         logger.info(
             {"message": f"saving MPAtlas Global API Data to gs://{bucket}/{archive_filename}"}

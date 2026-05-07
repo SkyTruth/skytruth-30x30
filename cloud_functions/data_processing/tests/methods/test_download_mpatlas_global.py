@@ -36,4 +36,4 @@ def test_get_request(mock_get, mock_save, mock_duplicate, api_response):
 
     download.download_mpatlas_global()
 
-    assert mock_save.call_args[0][0] == mock_get.return_value.content 
+    assert mock_save.call_args[0][0] == mock_get.return_value.content

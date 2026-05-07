@@ -457,14 +457,21 @@ def generate_marine_protection_level_stats_table(
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    def get_group_stats(df, loc, relations, protection_level="fully-highly-protected"):
+    def get_group_stats(
+        df, loc, relations, mpatlas_global, protection_level="fully-highly-protected"
+    ):
         if loc == "GLOB":
+            total_area = mpatlas_global["total_km2"].iloc[0]
+            total_protected_area = (
+                mpatlas_global["mpaguide_total_if_km2"].iloc[0]
+                + mpatlas_global["mpaguide_total_ih_km2"].iloc[0]
+            )
             return {
                 "location": loc,
-                "total_area": global_total_area,
-                "area": global_protected_area,
+                "total_area": total_area,
+                "area": total_protected_area,
                 "mpaa_protection_level": protection_level,
-                "percentage": 100 * global_protected_area / global_total_area,
+                "percentage": 100 * total_protected_area / total_area,
             }
         df_group = df[df["location"].isin(relations[loc])]
         total_area = df_group["total_area"].sum()
@@ -503,15 +510,6 @@ def generate_marine_protection_level_stats_table(
             }
         )
     mpatlas_global = load_mpatlas_global(bucket, mpatlas_global_file_name)
-    global_total_area = mpatlas_global["total_km2"].iloc[0]
-    # if = implementened and fully protected
-    # ih = implemented and highly protected
-    # not considering lightly protected, minimally protected, unknown,
-    # designed and unknown, or proposed/committed
-    global_protected_area = (
-        mpatlas_global["mpaguide_total_if_km2"].iloc[0]
-        + mpatlas_global["mpaguide_total_ih_km2"].iloc[0]
-    )
 
     if verbose:
         logger.info({"message": "loading high seas region to get area"})
@@ -556,6 +554,7 @@ def generate_marine_protection_level_stats_table(
                 mpa_cl_mps,
                 loc,
                 combined_regions,
+                mpatlas_global,
                 protection_level=protection_level,
             )
         )
