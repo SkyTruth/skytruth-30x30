@@ -176,6 +176,7 @@ def download_mpatlas(
             verbose=verbose,
             alert_message="failed to download MPAtlas zone stats",
         )
+
     except RetryFailed as e:
         cfg = METHOD_RETRY_CONFIGS["download_mpatlas"]
         raise ScheduleRetry(
