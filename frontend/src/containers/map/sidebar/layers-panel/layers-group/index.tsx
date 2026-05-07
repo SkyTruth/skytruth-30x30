@@ -12,11 +12,7 @@ import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
-import {
-  DatasetUpdatedByData,
-  Layer,
-  LayerResponseDataObject,
-} from '@/types/generated/strapi.schemas';
+import { Dataset, Layer } from '@/types/generated/strapi.schemas';
 
 import {
   COLLAPSIBLE_TRIGGER_ICONS_CLASSES,
@@ -27,7 +23,7 @@ import {
 
 type LayersGroupProps = PropsWithChildren<{
   name: string;
-  datasets: DatasetUpdatedByData[];
+  datasets: Dataset[];
   showDatasetsNames?: boolean;
   showBottomBorder?: boolean;
   isOpen?: boolean;
@@ -53,11 +49,7 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
   const [{ tab }] = useSyncMapContentSettings();
 
   const datasetsLayerSlugs = useMemo(() => {
-    return (
-      datasets
-        ?.map(({ attributes }) => attributes?.layers?.data?.map(({ slug }) => slug))
-        ?.flat() || []
-    );
+    return datasets?.map((item) => item?.layers?.map(({ slug }) => slug))?.flat() || [];
   }, [datasets]);
 
   const numActiveDatasetsLayers = useMemo(() => {
@@ -117,30 +109,40 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
           {noData && <span className="font-mono text-xs">{t('no-data-available')}</span>}
           {datasets?.map((dataset) => {
             return (
-              <div key={dataset.id} className="[&:not(:first-child)]:pt-3">
-                {showDatasetsNames && <h4 className="font-mono">{dataset?.attributes?.name}</h4>}
+              <div key={dataset.documentId} className="[&:not(:first-child)]:pt-3">
+                {showDatasetsNames && <h4 className="font-mono">{dataset?.name}</h4>}
                 <ul className={cn('my-3 flex flex-col space-y-3', { '-my-0': !showDatasetsNames })}>
-                  {dataset.attributes?.layers?.data?.map((layer: LayerResponseDataObject) => {
-                    const isActive = activeLayers?.includes(layer?.attributes?.slug);
-                    const onCheckedChange = onToggleLayer.bind(null, layer?.attributes?.slug) as (
+                  {dataset?.layers?.map((layer: Layer) => {
+                    const isActive = activeLayers?.includes(layer?.slug);
+                    const onCheckedChange = onToggleLayer.bind(null, layer?.slug) as (
                       isActive: boolean
                     ) => void;
-                    const metadata = layer?.attributes?.metadata;
+                    const metadata = layer?.metadata;
                     const sources = metadata?.citation
-                      ? [{ id: layer?.id, title: metadata?.citation, url: metadata?.source }]
+                      ? [
+                          {
+                            documentId: layer?.documentId,
+                            slug: layer?.slug,
+                            title: metadata?.citation,
+                            url: metadata?.source,
+                          },
+                        ]
                       : null;
 
                     return (
-                      <li key={layer.id} className="flex items-start justify-between">
+                      <li key={layer.documentId} className="flex items-start justify-between">
                         <span className="flex items-start gap-2">
                           <Switch
-                            id={`${layer.id}-switch`}
+                            id={`${layer.documentId}-switch`}
                             className="mt-px"
                             checked={isActive}
                             onCheckedChange={onCheckedChange}
                           />
-                          <Label htmlFor={`${layer.id}-switch`} className={SWITCH_LABEL_CLASSES}>
-                            {layer.attributes.title}
+                          <Label
+                            htmlFor={`${layer.documentId}-switch`}
+                            className={SWITCH_LABEL_CLASSES}
+                          >
+                            {layer.title}
                           </Label>
                         </span>
                         {metadata?.description && (

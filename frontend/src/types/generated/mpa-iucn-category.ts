@@ -20,8 +20,6 @@ import type {
   MpaIucnCategoryResponse,
   MpaIucnCategoryRequest,
   GetMpaIucnCategoriesIdParams,
-  MpaIucnCategoryLocalizationResponse,
-  MpaIucnCategoryLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
 import type { ErrorType, BodyType } from '../../services/api/index';
@@ -163,7 +161,7 @@ export const usePostMpaIucnCategories = <TError = ErrorType<Error>, TContext = u
   return useMutation(mutationOptions);
 };
 export const getMpaIucnCategoriesId = (
-  id: number,
+  id: string,
   params?: GetMpaIucnCategoriesIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -175,7 +173,7 @@ export const getMpaIucnCategoriesId = (
 };
 
 export const getGetMpaIucnCategoriesIdQueryKey = (
-  id: number,
+  id: string,
   params?: GetMpaIucnCategoriesIdParams
 ) => {
   return [`/mpa-iucn-categories/${id}`, ...(params ? [params] : [])] as const;
@@ -185,7 +183,7 @@ export const getGetMpaIucnCategoriesIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getMpaIucnCategoriesId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetMpaIucnCategoriesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getMpaIucnCategoriesId>>, TError, TData>;
@@ -215,7 +213,7 @@ export const useGetMpaIucnCategoriesId = <
   TData = Awaited<ReturnType<typeof getMpaIucnCategoriesId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetMpaIucnCategoriesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getMpaIucnCategoriesId>>, TError, TData>;
@@ -232,7 +230,7 @@ export const useGetMpaIucnCategoriesId = <
 };
 
 export const putMpaIucnCategoriesId = (
-  id: number,
+  id: string,
   mpaIucnCategoryRequest: BodyType<MpaIucnCategoryRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -254,21 +252,21 @@ export const getPutMpaIucnCategoriesIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putMpaIucnCategoriesId>>,
     TError,
-    { id: number; data: BodyType<MpaIucnCategoryRequest> },
+    { id: string; data: BodyType<MpaIucnCategoryRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putMpaIucnCategoriesId>>,
   TError,
-  { id: number; data: BodyType<MpaIucnCategoryRequest> },
+  { id: string; data: BodyType<MpaIucnCategoryRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putMpaIucnCategoriesId>>,
-    { id: number; data: BodyType<MpaIucnCategoryRequest> }
+    { id: string; data: BodyType<MpaIucnCategoryRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -288,7 +286,7 @@ export const usePutMpaIucnCategoriesId = <TError = ErrorType<Error>, TContext = 
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putMpaIucnCategoriesId>>,
     TError,
-    { id: number; data: BodyType<MpaIucnCategoryRequest> },
+    { id: string; data: BodyType<MpaIucnCategoryRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -297,7 +295,7 @@ export const usePutMpaIucnCategoriesId = <TError = ErrorType<Error>, TContext = 
 
   return useMutation(mutationOptions);
 };
-export const deleteMpaIucnCategoriesId = (id: number, options?: SecondParameter<typeof API>) => {
+export const deleteMpaIucnCategoriesId = (id: string, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/mpa-iucn-categories/${id}`, method: 'delete' }, options);
 };
 
@@ -308,21 +306,21 @@ export const getDeleteMpaIucnCategoriesIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteMpaIucnCategoriesId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteMpaIucnCategoriesId>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteMpaIucnCategoriesId>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -345,82 +343,12 @@ export const useDeleteMpaIucnCategoriesId = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteMpaIucnCategoriesId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }) => {
   const mutationOptions = getDeleteMpaIucnCategoriesIdMutationOptions(options);
-
-  return useMutation(mutationOptions);
-};
-export const postMpaIucnCategoriesIdLocalizations = (
-  id: number,
-  mpaIucnCategoryLocalizationRequest: BodyType<MpaIucnCategoryLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<MpaIucnCategoryLocalizationResponse>(
-    {
-      url: `/mpa-iucn-categories/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: mpaIucnCategoryLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostMpaIucnCategoriesIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<MpaIucnCategoryLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<MpaIucnCategoryLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>,
-    { id: number; data: BodyType<MpaIucnCategoryLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postMpaIucnCategoriesIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostMpaIucnCategoriesIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>
->;
-export type PostMpaIucnCategoriesIdLocalizationsMutationBody =
-  BodyType<MpaIucnCategoryLocalizationRequest>;
-export type PostMpaIucnCategoriesIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostMpaIucnCategoriesIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postMpaIucnCategoriesIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<MpaIucnCategoryLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostMpaIucnCategoriesIdLocalizationsMutationOptions(options);
 
   return useMutation(mutationOptions);
 };

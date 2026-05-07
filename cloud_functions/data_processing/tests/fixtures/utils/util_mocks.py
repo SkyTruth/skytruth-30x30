@@ -47,11 +47,18 @@ class MockBlob:
 
     def __init__(self):
         self.uploaded_data = None
+        self.uploaded_filename = None
         self.kwargs = None
 
     def upload_from_file(self, file_obj, **kwargs):
         file_obj.seek(0)
         self.uploaded_data = file_obj.read()
+        self.kwargs = kwargs
+
+    def upload_from_filename(self, source_file, **kwargs):
+        with open(source_file, "rb") as f:
+            self.uploaded_data = f.read()
+        self.uploaded_filename = source_file
         self.kwargs = kwargs
 
 

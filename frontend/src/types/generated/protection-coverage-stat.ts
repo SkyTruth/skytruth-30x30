@@ -96,7 +96,7 @@ export const useGetProtectionCoverageStats = <
 };
 
 export const getProtectionCoverageStatsId = (
-  id: number,
+  id: string,
   params?: GetProtectionCoverageStatsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -108,7 +108,7 @@ export const getProtectionCoverageStatsId = (
 };
 
 export const getGetProtectionCoverageStatsIdQueryKey = (
-  id: number,
+  id: string,
   params?: GetProtectionCoverageStatsIdParams
 ) => {
   return [`/protection-coverage-stats/${id}`, ...(params ? [params] : [])] as const;
@@ -118,7 +118,7 @@ export const getGetProtectionCoverageStatsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getProtectionCoverageStatsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetProtectionCoverageStatsIdParams,
   options?: {
     query?: UseQueryOptions<
@@ -153,7 +153,7 @@ export const useGetProtectionCoverageStatsId = <
   TData = Awaited<ReturnType<typeof getProtectionCoverageStatsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetProtectionCoverageStatsIdParams,
   options?: {
     query?: UseQueryOptions<

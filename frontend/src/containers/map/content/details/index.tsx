@@ -42,7 +42,7 @@ const MapDetails: FCWithMessages = () => {
           },
           {
             query: {
-              select: ({ data }) => data?.[0]?.attributes,
+              select: ({ data }) => data?.[0],
             },
           }
         ),

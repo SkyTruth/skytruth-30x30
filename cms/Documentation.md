@@ -1,14 +1,18 @@
-# 30x30 Progress Tracker REST API Documentation
+# 30x30 Progress Tracker REST API Documentation (v1)
+
+## ⚠️ New integrations: use v2
+
+**v2 of this API goes live on May 6, 2026.** New integrations should follow [Documentation_v2.md](./Documentation_v2.md) — this document describes the v1 response contract and is kept only for users who integrated before the v2 cutover.
+
+To continue receiving v1-shaped responses after May 6, send the following header on every request:
+
+${\color{lightgreen} Strapi-Response-Format: v4}$
+
+Without that header, requests against the same endpoints will return v2 responses (different envelope, populated relations no longer wrap in `data`/`attributes`, etc.). See the v2 docs for the new contract.
 
 ## Overview
 
 This API provides a single source for accessing open source data related to terrestrial and marine conservation. For most users, we recommend using the 30x30 web application, which provides a visual interface for exploring the complete set of conservation data layers.
-
-## ⚠️ ${\color{red}Upcoming \space Breaking \space Changes}$ ⚠️
-
-A major update of the API will occur sometime in between December 2025 and March 2026 that will introduce breaking changes to the API response contract. We will notify our users of this change when it is planned. In order to safeguard yourself against these changes you can add the following header to your request
-
-${\color{lightgreen} Strapi-Response-Format: v4}$
 
 ## Base URL
 

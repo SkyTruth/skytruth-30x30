@@ -294,9 +294,9 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         )
 
     # remove duplicate entries if they exist
-    last_entry = current_db.groupby("identifier")["id"].transform("max")
-    dups = list(current_db[current_db["id"] != last_entry]["id"])
-    current_db = current_db[current_db["id"] == last_entry]
+    last_entry = current_db.groupby("identifier")["documentId"].transform("max")
+    dups = list(current_db[current_db["documentId"] != last_entry]["documentId"])
+    current_db = current_db[current_db["documentId"] == last_entry]
     if verbose and len(dups) > 0:
         logger.warning({"message": f"identified {len(dups)} duplicate entries in DB for removal"})
 
@@ -318,7 +318,9 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
     if len(current_db) > 0:
         new = list(set(updated_pas["identifier"]) - set(current_db["identifier"]))
         deleted = list(set(current_db["identifier"]) - set(updated_pas["identifier"]))
-        deleted = list(set(list(current_db[current_db["identifier"].isin(deleted)]["id"]) + dups))
+        deleted = list(
+            set(list(current_db[current_db["identifier"].isin(deleted)]["documentId"]) + dups)
+        )
         static = set(current_db["identifier"]).intersection(set(updated_pas["identifier"]))
 
         if verbose:
@@ -333,9 +335,12 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         static_updated = updated_pas[updated_pas["identifier"].isin(static)].sort_values(
             by="identifier"
         )
-        # Add DB id to static updated table
+        # Add DB documentId to static updated table
         static_updated = pd.merge(
-            static_updated, current_db[["identifier", "id"]], on="identifier", how="left"
+            static_updated,
+            current_db[["identifier", "documentId"]],
+            on="identifier",
+            how="left",
         ).reset_index(drop=True)
 
         # specify which columns get which comparison

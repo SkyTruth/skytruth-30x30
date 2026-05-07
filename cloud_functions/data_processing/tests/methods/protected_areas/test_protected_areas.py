@@ -10,7 +10,7 @@ from src.methods.protected_areas.protected_areas import make_pa_updates
 def base_entry():
     """Baseline protected area entry for current_db."""
     return {
-        "id": 1,
+        "documentId": "doc-1",
         "name": "Bättelweid, Magerwiese",
         "area": 0.0130905404,
         "wdpaid": 555770001,
@@ -36,7 +36,7 @@ def base_entry():
 def parent():
     """Baseline parent PA"""
     return {
-        "id": 2,
+        "documentId": "doc-2",
         "name": "Balam Kin (A)",
         "area": 100,
         "wdpaid": 555783753,
@@ -58,7 +58,7 @@ def parent():
                 "zone_id": None,
                 "environment": "terrestrial",
                 "location": "MEX",
-                "id": 3,
+                "documentId": "doc-3",
             }
         ],
         "bbox": [-90.1, 18.8, -89.5, 19.2],
@@ -71,7 +71,7 @@ def parent():
 def child():
     """Baselione child PA"""
     return {
-        "id": 3,
+        "documentId": "doc-3",
         "name": "Balam Kin (B)",
         "area": 80,
         "wdpaid": 555783753,
@@ -91,7 +91,7 @@ def child():
             "zone_id": None,
             "environment": "terrestrial",
             "location": "MEX",
-            "id": 2,
+            "documentId": "doc-2",
         },
         "children": None,
         "bbox": [-90.1, 18.8, -89.5, 19.2],
@@ -112,9 +112,9 @@ def test_detect_new_entry(base_entry):
     new_entry = deepcopy(base_entry)
     new_entry["wdpaid"] = 999
     new_entry["wdpa_p_id"] = "999"
-    new_entry.pop("id", None)  # updated_pas should not have id
+    new_entry.pop("documentId", None)  # updated_pas should not have documentId
 
-    updated_pas = make_df([{k: v for k, v in base_entry.items() if k != "id"}, new_entry])
+    updated_pas = make_df([{k: v for k, v in base_entry.items() if k != "documentId"}, new_entry])
 
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
@@ -122,7 +122,7 @@ def test_detect_new_entry(base_entry):
     assert len(result["changed"]) == 0
     assert len(result["new"]) == 1
 
-    assert result["new"][0].get("id") is None
+    assert result["new"][0].get("documentId") is None
     assert result["new"][0]["wdpaid"] == 999
 
 
@@ -130,11 +130,11 @@ def test_detect_deleted_entry(base_entry):
     """Detects when a record in current_db is missing from updated_pas."""
     current_db = make_df([base_entry])
 
-    updated_pas = pd.DataFrame(columns=[c for c in current_db.columns if c != "id"])
+    updated_pas = pd.DataFrame(columns=[c for c in current_db.columns if c != "documentId"])
 
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
 
-    assert result["deleted"] == [1]
+    assert result["deleted"] == ["doc-1"]
     assert len(result["deleted"]) == 1
     assert len(result["new"]) == 0
     assert len(result["changed"]) == 0
@@ -145,7 +145,7 @@ def test_detect_changed_string(base_entry):
     current_db = make_df([base_entry])
     updated_entry = deepcopy(base_entry)
     updated_entry["designation"] = "International"
-    updated_entry.pop("id", None)
+    updated_entry.pop("documentId", None)
 
     updated_pas = make_df([updated_entry])
 
@@ -156,7 +156,7 @@ def test_detect_changed_string(base_entry):
     assert len(result["new"]) == 0
 
     assert result["changed"][0]["designation"] == "International"
-    assert result["changed"][0]["id"] == base_entry.get("id")
+    assert result["changed"][0]["documentId"] == base_entry.get("documentId")
 
 
 def test_detect_changed_area_large(base_entry):
@@ -167,7 +167,7 @@ def test_detect_changed_area_large(base_entry):
     updated_entry = deepcopy(base_entry)
 
     updated_entry["area"] = base_entry["area"] * 1.2
-    updated_entry.pop("id", None)
+    updated_entry.pop("documentId", None)
 
     updated_pas = make_df([updated_entry])
 
@@ -178,7 +178,7 @@ def test_detect_changed_area_large(base_entry):
     assert len(result["new"]) == 0
 
     assert result["changed"][0]["area"] == round(updated_entry["area"], 2)
-    assert result["changed"][0]["id"] == base_entry.get("id")
+    assert result["changed"][0]["documentId"] == base_entry.get("documentId")
 
 
 def test_ignore_small_area_change(base_entry):
@@ -188,7 +188,7 @@ def test_ignore_small_area_change(base_entry):
 
     # Using slightly under limit to prevent false failures with floating point percision rounding
     updated_entry["area"] = base_entry["area"] * 1.009
-    updated_entry.pop("id", None)
+    updated_entry.pop("documentId", None)
     updated_pas = make_df([updated_entry])
 
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
@@ -208,9 +208,9 @@ def test_detect_changed_parent(base_entry):
         "zone_id": None,
         "environment": base_entry["environment"],
         "location": base_entry["location"],
-        "id": None,
+        "documentId": None,
     }
-    updated_entry.pop("id", None)
+    updated_entry.pop("documentId", None)
 
     updated_pas = make_df([updated_entry])
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
@@ -234,10 +234,10 @@ def test_detect_changed_children(base_entry):
             "zone_id": None,
             "environment": base_entry["environment"],
             "location": base_entry["location"],
-            "id": None,
+            "documentId": None,
         }
     ]
-    updated_entry.pop("id", None)
+    updated_entry.pop("documentId", None)
 
     updated_pas = make_df([updated_entry])
 
@@ -259,8 +259,8 @@ def test_happy_path_no_change(parent, child):
     current_db = make_df([parent, child])
     updated_pas = make_df(
         [
-            {k: v for k, v in parent.items() if k != "id"},
-            {k: v for k, v in child.items() if k != "id"},
+            {k: v for k, v in parent.items() if k != "documentId"},
+            {k: v for k, v in child.items() if k != "documentId"},
         ]
     )
 
@@ -274,7 +274,7 @@ def test_no_changes(base_entry):
     """Ensures no false positives when current_db and updated_pas match exactly."""
     current_db = make_df([base_entry])
     updated_entry = deepcopy(base_entry)
-    updated_entry.pop("id", None)
+    updated_entry.pop("documentId", None)
     updated_pas = make_df([updated_entry])
 
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
@@ -283,40 +283,40 @@ def test_no_changes(base_entry):
     assert result["deleted"] == []
 
 
-def test_new_entry_has_no_id(base_entry):
-    """Ensure that new entries do not have an 'id' key in db_changes."""
+def test_new_entry_has_no_document_id(base_entry):
+    """Ensure that new entries do not have a 'documentId' key in db_changes."""
     current_db = make_df([base_entry])
 
     new_entry = deepcopy(base_entry)
     new_entry["wdpaid"] = 999
     new_entry["wdpa_p_id"] = "999"
-    new_entry.pop("id", None)
+    new_entry.pop("documentId", None)
 
-    updated_pas = make_df([{k: v for k, v in base_entry.items() if k != "id"}, new_entry])
+    updated_pas = make_df([{k: v for k, v in base_entry.items() if k != "documentId"}, new_entry])
 
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     new_record = result["new"][0]
-    assert "id" not in new_record
+    assert "documentId" not in new_record
 
     assert len(result["changed"]) == 0
     assert len(result["deleted"]) == 0
 
 
-def test_existing_entry_keeps_id(base_entry):
-    """Ensure that unchanged or changed entries keep their id from current_db."""
+def test_existing_entry_keeps_document_id(base_entry):
+    """Ensure that unchanged or changed entries keep their documentId from current_db."""
     current_db = make_df([base_entry])
     updated_entry = deepcopy(base_entry)
     updated_entry["designation"] = "International"
-    updated_entry.pop("id", None)
+    updated_entry.pop("documentId", None)
 
     updated_pas = make_df([updated_entry])
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
     changed_record = result["changed"][0]
-    assert changed_record["id"] == base_entry["id"]
+    assert changed_record["documentId"] == base_entry["documentId"]
 
 
-def test_new_child_has_no_id(base_entry):
-    """Ensure that a brand new child entry has id=None (explicitly present)."""
+def test_new_child_has_no_document_id(base_entry):
+    """Ensure that a brand new child entry has documentId=None (explicitly present)."""
     current_db = make_df([base_entry])
     updated_entry = deepcopy(base_entry)
     updated_entry["children"] = [
@@ -326,10 +326,10 @@ def test_new_child_has_no_id(base_entry):
             "zone_id": None,
             "environment": "terrestrial",
             "location": base_entry["location"],
-            "id": None,
+            "documentId": None,
         }
     ]
-    updated_entry.pop("id", None)
+    updated_entry.pop("documentId", None)
 
     updated_pas = make_df([updated_entry])
     result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
@@ -339,18 +339,18 @@ def test_new_child_has_no_id(base_entry):
     assert len(result["new"]) == 0
     assert len(result["deleted"]) == 0
 
-    assert changed_record["children"][0]["id"] is None
+    assert changed_record["children"][0]["documentId"] is None
     assert changed_record["children"] == updated_entry["children"]
 
 
 def test_multiple_children(base_entry, parent, child):
     """test the case where a PA has multiple children and a subset change"""
     updated_parent = deepcopy(parent)
-    updated_parent.pop("id", None)
-    updated_parent["children"][0].pop("id", None)
+    updated_parent.pop("documentId", None)
+    updated_parent["children"][0].pop("documentId", None)
 
     updated_child = deepcopy(child)
-    updated_child.pop("id", None)
+    updated_child.pop("documentId", None)
 
     parent["children"].append(base_entry)
     current_db = make_df([parent, child])
@@ -365,7 +365,7 @@ def test_multiple_children(base_entry, parent, child):
     assert len(result["deleted"]) == 0
 
     assert len(result["changed"][0]["children"]) == 1
-    assert result["changed"][0]["children"][0]["id"] == child["id"]
+    assert result["changed"][0]["children"][0]["documentId"] == child["documentId"]
 
 
 def test_pas_with_changed_deleted_new(base_entry, child, parent):
@@ -374,27 +374,27 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     """
     second_entry = deepcopy(base_entry)
     second_entry["wdpaid"] = 2
-    second_entry["id"] = 200
+    second_entry["documentId"] = "doc-200"
 
     third_entry = deepcopy(base_entry)
     third_entry["wdpaid"] = 3
-    third_entry["id"] = 300
+    third_entry["documentId"] = "doc-300"
 
     fourth_entry = deepcopy(base_entry)
     fourth_entry["wdpaid"] = 4
-    fourth_entry["id"] = 400
+    fourth_entry["documentId"] = "doc-400"
 
     unchanged_pa = deepcopy(base_entry)
-    del unchanged_pa["id"]
+    del unchanged_pa["documentId"]
 
     changed_pa = deepcopy(second_entry)
-    del changed_pa["id"]
+    del changed_pa["documentId"]
     changed_pa["area"] = second_entry["area"] * 2
     changed_pa["iucn_category"] = "II"
 
     # New PA with parent existing that has been updated
     new_pa = deepcopy(base_entry)
-    del new_pa["id"]
+    del new_pa["documentId"]
     new_pa["wdpaid"] = 1000000000
     new_pa["parent"] = {
         "wdpaid": second_entry.get("wdpaid"),
@@ -417,11 +417,11 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     # Remove child parent link of existing PAs
     changed_parent = deepcopy(parent)
     changed_parent["children"] = None
-    del changed_parent["id"]
+    del changed_parent["documentId"]
 
     changed_child = deepcopy(child)
     changed_child["parent"] = None
-    del changed_child["id"]
+    del changed_child["documentId"]
 
     current_db = make_df([base_entry, second_entry, third_entry, fourth_entry, parent, child])
     updated_pas = make_df([unchanged_pa, changed_pa, new_pa, changed_child, changed_parent])
@@ -436,27 +436,27 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     assert len(deleted) == 2  # third_pa, fourth_pa
 
     new_entry = new[0]
-    # New pa's parent should have an id equal to second_entry, other than that it should
-    # be the same as new_pa's parent
-    assert new_entry["parent"].get("id") == second_entry.get("id")
-    del new_entry["parent"]["id"]
+    # New pa's parent should have a documentId equal to second_entry, other than that it
+    # should be the same as new_pa's parent
+    assert new_entry["parent"].get("documentId") == second_entry.get("documentId")
+    del new_entry["parent"]["documentId"]
     assert new_entry["parent"] == new_pa["parent"]
-    assert new_entry.get("id") is None
+    assert new_entry.get("documentId") is None
 
-    # Verify that both expected deleted PA IDs (300, 400) were identified.
-    assert 300 in deleted
-    assert 400 in deleted
+    # Verify that both expected deleted PA documentIds were identified.
+    assert "doc-300" in deleted
+    assert "doc-400" in deleted
 
     changed_string = deepcopy(changed_pa)
-    changed_string["id"] = second_entry["id"]
+    changed_string["documentId"] = second_entry["documentId"]
     changed_string["area"] = round(changed_string["area"], 2)
 
     expected_changed_parent = deepcopy(changed_parent)
-    expected_changed_parent["id"] = parent["id"]
+    expected_changed_parent["documentId"] = parent["documentId"]
     expected_changed_parent["area"] = round(expected_changed_parent["area"], 2)
 
     expected_changed_child = deepcopy(changed_child)
-    expected_changed_child["id"] = child["id"]
+    expected_changed_child["documentId"] = child["documentId"]
     expected_changed_child["area"] = round(expected_changed_child["area"], 2)
 
     assert changed_string in changed

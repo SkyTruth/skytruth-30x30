@@ -59,15 +59,13 @@ const PopupContainer: FCWithMessages = () => {
           data
             .filter(
               ({
-                attributes: {
-                  config: {
-                    // @ts-expect-error will check later
-                    source: { id: sourceId },
-                  },
+                config: {
+                  // @ts-expect-error will check later
+                  source: { id: sourceId },
                 },
               }) => availableSources?.includes(sourceId)
             )
-            .map(({ attributes: { title: label, slug: value } }) => ({
+            .map(({ title: label, slug: value }) => ({
               label,
               value,
             }))

@@ -68,15 +68,15 @@ class Strapi:
           Parameters
         -----------
             pas: list[dict]
-                list of Pas to either create or update, if the dict has an id field
-                the pa with that databgase id will be updated with the new data, otherwise
-                a new pa will be created.
+                list of PAs to either create or update. If the dict has a ``documentId``
+                field the PA with that Strapi documentId will be updated with the new data,
+                otherwise a new PA will be created.
 
                 Sample data, required fields marked with *
 
             [
                 {
-                    id: 33,
+                    "documentId": "abc123xyz",
                     "name": "aba", *
                     "area": 54819.04, *
                     "year": 2022,
@@ -123,6 +123,8 @@ class Strapi:
                 timeout=2600,  # Wait 60 minutes
                 json={"data": pas},
             )
+            response.raise_for_status()
+
             return response.json()
         except Exception as excep:
             self.logger.error(
@@ -133,15 +135,15 @@ class Strapi:
             )
             raise excep
 
-    def delete_pas(self, pas: list[int]) -> dict:
+    def delete_pas(self, pas: list[str]) -> dict:
         """
         Bulk delete existing PAs
 
         Parameters
         -----------
-            pas: list[int]
-                list of PA database ids to be deleted,
-                relational fields will also be deleted
+            pas: list[str]
+                list of Strapi documentId strings to be deleted; relational fields
+                will also be deleted.
         """
         try:
             response = requests.patch(

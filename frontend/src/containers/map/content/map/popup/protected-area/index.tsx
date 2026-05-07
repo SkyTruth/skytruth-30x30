@@ -45,8 +45,8 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
     {
       query: {
         select: ({ data }) => ({
-          source: (data[0].attributes as LayerTyped).config?.source,
-          click: (data[0].attributes as LayerTyped)?.interaction_config?.events.find(
+          source: (data[0] as LayerTyped).config?.source,
+          click: (data[0] as LayerTyped)?.interaction_config?.events.find(
             (ev) => ev.type === 'click'
           ),
         }),
@@ -119,7 +119,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
   if (!DATA) return null;
 
   const globalCoveragePercentage =
-    (DATA.GIS_AREA / Number(locationQuery.data?.attributes?.total_marine_area)) * 100;
+    (DATA.GIS_AREA / Number(locationQuery.data?.total_marine_area)) * 100;
 
   const classNameByMPAType = cn({
     'text-green': DATA?.PA_DEF === '1',
