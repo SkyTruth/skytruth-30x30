@@ -1,13 +1,14 @@
 import geopandas as gpd
+
 from src.core.processors import mask_mpatlas_protection_level
 
 
 def test_mask_mpatlas_protection_level():
     """
-    Test the mask_mpatlas_protection_level function with various 
+    Test the mask_mpatlas_protection_level function with various
     combinations of establishment_stage and protection_mpaguide_level values
-    
-    mask_mpatlas_protection_level should replace protection_mpaguide_level with "unknown" for rows 
+
+    mask_mpatlas_protection_level should replace protection_mpaguide_level with "unknown" for rows
     where establishment_stage is not "actively managed" or "implemented"
     """
     gdf = gpd.GeoDataFrame(
@@ -26,7 +27,7 @@ def test_mask_mpatlas_protection_level():
     )
 
     out = mask_mpatlas_protection_level(gdf)
-    
+
     # Protection_mpaguide_level should be set to unknown if establishment stage is not actively managed or implemented
     assert out.iloc[0]["protection_mpaguide_level"] == "high"
     assert out.iloc[1]["protection_mpaguide_level"] == "full"

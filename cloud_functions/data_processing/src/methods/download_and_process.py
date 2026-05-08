@@ -211,7 +211,7 @@ def download_mpatlas(
 
     # Set protection levels to unknown if establishment stage is not actively managed or implemented
     mpa = mask_mpatlas_protection_level(mpa)
-    
+
     # Upload metadata (no geometry)
     if verbose:
         logger.info({"message": f"saving metadata to {meta_file_name}"})
