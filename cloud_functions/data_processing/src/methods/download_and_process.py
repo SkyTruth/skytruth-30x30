@@ -29,6 +29,7 @@ from src.core.commons import (
 from src.core.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
+    ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
     ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     ARCHIVE_RAW_WDPA_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
@@ -37,6 +38,8 @@ from src.core.params import (
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_GLOBAL_API_URL,
+    MPATLAS_GLOBAL_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     MPATLAS_URL,
     PP_API_KEY,
@@ -56,6 +59,7 @@ from src.core.params import (
 from src.core.processors import (
     calculate_area,
     choose_pa_area,
+    mask_mpatlas_protection_level,
     match_old_pa_naming_convantion,
 )
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
@@ -91,6 +95,31 @@ def download_mpatlas_country(
 
     upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+
+
+def download_mpatlas_global(
+    bucket: str = BUCKET,
+    url: str = MPATLAS_GLOBAL_API_URL,
+    current_filename: str = MPATLAS_GLOBAL_FILE_NAME,
+    archive_filename: str = ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
+    verbose: bool = True,
+):
+    response = requests.get(url)
+    response.raise_for_status()
+
+    if verbose:
+        logger.info(
+            {"message": f"saving MPAtlas Global API Data to gs://{bucket}/{current_filename}"}
+        )
+    save_file_bucket(
+        response.content,
+        response.headers.get("Content-Type"),
+        current_filename,
+        bucket,
+        verbose=verbose,
+    )
+
+    duplicate_blob(bucket, current_filename, archive_filename, verbose=True)
 
 
 def download_mpatlas_zone(
@@ -147,6 +176,9 @@ def download_mpatlas(
     mpatlas_country_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
     mpatlas_country_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    mpatlas_global_url: str = MPATLAS_GLOBAL_API_URL,
+    mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME,
+    archive_mpatlas_global_file_name: str = ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
     verbose: bool = True,
     project_id: str = PROJECT,
 ) -> None:
@@ -165,6 +197,15 @@ def download_mpatlas(
             current_filename=mpatlas_country_file_name,
             archive_filename=archive_mpatlas_country_file_name,
             alert_message="failed to download MPAtlas country stats",
+        )
+
+        retry_and_alert(
+            download_mpatlas_global,
+            bucket=bucket,
+            url=mpatlas_global_url,
+            current_filename=mpatlas_global_file_name,
+            archive_filename=archive_mpatlas_global_file_name,
+            alert_message="failed to download MPAtlas global stats",
         )
 
         retry_and_alert(
@@ -207,6 +248,9 @@ def download_mpatlas(
     if verbose:
         logger.info({"message": "calculating MPA bounding box (bbox)"})
     mpa["bbox"] = mpa.geometry.apply(lambda g: g.bounds if g is not None else None)
+
+    # Set protection levels to unknown if establishment stage is not actively managed or implemented
+    mpa = mask_mpatlas_protection_level(mpa)
 
     # Upload metadata (no geometry)
     if verbose:
