@@ -108,17 +108,17 @@ def download_mpatlas_global(
 
     if verbose:
         logger.info(
-            {"message": f"saving MPAtlas Global API Data to gs://{bucket}/{archive_filename}"}
+            {"message": f"saving MPAtlas Global API Data to gs://{bucket}/{current_filename}"}
         )
     save_file_bucket(
         response.content,
         response.headers.get("Content-Type"),
-        archive_filename,
+        current_filename,
         bucket,
         verbose=verbose,
     )
 
-    duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+    duplicate_blob(bucket, current_filename, archive_filename, verbose=True)
 
 
 def download_mpatlas_zone(
