@@ -398,11 +398,9 @@ def convert_poly_to_multi(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     df = df.copy()
     df["geometry"] = df["geometry"].apply(
-        lambda x: MultiPolygon([x])
-        if isinstance(x, Polygon)
-        else x
-        if isinstance(x, MultiPolygon)
-        else x
+        lambda x: (
+            MultiPolygon([x]) if isinstance(x, Polygon) else x if isinstance(x, MultiPolygon) else x
+        )
     )
     return df
 
@@ -660,5 +658,19 @@ def add_translations(
         left_on=gdf_field,
         right_on=translation_field,
         how="left",
+    )
+    return gdf
+
+
+def mask_mpatlas_protection_level(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """
+    Mask MPAtlas protection levels: set to unknown if establishment stage is not actively
+    managed or implemented
+    """
+    gdf = gdf.copy()
+    gdf["protection_mpaguide_level"] = np.where(
+        gdf["establishment_stage"].isin(["actively managed", "implemented"]),
+        gdf["protection_mpaguide_level"],
+        "unknown",
     )
     return gdf

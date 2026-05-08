@@ -6,7 +6,11 @@ export default ({ env }) => {
   // admin.path = '/admin', matching what reaches the container after the
   // LB rewrites /cms/* -> /*. The cookie path is the public-facing path
   // so the browser scopes the session cookie to /cms/admin/*.
-  const cmsUrl = env('CMS_URL');
+  // Always normalise to a trailing-slash form before appending "admin" so
+  // that the result is never "https://domain/cmsadmin" (missing slash) and
+  // never "https://domain/cms//admin" (double slash).
+  const rawCmsUrl = env('CMS_URL');
+  const cmsUrl = rawCmsUrl ? rawCmsUrl.replace(/\/*$/, '/') : null;
   const adminUrl = cmsUrl ? `${cmsUrl}admin` : '/admin';
   const cookiePath = adminUrl.startsWith('http') ? new URL(adminUrl).pathname : adminUrl;
 

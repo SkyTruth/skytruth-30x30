@@ -2055,22 +2055,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@localazy/strapi-plugin@npm:1.1.2":
-  version: 1.1.2
-  resolution: "@localazy/strapi-plugin@npm:1.1.2"
+"@localazy/api-client@npm:^2.1.5":
+  version: 2.1.11
+  resolution: "@localazy/api-client@npm:2.1.11"
   dependencies:
-    shelljs: ^0.8.5
-    ws: ^8.18.0
-  peerDependencies:
-    "@strapi/sdk-plugin": ^5.2.8
-    "@strapi/strapi": ^5.6.0
-    react: ^18.3.1
-    react-dom: ^18.3.1
-    react-router-dom: ^6.28.1
-    styled-components: ^6.1.14
-  bin:
-    strapi-plugin: install/index.mjs
-  checksum: cbcc46f5f10b195f417d519181212165e2fe9b700fde8fbea3fb5fb5fb55aa6d4c85fbaec876c6bad48b0ba6b820d19e61f40280a0e069dbb5e45012c28cbbed
+    "@localazy/languages": ^0.1.11
+    lodash-es: ^4.17.21
+  checksum: 7e5cf4e5a2c3f5c102d1f214b6ca82ed8d9ab7ef97f0b36eade339d5aa3a60ade32aa3d32b67c9872c6c56c7ac36ae55a9b45946becb347d5180e8029d33a06a
   languageName: node
   linkType: hard
 
@@ -3780,12 +3771,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@serverless-app-scaffold/cms@workspace:."
   dependencies:
-    "@localazy/strapi-plugin": 1.1.2
-    "@strapi/plugin-documentation": 5.44.0
-    "@strapi/plugin-users-permissions": 5.44.0
-    "@strapi/strapi": 5.44.0
-    "@types/qs": ^6.15.0
-    patch-package: ^8.0.1
+    "@localazy/strapi-plugin": 0.2.9
+    "@strapi/plugin-documentation": 4.14.5
+    "@strapi/plugin-i18n": 4.14.5
+    "@strapi/plugin-users-permissions": 4.14.5
+    "@strapi/strapi": 4.14.5
     pg: 8.8.0
     qs: ^6.15.0
     react: ^18.0.0

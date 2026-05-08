@@ -6,7 +6,7 @@ This API is a single source for open conservation data — terrestrial and marin
 
 ## v2 release
 
-The v2 API went live on **May 6, 2026**. If you integrated against the API prior to that date, refer to the previously published documentation for the v1 contract and migration guidance — this document only describes v2.
+The v2 API went live on **May 6, 2026**. If you integrated against the API prior to that date, the response contract has changed. Please refer to the previously published documentation for the v1 contract and migration guidance — this document only describes v2.
 
 ## Base URL
 
