@@ -154,16 +154,16 @@ def test_wrappers_call_pipeline_with_expected_config(
 def test_mpatlas_process():
     gdf = gpd.GeoDataFrame(
         {
-            "designation": ["MPA", "MPA", "MPA"],
-            "establishment_stage": ["implemented", "implemented", "implemented"],
-            "country": ["ABNJ", "ABNJ", "ABNJ"],
-            "zone_id": ["1", "2", "3"],
-            "protection_mpaguide_level": ["high", "full", "low"],
-            "name": ["A", "B", "C"],
-            "wdpa_id": ["1", "2", "3"],
-            "year": ["2017", "2018", "2019"],
+            "designation": ["MPA", "MPA", "MPA", "MPA"],
+            "establishment_stage": ["actively managed", "implemented", "designated", "proposed/committed"],
+            "country": ["ABNJ", "ABNJ", "ABNJ", "ABNJ"],
+            "zone_id": ["1", "2", "3", "4"],
+            "protection_mpaguide_level": ["high", "full", "low", "high"],
+            "name": ["A", "B", "C", "D"],
+            "wdpa_id": ["1", "2", "3", "4"],
+            "year": ["2017", "2018", "2019", "2020"],
         },
-        geometry=gpd.GeoSeries.from_wkt(["POINT (0 0)", "POINT (1 1)", "POINT (2 2)"]),
+        geometry=gpd.GeoSeries.from_wkt(["POINT (0 0)", "POINT (1 1)", "POINT (2 2)", "POINT (3 3)"]),
         crs="EPSG:4326",
     )
 
@@ -184,6 +184,12 @@ def test_mpatlas_process():
     assert out.iloc[0]["protecti_1"] == "fully or highly"
     assert out.iloc[1]["protecti_1"] == "fully or highly"
     assert out.iloc[2]["protecti_1"] == "less or unknown"
+    assert out.iloc[3]["protecti_1"] == "less or unknown"
+    # Protection_mpaguide_level should be set to unknown if establishment stage is not actively managed or implemented
+    assert out.iloc[0]["protection"] == "high"
+    assert out.iloc[1]["protection"] == "full"
+    assert out.iloc[2]["protection"] == "unknown"
+    assert out.iloc[3]["protection"] == "unknown"
     assert set(out.columns) == expected
 
 
