@@ -18,43 +18,44 @@
   "attributes": {
     "title": {
       "type": "string",
-      "required": true,
       "pluginOptions": {
         "i18n": {
           "localized": true
         }
-      }
+      },
+      "required": true
     },
     "type": {
       "type": "enumeration",
+      "pluginOptions": {
+        "i18n": {
+          "localized": false
+        }
+      },
       "enum": [
         "mapbox",
         "deckgl",
-        "carto"
-      ],
-      "pluginOptions": {
-        "i18n": {
-          "localized": false
-        }
-      }
+        "carto",
+        "pmtiles"
+      ]
     },
     "config": {
       "type": "json",
-      "required": true,
       "pluginOptions": {
         "i18n": {
           "localized": false
         }
-      }
+      },
+      "required": true
     },
     "params_config": {
       "type": "json",
-      "required": true,
       "pluginOptions": {
         "i18n": {
           "localized": false
         }
-      }
+      },
+      "required": true
     },
     "interaction_config": {
       "type": "json",
@@ -66,13 +67,13 @@
     },
     "metadata": {
       "type": "component",
-      "repeatable": false,
-      "component": "documentation.metadata",
       "pluginOptions": {
         "i18n": {
           "localized": true
         }
-      }
+      },
+      "component": "documentation.metadata",
+      "repeatable": false
     },
     "dataset": {
       "type": "relation",
@@ -80,23 +81,22 @@
       "target": "api::dataset.dataset"
     },
     "legend_config": {
-      "displayName": "legend",
       "type": "component",
-      "repeatable": false,
       "pluginOptions": {
         "i18n": {
           "localized": true
         }
       },
-      "component": "legend.legend"
+      "component": "legend.legend",
+      "repeatable": false
     },
     "default": {
+      "type": "boolean",
       "pluginOptions": {
         "i18n": {
           "localized": false
         }
       },
-      "type": "boolean",
       "default": false
     },
     "environment": {
@@ -105,12 +105,12 @@
       "target": "api::environment.environment"
     },
     "slug": {
+      "type": "string",
       "pluginOptions": {
         "i18n": {
           "localized": true
         }
       },
-      "type": "string",
       "required": true
     }
   }

@@ -6157,6 +6157,7 @@ export const LayerDatasetLayersItemType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
+  pmtiles: 'pmtiles',
 } as const;
 
 export type LayerDatasetLayersItemId = string | number;
@@ -6170,6 +6171,7 @@ export const LayerType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
+  pmtiles: 'pmtiles',
 } as const;
 
 export type LayerId = string | number;
@@ -6207,6 +6209,7 @@ export const LayerRequestDataType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
+  pmtiles: 'pmtiles',
 } as const;
 
 export type LayerRequestData = {
@@ -9245,6 +9248,7 @@ export const DatasetLayersItemType = {
   mapbox: 'mapbox',
   deckgl: 'deckgl',
   carto: 'carto',
+  pmtiles: 'pmtiles',
 } as const;
 
 export type DatasetLayersItemId = string | number;
