@@ -1,4 +1,5 @@
 export default [
+  'global::normalize-path',
   'strapi::logger',
   'strapi::errors',
   'strapi::security',

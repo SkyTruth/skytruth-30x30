@@ -36,6 +36,11 @@ COPY .env \
 
 RUN yarn install
 
+# Strapi V5 computes STRAPI_ADMIN_BACKEND_URL from server.url at build time.
+# Remove any manually-set value so it is never compiled into the JS bundle
+# with the wrong value (e.g. a full URL with trailing slash from a V4 secret).
+RUN sed -i '/^STRAPI_ADMIN_BACKEND_URL=/d' .env || true
+
 RUN yarn build
 
 # Copy only the built files into the final image
