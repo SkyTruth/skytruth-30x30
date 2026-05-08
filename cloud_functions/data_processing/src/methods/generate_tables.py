@@ -460,11 +460,26 @@ def generate_marine_protection_level_stats_table(
     def get_group_stats(
         df, loc, relations, mpatlas_global, protection_level="fully-highly-protected"
     ):
+        protection_level_dict = {
+            "full": ["mpaguide_total_if_km2"],
+            "high": ["mpaguide_total_ih_km2"],
+            "fully-highly-protected": ["mpaguide_total_if_km2", "mpaguide_total_ih_km2"],
+            "light": ["mpaguide_total_il_km2"],
+            "minimal": ["mpaguide_total_im_km2"],
+            "unknown": ["mpaguide_total_iu_km2", "mpaguide_total_du_km2", "mpaguide_total_pc_km2"],
+            # includes lightly, minimally, unknown, and proposed but not implemented MPAs
+            "less-protected-unknown": [
+                "mpaguide_total_il_km2",
+                "mpaguide_total_im_km2",
+                "mpaguide_total_iu_km2",
+                "mpaguide_total_du_km2",
+                "mpaguide_total_pc_km2",
+            ],
+        }
         if loc == "GLOB":
             total_area = mpatlas_global["total_km2"].iloc[0]
             total_protected_area = (
-                mpatlas_global["mpaguide_total_if_km2"].iloc[0]
-                + mpatlas_global["mpaguide_total_ih_km2"].iloc[0]
+                mpatlas_global[protection_level_dict[protection_level]].iloc[0].sum()
             )
             return {
                 "location": loc,

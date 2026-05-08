@@ -36,7 +36,7 @@ def test_mask_mpatlas_protection_level():
 
     out = mask_mpatlas_protection_level(gdf)
 
-    # Protection_mpaguide_level should be set to unknown if establishment stage is not actively 
+    # Protection_mpaguide_level should be set to unknown if establishment stage is not actively
     # managed or implemented
     assert out.iloc[0]["protection_mpaguide_level"] == "high"
     assert out.iloc[1]["protection_mpaguide_level"] == "full"
