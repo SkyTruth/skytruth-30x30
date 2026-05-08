@@ -24,6 +24,7 @@ from src.core.params import (
     CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_GLOBAL_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -179,6 +180,19 @@ def load_mpatlas_country(
     df["wdpa_marine_km2"] = df["wdpa_marine_km2"].apply(pd.to_numeric, errors="coerce")
 
     return df
+
+
+def load_mpatlas_global(
+    bucket: str = BUCKET, mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME
+):
+    mpatlas_global = read_json_from_gcs(bucket, mpatlas_global_file_name)
+
+    row = {k: v for k, v in mpatlas_global.items() if not isinstance(v, (dict, list))}
+    for entry in mpatlas_global["mpaguide_status"]["total"]:
+        key = entry["key"]
+        row[f"mpaguide_total_{key}_km2"] = entry["km2"]
+        row[f"mpaguide_total_{key}_percent"] = entry["percent"]
+    return pd.DataFrame([row])
 
 
 def load_wdpa_global(

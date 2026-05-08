@@ -662,7 +662,8 @@ def add_translations(
 
 def mask_mpatlas_protection_level(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
-    Mask MPAtlas protection levels: set to unknown if establishment stage is not actively managed or implemented
+    Mask MPAtlas protection levels: set to unknown if establishment stage is not actively
+    managed or implemented
     """
     gdf = gdf.copy()
     gdf["protection_mpaguide_level"] = np.where(

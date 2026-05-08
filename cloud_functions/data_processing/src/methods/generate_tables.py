@@ -7,6 +7,7 @@ from google.cloud import storage
 from src.core.commons import (
     load_marine_regions,
     load_mpatlas_country,
+    load_mpatlas_global,
     load_regions,
     load_wdpa_global,
 )
@@ -23,6 +24,7 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    MPATLAS_GLOBAL_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROJECT,
@@ -448,23 +450,49 @@ def generate_protection_coverage_stats_table(
 
 def generate_marine_protection_level_stats_table(
     mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     high_seas_params: dict = HIGH_SEAS_PARAMS,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    def get_group_stats(df, loc, relations, protection_level="fully-highly-protected"):
+    def get_group_stats(
+        df, loc, relations, mpatlas_global, protection_level="fully-highly-protected"
+    ):
+        protection_level_dict = {
+            "full": ["mpaguide_total_if_km2"],
+            "high": ["mpaguide_total_ih_km2"],
+            "fully-highly-protected": ["mpaguide_total_if_km2", "mpaguide_total_ih_km2"],
+            "light": ["mpaguide_total_il_km2"],
+            "minimal": ["mpaguide_total_im_km2"],
+            "unknown": ["mpaguide_total_iu_km2", "mpaguide_total_du_km2", "mpaguide_total_pc_km2"],
+            # includes lightly, minimally, unknown, and proposed but not implemented MPAs
+            "less-protected-unknown": [
+                "mpaguide_total_il_km2",
+                "mpaguide_total_im_km2",
+                "mpaguide_total_iu_km2",
+                "mpaguide_total_du_km2",
+                "mpaguide_total_pc_km2",
+            ],
+        }
         if loc == "GLOB":
-            df_group = df
-            total_area = GLOBAL_MARINE_AREA_KM2
-        else:
-            df_group = df[df["location"].isin(relations[loc])]
-            total_area = df_group["total_area"].sum()
+            total_area = mpatlas_global["total_km2"].iloc[0]
+            total_protected_area = (
+                mpatlas_global[protection_level_dict[protection_level]].iloc[0].sum()
+            )
+            return {
+                "location": loc,
+                "total_area": total_area,
+                "area": total_protected_area,
+                "mpaa_protection_level": protection_level,
+                "percentage": 100 * total_protected_area / total_area,
+            }
+        df_group = df[df["location"].isin(relations[loc])]
+        total_area = df_group["total_area"].sum()
 
         if len(df_group) > 0:
             total_protected_area = df_group["protected_area"].sum()
-
             return {
                 "location": loc,
                 "total_area": total_area,
@@ -488,6 +516,15 @@ def generate_marine_protection_level_stats_table(
             }
         )
     mpatlas_country = load_mpatlas_country(bucket, mpatlas_country_level_file_name)
+
+    # Load MPAtlas global statistics
+    if verbose:
+        logger.info(
+            {
+                "message": f"loading MPAtlas global stats from gs://{bucket}/{mpatlas_global_file_name}"
+            }
+        )
+    mpatlas_global = load_mpatlas_global(bucket, mpatlas_global_file_name)
 
     if verbose:
         logger.info({"message": "loading high seas region to get area"})
@@ -532,6 +569,7 @@ def generate_marine_protection_level_stats_table(
                 mpa_cl_mps,
                 loc,
                 combined_regions,
+                mpatlas_global,
                 protection_level=protection_level,
             )
         )
