@@ -96,7 +96,7 @@ export const useGetMpaaEstablishmentStages = <
 };
 
 export const getMpaaEstablishmentStagesId = (
-  id: string,
+  id: number,
   params?: GetMpaaEstablishmentStagesIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -108,7 +108,7 @@ export const getMpaaEstablishmentStagesId = (
 };
 
 export const getGetMpaaEstablishmentStagesIdQueryKey = (
-  id: string,
+  id: number,
   params?: GetMpaaEstablishmentStagesIdParams
 ) => {
   return [`/mpaa-establishment-stages/${id}`, ...(params ? [params] : [])] as const;
@@ -118,7 +118,7 @@ export const getGetMpaaEstablishmentStagesIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getMpaaEstablishmentStagesId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetMpaaEstablishmentStagesIdParams,
   options?: {
     query?: UseQueryOptions<
@@ -153,7 +153,7 @@ export const useGetMpaaEstablishmentStagesId = <
   TData = Awaited<ReturnType<typeof getMpaaEstablishmentStagesId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetMpaaEstablishmentStagesIdParams,
   options?: {
     query?: UseQueryOptions<

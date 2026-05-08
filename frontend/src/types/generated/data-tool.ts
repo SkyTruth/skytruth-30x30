@@ -157,7 +157,7 @@ export const usePostDataTools = <TError = ErrorType<Error>, TContext = unknown>(
   return useMutation(mutationOptions);
 };
 export const getDataToolsId = (
-  id: string,
+  id: number,
   params?: GetDataToolsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -168,7 +168,7 @@ export const getDataToolsId = (
   );
 };
 
-export const getGetDataToolsIdQueryKey = (id: string, params?: GetDataToolsIdParams) => {
+export const getGetDataToolsIdQueryKey = (id: number, params?: GetDataToolsIdParams) => {
   return [`/data-tools/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -176,7 +176,7 @@ export const getGetDataToolsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getDataToolsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetDataToolsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataToolsId>>, TError, TData>;
@@ -204,7 +204,7 @@ export const useGetDataToolsId = <
   TData = Awaited<ReturnType<typeof getDataToolsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetDataToolsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataToolsId>>, TError, TData>;
@@ -221,7 +221,7 @@ export const useGetDataToolsId = <
 };
 
 export const putDataToolsId = (
-  id: string,
+  id: number,
   dataToolRequest: BodyType<DataToolRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -243,21 +243,21 @@ export const getPutDataToolsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataToolsId>>,
     TError,
-    { id: string; data: BodyType<DataToolRequest> },
+    { id: number; data: BodyType<DataToolRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putDataToolsId>>,
   TError,
-  { id: string; data: BodyType<DataToolRequest> },
+  { id: number; data: BodyType<DataToolRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putDataToolsId>>,
-    { id: string; data: BodyType<DataToolRequest> }
+    { id: number; data: BodyType<DataToolRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -275,7 +275,7 @@ export const usePutDataToolsId = <TError = ErrorType<Error>, TContext = unknown>
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataToolsId>>,
     TError,
-    { id: string; data: BodyType<DataToolRequest> },
+    { id: number; data: BodyType<DataToolRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -284,7 +284,7 @@ export const usePutDataToolsId = <TError = ErrorType<Error>, TContext = unknown>
 
   return useMutation(mutationOptions);
 };
-export const deleteDataToolsId = (id: string, options?: SecondParameter<typeof API>) => {
+export const deleteDataToolsId = (id: number, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/data-tools/${id}`, method: 'delete' }, options);
 };
 
@@ -295,21 +295,21 @@ export const getDeleteDataToolsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDataToolsId>>,
     TError,
-    { id: string },
+    { id: number },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteDataToolsId>>,
   TError,
-  { id: string },
+  { id: number },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteDataToolsId>>,
-    { id: string }
+    { id: number }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -329,7 +329,7 @@ export const useDeleteDataToolsId = <TError = ErrorType<Error>, TContext = unkno
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDataToolsId>>,
     TError,
-    { id: string },
+    { id: number },
     TContext
   >;
   request?: SecondParameter<typeof API>;

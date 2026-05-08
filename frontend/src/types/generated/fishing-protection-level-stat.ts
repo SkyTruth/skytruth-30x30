@@ -176,7 +176,7 @@ export const usePostFishingProtectionLevelStats = <
   return useMutation(mutationOptions);
 };
 export const getFishingProtectionLevelStatsId = (
-  id: string,
+  id: number,
   params?: GetFishingProtectionLevelStatsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -188,7 +188,7 @@ export const getFishingProtectionLevelStatsId = (
 };
 
 export const getGetFishingProtectionLevelStatsIdQueryKey = (
-  id: string,
+  id: number,
   params?: GetFishingProtectionLevelStatsIdParams
 ) => {
   return [`/fishing-protection-level-stats/${id}`, ...(params ? [params] : [])] as const;
@@ -198,7 +198,7 @@ export const getGetFishingProtectionLevelStatsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getFishingProtectionLevelStatsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetFishingProtectionLevelStatsIdParams,
   options?: {
     query?: UseQueryOptions<
@@ -234,7 +234,7 @@ export const useGetFishingProtectionLevelStatsId = <
   TData = Awaited<ReturnType<typeof getFishingProtectionLevelStatsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetFishingProtectionLevelStatsIdParams,
   options?: {
     query?: UseQueryOptions<
@@ -255,7 +255,7 @@ export const useGetFishingProtectionLevelStatsId = <
 };
 
 export const putFishingProtectionLevelStatsId = (
-  id: string,
+  id: number,
   fishingProtectionLevelStatRequest: BodyType<FishingProtectionLevelStatRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -277,21 +277,21 @@ export const getPutFishingProtectionLevelStatsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putFishingProtectionLevelStatsId>>,
     TError,
-    { id: string; data: BodyType<FishingProtectionLevelStatRequest> },
+    { id: number; data: BodyType<FishingProtectionLevelStatRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putFishingProtectionLevelStatsId>>,
   TError,
-  { id: string; data: BodyType<FishingProtectionLevelStatRequest> },
+  { id: number; data: BodyType<FishingProtectionLevelStatRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putFishingProtectionLevelStatsId>>,
-    { id: string; data: BodyType<FishingProtectionLevelStatRequest> }
+    { id: number; data: BodyType<FishingProtectionLevelStatRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -315,7 +315,7 @@ export const usePutFishingProtectionLevelStatsId = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putFishingProtectionLevelStatsId>>,
     TError,
-    { id: string; data: BodyType<FishingProtectionLevelStatRequest> },
+    { id: number; data: BodyType<FishingProtectionLevelStatRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;

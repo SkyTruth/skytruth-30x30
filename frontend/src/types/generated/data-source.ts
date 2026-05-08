@@ -159,7 +159,7 @@ export const usePostDataSources = <TError = ErrorType<Error>, TContext = unknown
   return useMutation(mutationOptions);
 };
 export const getDataSourcesId = (
-  id: string,
+  id: number,
   params?: GetDataSourcesIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -170,7 +170,7 @@ export const getDataSourcesId = (
   );
 };
 
-export const getGetDataSourcesIdQueryKey = (id: string, params?: GetDataSourcesIdParams) => {
+export const getGetDataSourcesIdQueryKey = (id: number, params?: GetDataSourcesIdParams) => {
   return [`/data-sources/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -178,7 +178,7 @@ export const getGetDataSourcesIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getDataSourcesId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetDataSourcesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataSourcesId>>, TError, TData>;
@@ -206,7 +206,7 @@ export const useGetDataSourcesId = <
   TData = Awaited<ReturnType<typeof getDataSourcesId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetDataSourcesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataSourcesId>>, TError, TData>;
@@ -223,7 +223,7 @@ export const useGetDataSourcesId = <
 };
 
 export const putDataSourcesId = (
-  id: string,
+  id: number,
   dataSourceRequest: BodyType<DataSourceRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -245,21 +245,21 @@ export const getPutDataSourcesIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataSourcesId>>,
     TError,
-    { id: string; data: BodyType<DataSourceRequest> },
+    { id: number; data: BodyType<DataSourceRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putDataSourcesId>>,
   TError,
-  { id: string; data: BodyType<DataSourceRequest> },
+  { id: number; data: BodyType<DataSourceRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putDataSourcesId>>,
-    { id: string; data: BodyType<DataSourceRequest> }
+    { id: number; data: BodyType<DataSourceRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -279,7 +279,7 @@ export const usePutDataSourcesId = <TError = ErrorType<Error>, TContext = unknow
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataSourcesId>>,
     TError,
-    { id: string; data: BodyType<DataSourceRequest> },
+    { id: number; data: BodyType<DataSourceRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;

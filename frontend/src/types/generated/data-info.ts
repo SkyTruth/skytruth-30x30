@@ -154,7 +154,7 @@ export const usePostDataInfos = <TError = ErrorType<Error>, TContext = unknown>(
   return useMutation(mutationOptions);
 };
 export const getDataInfosId = (
-  id: string,
+  id: number,
   params?: GetDataInfosIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -165,7 +165,7 @@ export const getDataInfosId = (
   );
 };
 
-export const getGetDataInfosIdQueryKey = (id: string, params?: GetDataInfosIdParams) => {
+export const getGetDataInfosIdQueryKey = (id: number, params?: GetDataInfosIdParams) => {
   return [`/data-infos/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -173,7 +173,7 @@ export const getGetDataInfosIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getDataInfosId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetDataInfosIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataInfosId>>, TError, TData>;
@@ -201,7 +201,7 @@ export const useGetDataInfosId = <
   TData = Awaited<ReturnType<typeof getDataInfosId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetDataInfosIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataInfosId>>, TError, TData>;
@@ -218,7 +218,7 @@ export const useGetDataInfosId = <
 };
 
 export const putDataInfosId = (
-  id: string,
+  id: number,
   dataInfoRequest: BodyType<DataInfoRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -240,21 +240,21 @@ export const getPutDataInfosIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataInfosId>>,
     TError,
-    { id: string; data: BodyType<DataInfoRequest> },
+    { id: number; data: BodyType<DataInfoRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putDataInfosId>>,
   TError,
-  { id: string; data: BodyType<DataInfoRequest> },
+  { id: number; data: BodyType<DataInfoRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putDataInfosId>>,
-    { id: string; data: BodyType<DataInfoRequest> }
+    { id: number; data: BodyType<DataInfoRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -272,7 +272,7 @@ export const usePutDataInfosId = <TError = ErrorType<Error>, TContext = unknown>
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataInfosId>>,
     TError,
-    { id: string; data: BodyType<DataInfoRequest> },
+    { id: number; data: BodyType<DataInfoRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;

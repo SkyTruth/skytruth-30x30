@@ -94,7 +94,7 @@ export const useGetMpaaProtectionLevels = <
 };
 
 export const getMpaaProtectionLevelsId = (
-  id: string,
+  id: number,
   params?: GetMpaaProtectionLevelsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -106,7 +106,7 @@ export const getMpaaProtectionLevelsId = (
 };
 
 export const getGetMpaaProtectionLevelsIdQueryKey = (
-  id: string,
+  id: number,
   params?: GetMpaaProtectionLevelsIdParams
 ) => {
   return [`/mpaa-protection-levels/${id}`, ...(params ? [params] : [])] as const;
@@ -116,7 +116,7 @@ export const getGetMpaaProtectionLevelsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getMpaaProtectionLevelsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetMpaaProtectionLevelsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getMpaaProtectionLevelsId>>, TError, TData>;
@@ -147,7 +147,7 @@ export const useGetMpaaProtectionLevelsId = <
   TData = Awaited<ReturnType<typeof getMpaaProtectionLevelsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetMpaaProtectionLevelsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getMpaaProtectionLevelsId>>, TError, TData>;

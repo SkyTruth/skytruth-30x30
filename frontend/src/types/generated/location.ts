@@ -154,7 +154,7 @@ export const usePostLocations = <TError = ErrorType<Error>, TContext = unknown>(
   return useMutation(mutationOptions);
 };
 export const getLocationsId = (
-  id: string,
+  id: number,
   params?: GetLocationsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -162,7 +162,7 @@ export const getLocationsId = (
   return API<LocationResponse>({ url: `/locations/${id}`, method: 'get', params, signal }, options);
 };
 
-export const getGetLocationsIdQueryKey = (id: string, params?: GetLocationsIdParams) => {
+export const getGetLocationsIdQueryKey = (id: number, params?: GetLocationsIdParams) => {
   return [`/locations/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -170,7 +170,7 @@ export const getGetLocationsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getLocationsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetLocationsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getLocationsId>>, TError, TData>;
@@ -198,7 +198,7 @@ export const useGetLocationsId = <
   TData = Awaited<ReturnType<typeof getLocationsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetLocationsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getLocationsId>>, TError, TData>;
@@ -215,7 +215,7 @@ export const useGetLocationsId = <
 };
 
 export const putLocationsId = (
-  id: string,
+  id: number,
   locationRequest: BodyType<LocationRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -237,21 +237,21 @@ export const getPutLocationsIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putLocationsId>>,
     TError,
-    { id: string; data: BodyType<LocationRequest> },
+    { id: number; data: BodyType<LocationRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putLocationsId>>,
   TError,
-  { id: string; data: BodyType<LocationRequest> },
+  { id: number; data: BodyType<LocationRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putLocationsId>>,
-    { id: string; data: BodyType<LocationRequest> }
+    { id: number; data: BodyType<LocationRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -269,7 +269,7 @@ export const usePutLocationsId = <TError = ErrorType<Error>, TContext = unknown>
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putLocationsId>>,
     TError,
-    { id: string; data: BodyType<LocationRequest> },
+    { id: number; data: BodyType<LocationRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;

@@ -145,7 +145,7 @@ export const usePostPas = <TError = ErrorType<Error>, TContext = unknown>(option
   return useMutation(mutationOptions);
 };
 export const getPasId = (
-  id: string,
+  id: number,
   params?: GetPasIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -153,7 +153,7 @@ export const getPasId = (
   return API<PaResponse>({ url: `/pas/${id}`, method: 'get', params, signal }, options);
 };
 
-export const getGetPasIdQueryKey = (id: string, params?: GetPasIdParams) => {
+export const getGetPasIdQueryKey = (id: number, params?: GetPasIdParams) => {
   return [`/pas/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -161,7 +161,7 @@ export const getGetPasIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getPasId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetPasIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getPasId>>, TError, TData>;
@@ -189,7 +189,7 @@ export const useGetPasId = <
   TData = Awaited<ReturnType<typeof getPasId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetPasIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getPasId>>, TError, TData>;
@@ -206,7 +206,7 @@ export const useGetPasId = <
 };
 
 export const putPasId = (
-  id: string,
+  id: number,
   paRequest: BodyType<PaRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -228,21 +228,21 @@ export const getPutPasIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putPasId>>,
     TError,
-    { id: string; data: BodyType<PaRequest> },
+    { id: number; data: BodyType<PaRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putPasId>>,
   TError,
-  { id: string; data: BodyType<PaRequest> },
+  { id: number; data: BodyType<PaRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putPasId>>,
-    { id: string; data: BodyType<PaRequest> }
+    { id: number; data: BodyType<PaRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -260,7 +260,7 @@ export const usePutPasId = <TError = ErrorType<Error>, TContext = unknown>(optio
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putPasId>>,
     TError,
-    { id: string; data: BodyType<PaRequest> },
+    { id: number; data: BodyType<PaRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -269,7 +269,7 @@ export const usePutPasId = <TError = ErrorType<Error>, TContext = unknown>(optio
 
   return useMutation(mutationOptions);
 };
-export const deletePasId = (id: string, options?: SecondParameter<typeof API>) => {
+export const deletePasId = (id: number, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/pas/${id}`, method: 'delete' }, options);
 };
 
@@ -280,19 +280,19 @@ export const getDeletePasIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deletePasId>>,
     TError,
-    { id: string },
+    { id: number },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deletePasId>>,
   TError,
-  { id: string },
+  { id: number },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePasId>>, { id: string }> = (
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePasId>>, { id: number }> = (
     props
   ) => {
     const { id } = props ?? {};
@@ -311,7 +311,7 @@ export const useDeletePasId = <TError = ErrorType<Error>, TContext = unknown>(op
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deletePasId>>,
     TError,
-    { id: string },
+    { id: number },
     TContext
   >;
   request?: SecondParameter<typeof API>;

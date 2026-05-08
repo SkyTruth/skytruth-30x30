@@ -88,7 +88,7 @@ export const useGetHabitats = <
 };
 
 export const getHabitatsId = (
-  id: string,
+  id: number,
   params?: GetHabitatsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -96,7 +96,7 @@ export const getHabitatsId = (
   return API<HabitatResponse>({ url: `/habitats/${id}`, method: 'get', params, signal }, options);
 };
 
-export const getGetHabitatsIdQueryKey = (id: string, params?: GetHabitatsIdParams) => {
+export const getGetHabitatsIdQueryKey = (id: number, params?: GetHabitatsIdParams) => {
   return [`/habitats/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -104,7 +104,7 @@ export const getGetHabitatsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getHabitatsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetHabitatsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getHabitatsId>>, TError, TData>;
@@ -132,7 +132,7 @@ export const useGetHabitatsId = <
   TData = Awaited<ReturnType<typeof getHabitatsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetHabitatsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getHabitatsId>>, TError, TData>;

@@ -165,7 +165,7 @@ export const usePostDataToolResourceTypes = <
   return useMutation(mutationOptions);
 };
 export const getDataToolResourceTypesId = (
-  id: string,
+  id: number,
   params?: GetDataToolResourceTypesIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -177,7 +177,7 @@ export const getDataToolResourceTypesId = (
 };
 
 export const getGetDataToolResourceTypesIdQueryKey = (
-  id: string,
+  id: number,
   params?: GetDataToolResourceTypesIdParams
 ) => {
   return [`/data-tool-resource-types/${id}`, ...(params ? [params] : [])] as const;
@@ -187,7 +187,7 @@ export const getGetDataToolResourceTypesIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getDataToolResourceTypesId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetDataToolResourceTypesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataToolResourceTypesId>>, TError, TData>;
@@ -218,7 +218,7 @@ export const useGetDataToolResourceTypesId = <
   TData = Awaited<ReturnType<typeof getDataToolResourceTypesId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetDataToolResourceTypesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataToolResourceTypesId>>, TError, TData>;
@@ -235,7 +235,7 @@ export const useGetDataToolResourceTypesId = <
 };
 
 export const putDataToolResourceTypesId = (
-  id: string,
+  id: number,
   dataToolResourceTypeRequest: BodyType<DataToolResourceTypeRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -257,21 +257,21 @@ export const getPutDataToolResourceTypesIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataToolResourceTypesId>>,
     TError,
-    { id: string; data: BodyType<DataToolResourceTypeRequest> },
+    { id: number; data: BodyType<DataToolResourceTypeRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putDataToolResourceTypesId>>,
   TError,
-  { id: string; data: BodyType<DataToolResourceTypeRequest> },
+  { id: number; data: BodyType<DataToolResourceTypeRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putDataToolResourceTypesId>>,
-    { id: string; data: BodyType<DataToolResourceTypeRequest> }
+    { id: number; data: BodyType<DataToolResourceTypeRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -294,7 +294,7 @@ export const usePutDataToolResourceTypesId = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataToolResourceTypesId>>,
     TError,
-    { id: string; data: BodyType<DataToolResourceTypeRequest> },
+    { id: number; data: BodyType<DataToolResourceTypeRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -304,7 +304,7 @@ export const usePutDataToolResourceTypesId = <
   return useMutation(mutationOptions);
 };
 export const deleteDataToolResourceTypesId = (
-  id: string,
+  id: number,
   options?: SecondParameter<typeof API>
 ) => {
   return API<number>({ url: `/data-tool-resource-types/${id}`, method: 'delete' }, options);
@@ -317,21 +317,21 @@ export const getDeleteDataToolResourceTypesIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDataToolResourceTypesId>>,
     TError,
-    { id: string },
+    { id: number },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteDataToolResourceTypesId>>,
   TError,
-  { id: string },
+  { id: number },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteDataToolResourceTypesId>>,
-    { id: string }
+    { id: number }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -354,7 +354,7 @@ export const useDeleteDataToolResourceTypesId = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDataToolResourceTypesId>>,
     TError,
-    { id: string },
+    { id: number },
     TContext
   >;
   request?: SecondParameter<typeof API>;

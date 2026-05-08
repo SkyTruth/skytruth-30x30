@@ -96,7 +96,7 @@ export const useGetFishingProtectionLevels = <
 };
 
 export const getFishingProtectionLevelsId = (
-  id: string,
+  id: number,
   params?: GetFishingProtectionLevelsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -108,7 +108,7 @@ export const getFishingProtectionLevelsId = (
 };
 
 export const getGetFishingProtectionLevelsIdQueryKey = (
-  id: string,
+  id: number,
   params?: GetFishingProtectionLevelsIdParams
 ) => {
   return [`/fishing-protection-levels/${id}`, ...(params ? [params] : [])] as const;
@@ -118,7 +118,7 @@ export const getGetFishingProtectionLevelsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getFishingProtectionLevelsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetFishingProtectionLevelsIdParams,
   options?: {
     query?: UseQueryOptions<
@@ -153,7 +153,7 @@ export const useGetFishingProtectionLevelsId = <
   TData = Awaited<ReturnType<typeof getFishingProtectionLevelsId>>,
   TError = ErrorType<Error>,
 >(
-  id: string,
+  id: number,
   params?: GetFishingProtectionLevelsIdParams,
   options?: {
     query?: UseQueryOptions<
