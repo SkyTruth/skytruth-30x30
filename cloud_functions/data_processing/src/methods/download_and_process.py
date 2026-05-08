@@ -202,7 +202,6 @@ def download_mpatlas(
         retry_and_alert(
             download_mpatlas_global,
             bucket=bucket,
-            project=project,
             url=mpatlas_global_url,
             current_filename=mpatlas_global_file_name,
             archive_filename=archive_mpatlas_global_file_name,
