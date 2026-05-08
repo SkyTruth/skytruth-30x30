@@ -161,7 +161,7 @@ export const usePostDataToolLanguages = <TError = ErrorType<Error>, TContext = u
   return useMutation(mutationOptions);
 };
 export const getDataToolLanguagesId = (
-  id: number,
+  id: string,
   params?: GetDataToolLanguagesIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -173,7 +173,7 @@ export const getDataToolLanguagesId = (
 };
 
 export const getGetDataToolLanguagesIdQueryKey = (
-  id: number,
+  id: string,
   params?: GetDataToolLanguagesIdParams
 ) => {
   return [`/data-tool-languages/${id}`, ...(params ? [params] : [])] as const;
@@ -183,7 +183,7 @@ export const getGetDataToolLanguagesIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getDataToolLanguagesId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetDataToolLanguagesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataToolLanguagesId>>, TError, TData>;
@@ -213,7 +213,7 @@ export const useGetDataToolLanguagesId = <
   TData = Awaited<ReturnType<typeof getDataToolLanguagesId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetDataToolLanguagesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDataToolLanguagesId>>, TError, TData>;
@@ -230,7 +230,7 @@ export const useGetDataToolLanguagesId = <
 };
 
 export const putDataToolLanguagesId = (
-  id: number,
+  id: string,
   dataToolLanguageRequest: BodyType<DataToolLanguageRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -252,21 +252,21 @@ export const getPutDataToolLanguagesIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataToolLanguagesId>>,
     TError,
-    { id: number; data: BodyType<DataToolLanguageRequest> },
+    { id: string; data: BodyType<DataToolLanguageRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putDataToolLanguagesId>>,
   TError,
-  { id: number; data: BodyType<DataToolLanguageRequest> },
+  { id: string; data: BodyType<DataToolLanguageRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putDataToolLanguagesId>>,
-    { id: number; data: BodyType<DataToolLanguageRequest> }
+    { id: string; data: BodyType<DataToolLanguageRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -286,7 +286,7 @@ export const usePutDataToolLanguagesId = <TError = ErrorType<Error>, TContext = 
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putDataToolLanguagesId>>,
     TError,
-    { id: number; data: BodyType<DataToolLanguageRequest> },
+    { id: string; data: BodyType<DataToolLanguageRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -295,7 +295,7 @@ export const usePutDataToolLanguagesId = <TError = ErrorType<Error>, TContext = 
 
   return useMutation(mutationOptions);
 };
-export const deleteDataToolLanguagesId = (id: number, options?: SecondParameter<typeof API>) => {
+export const deleteDataToolLanguagesId = (id: string, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/data-tool-languages/${id}`, method: 'delete' }, options);
 };
 
@@ -306,21 +306,21 @@ export const getDeleteDataToolLanguagesIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDataToolLanguagesId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteDataToolLanguagesId>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteDataToolLanguagesId>>,
-    { id: number }
+    { id: string }
   > = (props) => {
     const { id } = props ?? {};
 
@@ -343,7 +343,7 @@ export const useDeleteDataToolLanguagesId = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDataToolLanguagesId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;

@@ -154,7 +154,7 @@ export const usePostLayers = <TError = ErrorType<Error>, TContext = unknown>(opt
   return useMutation(mutationOptions);
 };
 export const getLayersId = (
-  id: number,
+  id: string,
   params?: GetLayersIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -162,7 +162,7 @@ export const getLayersId = (
   return API<LayerResponse>({ url: `/layers/${id}`, method: 'get', params, signal }, options);
 };
 
-export const getGetLayersIdQueryKey = (id: number, params?: GetLayersIdParams) => {
+export const getGetLayersIdQueryKey = (id: string, params?: GetLayersIdParams) => {
   return [`/layers/${id}`, ...(params ? [params] : [])] as const;
 };
 
@@ -170,7 +170,7 @@ export const getGetLayersIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getLayersId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetLayersIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getLayersId>>, TError, TData>;
@@ -198,7 +198,7 @@ export const useGetLayersId = <
   TData = Awaited<ReturnType<typeof getLayersId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetLayersIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getLayersId>>, TError, TData>;
@@ -215,7 +215,7 @@ export const useGetLayersId = <
 };
 
 export const putLayersId = (
-  id: number,
+  id: string,
   layerRequest: BodyType<LayerRequest>,
   options?: SecondParameter<typeof API>
 ) => {
@@ -237,21 +237,21 @@ export const getPutLayersIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putLayersId>>,
     TError,
-    { id: number; data: BodyType<LayerRequest> },
+    { id: string; data: BodyType<LayerRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof putLayersId>>,
   TError,
-  { id: number; data: BodyType<LayerRequest> },
+  { id: string; data: BodyType<LayerRequest> },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof putLayersId>>,
-    { id: number; data: BodyType<LayerRequest> }
+    { id: string; data: BodyType<LayerRequest> }
   > = (props) => {
     const { id, data } = props ?? {};
 
@@ -269,7 +269,7 @@ export const usePutLayersId = <TError = ErrorType<Error>, TContext = unknown>(op
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof putLayersId>>,
     TError,
-    { id: number; data: BodyType<LayerRequest> },
+    { id: string; data: BodyType<LayerRequest> },
     TContext
   >;
   request?: SecondParameter<typeof API>;
@@ -278,7 +278,7 @@ export const usePutLayersId = <TError = ErrorType<Error>, TContext = unknown>(op
 
   return useMutation(mutationOptions);
 };
-export const deleteLayersId = (id: number, options?: SecondParameter<typeof API>) => {
+export const deleteLayersId = (id: string, options?: SecondParameter<typeof API>) => {
   return API<number>({ url: `/layers/${id}`, method: 'delete' }, options);
 };
 
@@ -289,19 +289,19 @@ export const getDeleteLayersIdMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteLayersId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteLayersId>>,
   TError,
-  { id: number },
+  { id: string },
   TContext
 > => {
   const { mutation: mutationOptions, request: requestOptions } = options ?? {};
 
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteLayersId>>, { id: number }> = (
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteLayersId>>, { id: string }> = (
     props
   ) => {
     const { id } = props ?? {};
@@ -320,7 +320,7 @@ export const useDeleteLayersId = <TError = ErrorType<Error>, TContext = unknown>
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteLayersId>>,
     TError,
-    { id: number },
+    { id: string },
     TContext
   >;
   request?: SecondParameter<typeof API>;

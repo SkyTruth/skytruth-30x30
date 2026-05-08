@@ -93,7 +93,7 @@ export const useGetProtectionStatuses = <
 };
 
 export const getProtectionStatusesId = (
-  id: number,
+  id: string,
   params?: GetProtectionStatusesIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -105,7 +105,7 @@ export const getProtectionStatusesId = (
 };
 
 export const getGetProtectionStatusesIdQueryKey = (
-  id: number,
+  id: string,
   params?: GetProtectionStatusesIdParams
 ) => {
   return [`/protection-statuses/${id}`, ...(params ? [params] : [])] as const;
@@ -115,7 +115,7 @@ export const getGetProtectionStatusesIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getProtectionStatusesId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetProtectionStatusesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getProtectionStatusesId>>, TError, TData>;
@@ -146,7 +146,7 @@ export const useGetProtectionStatusesId = <
   TData = Awaited<ReturnType<typeof getProtectionStatusesId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetProtectionStatusesIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getProtectionStatusesId>>, TError, TData>;
