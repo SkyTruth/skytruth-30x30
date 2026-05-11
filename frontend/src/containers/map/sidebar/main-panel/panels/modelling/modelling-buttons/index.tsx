@@ -268,27 +268,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
 
       <div className="flex w-full flex-col space-y-2">
         <div className="flex w-full gap-3 px-5">
-          {status === 'success' ? (
-            <>
-              <Button
-                variant="blue"
-                className={COMMON_BUTTON_CLASSES}
-                size="full"
-                onClick={onClickClearShape}
-              >
-                {t('clear-shape')}
-              </Button>
-              <Button
-                variant="blue"
-                className={COMMON_BUTTON_CLASSES}
-                size="full"
-                onClick={onClickRedraw}
-              >
-                {t('redraw')}
-              </Button>
-            </>
-          ) : (
-            <>
               <TooltipProvider>
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
@@ -342,8 +321,6 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
                   )}
                 </Tooltip>
               </TooltipProvider>
-            </>
-          )}
         </div>
       </div>
       <div className="mt-2 w-full px-5">
