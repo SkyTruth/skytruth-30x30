@@ -8,7 +8,7 @@
     "description": ""
   },
   "options": {
-    "draftAndPublish": true
+    "draftAndPublish": false
   },
   "pluginOptions": {
     "i18n": {
@@ -26,12 +26,12 @@
     },
     "slug": {
       "type": "string",
-      "unique": false,
       "pluginOptions": {
         "i18n": {
           "localized": false
         }
-      }
+      },
+      "unique": false
     },
     "data_tool": {
       "type": "relation",
