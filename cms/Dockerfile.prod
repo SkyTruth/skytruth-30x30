@@ -21,9 +21,6 @@ COPY config ./config
 COPY database ./database
 COPY patches ./patches
 COPY public ./public
-# TODO(post-v4-to-v5-migration): drop this `COPY scripts ./scripts` once
-# cms/scripts/migrate.js is deleted (paired removal — see migrate.js).
-COPY scripts ./scripts
 COPY src ./src
 COPY types ./types
 

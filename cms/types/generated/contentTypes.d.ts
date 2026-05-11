@@ -439,7 +439,7 @@ export interface ApiContactDetailContactDetail extends Struct.SingleTypeSchema {
     singularName: 'contact-detail';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   pluginOptions: {
     i18n: {
@@ -603,7 +603,7 @@ export interface ApiDataToolEcosystemDataToolEcosystem
     singularName: 'data-tool-ecosystem';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   pluginOptions: {
     i18n: {
@@ -642,7 +642,7 @@ export interface ApiDataToolLanguageDataToolLanguage
     singularName: 'data-tool-language';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   pluginOptions: {
     i18n: {
@@ -691,7 +691,7 @@ export interface ApiDataToolResourceTypeDataToolResourceType
     singularName: 'data-tool-resource-type';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   pluginOptions: {
     i18n: {
@@ -729,7 +729,7 @@ export interface ApiDataToolDataTool extends Struct.CollectionTypeSchema {
     singularName: 'data-tool';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   pluginOptions: {
     i18n: {
@@ -798,7 +798,7 @@ export interface ApiDatasetDataset extends Struct.CollectionTypeSchema {
     singularName: 'dataset';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   pluginOptions: {
     i18n: {
@@ -1678,7 +1678,7 @@ export interface ApiStaticIndicatorStaticIndicator
     singularName: 'static-indicator';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   pluginOptions: {
     i18n: {

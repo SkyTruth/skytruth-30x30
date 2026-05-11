@@ -8,7 +8,7 @@
     "description": ""
   },
   "options": {
-    "draftAndPublish": true
+    "draftAndPublish": false
   },
   "pluginOptions": {
     "i18n": {
@@ -18,13 +18,13 @@
   "attributes": {
     "name": {
       "type": "string",
-      "required": true,
-      "unique": false,
       "pluginOptions": {
         "i18n": {
           "localized": true
         }
-      }
+      },
+      "required": true,
+      "unique": false
     },
     "layers": {
       "type": "relation",
@@ -32,14 +32,14 @@
       "target": "api::layer.layer"
     },
     "slug": {
+      "type": "string",
       "pluginOptions": {
         "i18n": {
           "localized": false
         }
       },
-      "type": "string",
-      "unique": false,
-      "required": true
+      "required": true,
+      "unique": false
     }
   }
 }
