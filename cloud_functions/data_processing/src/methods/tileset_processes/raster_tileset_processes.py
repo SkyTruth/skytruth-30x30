@@ -7,7 +7,7 @@ from src.core.map_params import (
     CORAL_REEF_TILESET_NAME,
     PMTILES_BUCKET,
 )
-from src.core.params import BUCKET, CORAL_REEF_SOURCE_FILE
+from src.core.params import BUCKET, CLIMATE_RES_CORAL_SOURCE_FILE
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import upload_file_to_gcs
 from src.utils.logger import Logger
@@ -21,7 +21,7 @@ logger = Logger()
 
 def create_and_update_climate_resilient_coral_tileset(
     source_bucket: str = BUCKET,
-    source_blob: str = CORAL_REEF_SOURCE_FILE,
+    source_blob: str = CLIMATE_RES_CORAL_SOURCE_FILE,
     output_bucket: str = PMTILES_BUCKET,
     output_blob: str = CORAL_REEF_TILESET_FILE,
     archive_bucket: str = BUCKET,

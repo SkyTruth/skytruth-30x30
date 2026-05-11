@@ -11,6 +11,7 @@ import {
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3472: remove feature flag (climate resilient corals)
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type { AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
@@ -33,6 +34,12 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       : location;
 
   const [{ tab }] = useSyncMapContentSettings();
+
+  // TECH-3472: remove feature flag (climate resilient corals habitat-widget gate)
+  const isClimateResCoralsActive = useFeatureFlag('is_climate_res_corals_active');
+  const hiddenHabitatSlugs = isClimateResCoralsActive
+    ? ['warm-water corals']
+    : ['climate-resilient-corals', 'other-corals'];
 
   const [HABITAT_CHART_COLORS] = useMemo(() => {
     const total =
@@ -113,6 +120,10 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
           const allLocations = new Set(locations.split(','));
 
           const parsedData = reversedStats.reduce((parsed, entry) => {
+            // TECH-3472: gate climate-resilient / warm-water corals by flag.
+            if (hiddenHabitatSlugs.includes(entry.habitat.slug)) {
+              return parsed;
+            }
             if (parsedHabitats.has(entry.habitat.slug)) {
               return parsed;
             }
