@@ -9,7 +9,6 @@ import { Switch } from '@/components/ui/switch';
 import { useSyncMapSettings } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useDatasetsByEnvironment from '@/hooks/use-datasets-by-environment';
-import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3372: tear down
 import { FCWithMessages } from '@/types';
 import { MapTypes } from '@/types/map';
 
@@ -29,9 +28,6 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
 
   const [mapType] = useAtom(mapTypeAtom);
   const [customLayers] = useAtom(customLayersAtom);
-
-  // TECH-3372: tear down
-  const isCustomLayersActive = useFeatureFlag('is_custom_layers_active');
 
   const handleLabelsChange = useCallback(
     (active: Parameters<ComponentProps<typeof Switch>['onCheckedChange']>[0]) => {
@@ -67,9 +63,7 @@ const LayersPanel: FCWithMessages = (): JSX.Element => {
           implementations.
       */}
 
-      {mapType === MapTypes.ConservationBuilder &&
-      isCustomLayersActive && // TODO: TECH-3372 remove feature flag check
-      Object.keys(customLayers).length > 0 ? (
+      {mapType === MapTypes.ConservationBuilder && Object.keys(customLayers).length > 0 ? (
         <CustomLayerGroup name={t('custom-layers')} isOpen={true} />
       ) : null}
       <LayersGroup
