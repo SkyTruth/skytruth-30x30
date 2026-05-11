@@ -439,7 +439,11 @@ export interface ApiContactDetailContactDetail extends Struct.SingleTypeSchema {
     singularName: 'contact-detail';
   };
   options: {
+<<<<<<< HEAD
     draftAndPublish: true;
+=======
+    draftAndPublish: false;
+>>>>>>> dd7b429babfbfd7b05ba390e98c10b4f0533b92a
   };
   pluginOptions: {
     i18n: {
@@ -603,7 +607,11 @@ export interface ApiDataToolEcosystemDataToolEcosystem
     singularName: 'data-tool-ecosystem';
   };
   options: {
+<<<<<<< HEAD
     draftAndPublish: true;
+=======
+    draftAndPublish: false;
+>>>>>>> dd7b429babfbfd7b05ba390e98c10b4f0533b92a
   };
   pluginOptions: {
     i18n: {
@@ -642,7 +650,11 @@ export interface ApiDataToolLanguageDataToolLanguage
     singularName: 'data-tool-language';
   };
   options: {
+<<<<<<< HEAD
     draftAndPublish: true;
+=======
+    draftAndPublish: false;
+>>>>>>> dd7b429babfbfd7b05ba390e98c10b4f0533b92a
   };
   pluginOptions: {
     i18n: {
@@ -691,7 +703,11 @@ export interface ApiDataToolResourceTypeDataToolResourceType
     singularName: 'data-tool-resource-type';
   };
   options: {
+<<<<<<< HEAD
     draftAndPublish: true;
+=======
+    draftAndPublish: false;
+>>>>>>> dd7b429babfbfd7b05ba390e98c10b4f0533b92a
   };
   pluginOptions: {
     i18n: {
@@ -729,7 +745,11 @@ export interface ApiDataToolDataTool extends Struct.CollectionTypeSchema {
     singularName: 'data-tool';
   };
   options: {
+<<<<<<< HEAD
     draftAndPublish: true;
+=======
+    draftAndPublish: false;
+>>>>>>> dd7b429babfbfd7b05ba390e98c10b4f0533b92a
   };
   pluginOptions: {
     i18n: {
@@ -798,7 +818,11 @@ export interface ApiDatasetDataset extends Struct.CollectionTypeSchema {
     singularName: 'dataset';
   };
   options: {
+<<<<<<< HEAD
     draftAndPublish: true;
+=======
+    draftAndPublish: false;
+>>>>>>> dd7b429babfbfd7b05ba390e98c10b4f0533b92a
   };
   pluginOptions: {
     i18n: {
@@ -1678,7 +1702,11 @@ export interface ApiStaticIndicatorStaticIndicator
     singularName: 'static-indicator';
   };
   options: {
+<<<<<<< HEAD
     draftAndPublish: true;
+=======
+    draftAndPublish: false;
+>>>>>>> dd7b429babfbfd7b05ba390e98c10b4f0533b92a
   };
   pluginOptions: {
     i18n: {

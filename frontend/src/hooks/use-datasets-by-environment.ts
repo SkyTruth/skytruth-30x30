@@ -48,6 +48,7 @@ export default function useDatasetsByEnvironment() {
         layers?.filter((item) => {
           // TECH-3472: remove feature flag (climate resilient corals layer gate)
           if (item.slug === 'crc' && !isClimateResCoralsActive) return false;
+          if (item.slug === 'wwc' && isClimateResCoralsActive) return false;
           return item.environment?.slug === environment;
         }) || []
       );
