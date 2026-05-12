@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 import { VariantProps, cva } from 'class-variance-authority';
@@ -27,7 +26,6 @@ import {
   useSyncMapLayers,
   useSyncMapSettings,
 } from '@/containers/map/content/map/sync-settings';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { cn } from '@/lib/classnames';
 import ArrowRight from '@/styles/icons/arrow-right.svg';
 import { FCWithMessages } from '@/types';
@@ -62,7 +60,6 @@ export type HeaderProps = VariantProps<typeof headerVariants> & {
 
 const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const t = useTranslations('components.header');
-  const hideInfoPages = useFeatureFlag('hide_info_pages'); //TECH 3447 teardown
 
   const navigationItems = useMemo(
     () =>
@@ -79,18 +76,8 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
           colorClassName: 'text-blue',
           preserveMapParams: true,
         },
-        !hideInfoPages && {
-          name: t('knowledge-hub'),
-          href: PAGES.knowledgeHub,
-          colorClassName: 'text-green',
-        },
-        !hideInfoPages && {
-          name: t('about'),
-          href: PAGES.about,
-          colorClassName: 'text-violet',
-        },
       ].filter(Boolean),
-    [t, hideInfoPages]
+    [t]
   );
 
   const [mapSettings] = useSyncMapSettings();
@@ -133,37 +120,21 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         aria-label={t('global')}
       >
         <span className="flex">
-          {!hideLogo &&
-            (hideInfoPages ? (
-              <a
-                href="https://www.skytruth.org/30x30"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="-my-1.5 inline-block ring-offset-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
-              >
-                <Image
-                  src="/images/skytruth-30-30-logo.svg"
-                  alt="SkyTruth 30x30"
-                  width={25}
-                  height={25}
-                />
-              </a>
-            ) : (
-              <Link
-                href={{
-                  pathname: '/',
-                  query: runAsOf ? { 'run-as-of': runAsOf } : '',
-                }}
-                className="-my-1.5 inline-block ring-offset-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
-              >
-                <Image
-                  src="/images/skytruth-30-30-logo.svg"
-                  alt="SkyTruth 30x30"
-                  width={25}
-                  height={25}
-                />
-              </Link>
-            ))}
+          {!hideLogo && (
+            <a
+              href="https://www.skytruth.org/30x30"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="-my-1.5 inline-block ring-offset-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+            >
+              <Image
+                src="/images/skytruth-30-30-logo.svg"
+                alt="SkyTruth 30x30"
+                width={25}
+                height={25}
+              />
+            </a>
+          )}
         </span>
 
         {/* Mobile hamburger menu */}
