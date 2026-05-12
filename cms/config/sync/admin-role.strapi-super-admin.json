@@ -20,7 +20,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -36,7 +37,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -52,7 +54,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -61,29 +64,6 @@
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::contact-detail.contact-detail",
-      "properties": {
-        "fields": [
-          "name",
-          "address",
-          "phone",
-          "email",
-          "registration"
-        ],
-        "locales": [
-          "en",
-          "es",
-          "fr",
-          "pt",
-          "id"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::contact-detail.contact-detail",
       "properties": {
         "fields": [
@@ -98,7 +78,32 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::contact-detail.contact-detail",
+      "properties": {
+        "fields": [
+          "name",
+          "address",
+          "phone",
+          "email",
+          "registration"
+        ],
+        "locales": [
+          "en",
+          "es",
+          "fr",
+          "pt",
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -119,7 +124,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -135,7 +141,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -151,7 +158,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -160,27 +168,6 @@
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::data-info.data-info",
-      "properties": {
-        "fields": [
-          "slug",
-          "content",
-          "data_sources"
-        ],
-        "locales": [
-          "en",
-          "es",
-          "fr",
-          "pt",
-          "id"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::data-info.data-info",
       "properties": {
         "fields": [
@@ -193,7 +180,30 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::data-info.data-info",
+      "properties": {
+        "fields": [
+          "slug",
+          "content",
+          "data_sources"
+        ],
+        "locales": [
+          "en",
+          "es",
+          "fr",
+          "pt",
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -214,7 +224,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -230,7 +241,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -246,7 +258,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -267,7 +280,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -288,7 +302,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -307,7 +322,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -323,7 +339,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -339,7 +356,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -358,7 +376,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -377,7 +396,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -398,7 +418,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -414,7 +435,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -430,7 +452,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -451,7 +474,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -472,7 +496,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -491,7 +516,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -507,7 +533,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -523,7 +550,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -542,7 +570,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -561,7 +590,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -586,7 +616,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -602,7 +633,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -618,7 +650,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -643,7 +676,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -668,7 +702,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -689,7 +724,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -705,7 +741,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -721,7 +758,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -742,7 +780,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -763,7 +802,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -783,7 +823,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -799,7 +840,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -815,7 +857,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -835,7 +878,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -855,7 +899,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1004,7 +1049,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1020,7 +1066,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1036,7 +1083,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1057,7 +1105,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1078,7 +1127,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1166,7 +1216,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1182,7 +1233,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1198,7 +1250,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1219,7 +1272,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1240,7 +1294,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1278,7 +1333,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1294,7 +1350,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1310,7 +1367,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1348,7 +1406,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1386,7 +1445,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1513,7 +1573,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1529,7 +1590,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1545,7 +1607,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1566,7 +1629,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1587,7 +1651,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1608,7 +1673,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1624,7 +1690,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1640,7 +1707,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1661,7 +1729,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1682,7 +1751,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1767,7 +1837,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1783,7 +1854,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1799,7 +1871,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1820,7 +1893,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -1841,7 +1915,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2047,7 +2122,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2063,7 +2139,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2079,7 +2156,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2100,7 +2178,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2121,7 +2200,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2143,7 +2223,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2159,7 +2240,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2175,7 +2257,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2197,7 +2280,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
@@ -2219,7 +2303,8 @@
           "es",
           "fr",
           "pt",
-          "id"
+          "id",
+          "sw"
         ]
       },
       "conditions": [],
