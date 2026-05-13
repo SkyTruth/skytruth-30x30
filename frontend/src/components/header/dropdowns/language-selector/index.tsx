@@ -49,15 +49,17 @@ const LanguageSelector: FCWithMessages = () => {
         <SelectItem value="es">Español{locale !== 'es' && ` (${t('spanish')})`}</SelectItem>
         <SelectItem value="fr">Français{locale !== 'fr' && ` (${t('french')})`}</SelectItem>
         <SelectItem value="pt">Português{locale !== 'pt' && ` (${t('portuguese')})`}</SelectItem>
-        { // TODO TECH-3541: tear down FF check
+        {
+          // TODO TECH-3541: tear down FF check
           isIdSwActive && (
-          <>
-            <SelectItem value="id">
-              Bahasa Indonesia{locale !== 'id' && ` (${t('indonesian')})`}
-            </SelectItem>
-            <SelectItem value="sw">Kiswahili{locale !== 'sw' && ` (${t('swahili')})`}</SelectItem>
-          </>
-        )}
+            <>
+              <SelectItem value="id">
+                Bahasa Indonesia{locale !== 'id' && ` (${t('indonesian')})`}
+              </SelectItem>
+              <SelectItem value="sw">Kiswahili{locale !== 'sw' && ` (${t('swahili')})`}</SelectItem>
+            </>
+          )
+        }
       </SelectContent>
     </Select>
   );
