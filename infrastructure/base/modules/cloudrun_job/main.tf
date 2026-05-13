@@ -42,7 +42,7 @@ resource "google_cloud_run_v2_job" "default" {
       dynamic "vpc_access" {
         for_each = var.vpc_connector_name == null ? [] : [1]
         content {
-            connector = "projects/${var.project_id}/locations/${var.region}/connectors/${var.vpc_connector_name}"
+          connector = "projects/${var.project_id}/locations/${var.region}/connectors/${var.vpc_connector_name}"
         }
       }
 
@@ -88,7 +88,7 @@ resource "google_cloud_run_v2_job" "default" {
       client,
       client_version,
       labels,
-      template[0].labels,  
+      template[0].labels,
     ]
   }
 
