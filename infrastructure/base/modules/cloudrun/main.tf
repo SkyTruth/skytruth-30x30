@@ -45,6 +45,7 @@ resource "google_cloud_run_service" "cloud_run" {
 
         resources {
           limits = {
+            cpu    = var.cpu
             memory = var.memory
           }
         }

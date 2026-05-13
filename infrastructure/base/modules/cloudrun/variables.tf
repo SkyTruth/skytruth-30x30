@@ -88,3 +88,9 @@ variable "memory" {
   description = "Memory limit for the container (e.g. \"512Mi\", \"1Gi\")"
   default     = "512Mi"
 }
+
+variable "cpu" {
+  type        = string
+  description = "CPU limit for the container (e.g. \"1000m\", \"2000m\"). Defaults to Cloud Run's standard 1000m to avoid resource drift."
+  default     = "1000m"
+}
