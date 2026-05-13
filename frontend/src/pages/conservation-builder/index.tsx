@@ -21,7 +21,6 @@ const ConservationBuilderPage: FCWithMessages & {
 ConservationBuilderPage.layout = {
   Component: MapLayout,
   props: {
-    title: '',
     type: MapTypes.ConservationBuilder,
   },
 };

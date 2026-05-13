@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 
-import useNameField from '@/hooks/use-name-field';
+import useLocationName from '@/hooks/use-location-name';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
 import { Location } from '@/types/generated/strapi.schemas';
@@ -11,13 +11,13 @@ type MissingCountriesListProps = {
 
 const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ countries }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const nameField = useNameField();
+  const getLocationName = useLocationName();
 
   const { data: locations, isFetching } = useGetLocations<Location[]>(
     {
       //@ts-ignore
       populate: {
-        fields: ['name', 'name_es', 'name_fr', 'name_pt'],
+        fields: ['code', 'type'],
       },
       filters: {
         code: {
@@ -38,7 +38,9 @@ const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ count
   return (
     <div className="mt-2 text-xs">
       {'* ' + t('no-data-for') + ' '}
-      {locations.map((loc, idx) => loc[nameField] + `${idx !== locations.length - 1 ? ', ' : ''}`)}
+      {locations.map(
+        (loc, idx) => getLocationName(loc) + `${idx !== locations.length - 1 ? ', ' : ''}`
+      )}
     </div>
   );
 };
