@@ -22,6 +22,7 @@ module "staging" {
   backend_min_scale                                  = 0
   frontend_max_scale                                 = 1
   backend_max_scale                                  = 2
+  backend_available_memory                           = "2Gi"
   dns_zone_name                                      = module.dns.dns_zone_name
   domain                                             = var.domain
   subdomain                                          = var.staging_subdomain
@@ -63,6 +64,7 @@ module "production" {
   backend_min_scale                                  = 0
   frontend_max_scale                                 = 1
   backend_max_scale                                  = 2
+  backend_available_memory                           = "2Gi"
   dns_zone_name                                      = module.dns.dns_zone_name
   domain                                             = var.domain
   subdomain                                          = var.production_subdomain

@@ -58,6 +58,7 @@ module "backend_cloudrun" {
   max_scale             = var.backend_max_scale
   tag                   = var.environment
   timeout_seconds       = 1800
+  memory                = var.backend_available_memory
   use_hello_world_image = var.use_hello_world_image
 }
 
@@ -331,17 +332,17 @@ resource "google_storage_bucket_iam_member" "pmtiles_public_read" {
 
 locals {
   data_processing_env = {
-    BUCKET              = google_storage_bucket.data_bucket.name
-    DATABASE_HOST       = module.database.database_host
-    DATABASE_NAME       = module.database.database_name
-    DATABASE_USERNAME   = module.database.database_user
-    MAPBOX_USER         = var.mapbox_user
-    PROJECT             = var.gcp_project_id
-    STRAPI_API_URL      = local.api_lb_url
-    STRAPI_USERNAME     = var.backend_write_user
-    LOCATION            = var.gcp_region
-    ENVIRONMENT         = var.environment
-    PMTILES_BUCKET      = google_storage_bucket.pmtiles_bucket.name
+    BUCKET            = google_storage_bucket.data_bucket.name
+    DATABASE_HOST     = module.database.database_host
+    DATABASE_NAME     = module.database.database_name
+    DATABASE_USERNAME = module.database.database_user
+    MAPBOX_USER       = var.mapbox_user
+    PROJECT           = var.gcp_project_id
+    STRAPI_API_URL    = local.api_lb_url
+    STRAPI_USERNAME   = var.backend_write_user
+    LOCATION          = var.gcp_region
+    ENVIRONMENT       = var.environment
+    PMTILES_BUCKET    = google_storage_bucket.pmtiles_bucket.name
   }
 
   data_processing_secrets = [{
@@ -349,30 +350,30 @@ locals {
     project_id = var.gcp_project_id
     secret     = "protected-planet-api-key"
     version    = "latest"
-  },
-  {
-    key        = "STRAPI_PASSWORD"
-    project_id = var.gcp_project_id
-    secret     = "${var.project_name}_strapi_write_user_password"
-    version    = "latest"
-  },
-  {
-    key        = "MAPBOX_TOKEN"
-    project_id = var.gcp_project_id
-    secret     = "mapbox_token"
-    version    = "latest"
-  },
-  {
-    key        = "DATABASE_PASSWORD"
-    project_id = var.gcp_project_id
-    secret     = module.postgres_application_user_password.secret_name
-    version    = module.postgres_application_user_password.latest_version
-  },
-  {
-    key        = "SLACK_ALERTS_WEBHOOK"
-    project_id = var.gcp_project_id
-    secret     = "gcp-slack-alerts-webhook"
-    version    = "latest"
+    },
+    {
+      key        = "STRAPI_PASSWORD"
+      project_id = var.gcp_project_id
+      secret     = "${var.project_name}_strapi_write_user_password"
+      version    = "latest"
+    },
+    {
+      key        = "MAPBOX_TOKEN"
+      project_id = var.gcp_project_id
+      secret     = "mapbox_token"
+      version    = "latest"
+    },
+    {
+      key        = "DATABASE_PASSWORD"
+      project_id = var.gcp_project_id
+      secret     = module.postgres_application_user_password.secret_name
+      version    = module.postgres_application_user_password.latest_version
+    },
+    {
+      key        = "SLACK_ALERTS_WEBHOOK"
+      project_id = var.gcp_project_id
+      secret     = "gcp-slack-alerts-webhook"
+      version    = "latest"
   }]
 }
 
@@ -398,17 +399,17 @@ module "data_pipes_cloud_function" {
 
 
 module "data_pipes_cloudrun_jobs" {
-  source                           = "../cloudrun_job"
-  project_id                       = var.gcp_project_id
-  region                           = var.gcp_region
-  job_name                         = "${var.project_name}-data-cloudrun-job"
-  env                              = local.data_processing_env
-  secrets                          = local.data_processing_secrets
-  image                            = var.cloudrun_jobs_image
-  timeout_seconds                  = var.cloudrun_jobs_timeout_seconds
-  cpu                              = var.cloudrun_jobs_available_cpu
-  memory                           = var.cloudrun_jobs_available_memory
-  vpc_connector_name               = module.network.vpc_access_connector_name
+  source             = "../cloudrun_job"
+  project_id         = var.gcp_project_id
+  region             = var.gcp_region
+  job_name           = "${var.project_name}-data-cloudrun-job"
+  env                = local.data_processing_env
+  secrets            = local.data_processing_secrets
+  image              = var.cloudrun_jobs_image
+  timeout_seconds    = var.cloudrun_jobs_timeout_seconds
+  cpu                = var.cloudrun_jobs_available_cpu
+  memory             = var.cloudrun_jobs_available_memory
+  vpc_connector_name = module.network.vpc_access_connector_name
 }
 
 
@@ -469,7 +470,7 @@ resource "google_cloud_run_v2_job_iam_member" "caller_job_can_run_target_job" {
   project  = var.gcp_project_id
   location = var.gcp_region
 
-  name     = module.data_pipes_cloudrun_jobs.job_name
+  name = module.data_pipes_cloudrun_jobs.job_name
 
   role   = "roles/run.developer"
   member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
@@ -478,7 +479,7 @@ resource "google_cloud_run_v2_job_iam_member" "caller_job_can_run_target_job" {
 variable "cloud_tasks_roles" {
   description = "List of roles to grant to the Data Pipes Service Account"
   type        = list(string)
-  default     = [
+  default = [
     "roles/iam.serviceAccountTokenCreator",
     "roles/iam.serviceAccountUser",
     "roles/cloudtasks.enqueuer"
@@ -496,7 +497,7 @@ resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
   cloud_function = module.data_pipes_cloud_function.function_name
   role           = "roles/cloudfunctions.invoker"
   member         = "serviceAccount:${google_service_account.cloudtasks_invoker.email}"
-  depends_on = [google_service_account.cloudtasks_invoker]
+  depends_on     = [google_service_account.cloudtasks_invoker]
 }
 
 # Allow the Data Pipes Cloud Function SA to run the Cloud Run Job
@@ -512,17 +513,17 @@ resource "google_cloud_run_v2_job_iam_member" "data_function_can_run_job" {
 module "monthly_job_queue" {
   source = "../cloudtasks"
 
-  queue_name  = "${var.project_name}-monthly-data-pipes-jobs"
-  location    = var.gcp_region
+  queue_name = "${var.project_name}-monthly-data-pipes-jobs"
+  location   = var.gcp_region
 
-  target_url = module.data_pipes_cloud_function.function_uri
+  target_url                    = module.data_pipes_cloud_function.function_uri
   invoker_service_account_email = google_service_account.cloudtasks_invoker.email
 
   max_concurrent_dispatches = 1
   max_dispatches_per_second = 1
 
   # Just try one time - retries are handled in handler
-  max_attempts       = 1
+  max_attempts = 1
 
   enable_dlq = false
 }
@@ -533,21 +534,21 @@ resource "google_service_account" "scheduler_invoker" {
 }
 
 module "data_pipes_scheduler" {
-  source                   = "../cloud_scheduler"
-  name                     = "${var.project_name}-trigger-data-pipes-method"
-  schedule                 = "0 8 1 * *"
-  target_url               = module.data_pipes_cloud_function.function_uri
-  invoker_service_account  = google_service_account.scheduler_invoker.email
+  source                  = "../cloud_scheduler"
+  name                    = "${var.project_name}-trigger-data-pipes-method"
+  schedule                = "0 8 1 * *"
+  target_url              = module.data_pipes_cloud_function.function_uri
+  invoker_service_account = google_service_account.scheduler_invoker.email
   headers = {
     "Content-Type" = "application/json"
   }
   body = jsonencode({
-    METHOD              = "publisher",
-    TRIGGER_NEXT        = true,
-    QUEUE_NAME          = module.monthly_job_queue.queue_name,
-    JOB_NAME            = module.data_pipes_cloudrun_jobs.job_name,
-    TARGET_URL          = module.data_pipes_cloud_function.function_uri,
-    INVOKER_SA          = google_service_account.cloudtasks_invoker.email
+    METHOD       = "publisher",
+    TRIGGER_NEXT = true,
+    QUEUE_NAME   = module.monthly_job_queue.queue_name,
+    JOB_NAME     = module.data_pipes_cloudrun_jobs.job_name,
+    TARGET_URL   = module.data_pipes_cloud_function.function_uri,
+    INVOKER_SA   = google_service_account.cloudtasks_invoker.email
   })
 }
 

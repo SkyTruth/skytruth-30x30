@@ -33,7 +33,7 @@ resource "google_cloud_run_service" "cloud_run" {
 
   template {
     spec {
-      timeout_seconds  = var.timeout_seconds
+      timeout_seconds      = var.timeout_seconds
       service_account_name = google_service_account.service_account.email
 
       containers {
@@ -41,6 +41,13 @@ resource "google_cloud_run_service" "cloud_run" {
 
         ports {
           container_port = var.container_port
+        }
+
+        resources {
+          limits = {
+            cpu    = var.cpu
+            memory = var.memory
+          }
         }
       }
     }
