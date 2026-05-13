@@ -82,3 +82,9 @@ variable "tag" {
   type        = string
   description = "Tag name to use for docker image tagging and deployment"
 }
+
+variable "memory" {
+  type        = string
+  description = "Memory limit for the container (e.g. \"512Mi\", \"1Gi\")"
+  default     = "512Mi"
+}

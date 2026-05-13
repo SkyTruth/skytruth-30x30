@@ -71,6 +71,12 @@ variable "backend_max_scale" {
   default     = 5
 }
 
+variable "backend_available_memory" {
+  type        = string
+  description = "Memory limit for the backend Cloud Run container (e.g. \"512Mi\", \"1Gi\")"
+  default     = "512Mi"
+}
+
 variable "cors_origin" {
   type        = string
   description = "Origin for CORS config"
