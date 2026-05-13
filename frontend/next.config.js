@@ -67,7 +67,7 @@ const nextConfig = {
     ];
   },
   i18n: {
-    locales: ['en', 'es', 'fr', 'pt'],
+    locales: ['en', 'es', 'fr', 'pt', 'id', 'sw'],
     defaultLocale: 'en',
   },
 };
