@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [staging_client, staging_cms, staging_analysis_cloud_functions, staging_data_cloud_functions, staging_data_cloud_job]
+    needs: [upload_localazy, staging_client, staging_cms, staging_analysis_cloud_functions, staging_data_cloud_functions, staging_data_cloud_job]
     steps:
       - run: echo "🎉 All staging deployments completed successfully."
 
