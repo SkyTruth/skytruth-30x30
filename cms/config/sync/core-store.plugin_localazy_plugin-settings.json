@@ -1,7 +1,7 @@
 {
   "key": "plugin_localazy_plugin-settings",
   "value": {
-    "defaultRoute": "overview",
+    "defaultRoute": "upload",
     "upload": {
       "allowAutomated": true,
       "automatedTriggers": [
@@ -20,7 +20,9 @@
       "uiLanguages": [
         "es",
         "fr",
-        "pt"
+        "id",
+        "pt",
+        "sw"
       ]
     }
   },
