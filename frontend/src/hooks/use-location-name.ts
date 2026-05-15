@@ -11,7 +11,7 @@ type LocationLike = {
 
 /**
  * Returns a function that resolves a Strapi location (or an alpha-3 country
- * code passed as a string) to a localized display name. 
+ * code passed as a string) to a localized display name.
  */
 export default function useLocationName() {
   const locale = useLocale();
@@ -23,7 +23,7 @@ export default function useLocationName() {
 
       const code = typeof location === 'string' ? location : location.code;
       if (!code) return '';
-      
+
       const type = typeof location === 'string' ? 'country' : (location.type ?? 'country');
 
       // next-intl's typed t() doesn't match the dynamic key shape resolveLocationName uses;
