@@ -45,6 +45,10 @@ const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ count
   );
 };
 
-MissingCountriesList.messages = ['containers.map-sidebar-main-panel'];
+MissingCountriesList.messages = [
+  'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
+];
 
 export default MissingCountriesList;

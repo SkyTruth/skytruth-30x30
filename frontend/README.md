@@ -44,49 +44,6 @@ docker-compose up --build
 
 Open the app at <http://localhost:3000>
 
-## Location name resolution
-
-Location display names (countries, regions, "Global", "High Seas", etc.) are
-resolved at render time rather than read from the database. The resolver lives
-at `src/lib/i18n/locationName.ts` and is consumed via the `useLocationName()`
-hook (`src/hooks/use-location-name.ts`).
-
-Resolution order:
-
-1. `type === 'country'` with a `*` suffix — strip the suffix, resolve the base
-   country, then wrap with the `locations.andTerritories` template (e.g.
-   `USA*` → "United States and Territories").
-2. `type === 'country'` — English override map (`EN_COUNTRY_OVERRIDES` in the
-   resolver) applied only when locale is `en`; otherwise
-   `Intl.DisplayNames` with the alpha-2 code derived via `i18n-iso-countries`.
-3. `type ∈ { region, custom_region, worldwide, highseas }` — Localazy key
-   under `locations.<type>.<code>` in `translations/en.json` (translators fill
-   in non-English values).
-4. Any other type (`inactive`, `inactive_region`, unknown) — falls through to
-   the raw code so misses are visible in the UI. These are admin-only today.
-
-### Adding a new bespoke region
-
-1. Pick a stable uppercase code and `type` (one of `region`, `custom_region`,
-   `worldwide`, `highseas`).
-2. Add the English string to `translations/en.json` under
-   `locations.<type>.<code>`.
-3. Push the source to Localazy so translators can pick up the new key.
-4. Insert the row into Strapi with the matching `code` and `type`. No
-   `name_*` columns are needed for new entries.
-
-### Adding an English override for a country
-
-Edit `EN_COUNTRY_OVERRIDES` in `src/lib/i18n/locationName.ts`. Keep the map
-small — CLDR is the default and overrides exist only where product copy
-differs from CLDR's style.
-
-### Importing `i18n-iso-countries`
-
-Always import from `i18n-iso-countries/index` (not the package root). The
-default entry point eagerly registers every supported locale JSON, which
-inflates the bundle by hundreds of KB; we only need `alpha3ToAlpha2`.
-
 [30x30]: https://30x30.skytruth.org/
 [strapi]: ../cms/README.md
 [cms_build]: ../cms/README.md#build

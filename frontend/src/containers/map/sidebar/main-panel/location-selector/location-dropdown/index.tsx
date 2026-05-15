@@ -106,6 +106,10 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   );
 };
 
-LocationDropdown.messages = ['containers.map-sidebar-main-panel'];
+LocationDropdown.messages = [
+  'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
+];
 
 export default LocationDropdown;

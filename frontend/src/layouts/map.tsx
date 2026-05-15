@@ -129,6 +129,8 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
 
 MapLayout.messages = [
   'layouts.map',
+  // Required by the `useLocationName` hook
+  'locations',
   ...Header.messages,
   ...Sidebar.messages,
   ...Content.messages,

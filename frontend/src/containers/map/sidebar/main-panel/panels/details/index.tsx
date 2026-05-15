@@ -243,6 +243,8 @@ const SidebarDetails: FCWithMessages = () => {
 
 SidebarDetails.messages = [
   'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
   ...LocationSelector.messages,
   ...CountriesList.messages,
   ...DetailsButton.messages,

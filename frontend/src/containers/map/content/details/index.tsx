@@ -154,6 +154,8 @@ const MapDetails: FCWithMessages = () => {
 
 MapDetails.messages = [
   'containers.map',
+  // Required by the `useLocationName` hook
+  'locations',
   ...GlobalRegionalTable.messages,
   ...NationalHighSeasTable.messages,
 ];

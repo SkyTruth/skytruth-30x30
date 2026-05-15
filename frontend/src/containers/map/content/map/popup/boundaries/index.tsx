@@ -214,6 +214,10 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
   );
 };
 
-BoundariesPopup.messages = ['containers.map'];
+BoundariesPopup.messages = [
+  'containers.map',
+  // Required by the `useLocationName` hook (used inside `useFormattedStats`)
+  'locations',
+];
 
 export default BoundariesPopup;

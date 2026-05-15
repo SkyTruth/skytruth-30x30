@@ -376,6 +376,8 @@ const ModellingWidget: FCWithMessages = () => {
 ModellingWidget.messages = [
   'containers.map-sidebar-main-panel',
   'services.uploads',
+  // Required by the `useLocationName` hook
+  'locations',
   ...Widget.messages,
   ...WidgetLegend.messages,
   ...StackedHorizontalBarChart.messages,

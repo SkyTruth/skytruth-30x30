@@ -325,6 +325,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
 LocationSelector.messages = [
   'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
   ...LocationTypeToggle.messages,
   ...LocationDropdown.messages,
 ];

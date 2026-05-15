@@ -116,6 +116,8 @@ const GlobalRegionalTable: FCWithMessages = () => {
 
 GlobalRegionalTable.messages = [
   'containers.map',
+  // Required by the `useLocationName` hook (used inside `useColumns`)
+  'locations',
   ...Table.messages,
   // Dependencies of `useColumns`
   ...SortingButton.messages,
