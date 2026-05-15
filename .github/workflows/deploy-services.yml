@@ -14,11 +14,11 @@ on:
 # STAGING PHASE
 # -----------------------------
 jobs:
-  # upload_localazy:
-  #   if: |
-  #     inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-  #   uses: ./.github/workflows/localazy-upload.yml
-  #   secrets: inherit
+  upload_localazy:
+    if: |
+      inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/localazy-upload.yml
+    secrets: inherit
 
   staging_client:
     if: |
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [staging_client, staging_cms, staging_analysis_cloud_functions, staging_data_cloud_functions, staging_data_cloud_job]
+    needs: [upload_localazy, staging_client, staging_cms, staging_analysis_cloud_functions, staging_data_cloud_functions, staging_data_cloud_job]
     steps:
       - run: echo "🎉 All staging deployments completed successfully."
 

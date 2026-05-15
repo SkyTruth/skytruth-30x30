@@ -1125,7 +1125,7 @@ export interface ApiLayerLayer extends Struct.CollectionTypeSchema {
     singularName: 'layer';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   pluginOptions: {
     i18n: {
