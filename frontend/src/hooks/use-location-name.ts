@@ -20,7 +20,7 @@ export default function useLocationName() {
   return useCallback(
     (location: LocationLike = {}): string => {
       if (!location.code) return '';
-      
+
       return resolveLocationName(location.code, location.type ?? 'country', locale, t);
     },
     [locale, t]
