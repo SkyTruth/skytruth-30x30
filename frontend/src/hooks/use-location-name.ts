@@ -10,26 +10,18 @@ type LocationLike = {
 };
 
 /**
- * Returns a function that resolves a Strapi location (or an alpha-3 country
- * code passed as a string) to a localized display name.
+ * Returns a function that resolves a Strapi location (or a `{code, type}` literal)
+ * to a localized display name.
  */
 export default function useLocationName() {
   const locale = useLocale();
   const t = useTranslations('locations');
 
   return useCallback(
-    (location: LocationLike | string | null | undefined): string => {
-      if (!location) return '';
-
-      const code = typeof location === 'string' ? location : location.code;
-      if (!code) return '';
-
-      const type = typeof location === 'string' ? 'country' : (location.type ?? 'country');
-
-      // next-intl's typed t() doesn't match the dynamic key shape resolveLocationName uses;
-      // the resolver only ever passes well-known shapes.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return resolveLocationName(code, type, locale, t as any);
+    (location: LocationLike = {}): string => {
+      if (!location.code) return '';
+      
+      return resolveLocationName(location.code, location.type ?? 'country', locale, t);
     },
     [locale, t]
   );

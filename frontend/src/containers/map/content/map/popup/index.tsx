@@ -100,7 +100,7 @@ const PopupContainer: FCWithMessages = () => {
       const sourceConfig = POPUP_PROPERTIES_BY_SOURCE[source];
       const codeKey = sourceConfig?.ids?.find((k: string) => !!properties[k]);
       const code = codeKey ? properties[codeKey] : null;
-      
+
       displayName =
         code && sourceConfig?.locationType
           ? getLocationName({ code, type: sourceConfig.locationType })
