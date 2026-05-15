@@ -12,14 +12,51 @@ export type LocationType =
   | 'inactive'
   | 'inactive_region';
 
-// CLDR's English strings differ from our product copy in these cases.
+// CLDR's strings differ from our product copy in these cases. Keyed by alpha-3,
+// then by locale. A missing locale entry falls through to CLDR (not to English),
+// so the user always sees a name in their language even if we haven't curated one.
 // Add new entries sparingly — accepting CLDR is the default.
-const EN_COUNTRY_OVERRIDES: Record<string, string> = {
-  KOR: 'Republic of Korea',
-  COD: 'Democratic Republic of the Congo',
-  COG: 'Republic of the Congo',
-  BES: 'Bonaire, Sint Eustatius and Saba',
-  MMR: 'Myanmar',
+const COUNTRY_OVERRIDES: Record<string, Record<string, string>> = {
+  KOR: {
+    en: 'Republic of Korea',
+    es: 'República de Corea',
+    fr: 'République de Corée',
+    pt: 'República da Coreia',
+    id: 'Republik Korea',
+    sw: 'Jamhuri ya Korea',
+  },
+  COD: {
+    en: 'Democratic Republic of the Congo',
+    es: 'República Democrática del Congo',
+    fr: 'République démocratique du Congo',
+    pt: 'República Democrática do Congo',
+    id: 'Republik Demokratik Kongo',
+    sw: 'Jamhuri ya Kidemokrasia ya Kongo',
+  },
+  COG: {
+    en: 'Republic of the Congo',
+    es: 'República del Congo',
+    fr: 'République du Congo',
+    pt: 'República do Congo',
+    id: 'Republik Kongo',
+    sw: 'Jamhuri ya Kongo',
+  },
+  BES: {
+    en: 'Bonaire, Sint Eustatius and Saba',
+    es: 'Bonaire, San Eustaquio y Saba',
+    fr: 'Bonaire, Saint-Eustache et Saba',
+    pt: 'Bonaire, Santo Eustáquio e Saba',
+    id: 'Bonaire, Sint Eustatius dan Saba',
+    sw: 'Bonaire, Sint Eustatius na Saba',
+  },
+  MMR: {
+    en: 'Myanmar',
+    es: 'Myanmar',
+    fr: 'Myanmar',
+    pt: 'Myanmar',
+    id: 'Myanmar',
+    sw: 'Myanmar',
+  },
 };
 
 type TranslateFn = (key: string, values?: Record<string, string | number>) => string;
@@ -30,8 +67,8 @@ type TranslateFn = (key: string, values?: Record<string, string | number>) => st
  * Resolution order:
  *   1. type === 'country' with `*` suffix → resolve the base country, then wrap
  *      with the andTerritories template.
- *   2. type === 'country' → English override map (en locale only), then
- *      Intl.DisplayNames with the alpha-2 of the code.
+ *   2. type === 'country' → per-locale override map, then Intl.DisplayNames with
+ *      the alpha-2 of the code.
  *   3. type ∈ {region, custom_region, worldwide, highseas} → Localazy key
  *      under `<type>.<code>`.
  *   4. Anything else (inactive, inactive_region, unknown) → fall through to the
@@ -69,9 +106,8 @@ export function resolveLocationName(
 }
 
 function resolveCountry(alpha3: string, locale: string): string {
-  if (locale === 'en' && EN_COUNTRY_OVERRIDES[alpha3]) {
-    return EN_COUNTRY_OVERRIDES[alpha3];
-  }
+  const override = COUNTRY_OVERRIDES[alpha3]?.[locale];
+  if (override) return override;
 
   const alpha2 = alpha3ToAlpha2(alpha3);
   if (!alpha2) return alpha3;
