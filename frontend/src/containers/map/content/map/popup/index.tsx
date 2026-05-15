@@ -97,10 +97,14 @@ const PopupContainer: FCWithMessages = () => {
     if (source === EEZ_SOURCE) {
       displayName = properties[POPUP_PROPERTIES_BY_SOURCE[source]?.name[locale]] ?? null;
     } else {
-      const codeKey = POPUP_PROPERTIES_BY_SOURCE[source]?.ids?.find((k: string) => !!properties[k]);
+      const sourceConfig = POPUP_PROPERTIES_BY_SOURCE[source];
+      const codeKey = sourceConfig?.ids?.find((k: string) => !!properties[k]);
       const code = codeKey ? properties[codeKey] : null;
-      const type = source === 'countries' ? 'country' : 'region';
-      displayName = code ? getLocationName({ code, type }) : null;
+      
+      displayName =
+        code && sourceConfig?.locationType
+          ? getLocationName({ code, type: sourceConfig.locationType })
+          : null;
     }
 
     return (

@@ -60,7 +60,7 @@ export function resolveLocationName(
       const country = resolveCountry(baseCode, locale);
       return t('andTerritories', { country });
     }
-    
+
     return resolveCountry(code, locale);
   }
 

@@ -134,9 +134,9 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     }
 
     const code = locationCodes[0];
-    if (!code) return undefined;
+    const type = POPUP_PROPERTIES_BY_SOURCE[sourceId]?.locationType;
 
-    const type = sourceId === 'countries' ? 'country' : 'region';
+    if (!code || !type) return undefined;
     return getLocationName({ code, type });
   }, [geometryData, locale, source, locationCodes, getLocationName]);
 
