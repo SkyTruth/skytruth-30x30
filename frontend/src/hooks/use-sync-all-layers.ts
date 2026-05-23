@@ -85,12 +85,12 @@ const useSyncAllLayers = (type: MapTypes) => {
         (layer) => !preservedPredefinedLayersSet.has(layer)
       );
 
-      currentActiveLayers = [
-        ...newCustomLayers,
-        ...preservedCustomLayers,
-        ...newPredefinedLayers,
-        ...preservedPredefinedLayers,
-      ];
+      // Active layers with order preserved
+      const orderedActiveLayers = allActiveLayersRef.current.filter(
+        (layer) => activeCustomLayersSet.has(layer) || activePredefinedLayersSet.has(layer)
+      );
+
+      currentActiveLayers = [...newCustomLayers, ...newPredefinedLayers, ...orderedActiveLayers];
     }
 
     setAllActiveLayers(currentActiveLayers);

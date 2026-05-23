@@ -37,7 +37,7 @@
       },
       {
         "data_tool_languages": {
-          "__model__": false,
+          "__model__": true,
           "name": true,
           "slug": null,
           "data_tool": null
@@ -45,13 +45,13 @@
       },
       {
         "data_tool_resource_types": {
-          "__model__": false,
+          "__model__": true,
           "name": true
         }
       },
       {
         "data_tools": {
-          "__model__": false,
+          "__model__": true,
           "name": true,
           "description": true,
           "site": null,

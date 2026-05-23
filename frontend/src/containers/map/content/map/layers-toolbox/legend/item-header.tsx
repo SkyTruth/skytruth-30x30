@@ -14,8 +14,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { CUSTOM_LAYER_STYLE_COLORS } from '@/constants/custom-layer-style-colors';
 import { screenshotOpenAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
-import ArrowDownIcon from '@/styles/icons/arrow-down.svg';
-import ArrowTopIcon from '@/styles/icons/arrow-top.svg';
 import CloseIcon from '@/styles/icons/close.svg';
 import OpacityIcon from '@/styles/icons/opacity.svg';
 import { FCWithMessages } from '@/types';
@@ -23,13 +21,9 @@ import { FCWithMessages } from '@/types';
 type LegendItemHeaderProps = {
   color?: string;
   isCustomLayer?: boolean;
-  isFirst: boolean;
-  isLast: boolean;
   isVisible: boolean;
   onChangeLayerColor?: (slug: string, color: string) => void;
   onChangeLayerOpacity: (slug: string, opacity: number) => void;
-  onMoveLayerDown: (slug: string) => void;
-  onMoveLayerUp: (slug: string) => void;
   opacity: number;
   onRemoveLayer: (slug: string) => void;
   onToggleLayerVisibility: (slug: string, isVisible: boolean) => void;
@@ -40,13 +34,9 @@ type LegendItemHeaderProps = {
 const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
   color,
   isCustomLayer = false,
-  isFirst,
-  isLast,
   isVisible,
   onChangeLayerColor,
   onChangeLayerOpacity,
-  onMoveLayerDown,
-  onMoveLayerUp,
   opacity,
   onRemoveLayer,
   onToggleLayerVisibility,
@@ -57,8 +47,6 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
   const screenshotOpen = useAtomValue(screenshotOpenAtom);
   const layerTitleId = useId();
   const styleButtonLabel = isCustomLayer ? t('change-layer-style') : t('change-opacity');
-  const moveUpLabel = t('move-up-layer', { layer: title });
-  const moveDownLabel = t('move-down-layer', { layer: title });
   const styleButtonLayerLabel = isCustomLayer
     ? t('change-layer-style-layer', { layer: title })
     : t('change-opacity-layer', { layer: title });
@@ -86,38 +74,6 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
       {!screenshotOpen && (
         <TooltipProvider>
           <div className="flex shrink-0 items-center">
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={isFirst}
-                  aria-label={moveUpLabel}
-                  onClick={() => onMoveLayerUp(slug)}
-                >
-                  <span className="sr-only">{moveUpLabel}</span>
-                  <Icon icon={ArrowTopIcon} className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('move-up')}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={isLast}
-                  aria-label={moveDownLabel}
-                  onClick={() => onMoveLayerDown(slug)}
-                >
-                  <span className="sr-only">{moveDownLabel}</span>
-                  <Icon icon={ArrowDownIcon} className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('move-down')}</TooltipContent>
-            </Tooltip>
             <Tooltip>
               <Popover>
                 <TooltipTrigger asChild>

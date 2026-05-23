@@ -1,5 +1,16 @@
 import { useCallback, useMemo } from 'react';
 
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useAtom } from 'jotai';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -8,14 +19,12 @@ import {
   useSyncMapLayers,
 } from '@/containers/map/content/map/sync-settings';
 import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
-import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { Layer, LegendLegendComponent } from '@/types/generated/strapi.schemas';
 import { LayerTyped, ParamsConfig } from '@/types/layers';
 
-import LegendItem from './item';
-import LegendItemHeader from './item-header';
+import SortableLegendItem from './sortable-item';
 
 const Legend: FCWithMessages = () => {
   const t = useTranslations('containers.map');
@@ -149,48 +158,31 @@ const Legend: FCWithMessages = () => {
     [setCustomLayers]
   );
 
-  const moveLayer = useCallback(
-    (layerSlug: string, direction: 'up' | 'down') => {
-      const layerIndex = allActiveLayers.findIndex((slug) => slug === layerSlug);
-      if (layerIndex === -1) {
-        return;
-      }
-      const delta = direction === 'up' ? -1 : 1;
-
-      if (!customLayers[layerSlug]) {
-        const predfinedLayerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
-
-        if (
-          (direction === 'up' && predfinedLayerIndex !== 0) ||
-          (direction === 'down' && predfinedLayerIndex !== activeLayers.length - 1)
-        ) {
-          setPredefinedMapLayers((prev) => {
-            return prev
-              .toSpliced(predfinedLayerIndex, 1)
-              .toSpliced(predfinedLayerIndex + delta, 0, layerSlug);
-          });
-        }
-      }
-
-      setAllActiveLayers((prev) =>
-        prev.toSpliced(layerIndex, 1).toSpliced(layerIndex + delta, 0, layerSlug)
-      );
-    },
-    [allActiveLayers, activeLayers, customLayers, setAllActiveLayers, setPredefinedMapLayers]
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
-  const onMoveLayerDown = useCallback(
-    (layerSlug: string) => {
-      moveLayer(layerSlug, 'down');
-    },
-    [moveLayer]
-  );
+  const onDragEnd = useCallback(
+    ({ active, over }: DragEndEvent) => {
+      if (!over || active.id === over.id) return;
 
-  const onMoveLayerUp = useCallback(
-    (layerSlug: string) => {
-      moveLayer(layerSlug, 'up');
+      const activeSlug = active.id as string;
+      const overSlug = over.id as string;
+      const oldIndex = allActiveLayers.indexOf(activeSlug);
+      const newIndex = allActiveLayers.indexOf(overSlug);
+
+      const newAllActiveLayers = arrayMove(allActiveLayers, oldIndex, newIndex);
+      setAllActiveLayers(newAllActiveLayers);
+
+      const newPredefinedLayers = newAllActiveLayers.filter((slug) => !customLayers[slug]);
+      setPredefinedMapLayers(newPredefinedLayers);
     },
-    [moveLayer]
+    [allActiveLayers, customLayers, setAllActiveLayers, setPredefinedMapLayers]
   );
 
   const legendItems = useMemo(() => {
@@ -198,96 +190,72 @@ const Legend: FCWithMessages = () => {
       return null;
     }
 
-    return (
-      <div>
-        {allActiveLayers.map((slug, index) => {
-          const isFirst = index === 0;
-          const isLast = index + 1 === allActiveLayers.length;
+    return allActiveLayers.map((slug) => {
+      let opacity = 1;
+      let color: string | undefined;
+      let isVisible = true;
+      let isCustomLayer = false;
+      let title: string;
+      let legend_config: LegendLegendComponent;
+      let params_config;
 
-          let opacity = 1;
-          let color: string | undefined;
-          let isVisible = true;
-          let isCustomLayer = false;
-          let title: string;
-          let legend_config: LegendLegendComponent;
-          let params_config;
+      if (!customLayers[slug] && layersQuery.data?.length) {
+        const layer = layersQuery.data.filter((layer) => layer.slug === slug)[0];
 
-          if (!customLayers[slug] && layersQuery.data?.length) {
-            const layer = layersQuery.data.filter((layer) => layer.slug === slug)[0];
+        if (!layer) return null;
 
-            // Short circuit to catch when allActiveLayers state updates and the layersQuery
-            // hasn't yet returned the corresponding data
-            if (!layer) return null;
+        legend_config = layer.legend_config;
+        params_config = layer.params_config;
 
-            legend_config = layer.legend_config;
-            params_config = layer.params_config;
+        title = layer.title;
+        isVisible = layerSettings[slug]?.visibility !== false;
+        opacity = layerSettings[slug]?.opacity ?? 1;
+      } else {
+        const layer = customLayers[slug];
 
-            title = layer.title;
-            isVisible = layerSettings[slug]?.visibility !== false;
-            opacity = layerSettings[slug]?.opacity ?? 1;
-          } else {
-            const layer = customLayers[slug];
+        isCustomLayer = true;
+        title = layer.name;
+        isVisible = layer.isVisible;
+        opacity = layer.style.opacity ?? 0.5;
+        color = layer.style.fillColor ?? layer.style.lineColor;
+        legend_config = {
+          type: 'icon',
+          items: [
+            {
+              color: layer.style.fillColor,
+              description: null,
+              icon: 'circle-with-fill',
+              value: title,
+            },
+          ],
+        };
 
-            isCustomLayer = true;
-            title = layer.name;
-            isVisible = layer.isVisible;
-            opacity = layer.style.opacity ?? 0.5;
-            color = layer.style.fillColor ?? layer.style.lineColor;
-            legend_config = {
-              type: 'icon',
-              items: [
-                {
-                  color: layer.style.fillColor,
-                  description: null,
-                  icon: 'circle-with-fill',
-                  value: title,
-                },
-              ],
-            };
+        params_config = [
+          {
+            key: 'opacity',
+            default: opacity,
+          },
+        ];
+      }
 
-            params_config = [
-              {
-                key: 'opacity',
-                default: opacity,
-              },
-            ];
-          }
-
-          return (
-            <div
-              key={slug}
-              className={cn({
-                'pb-3': index + 1 < allActiveLayers.length,
-                'pt-2': index > 0,
-              })}
-            >
-              <LegendItemHeader
-                title={title}
-                isFirst={isFirst}
-                isLast={isLast}
-                onMoveLayerDown={onMoveLayerDown}
-                onMoveLayerUp={onMoveLayerUp}
-                slug={slug}
-                isVisible={isVisible}
-                onChangeLayerOpacity={onChangeLayerOpacity}
-                onChangeLayerColor={onChangeLayerColor}
-                onRemoveLayer={onRemoveLayer}
-                onToggleLayerVisibility={onToggleLayerVisibility}
-                opacity={opacity}
-                isCustomLayer={isCustomLayer}
-                color={color}
-              />
-              <div className="pt-1.5">
-                <LegendItem
-                  config={legend_config as LayerTyped['legend_config']}
-                  paramsConfig={params_config as ParamsConfig}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+      return (
+        <SortableLegendItem
+          key={slug}
+          slug={slug}
+          title={title}
+          isCustomLayer={isCustomLayer}
+          isVisible={isVisible}
+          opacity={opacity}
+          color={color}
+          legend_config={legend_config as LayerTyped['legend_config']}
+          params_config={params_config as ParamsConfig}
+          onRemoveLayer={onRemoveLayer}
+          onToggleLayerVisibility={onToggleLayerVisibility}
+          onChangeLayerOpacity={onChangeLayerOpacity}
+          onChangeLayerColor={onChangeLayerColor}
+        />
+      );
+    });
   }, [
     allActiveLayers,
     customLayers,
@@ -295,14 +263,12 @@ const Legend: FCWithMessages = () => {
     layersQuery.data,
     onChangeLayerOpacity,
     onChangeLayerColor,
-    onMoveLayerDown,
-    onMoveLayerUp,
     onRemoveLayer,
     onToggleLayerVisibility,
   ]);
 
   return (
-    <div className="px-4 py-2">
+    <div className="pl-2 pr-4 py-2 select-none">
       {!layersQuery.data?.length && (
         <p>
           {t.rich('open-layers-to-add-to-map', {
@@ -310,11 +276,27 @@ const Legend: FCWithMessages = () => {
           })}
         </p>
       )}
-      {legendItems}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={onDragEnd}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        autoScroll={false}
+        accessibility={{
+          screenReaderInstructions: {
+            draggable:
+              'To pick up a layer, press space or enter. Use the arrow keys to move the layer up or down. Press space or enter again to drop the layer in its new position, or press escape to cancel.',
+          },
+        }}
+      >
+        <SortableContext items={allActiveLayers} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col gap-y-5">{legendItems}</div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 };
 
-Legend.messages = ['containers.map', ...LegendItem.messages, ...LegendItemHeader.messages];
+Legend.messages = ['containers.map', ...SortableLegendItem.messages];
 
 export default Legend;
