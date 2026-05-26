@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 
 import {
   DndContext,
@@ -35,6 +35,8 @@ const Legend: FCWithMessages = () => {
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
+
+  const legendContainerRef = useRef<HTMLDivElement>(null);
 
   const layersQuery = useGetLayers<Layer[]>(
     {
@@ -171,6 +173,14 @@ const Legend: FCWithMessages = () => {
     ({ active, over }: DragEndEvent) => {
       if (!over || active.id === over.id) return;
 
+      let scrollContainer: HTMLElement | null = legendContainerRef.current?.parentElement ?? null;
+      while (scrollContainer) {
+        const { overflowY } = window.getComputedStyle(scrollContainer);
+        if (overflowY === 'auto' || overflowY === 'scroll') break;
+        scrollContainer = scrollContainer.parentElement;
+      }
+      const savedScrollTop = scrollContainer?.scrollTop ?? 0;
+
       const activeSlug = active.id as string;
       const overSlug = over.id as string;
       const oldIndex = allActiveLayers.indexOf(activeSlug);
@@ -181,6 +191,10 @@ const Legend: FCWithMessages = () => {
 
       const newPredefinedLayers = newAllActiveLayers.filter((slug) => !customLayers[slug]);
       setPredefinedMapLayers(newPredefinedLayers);
+
+      requestAnimationFrame(() => {
+        if (scrollContainer) scrollContainer.scrollTop = savedScrollTop;
+      });
     },
     [allActiveLayers, customLayers, setAllActiveLayers, setPredefinedMapLayers]
   );
@@ -268,7 +282,7 @@ const Legend: FCWithMessages = () => {
   ]);
 
   return (
-    <div className="pl-2 pr-4 py-2 select-none">
+    <div ref={legendContainerRef} className="pl-2 pr-4 py-2 select-none">
       {!layersQuery.data?.length && (
         <p>
           {t.rich('open-layers-to-add-to-map', {
@@ -288,7 +302,6 @@ const Legend: FCWithMessages = () => {
         }}
         onDragEnd={onDragEnd}
         modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-        autoScroll={false}
         accessibility={{
           screenReaderInstructions: {
             draggable:
