@@ -278,7 +278,14 @@ const Legend: FCWithMessages = () => {
       )}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={(args) => {
+          if (!args.pointerCoordinates) return closestCenter(args);
+          const { x, y } = args.pointerCoordinates;
+          return closestCenter({
+            ...args,
+            collisionRect: { top: y, bottom: y, left: x, right: x, width: 0, height: 0 },
+          });
+        }}
         onDragEnd={onDragEnd}
         modifiers={[restrictToVerticalAxis, restrictToParentElement]}
         autoScroll={false}
