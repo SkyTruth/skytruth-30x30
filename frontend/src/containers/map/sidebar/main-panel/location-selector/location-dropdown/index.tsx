@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { Check, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -48,8 +48,12 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
 
   const normalize = (s: string) => s.normalize?.('NFKD').toLowerCase() || s.toLowerCase();
 
-  const resolveName = (item: Location) =>
-    item?.code === 'clear' ? t('clear-all') : getLocationName(item);
+  const resolveName = useCallback(
+    (item: Location) => {
+      return item?.code === 'clear' ? t('clear-all') : getLocationName(item);
+    },
+    [getLocationName, t]
+  );
 
   const visibleLocations = useMemo(() => {
     if (!searchTerm) return filteredLocations;
@@ -59,8 +63,7 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
       const name = resolveName(item);
       return normalize(name).includes(query);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredLocations, searchTerm, getLocationName, t]);
+  }, [filteredLocations, searchTerm, resolveName]);
 
   return (
     <Command label={searchPlaceholder} className={cn(className)} shouldFilter={false}>
