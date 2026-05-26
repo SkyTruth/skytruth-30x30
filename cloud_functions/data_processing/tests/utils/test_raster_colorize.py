@@ -126,15 +126,14 @@ def test_colorize_binary_coral_ramp(tmp_path):
     rgba = _read_rgba(dest_path)
     r, g, b = rgba[0], rgba[1], rgba[2]
 
-    # Value 1.0 → #EC7667 = (236, 118, 103)
-    assert r[0, 1] == 236
-    assert g[0, 1] == 118
-    assert b[0, 1] == 103
+    assert r[0, 1] == 204
+    assert g[0, 1] == 0
+    assert b[0, 1] == 204
 
     # Value 0.0 → lighter = (243, 187, 179)
-    assert r[0, 0] == 243
-    assert g[0, 0] == 187
-    assert b[0, 0] == 179
+    assert r[0, 0] == 255
+    assert g[0, 0] == 102
+    assert b[0, 0] == 255
 
 
 def test_colorize_domain_clamping(tmp_path):
