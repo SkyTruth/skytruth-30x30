@@ -4,6 +4,7 @@ import { TileLayer, type TileLayerProps } from '@deck.gl/geo-layers/typed';
 import type { TileLoadProps } from '@deck.gl/geo-layers/typed/tileset-2d/types';
 import { BitmapLayer } from '@deck.gl/layers/typed';
 import { PMTilesTileSource } from '@loaders.gl/pmtiles';
+import GL from '@luma.gl/constants';
 
 import { useDeckMapboxOverlayContext } from '@/components/map/provider';
 import { LayerProps } from '@/types/layers';
@@ -79,6 +80,10 @@ const PmtilesLayer = ({ id, beforeId, url, opacity = 1, visibility = true }: Pmt
           bounds: [west, south, east, north],
           opacity: props.opacity,
           visible: props.visible,
+          textureParameters: {
+            [GL.TEXTURE_MIN_FILTER]: GL.NEAREST,
+            [GL.TEXTURE_MAG_FILTER]: GL.NEAREST,
+          },
         });
       },
     };
