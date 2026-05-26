@@ -24,8 +24,8 @@ class ColorStop:
 # Predefined color ramps
 COLOR_RAMPS: dict[str, list[ColorStop]] = {
     "coral": [
-        ColorStop(0.0, (243, 187, 179, 255)),  # lighter #EC7667
-        ColorStop(1.0, (236, 118, 103, 255)),  # #EC7667
+        ColorStop(0.0, (255, 102, 255, 255)),  # #FF66FF
+        ColorStop(1.0, (204, 0, 204, 255)),  # #CC00CC
     ]
 }
 
