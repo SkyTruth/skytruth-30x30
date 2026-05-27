@@ -1,16 +1,14 @@
-import { useCallback, useMemo, useRef } from 'react';
-
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   DragEndEvent,
-  KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
 import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useAtom } from 'jotai';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -38,6 +36,7 @@ const Legend: FCWithMessages = () => {
 
   const legendContainerRef = useRef<HTMLDivElement>(null);
 
+  const [announcement, setAnnouncement] = useState('');
   const layersQuery = useGetLayers<Layer[]>(
     {
       locale,
@@ -163,40 +162,74 @@ const Legend: FCWithMessages = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
     })
+  );
+  const getLayerLabel = useCallback(
+    (slug: string) =>
+      customLayers[slug]?.name ??
+      layersQuery.data?.find((layer) => layer.slug === slug)?.title ??
+      slug,
+    [customLayers, layersQuery.data]
+  );
+  const findScrollContainer = useCallback((): HTMLElement | null => {
+    let el = legendContainerRef.current?.parentElement ?? null;
+    while (el) {
+      const { overflowY } = window.getComputedStyle(el);
+      if (overflowY === 'auto' || overflowY === 'scroll') return el;
+      el = el.parentElement;
+    }
+    return null;
+  }, []);
+
+  const reorderLayer = useCallback(
+    (slug: string, toIndex: number) => {
+      const fromIndex = allActiveLayers.indexOf(slug);
+      if (
+        fromIndex === -1 ||
+        toIndex < 0 ||
+        toIndex >= allActiveLayers.length ||
+        toIndex === fromIndex
+      ) {
+        return false;
+      }
+      const neighborLabel = getLayerLabel(allActiveLayers[toIndex]);
+      const direction = toIndex > fromIndex ? 'below' : 'above';
+      const reordered = arrayMove(allActiveLayers, fromIndex, toIndex);
+      setAllActiveLayers(reordered);
+      setPredefinedMapLayers(reordered.filter((layerSlug) => !customLayers[layerSlug]));
+      setAnnouncement(`${getLayerLabel(slug)} moved ${direction} ${neighborLabel}`);
+      return true;
+    },
+    [allActiveLayers, customLayers, getLayerLabel, setAllActiveLayers, setPredefinedMapLayers]
   );
 
   const onDragEnd = useCallback(
     ({ active, over }: DragEndEvent) => {
       if (!over || active.id === over.id) return;
-
-      let scrollContainer: HTMLElement | null = legendContainerRef.current?.parentElement ?? null;
-      while (scrollContainer) {
-        const { overflowY } = window.getComputedStyle(scrollContainer);
-        if (overflowY === 'auto' || overflowY === 'scroll') break;
-        scrollContainer = scrollContainer.parentElement;
-      }
+      const scrollContainer = findScrollContainer();
       const savedScrollTop = scrollContainer?.scrollTop ?? 0;
-
-      const activeSlug = active.id as string;
-      const overSlug = over.id as string;
-      const oldIndex = allActiveLayers.indexOf(activeSlug);
-      const newIndex = allActiveLayers.indexOf(overSlug);
-
-      const newAllActiveLayers = arrayMove(allActiveLayers, oldIndex, newIndex);
-      setAllActiveLayers(newAllActiveLayers);
-
-      const newPredefinedLayers = newAllActiveLayers.filter((slug) => !customLayers[slug]);
-      setPredefinedMapLayers(newPredefinedLayers);
-
+      reorderLayer(active.id as string, allActiveLayers.indexOf(over.id as string));
       requestAnimationFrame(() => {
         if (scrollContainer) scrollContainer.scrollTop = savedScrollTop;
       });
     },
-    [allActiveLayers, customLayers, setAllActiveLayers, setPredefinedMapLayers]
+    [allActiveLayers, findScrollContainer, reorderLayer]
+  );
+
+  const moveLayer = useCallback(
+    (slug: string, direction: 'up' | 'down') => {
+      const fromIndex = allActiveLayers.indexOf(slug);
+      if (fromIndex === -1) return;
+      const moved = reorderLayer(slug, fromIndex + (direction === 'up' ? -1 : 1));
+      if (moved) {
+        requestAnimationFrame(() => {
+          document
+            .querySelector(`[data-layer-slug="${slug}"]`)
+            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+      }
+    },
+    [allActiveLayers, reorderLayer]
   );
 
   const legendItems = useMemo(() => {
@@ -224,6 +257,7 @@ const Legend: FCWithMessages = () => {
         title = layer.title;
         isVisible = layerSettings[slug]?.visibility !== false;
         opacity = layerSettings[slug]?.opacity ?? 1;
+        
       } else {
         const layer = customLayers[slug];
 
@@ -267,6 +301,7 @@ const Legend: FCWithMessages = () => {
           onToggleLayerVisibility={onToggleLayerVisibility}
           onChangeLayerOpacity={onChangeLayerOpacity}
           onChangeLayerColor={onChangeLayerColor}
+          onMoveLayer={moveLayer}
         />
       );
     });
@@ -275,6 +310,7 @@ const Legend: FCWithMessages = () => {
     customLayers,
     layerSettings,
     layersQuery.data,
+    moveLayer,
     onChangeLayerOpacity,
     onChangeLayerColor,
     onRemoveLayer,
@@ -290,6 +326,9 @@ const Legend: FCWithMessages = () => {
           })}
         </p>
       )}
+      <div role="status" aria-live="assertive" aria-atomic="true" className="sr-only">
+        {announcement}
+      </div>
       <DndContext
         sensors={sensors}
         collisionDetection={(args) => {
@@ -303,9 +342,11 @@ const Legend: FCWithMessages = () => {
         onDragEnd={onDragEnd}
         modifiers={[restrictToVerticalAxis, restrictToParentElement]}
         accessibility={{
-          screenReaderInstructions: {
-            draggable:
-              'To pick up a layer, press space or enter. Use the arrow keys to move the layer up or down. Press space or enter again to drop the layer in its new position, or press escape to cancel.',
+          announcements: {
+            onDragStart: () => undefined,
+            onDragOver: () => undefined,
+            onDragEnd: () => undefined,
+            onDragCancel: () => undefined,
           },
         }}
       >

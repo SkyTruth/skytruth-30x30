@@ -149,7 +149,7 @@
       "open-region-insights": "Open region insights",
       "legend": "Legend",
       "open-layers-to-add-to-map": "Open <b>Layers</b> to add layers to the map",
-      "drag-to-reorder-layer": "Drag {layer} to reorder",
+      "drag-to-reorder-layer": "Drag {layer} to reorder. Use Alt + Up to move the layer up or Alt + Down to move down.",
       "change-opacity": "Change opacity",
       "change-opacity-layer": "Change opacity for {layer}",
       "change-layer-style": "Change layer style",
