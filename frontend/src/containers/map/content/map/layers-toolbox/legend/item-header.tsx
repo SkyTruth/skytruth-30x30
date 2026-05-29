@@ -1,6 +1,7 @@
-import { useId } from 'react';
+import { type HTMLAttributes, type KeyboardEvent, useId } from 'react';
 
 import { useAtomValue } from 'jotai';
+import { Menu } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { HiEye, HiEyeOff } from 'react-icons/hi';
 
@@ -20,10 +21,13 @@ import { FCWithMessages } from '@/types';
 
 type LegendItemHeaderProps = {
   color?: string;
+  dragHandleRef?: (element: HTMLElement | null) => void;
+  dragListeners?: HTMLAttributes<HTMLButtonElement>;
   isCustomLayer?: boolean;
   isVisible: boolean;
   onChangeLayerColor?: (slug: string, color: string) => void;
   onChangeLayerOpacity: (slug: string, opacity: number) => void;
+  onDragKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
   opacity: number;
   onRemoveLayer: (slug: string) => void;
   onToggleLayerVisibility: (slug: string, isVisible: boolean) => void;
@@ -33,10 +37,13 @@ type LegendItemHeaderProps = {
 
 const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
   color,
+  dragHandleRef,
+  dragListeners,
   isCustomLayer = false,
   isVisible,
   onChangeLayerColor,
   onChangeLayerOpacity,
+  onDragKeyDown,
   opacity,
   onRemoveLayer,
   onToggleLayerVisibility,
@@ -46,6 +53,7 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
   const t = useTranslations('containers.map');
   const screenshotOpen = useAtomValue(screenshotOpenAtom);
   const layerTitleId = useId();
+  const dragInstructionsId = useId();
   const styleButtonLabel = isCustomLayer ? t('change-layer-style') : t('change-opacity');
   const styleButtonLayerLabel = isCustomLayer
     ? t('change-layer-style-layer', { layer: title })
@@ -63,10 +71,28 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
       role="group"
       aria-labelledby={layerTitleId}
     >
+      {!screenshotOpen && dragHandleRef && (
+        <>
+          <span id={dragInstructionsId} className="sr-only">
+            {t('drag-reorder-instructions')}
+          </span>
+          <button
+            ref={dragHandleRef}
+            {...dragListeners}
+            type="button"
+            onKeyDown={onDragKeyDown}
+            aria-label={t('drag-to-reorder-layer', { layer: title })}
+            aria-describedby={dragInstructionsId}
+            className="shrink-0 cursor-grab touch-none rounded-sm text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1 active:cursor-grabbing"
+          >
+            <Menu className="h-4 w-4" aria-hidden />
+          </button>
+        </>
+      )}
       <TooltipProvider>
         <div
           id={layerTitleId}
-          className="cursor-default overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs font-bold ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 [&_svg]:aria-[expanded=true]:rotate-180"
+          className="min-w-0 flex-1 cursor-default overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs font-bold ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 [&_svg]:aria-[expanded=true]:rotate-180"
         >
           {title}
         </div>

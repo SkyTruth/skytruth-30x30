@@ -193,11 +193,15 @@ const Legend: FCWithMessages = () => {
         return false;
       }
       const neighborLabel = getLayerLabel(allActiveLayers[toIndex]);
-      const direction = toIndex > fromIndex ? 'below' : 'above';
       const reordered = arrayMove(allActiveLayers, fromIndex, toIndex);
       setAllActiveLayers(reordered);
       setPredefinedMapLayers(reordered.filter((layerSlug) => !customLayers[layerSlug]));
-      setAnnouncement(`${getLayerLabel(slug)} moved ${direction} ${neighborLabel}`);
+      setAnnouncement(
+        t(toIndex > fromIndex ? 'layer-moved-below' : 'layer-moved-above', {
+          layer: getLayerLabel(slug),
+          neighbor: neighborLabel,
+        })
+      );
       return true;
     },
     [allActiveLayers, customLayers, getLayerLabel, setAllActiveLayers, setPredefinedMapLayers]
@@ -326,7 +330,7 @@ const Legend: FCWithMessages = () => {
           })}
         </p>
       )}
-      <div role="status" aria-live="assertive" aria-atomic="true" className="sr-only">
+      <div role="alert" className="sr-only">
         {announcement}
       </div>
       <DndContext

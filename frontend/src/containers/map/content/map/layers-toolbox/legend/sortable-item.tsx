@@ -1,10 +1,7 @@
 import { type KeyboardEvent } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useAtomValue } from 'jotai';
-import { Menu } from 'lucide-react';
 
-import { screenshotOpenAtom } from '@/containers/map/store';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { LegendLegendComponent } from '@/types/generated/strapi.schemas';
@@ -13,7 +10,6 @@ import { LayerTyped, ParamsConfig } from '@/types/layers';
 import LegendItem from './item';
 import LegendItemHeader from './item-header';
 
-import { useTranslations } from 'next-intl';
 type SortableLegendItemProps = {
   slug: string;
   title: string;
@@ -45,9 +41,6 @@ const SortableLegendItem: FCWithMessages<SortableLegendItemProps> = ({
   onChangeLayerColor,
   onMoveLayer,
 }) => {
-  const t = useTranslations('containers.map');
-  const screenshotOpen = useAtomValue(screenshotOpenAtom);
-
   const { listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: slug, data: { title } });
   const style = {
@@ -70,41 +63,30 @@ const SortableLegendItem: FCWithMessages<SortableLegendItemProps> = ({
       ref={setNodeRef}
       style={style}
       data-layer-slug={slug}
-      className={cn('relative flex items-start gap-x-2', {
+      className={cn('relative', {
         'opacity-50': isDragging,
       })}
     >
-      {!screenshotOpen && (
-        <button
-          ref={setActivatorNodeRef}
-          {...listeners}
-          type="button"
-          onKeyDown={handleKeyDown}
-          aria-label={t('drag-to-reorder-layer', {layer: title})}
-          className="mt-[3px] shrink-0 cursor-grab touch-none rounded-sm text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1 active:cursor-grabbing"
-        >
-          <Menu className="h-4 w-4" aria-hidden />
-        </button>
-      )}
-      <div className="min-w-0 flex-1">
-        <LegendItemHeader
-          slug={slug}
-          title={title}
-          isVisible={isVisible}
-          opacity={opacity}
-          isCustomLayer={isCustomLayer}
-          color={color}
-          onRemoveLayer={onRemoveLayer}
-          onToggleLayerVisibility={onToggleLayerVisibility}
-          onChangeLayerOpacity={onChangeLayerOpacity}
-          onChangeLayerColor={onChangeLayerColor}
+      <LegendItemHeader
+        slug={slug}
+        title={title}
+        isVisible={isVisible}
+        opacity={opacity}
+        isCustomLayer={isCustomLayer}
+        color={color}
+        dragHandleRef={setActivatorNodeRef}
+        dragListeners={listeners}
+        onDragKeyDown={handleKeyDown}
+        onRemoveLayer={onRemoveLayer}
+        onToggleLayerVisibility={onToggleLayerVisibility}
+        onChangeLayerOpacity={onChangeLayerOpacity}
+        onChangeLayerColor={onChangeLayerColor}
+      />
+      <div className="pt-1.5">
+        <LegendItem
+          config={legend_config as LayerTyped['legend_config']}
+          paramsConfig={params_config as ParamsConfig}
         />
-        <div className="pt-1.5">
-          <LegendItem
-            config={legend_config as LayerTyped['legend_config']}
-            paramsConfig={params_config as ParamsConfig}
-          />
-        </div>
       </div>
     </div>
   );
