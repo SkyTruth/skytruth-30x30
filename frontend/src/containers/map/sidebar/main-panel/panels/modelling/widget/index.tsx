@@ -9,9 +9,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import StackedHorizontalBarChart from '@/components/charts/stacked-horizontal-bar-chart';
 import TooltipButton from '@/components/tooltip-button';
 import Widget from '@/components/widget';
-import { modellingAtom } from '@/containers/map/store';
+import { drawStateAtom, modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import useNameField from '@/hooks/use-name-field';
+import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import {
@@ -70,8 +70,9 @@ WidgetLegend.messages = ['containers.map-sidebar-main-panel'];
 
 const ModellingWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
+  const tUploads = useTranslations('services.uploads');
   const locale = useLocale();
-  const locationNameField = useNameField();
+  const getLocationName = useLocationName();
 
   const [{ tab }] = useSyncMapContentSettings();
 
@@ -80,8 +81,13 @@ const ModellingWidget: FCWithMessages = () => {
   const {
     status: modellingStatus,
     data: modellingData,
-    errorMessage,
+    errorMessage: errorMessageKey,
   } = useAtomValue(modellingAtom);
+
+  const errorMessage = errorMessageKey
+    ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0], { environment: tab })
+    : undefined;
+  const { status: drawStatus } = useAtomValue(drawStateAtom);
 
   // Tooltips with mapping
   const tooltips = useTooltips();
@@ -119,36 +125,30 @@ const ModellingWidget: FCWithMessages = () => {
       },
       'pagination[limit]': 1,
       // @ts-ignore
-      fields: ['protected_area'],
+      fields: ['protected_area', 'total_area'],
     },
     {
       query: {
+        queryKey: [modellingData, tab, locale],
         enabled: Boolean(modellingData?.locations_area) && ['marine', 'terrestrial'].includes(tab),
         select: ({ data }) => {
           if (!data) return null;
 
-          const protectedArea = data?.[0].attributes.protected_area ?? 0;
-
-          const location = data?.[0].attributes?.location?.data?.attributes;
-          let totalArea;
-          if (tab === 'marine') {
-            totalArea = location?.total_marine_area ? Number(location?.total_marine_area) : 0;
-          } else {
-            totalArea = location?.total_terrestrial_area
-              ? Number(location?.total_terrestrial_area)
-              : 0;
-          }
-
+          // existing global protected area
+          const protectedArea = data?.[0].protected_area ?? 0;
+          // total area
+          const totalArea = Number(data?.[0].total_area ?? 0);
+          // total custom protected areas (analysis)
           const totalCustomAreas = modellingData.locations_area.reduce((acc, location) => {
             return acc + location.protected_area;
           }, 0);
-
+          // sum of existing global protected area and custom protected areas (analysis)
           const totalProtectedArea = protectedArea + totalCustomAreas;
-          //  ? percentage of custom protected areas (analysis)
+          // percentage of custom protected areas (analysis)
           const totalCustomAreasPercentage = (totalCustomAreas / totalArea) * 100;
-          //  ? percentage of existing global protected area
+          // percentage of existing global protected area
           const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
-
+          // percentage of existing global protected area and custom protected areas
           const totalPercentage = totalCustomAreasPercentage + totalExistingAreaPercentage;
 
           return {
@@ -188,59 +188,52 @@ const ModellingWidget: FCWithMessages = () => {
           // @ts-ignore
           populate: {
             location: {
-              fields: [
-                'name',
-                'name_es',
-                'name_fr',
-                'name_pt',
-                'code',
-                'total_marine_area',
-                'total_terrestrial_area',
-              ],
+              fields: ['name', 'code', 'type', 'total_marine_area', 'total_terrestrial_area'],
             },
           },
           'pagination[limit]': 1,
           // @ts-ignore
-          fields: ['protected_area'],
+          fields: ['protected_area', 'total_area'],
         },
         {
           query: {
             enabled:
               Boolean(modellingData?.locations_area) && ['marine', 'terrestrial'].includes(tab),
             select: ({ data }) => {
-              if (!data) return null;
+              if (!data?.length) return null;
 
-              const protectedArea = data?.[0]?.attributes.protected_area ?? 0;
+              // existing protected area
+              const protectedArea = data?.[0]?.protected_area ?? 0;
+              const currentLoc = data?.[0]?.location;
 
-              const location = data?.[0]?.attributes?.location?.data?.attributes;
+              // Fallback area if location isn't in WDPA
+              const fallBackArea =
+                tab === 'marine'
+                  ? currentLoc?.total_marine_area
+                  : currentLoc?.total_terrestrial_area;
 
-              // ? total extension of location
-              let totalArea;
-              if (tab === 'marine') {
-                totalArea = location?.total_marine_area ? Number(location.total_marine_area) : 0;
-              } else {
-                totalArea = location?.total_terrestrial_area
-                  ? Number(location.total_terrestrial_area)
-                  : 0;
-              }
+              const totalArea = Number(data?.[0]?.total_area ?? fallBackArea);
+              // total custom protected area (analysis)
+              const CLoc = modellingData.locations_area.find(
+                ({ code }) => code === currentLoc?.code
+              );
 
-              // ? total custom  protected area (analysis)
-              const totalCustomArea = modellingData.locations_area.find(
-                ({ code }) => code === location?.code
-              ).protected_area;
-
-              //  ? percentage of custom protected area (analysis)
-              const totalCustomAreaPercentage = (totalCustomArea / totalArea) * 100;
-              //  ? percentage of existing protected area
-              const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
-
-              // ? sum of existing protected area and protected custom area (analysis)
+              const customArea = CLoc.protected_area;
+              // If custom area exceeds total unprotected area, cap it to the total unprotected area
+              // necessary because of rounding errors and differences in data resolutions
+              const totalCustomArea =
+                customArea + protectedArea > totalArea ? totalArea - protectedArea : customArea;
+              // sum of existing protected area and custom protected area (analysis)
               const totalProtectedArea = protectedArea + totalCustomArea;
-
+              // percentage of custom protected area (analysis)
+              const totalCustomAreaPercentage = (totalCustomArea / totalArea) * 100;
+              // percentage of existing protected area
+              const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
+              // percentage of existing protected area and custom protected area
               const totalPercentage = totalCustomAreaPercentage + totalExistingAreaPercentage;
 
               return {
-                location,
+                location: currentLoc,
                 totalArea,
                 totalProtectedArea,
                 protectedArea,
@@ -257,8 +250,10 @@ const ModellingWidget: FCWithMessages = () => {
     ),
   });
 
-  const loading = modellingStatus === 'running';
+  const loading = modellingStatus === 'running' || drawStatus === 'uploading';
   const error = modellingStatus === 'error';
+  const loadingMessage =
+    drawStatus === 'uploading' ? t('uploading-layer-to-map') : t('loading-data');
 
   // @ts-expect-error will check later
   const nationalLevelContributions: {
@@ -283,16 +278,16 @@ const ModellingWidget: FCWithMessages = () => {
     [locationQueries]
   );
 
-  const administrativeBoundaries = nationalLevelContributions?.map((contribution) => {
-    const locationName = contribution.location[locationNameField];
-    return locationName;
-  });
+  const administrativeBoundaries = nationalLevelContributions?.map((contribution) =>
+    getLocationName(contribution.location)
+  );
 
   return (
     <Widget
-      className="border-b border-black py-0"
+      className="border-black py-0"
       noData={!nationalLevelContributions}
       loading={loading}
+      loadingMessage={loadingMessage}
       error={error}
       errorMessage={errorMessage}
     >
@@ -316,7 +311,7 @@ const ModellingWidget: FCWithMessages = () => {
             <WidgetLegend />
           </div>
           {nationalLevelContributions?.map((contribution) => {
-            const locationName = contribution.location[locationNameField];
+            const locationName = getLocationName(contribution.location);
 
             return (
               <StackedHorizontalBarChart
@@ -380,6 +375,9 @@ const ModellingWidget: FCWithMessages = () => {
 
 ModellingWidget.messages = [
   'containers.map-sidebar-main-panel',
+  'services.uploads',
+  // Required by the `useLocationName` hook
+  'locations',
   ...Widget.messages,
   ...WidgetLegend.messages,
   ...StackedHorizontalBarChart.messages,

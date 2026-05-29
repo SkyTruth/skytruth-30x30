@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useAtom, useAtomValue } from 'jotai';
 import { useLocale } from 'next-intl';
 
-import Map, { ZoomControls, Attributions } from '@/components/map';
+import Map, { ZoomControls, Screenshot, Attributions } from '@/components/map';
 import { DEFAULT_VIEW_STATE } from '@/components/map/constants';
 import DrawControls from '@/containers/map/content/map/draw-controls';
 import LabelsManager from '@/containers/map/content/map/labels-manager';
@@ -22,12 +22,14 @@ import {
   drawStateAtom,
   layersInteractiveAtom,
   layersInteractiveIdsAtom,
+  mapTypeAtom,
   popupAtom,
 } from '@/containers/map/store';
 import useMapBounds from '@/hooks/useMapBounds';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped } from '@/types/layers';
+import { MapTypes } from '@/types/map';
 
 const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-manager'), {
   ssr: false,
@@ -44,6 +46,7 @@ const MainMap: FCWithMessages = () => {
   const drawState = useAtomValue(drawStateAtom);
   const layersInteractive = useAtomValue(layersInteractiveAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
+  const mapType = useAtomValue(mapTypeAtom);
 
   const [popup, setPopup] = useAtom(popupAtom);
 
@@ -65,7 +68,7 @@ const MainMap: FCWithMessages = () => {
     {
       query: {
         enabled: !!layersInteractive.length,
-        select: ({ data }) => data,
+        select: ({ data }) => data as LayerTyped[],
       },
     }
   );
@@ -86,7 +89,7 @@ const MainMap: FCWithMessages = () => {
     },
     {
       query: {
-        select: ({ data }) => data.map(({ attributes }) => attributes?.slug),
+        select: ({ data }) => data.map((item) => item?.slug),
       },
     }
   );
@@ -173,8 +176,7 @@ const MainMap: FCWithMessages = () => {
       if (
         layersInteractive.length &&
         layersInteractiveData.some((l) => {
-          const attributes = l.attributes as LayerTyped;
-          return attributes?.interaction_config?.events.some((ev) => ev.type === 'click');
+          return l?.interaction_config?.events.some((ev) => ev.type === 'click');
         })
       ) {
         const p = Object.assign({}, e, { features: e.features ?? [] });
@@ -250,11 +252,14 @@ const MainMap: FCWithMessages = () => {
   const disableMouseMove = popup.type === 'click' && popup.features?.length;
 
   return (
-    <div className="absolute left-0 h-full w-full border-b border-r border-black">
+    <div
+      className="absolute left-0 h-full w-full border-b border-r border-black"
+      data-screenshot="map"
+    >
       <Map
         initialViewState={initialViewState}
         bounds={bounds}
-        interactiveLayerIds={!drawState.active && !drawState.feature ? layersInteractiveIds : []}
+        interactiveLayerIds={!drawState.active ? layersInteractiveIds : []}
         onClick={handleMapClick}
         onMoveEnd={handleMoveEnd}
         onMouseMove={!disableMouseMove && handleMouseMove}
@@ -267,7 +272,7 @@ const MainMap: FCWithMessages = () => {
           <LabelsManager />
           <LayersToolbox />
           <ZoomControls />
-          <DrawControls />
+          {mapType === MapTypes.ConservationBuilder ? <Screenshot /> : null} <DrawControls />
           <LayerManager cursor={cursor} />
           <Modelling />
           <Attributions />
@@ -282,6 +287,8 @@ MainMap.messages = [
   ...Popup.messages,
   ...LayersToolbox.messages,
   ...ZoomControls.messages,
+  ...Screenshot.messages,
+  ...DrawControls.messages,
   // Indirectly imported by the layer manager
   ...GenericPopup.messages,
   ...ProtectedAreaPopup.messages,

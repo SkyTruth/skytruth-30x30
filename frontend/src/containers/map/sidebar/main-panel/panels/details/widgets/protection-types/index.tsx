@@ -58,14 +58,13 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
         select: ({ data }) =>
           data[0]
             ? {
-                info: data[0]?.attributes?.content,
-                sources: data[0]?.attributes?.data_sources?.data?.map(
-                  ({ id, attributes: { title, url } }) => ({
-                    id,
-                    title,
-                    url,
-                  })
-                ),
+                info: data[0]?.content,
+                sources: data[0]?.data_sources?.map(({ documentId, slug, title, url }) => ({
+                  documentId,
+                  slug,
+                  title,
+                  url,
+                })),
               }
             : undefined,
       },

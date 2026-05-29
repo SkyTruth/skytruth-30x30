@@ -30,7 +30,7 @@ const PopupItem: FCWithMessages<PopupItemProps> = ({ slug }) => {
     },
     {
       query: {
-        select: ({ data }) => data[0]?.attributes,
+        select: ({ data }) => data[0],
       },
     }
   );

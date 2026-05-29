@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 import { VariantProps, cva } from 'class-variance-authority';
@@ -63,22 +62,21 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const t = useTranslations('components.header');
 
   const navigationItems = useMemo(
-    () => [
-      {
-        name: t('progress-tracker'),
-        href: PAGES.progressTracker,
-        colorClassName: 'text-orange',
-        preserveMapParams: true,
-      },
-      {
-        name: t('conservation-builder'),
-        href: PAGES.conservationBuilder,
-        colorClassName: 'text-blue',
-        preserveMapParams: true,
-      },
-      { name: t('knowledge-hub'), href: PAGES.knowledgeHub, colorClassName: 'text-green' },
-      { name: t('about'), href: PAGES.about, colorClassName: 'text-violet' },
-    ],
+    () =>
+      [
+        {
+          name: t('progress-tracker'),
+          href: PAGES.progressTracker,
+          colorClassName: 'text-orange',
+          preserveMapParams: true,
+        },
+        {
+          name: t('conservation-builder'),
+          href: PAGES.conservationBuilder,
+          colorClassName: 'text-blue',
+          preserveMapParams: true,
+        },
+      ].filter(Boolean),
     [t]
   );
 
@@ -123,11 +121,10 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
       >
         <span className="flex">
           {!hideLogo && (
-            <Link
-              href={{
-                pathname: '/',
-                query: runAsOf ? { 'run-as-of': runAsOf } : '',
-              }}
+            <a
+              href="https://www.skytruth.org/30x30"
+              target="_blank"
+              rel="noopener noreferrer"
               className="-my-1.5 inline-block ring-offset-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
             >
               <Image
@@ -136,7 +133,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
                 width={25}
                 height={25}
               />
-            </Link>
+            </a>
           )}
         </span>
 

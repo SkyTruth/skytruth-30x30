@@ -1,17 +1,15 @@
-import { useTranslations } from 'next-intl';
+import { FC } from 'react';
 
-import { FCWithMessages } from '@/types';
+type LoadingProps = {
+  message?: string;
+};
 
-const Loading: FCWithMessages = () => {
-  const t = useTranslations('components.widget');
-
+const Loading: FC<LoadingProps> = ({ message }) => {
   return (
     <div className="flex flex-col gap-8 px-14 py-12 text-center md:px-10 md:py-14">
-      <p className="text-xs">{t('loading-data')}</p>
+      <p className="text-xs">{message}</p>
     </div>
   );
 };
-
-Loading.messages = ['components.widget'];
 
 export default Loading;

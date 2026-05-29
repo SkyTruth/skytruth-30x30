@@ -71,6 +71,12 @@ variable "backend_max_scale" {
   default     = 5
 }
 
+variable "backend_available_memory" {
+  type        = string
+  description = "Memory limit for the backend Cloud Run container (e.g. \"512Mi\", \"1Gi\")"
+  default     = "512Mi"
+}
+
 variable "cors_origin" {
   type        = string
   description = "Origin for CORS config"
@@ -186,6 +192,40 @@ variable "data_processing_max_instance_request_concurrency" {
   type        = number
   default     = 1
   description = "Max instance request concurrency for the data processing function"
+}
+
+variable "cloudrun_jobs_timeout_seconds" {
+  type        = number
+  default     = 600
+  description = "Timeout for the data processing function"
+}
+
+variable "cloudrun_jobs_available_memory" {
+  type        = string
+  default     = "8G"
+  description = "Available memory for the data processing function"
+}
+
+variable "cloudrun_jobs_available_cpu" {
+  type        = number
+  default     = 2
+  description = "Available cpu for the data processing function"
+}
+
+variable "cloudrun_jobs_max_instance_count" {
+  type        = number
+  default     = 10
+  description = "Max instance count for the data processing function"
+}
+
+variable "cloudrun_jobs_max_instance_request_concurrency" {
+  type        = number
+  default     = 1
+  description = "Max instance request concurrency for the data processing function"
+}
+
+variable "cloudrun_jobs_image" {
+  type = string
 }
 
 variable "scheduler_invoker_sa" {

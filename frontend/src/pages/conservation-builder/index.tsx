@@ -8,6 +8,7 @@ import MapLayout from '@/layouts/map';
 import { fetchTranslations } from '@/lib/i18n';
 import mapParamsToSearchParams from '@/lib/mapparams-to-searchparams';
 import { FCWithMessages } from '@/types';
+import { MapTypes } from '@/types/map';
 
 import { LayoutProps } from '../_app';
 
@@ -20,8 +21,7 @@ const ConservationBuilderPage: FCWithMessages & {
 ConservationBuilderPage.layout = {
   Component: MapLayout,
   props: {
-    title: '',
-    type: 'conservation-builder',
+    type: MapTypes.ConservationBuilder,
   },
 };
 
@@ -37,7 +37,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       searchParams += `&run-as-of=${runAsOf}`;
     }
 
-    const target = `/${context.locale}/${PAGES.conservationBuilder}/?${searchParams}`;
+    const target = `/${context.locale}${PAGES.conservationBuilder}/?${searchParams}`;
 
     return {
       redirect: {

@@ -1,3 +1,5 @@
+import { ComponentProps } from 'react';
+
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 import type { GetServerSideProps } from 'next';
 
@@ -8,34 +10,25 @@ import mapParamsToSearchParams from '@/lib/mapparams-to-searchparams';
 import { FCWithMessages } from '@/types';
 import { getGetLocationsQueryKey, getGetLocationsQueryOptions } from '@/types/generated/location';
 import { LocationListResponse } from '@/types/generated/strapi.schemas';
+import { MapTypes } from '@/types/map';
 
 import { LayoutProps } from '../_app';
 
 const ProgressTrackerPage: FCWithMessages & {
-  layout: LayoutProps<{ locale: string; location: { code: string; name: string } }>;
+  layout: LayoutProps<
+    { locale: string; location: { code: string; type: string } },
+    ComponentProps<typeof MapLayout>
+  >;
 } = () => {
   return null;
 };
 
 ProgressTrackerPage.layout = {
   Component: MapLayout,
-  props: ({ locale, location }) => {
-    let locationNameField = 'name';
-    if (locale === 'es') {
-      locationNameField = 'name_es';
-    }
-    if (locale === 'fr') {
-      locationNameField = 'name_fr';
-    }
-    if (locale === 'pt') {
-      locationNameField = 'name_pt';
-    }
-
-    return {
-      title: location?.[locationNameField],
-      type: 'progress-tracker',
-    };
-  },
+  props: ({ location }) => ({
+    location,
+    type: MapTypes.ProgressTracker,
+  }),
 };
 
 ProgressTrackerPage.messages = ['pages.progress-tracker', ...MapLayout.messages];
@@ -49,7 +42,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     if (runAsOf) {
       searchParams += `&run-as-of=${runAsOf}`;
     }
-    const target = `/${context.locale}/${PAGES.progressTracker}/${location}?${searchParams}`;
+
+    const target = `/${context.locale}${PAGES.progressTracker}/${location}?${searchParams}`;
 
     return {
       redirect: {
@@ -84,7 +78,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   return {
     props: {
       locale: context.locale,
-      location: locationsData.data[0].attributes,
+      location: locationsData.data[0],
       dehydratedState: dehydrate(queryClient),
       messages: await fetchTranslations(context.locale, ProgressTrackerPage.messages),
     },

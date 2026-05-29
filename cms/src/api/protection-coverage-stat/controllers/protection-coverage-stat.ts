@@ -22,19 +22,21 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
 
             // find the most recently updated record and return its updatedAt date
             const updatedAtQuery = {
-                ...query,
+                ...query as any,
                 fields: ['updatedAt'],
-                sort: { updatedAt: 'desc' },
-                limit: 1
+                sort: 'updatedAt:desc',
+                pagination: { limit: 1 },
             };
-            const updatedAt = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE, updatedAtQuery).then((data) => {
-                return data[0]?.updatedAt ?? null;
-            });
+            const updatedAt = await strapi
+                .documents(PROTECTION_COVERAGE_STAT_NAMESPACE)
+                .findMany(updatedAtQuery)
+                .then((data) => data[0]?.updatedAt ?? null);
 
             const dataQuery = {
-                ...query,
-                pagination: { pageSize: 1000000, page: 1 } // Max allowed by the API config. Will paginate after sorting
-            }
+                ...query as any,
+                // Max allowed by the API config. Will paginate after sorting
+                pagination: { pageSize: 1000000, page: 1 }
+            };
             delete dataQuery.sort; // We will sort the data after we get it
             ctx.query = dataQuery;
             // run the original find function without pagination or sorting
@@ -122,11 +124,12 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                     }
                     if (statsMap[`${stat.location}-${stat.environment}`]) {
                         // Update existing stat
-                        const id = statsMap[`${location}-${environment}`];
-                        await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                        const docId = statsMap[`${location}-${environment}`];
+                        await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
+                            documentId: docId,
                             data: {
                                 ...attributes,
-                            },
+                            }
                         });
                     } else {
                         // Create new stat
@@ -155,7 +158,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                         const locationId = locationMap[location];
                         const environmentId = environmentMap[environment];
 
-                        const { id } = await strapi.entityService.create(PROTECTION_COVERAGE_STAT_NAMESPACE, {
+                        const { documentId } = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).create({
                             data: {
                                 ...attributes,
                                 year,
@@ -163,7 +166,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                                 environment: environmentId
                             },
                         });
-                        const prevLastYear = await strapi.entityService.findMany(PROTECTION_COVERAGE_STAT_NAMESPACE, {
+                        const prevLastYear = await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).findMany({
                             filters: {
                                 is_last_year: true,
                                 location: {
@@ -177,8 +180,8 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                                     }
                                 }
                                 },
-                            fields: ['id', 'year'],
-                        }) as { id: number, year: number }[];
+                            fields: ['documentId', 'year'],
+                        }) as { documentId: string, year: number }[];
 
                         // If multiple records are found taged as last_year, log and alert the user 
                         if (prevLastYear.length > 1) {
@@ -193,16 +196,19 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
 
                         } else if (prevLastYear.length === 0 && year === new Date().getFullYear()) {
                         // If there is no previous last year record, set the new record as last year if it is the current year
-                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                            await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
+                                documentId: documentId,
                                 data: { is_last_year: true }
                             });
                         } else if (prevLastYear[0].year < year) {
                             // If the new record is the most recent set is_last_year to true and unset it for the previous last year
-                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, prevLastYear[0].id, {
+                            await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
+                                documentId: prevLastYear[0].documentId,
                                 data: { is_last_year: false }
                             });
 
-                            await strapi.entityService.update(PROTECTION_COVERAGE_STAT_NAMESPACE, id, {
+                            await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
+                                documentId: documentId,
                                 data: { is_last_year: true }
                             });
                         }
@@ -247,7 +253,7 @@ function getPaginationBounds(pagination: Pagination = {}, dataLength: number): [
 
 interface ProtectionCoverageStatResponse
     extends ApiProtectionCoverageStatProtectionCoverageStat {
-    id: number;
+    documentId: string;
     data?: ApiLocationLocation | ApiEnvironmentEnvironment
 }
 
@@ -255,7 +261,7 @@ interface ProtectionCoverageStatResponse
  * Helper method to get data from a nested object using a string path. Similar to Lodash's get, except it 
  *  also looks for data and attributes keys where appropriate
  * @param data Returned data from the API
- * @param path String path to the desired value, e.g. 'data.attributes.name'
+ * @param path String path to the desired value, e.g. 'data.name'
  * @returns 
  */
 function getValueByPath(
@@ -269,11 +275,11 @@ function getValueByPath(
         if (acc[key]) {
             return acc[key];
         }
-        if (acc?.attributes) {
-            return acc.attributes[key];
+        if (acc) {
+            return acc[key];
         }
         if (acc?.data) {
-            return acc.data?.attributes[key];
+            return acc.data[key];
         }
 
     }, data);

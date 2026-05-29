@@ -139,18 +139,23 @@ def upload_protected_areas(
             logger.info({"message": f"upserting {len(upserted)} entries"})
 
         wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
-        chunk_size = 20000
-        for i in tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"):
+        chunk_size = 10000
+        total_chunks = (len(wdpaids) + chunk_size - 1) // chunk_size
+        for chunk_idx, i in enumerate(
+            tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"),
+            start=1,
+        ):
             ids = wdpaids[i : i + chunk_size]
             chunk = [u for u in upserted if u["wdpaid"] in ids]
             try:
+                logger.info({"message": f"upserting chunk {chunk_idx} of {total_chunks}"})
                 upsert_response = strapi.upsert_pas(chunk)
 
                 if verbose:
                     logger.info({"message": f"upsert response: {upsert_response}"})
             except Exception as excep:
-                logger.error({"message": f"Error on chunk {i // chunk_size}", "error": str(excep)})
-                continue
+                logger.error({"message": f"Error on chunk {chunk_idx} of {total_chunks}"})
+                raise excep
 
     if verbose:
         logger.info({"message": "Update complete!"})

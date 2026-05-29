@@ -24,6 +24,7 @@ from src.core.params import (
     CHUNK_SIZE,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_GLOBAL_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -149,11 +150,16 @@ def safe_union(df, batch_size=1000, simplify_tolerance=1000):
     return unary_union(parts)
 
 
-def get_cover_areas(src, geom, identifier, id_col, land_cover_classes):
+def get_cover_areas(src, geom, identifier, id_col, land_cover_classes, include_zero: bool = False):
     out_image, out_transform = mask(src, geom, crop=True, filled=False)
     valid_mask = ~out_image.mask[0]
 
-    if np.all(out_image[0] <= 0):
+    if not valid_mask.any():
+        return None
+    # Default short-circuit treats 0 as "no class" (terrestrial reclass output);
+    # callers with binary 0/1 rasters (e.g., climate-resilient corals) must pass
+    # include_zero=True so zero-valued pixels are counted as a real class.
+    if not include_zero and np.all(out_image[0] <= 0):
         return None
 
     # Compute area per pixel using latitude-varying resolution
@@ -179,6 +185,19 @@ def load_mpatlas_country(
     df["wdpa_marine_km2"] = df["wdpa_marine_km2"].apply(pd.to_numeric, errors="coerce")
 
     return df
+
+
+def load_mpatlas_global(
+    bucket: str = BUCKET, mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME
+):
+    mpatlas_global = read_json_from_gcs(bucket, mpatlas_global_file_name)
+
+    row = {k: v for k, v in mpatlas_global.items() if not isinstance(v, (dict, list))}
+    for entry in mpatlas_global["mpaguide_status"]["total"]:
+        key = entry["key"]
+        row[f"mpaguide_total_{key}_km2"] = entry["km2"]
+        row[f"mpaguide_total_{key}_percent"] = entry["percent"]
+    return pd.DataFrame([row])
 
 
 def load_wdpa_global(

@@ -3,20 +3,27 @@ import { useMemo } from 'react';
 import { useLocale } from 'next-intl';
 
 import { ENVIRONMENTS } from '@/constants/environments';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3472: remove feature flag (climate resilient corals)
 import { useGetDatasets } from '@/types/generated/dataset';
-import { DatasetUpdatedByData } from '@/types/generated/strapi.schemas';
+import { Dataset } from '@/types/generated/strapi.schemas';
 
 export default function useDatasetsByEnvironment() {
   const locale = useLocale();
 
-  const { data, isFetching } = useGetDatasets<DatasetUpdatedByData[]>(
+  // TECH-3472: remove feature flag (climate resilient corals layer gate)
+  const isClimateResCoralsActive = useFeatureFlag('is_climate_res_corals_active');
+
+  const { data, isFetching } = useGetDatasets<Dataset[]>(
     {
       locale,
       sort: 'name:asc',
       // @ts-ignore
       populate: {
         layers: {
-          populate: 'metadata,environment',
+          populate: {
+            metadata: true,
+            environment: true,
+          },
         },
       },
     },
@@ -31,25 +38,25 @@ export default function useDatasetsByEnvironment() {
   const datasets = useMemo(() => {
     // Basemap dataset is displayed separately in the panel, much like terrestrial/maritime.
     // We need to split it out from the datasets we're processing in order to display this correctly.
-    const basemapDataset = data?.filter(({ attributes }) => attributes?.slug === 'basemap');
-    const basemapDatasetIds = basemapDataset?.map(({ id }) => id);
-    const nonBasemapDatasets = data?.filter(({ id }) => !basemapDatasetIds.includes(id));
+    const basemapDataset = data?.filter((dataset) => dataset?.slug === 'basemap');
+    const nonBasemapDatasets = data?.filter((dataset) => dataset?.slug !== 'basemap');
 
     // A dataset can contain layers with different environments assigned, we want
     // to pick only the layers for the environment we're displaying.
     const filterLayersByEnvironment = (layers, environment) => {
-      const layersData = layers?.data;
       return (
-        layersData?.filter(({ attributes }) => {
-          const environmentData = attributes?.environment?.data;
-          return environmentData?.attributes?.slug === environment;
+        layers?.filter((item) => {
+          // TECH-3472: remove feature flag (climate resilient corals layer gate)
+          if (item.slug === 'crc' && !isClimateResCoralsActive) return false;
+          if (item.slug === 'wwc' && isClimateResCoralsActive) return false;
+          return item.environment?.slug === environment;
         }) || []
       );
     };
 
-    const parseDatasetsByEnvironment = (datasets: DatasetUpdatedByData[], environment: string) => {
+    const parseDatasetsByEnvironment = (datasets: Dataset[], environment: string) => {
       const parsedDatasets = datasets?.map((d) => {
-        const { layers, ...rest } = d?.attributes;
+        const { layers, ...rest } = d;
         const filteredLayers = filterLayersByEnvironment(layers, environment);
 
         // If dataset contains no layers, it should not displayed. We'll filter this
@@ -57,14 +64,10 @@ export default function useDatasetsByEnvironment() {
         if (!filteredLayers.length) return null;
 
         return {
-          id: d?.id,
-          attributes: {
-            ...rest,
-            layers: {
-              data: filteredLayers,
-            },
-          },
-        } as DatasetUpdatedByData;
+          documentId: d?.documentId,
+          ...rest,
+          layers: filteredLayers,
+        } as Dataset;
       });
 
       // Prevent displaying of groups when they are empty / contain no layers
@@ -81,7 +84,8 @@ export default function useDatasetsByEnvironment() {
       marine: marineDataset,
       basemap: basemapDataset,
     };
-  }, [data]);
+    // TECH-3472: remove `isClimateResCoralsActive` from deps when feature flag is removed
+  }, [data, isClimateResCoralsActive]);
 
   return [datasets, { isLoading: isFetching }] as const;
 }

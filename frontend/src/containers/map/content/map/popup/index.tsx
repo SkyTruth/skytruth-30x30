@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import PopupItem from '@/containers/map/content/map/popup/item';
 import { layersInteractiveAtom, popupAtom } from '@/containers/map/store';
+import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import CloseIcon from '@/styles/icons/close.svg';
 import { FCWithMessages } from '@/types';
@@ -38,6 +39,8 @@ const PopupContainer: FCWithMessages = () => {
 
   const setPopup = useSetAtom(popupAtom);
 
+  const getLocationName = useLocationName();
+
   const availableSources = useMemo(
     () => Array.from(new Set(popup?.features?.map(({ source }) => source))),
     [popup]
@@ -59,15 +62,13 @@ const PopupContainer: FCWithMessages = () => {
           data
             .filter(
               ({
-                attributes: {
-                  config: {
-                    // @ts-expect-error will check later
-                    source: { id: sourceId },
-                  },
+                config: {
+                  // @ts-expect-error will check later
+                  source: { id: sourceId },
                 },
               }) => availableSources?.includes(sourceId)
             )
-            .map(({ attributes: { title: label, slug: value } }) => ({
+            .map(({ title: label, slug: value }) => ({
               label,
               value,
             }))
@@ -89,18 +90,35 @@ const PopupContainer: FCWithMessages = () => {
       return null;
     }
 
+    // EEZ joint zones carry pre-localized names baked into the tile properties,
+    // so keep the locale-keyed lookup for that source. Countries and
+    // terrestrial/marine regions share the app-wide `useLocationName` resolver.
+    let displayName: string | null = null;
+    if (source === EEZ_SOURCE) {
+      displayName = properties[POPUP_PROPERTIES_BY_SOURCE[source]?.name[locale]] ?? null;
+    } else {
+      const sourceConfig = POPUP_PROPERTIES_BY_SOURCE[source];
+      const codeKey = sourceConfig?.ids?.find((k: string) => !!properties[k]);
+      const code = codeKey ? properties[codeKey] : null;
+
+      displayName =
+        code && sourceConfig?.locationType
+          ? getLocationName({ code, type: sourceConfig.locationType })
+          : null;
+    }
+
     return (
       <div>
         {POPUP_ICON_BY_SOURCE[source] ? (
           <Icon icon={POPUP_ICON_BY_SOURCE[source]} className="mr-2 inline-block w-[14px]" />
         ) : null}
-        {properties[POPUP_PROPERTIES_BY_SOURCE[source]?.name[locale]] ?? null}
+        {displayName}
         <div className="mt-[0.25rem] text-xs">
           {isMultiClaimEEZ ? `* ${t('eez-multi-claim')}` : null}
         </div>
       </div>
     );
-  }, [locale, popup, t]);
+  }, [locale, popup, t, getLocationName]);
 
   const closePopup = useCallback(() => {
     setPopup({});
@@ -176,6 +194,11 @@ const PopupContainer: FCWithMessages = () => {
   );
 };
 
-PopupContainer.messages = ['containers.map', ...PopupItem.messages];
+PopupContainer.messages = [
+  'containers.map',
+  // Required by the `useLocationName` hook
+  'locations',
+  ...PopupItem.messages,
+];
 
 export default PopupContainer;

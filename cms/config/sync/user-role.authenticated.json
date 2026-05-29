@@ -2,138 +2,183 @@
   "name": "Authenticated",
   "description": "Default role given to authenticated user.",
   "type": "authenticated",
+  "locale": null,
   "permissions": [
     {
-      "action": "api::data-info.data-info.create"
+      "action": "api::data-info.data-info.create",
+      "locale": null
     },
     {
-      "action": "api::data-info.data-info.find"
+      "action": "api::data-info.data-info.find",
+      "locale": null
     },
     {
-      "action": "api::data-info.data-info.findOne"
+      "action": "api::data-info.data-info.findOne",
+      "locale": null
     },
     {
-      "action": "api::data-info.data-info.update"
+      "action": "api::data-info.data-info.update",
+      "locale": null
     },
     {
-      "action": "api::data-source.data-source.create"
+      "action": "api::data-source.data-source.create",
+      "locale": null
     },
     {
-      "action": "api::data-source.data-source.find"
+      "action": "api::data-source.data-source.find",
+      "locale": null
     },
     {
-      "action": "api::data-source.data-source.findOne"
+      "action": "api::data-source.data-source.findOne",
+      "locale": null
     },
     {
-      "action": "api::data-source.data-source.update"
+      "action": "api::data-source.data-source.update",
+      "locale": null
     },
     {
-      "action": "api::dataset.dataset.find"
+      "action": "api::dataset.dataset.find",
+      "locale": null
     },
     {
-      "action": "api::dataset.dataset.findOne"
+      "action": "api::dataset.dataset.findOne",
+      "locale": null
     },
     {
-      "action": "api::dataset.dataset.update"
+      "action": "api::dataset.dataset.update",
+      "locale": null
     },
     {
-      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.bulkUpsert"
+      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.bulkUpsert",
+      "locale": null
     },
     {
-      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.create"
+      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.create",
+      "locale": null
     },
     {
-      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.find"
+      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.find",
+      "locale": null
     },
     {
-      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.findOne"
+      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.findOne",
+      "locale": null
     },
     {
-      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.update"
+      "action": "api::fishing-protection-level-stat.fishing-protection-level-stat.update",
+      "locale": null
     },
     {
-      "action": "api::fishing-protection-level.fishing-protection-level.find"
+      "action": "api::fishing-protection-level.fishing-protection-level.find",
+      "locale": null
     },
     {
-      "action": "api::fishing-protection-level.fishing-protection-level.findOne"
+      "action": "api::fishing-protection-level.fishing-protection-level.findOne",
+      "locale": null
     },
     {
-      "action": "api::habitat-stat.habitat-stat.bulkUpsert"
+      "action": "api::habitat-stat.habitat-stat.bulkUpsert",
+      "locale": null
     },
     {
-      "action": "api::habitat-stat.habitat-stat.find"
+      "action": "api::habitat-stat.habitat-stat.find",
+      "locale": null
     },
     {
-      "action": "api::habitat-stat.habitat-stat.findOne"
+      "action": "api::habitat-stat.habitat-stat.findOne",
+      "locale": null
     },
     {
-      "action": "api::layer.layer.find"
+      "action": "api::layer.layer.find",
+      "locale": null
     },
     {
-      "action": "api::layer.layer.findOne"
+      "action": "api::layer.layer.findOne",
+      "locale": null
     },
     {
-      "action": "api::layer.layer.update"
+      "action": "api::layer.layer.update",
+      "locale": null
     },
     {
-      "action": "api::location.location.bulkUpsert"
+      "action": "api::location.location.bulkUpsert",
+      "locale": null
     },
     {
-      "action": "api::location.location.create"
+      "action": "api::location.location.create",
+      "locale": null
     },
     {
-      "action": "api::location.location.find"
+      "action": "api::location.location.find",
+      "locale": null
     },
     {
-      "action": "api::location.location.findOne"
+      "action": "api::location.location.findOne",
+      "locale": null
     },
     {
-      "action": "api::location.location.update"
+      "action": "api::location.location.update",
+      "locale": null
     },
     {
-      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.bulkUpsert"
+      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.bulkUpsert",
+      "locale": null
     },
     {
-      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.find"
+      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.find",
+      "locale": null
     },
     {
-      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.findOne"
+      "action": "api::mpaa-protection-level-stat.mpaa-protection-level-stat.findOne",
+      "locale": null
     },
     {
-      "action": "api::pa.pa.bulkPatch"
+      "action": "api::pa.pa.bulkPatch",
+      "locale": null
     },
     {
-      "action": "api::pa.pa.bulkUpsert"
+      "action": "api::pa.pa.bulkUpsert",
+      "locale": null
     },
     {
-      "action": "api::pa.pa.create"
+      "action": "api::pa.pa.create",
+      "locale": null
     },
     {
-      "action": "api::pa.pa.delete"
+      "action": "api::pa.pa.delete",
+      "locale": null
     },
     {
-      "action": "api::pa.pa.find"
+      "action": "api::pa.pa.find",
+      "locale": null
     },
     {
-      "action": "api::pa.pa.findOne"
+      "action": "api::pa.pa.findOne",
+      "locale": null
     },
     {
-      "action": "api::pa.pa.update"
+      "action": "api::pa.pa.update",
+      "locale": null
     },
     {
-      "action": "api::protection-coverage-stat.protection-coverage-stat.bulkUpsert"
+      "action": "api::protection-coverage-stat.protection-coverage-stat.bulkUpsert",
+      "locale": null
     },
     {
-      "action": "api::protection-coverage-stat.protection-coverage-stat.find"
+      "action": "api::protection-coverage-stat.protection-coverage-stat.find",
+      "locale": null
     },
     {
-      "action": "api::protection-coverage-stat.protection-coverage-stat.findOne"
+      "action": "api::protection-coverage-stat.protection-coverage-stat.findOne",
+      "locale": null
     },
     {
-      "action": "plugin::users-permissions.auth.changePassword"
+      "action": "plugin::users-permissions.auth.changePassword",
+      "locale": null
     },
     {
-      "action": "plugin::users-permissions.user.me"
+      "action": "plugin::users-permissions.user.me",
+      "locale": null
     }
   ]
 }

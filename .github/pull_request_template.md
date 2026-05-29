@@ -1,23 +1,17 @@
-## Substitute this line for a meaningful title for your changes
+## What does this PR do?
 
-### Overview
+## Designs
 
-_Please write a description. If the PR is hard to understand, provide a quick explanation of the code._
+_Include screenshots / figma links if applicable_
 
-### Designs
+## How was this tested/  how can it be tested?
 
-_Link to the related design prototypes (if applicable)_
-
-### Testing instructions
-
-_Please explain how to test the PR: ID of a dataset, steps to reach the feature, etc._
-
-### Feature relevant tickets
-
-_Link to the related task manager tickets_
-
----
+## Link relevant Jira tickets
 
 ## Checklist before submitting
 
-- [ ] Meaningful commits and code rebased on `develop`.
+- [ ] Merged or rebased latest code from `main`
+- [ ] Tested changes on staging before Prod deployment
+- [ ] Appropriate linters or formatters run
+- [ ] Documentation, logging, alerts, etc appropriately updated as needed
+- [ ] [Checked Demo Calendar](https://calendar.google.com/calendar/embed?src=c_650a13af470a46193658bb5cbddf79ecdb4e43bdc838d595937de6ae490704c3%40group.calendar.google.com&ctz=America%2FPhoenix) before deploying

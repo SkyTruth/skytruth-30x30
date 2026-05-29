@@ -97,6 +97,12 @@ variable "runtime_environment_variables" {
   default     = {}
 }
 
+variable "additional_invokers" {
+  description = "Additional service account emails to grant roles/run.invoker on this Cloud Run service."
+  type        = list(string)
+  default     = []
+}
+
 variable "secrets" {
   # List of objects for the secret_environment_variables block
   # The secret_environment_variables block supports:

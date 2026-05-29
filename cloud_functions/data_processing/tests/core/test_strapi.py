@@ -59,6 +59,7 @@ def test_login_no_pwd_failure(mock_logger_error, monkeypatch):
         {
             "message": "Failed to authenticate with 30x30 API",
             "exception": "No API password provided",
+            "status_code": None,
         }
     )
 

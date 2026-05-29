@@ -7,6 +7,10 @@ terraform {
   }
 }
 
+locals {
+  cloudrun_jobs_image = "gcr.io/cloudrun/hello"
+}
+
 module "staging" {
   source                                             = "./modules/env"
   gcp_project_id                                     = var.gcp_project_id
@@ -18,6 +22,7 @@ module "staging" {
   backend_min_scale                                  = 0
   frontend_max_scale                                 = 1
   backend_max_scale                                  = 2
+  backend_available_memory                           = "2Gi"
   dns_zone_name                                      = module.dns.dns_zone_name
   domain                                             = var.domain
   subdomain                                          = var.staging_subdomain
@@ -32,6 +37,14 @@ module "staging" {
   data_processing_timeout_seconds                    = 3600
   data_processing_available_memory                   = "32G"
   data_processing_available_cpu                      = 8
+  data_processing_max_instance_count                 = 2
+  data_processing_max_instance_request_concurrency   = 5
+  cloudrun_jobs_timeout_seconds                      = 10800 # 3 hours
+  cloudrun_jobs_available_memory                     = "32G"
+  cloudrun_jobs_available_cpu                        = 8
+  cloudrun_jobs_max_instance_count                   = 2
+  cloudrun_jobs_max_instance_request_concurrency     = 10
+  cloudrun_jobs_image                                = local.cloudrun_jobs_image
   mapbox_user                                        = "skytruth"
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "staging"
@@ -51,6 +64,7 @@ module "production" {
   backend_min_scale                                  = 0
   frontend_max_scale                                 = 1
   backend_max_scale                                  = 2
+  backend_available_memory                           = "2Gi"
   dns_zone_name                                      = module.dns.dns_zone_name
   domain                                             = var.domain
   subdomain                                          = var.production_subdomain
@@ -65,6 +79,14 @@ module "production" {
   data_processing_timeout_seconds                    = 3600
   data_processing_available_memory                   = "32G"
   data_processing_available_cpu                      = 8
+  data_processing_max_instance_count                 = 2
+  data_processing_max_instance_request_concurrency   = 5
+  cloudrun_jobs_timeout_seconds                      = 10800 # 3 hours
+  cloudrun_jobs_available_memory                     = "32G"
+  cloudrun_jobs_available_cpu                        = 8
+  cloudrun_jobs_max_instance_count                   = 2
+  cloudrun_jobs_max_instance_request_concurrency     = 10
+  cloudrun_jobs_image                                = local.cloudrun_jobs_image
   mapbox_user                                        = "skytruth"
   uptime_alert_email                                 = var.uptime_alert_email
   environment                                        = "production"

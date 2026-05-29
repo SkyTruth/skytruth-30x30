@@ -13,6 +13,7 @@ import useResolvedParamsConfig from '@/hooks/use-resolved-params-config';
 import { cn } from '@/lib/classnames';
 import CircleWithDottedRedStrokeIcon from '@/styles/icons/circle-with-dotted-red-stroke.svg';
 import CircleWithFillIcon from '@/styles/icons/circle-with-fill.svg';
+import CircleWithSolidFillIcon from '@/styles/icons/circle-with-solid-fill.svg';
 import CircleWithoutFillIcon from '@/styles/icons/circle-without-fill.svg';
 import EstablishmentDesignatedIcon from '@/styles/icons/designated.svg';
 import EstablishmentImplementedIcon from '@/styles/icons/implemented.svg';
@@ -28,6 +29,7 @@ export interface LegendItemsProps {
 
 const ICONS_MAPPING = {
   'circle-with-fill': CircleWithFillIcon,
+  'circle-with-solid-fill': CircleWithSolidFillIcon,
   'circle-without-fill': CircleWithoutFillIcon,
   'circle-with-dotted-red-stroke': CircleWithDottedRedStrokeIcon,
   'establishment-proposed': EstablishmentProposedIcon,
@@ -51,6 +53,7 @@ const LegendItem: FCWithMessages<LegendItemsProps> = ({ config, paramsConfig }) 
   );
 
   const resolvedParamsConfig = useResolvedParamsConfig(paramsConfig, resolvedParamsConfigParams);
+
   const dynamicLegendConfig = useMemo(
     () =>
       resolvedParamsConfig?.find(({ key }) => key === 'legend_config')?.default as

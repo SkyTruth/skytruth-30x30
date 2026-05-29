@@ -1,6 +1,7 @@
 """Class for managing API credentials and CRUD methods for the intenral strapi API"""
 
 import os
+import time
 from datetime import datetime
 
 import requests
@@ -24,7 +25,12 @@ class Strapi:
     # this inlcudes all PUT and POST endpoints
     def authenticate(self) -> str:
         """Authenticate with the 30x30 API and return the JWT token."""
+
+        attempt = 0
+        response = None
+        status = None
         try:
+            attempt += 1
             if not self.PASSWORD:
                 raise ValueError("No API password provided")
             response = requests.post(
@@ -32,16 +38,27 @@ class Strapi:
                 data={"identifier": self.USERNAME, "password": self.PASSWORD},
                 timeout=5,
             )
+            status = response.status_code
             response.raise_for_status()
             response_data = response.json()
             return response_data.get("jwt")
         except Exception as excep:
-            self.logger.error(
-                {
-                    "message": "Failed to authenticate with 30x30 API",
-                    "exception": str(excep),
-                }
-            )
+            if response is not None and attempt < 3 and status != 401:
+                self.logger.warning(
+                    {
+                        "message": "Error attempting to authenticate with 30x30 API, retrying...",
+                        "exception": str(excep),
+                    }
+                )
+                time.sleep(10)
+            else:
+                self.logger.error(
+                    {
+                        "message": "Failed to authenticate with 30x30 API",
+                        "exception": str(excep),
+                        "status_code": status,
+                    }
+                )
             raise excep
 
     def upsert_pas(self, pas: list[dict]) -> dict:
@@ -51,15 +68,15 @@ class Strapi:
           Parameters
         -----------
             pas: list[dict]
-                list of Pas to either create or update, if the dict has an id field
-                the pa with that databgase id will be updated with the new data, otherwise
-                a new pa will be created.
+                list of PAs to either create or update. If the dict has a ``documentId``
+                field the PA with that Strapi documentId will be updated with the new data,
+                otherwise a new PA will be created.
 
                 Sample data, required fields marked with *
 
             [
                 {
-                    id: 33,
+                    "documentId": "abc123xyz",
                     "name": "aba", *
                     "area": 54819.04, *
                     "year": 2022,
@@ -106,6 +123,8 @@ class Strapi:
                 timeout=2600,  # Wait 60 minutes
                 json={"data": pas},
             )
+            response.raise_for_status()
+
             return response.json()
         except Exception as excep:
             self.logger.error(
@@ -116,15 +135,15 @@ class Strapi:
             )
             raise excep
 
-    def delete_pas(self, pas: list[int]) -> dict:
+    def delete_pas(self, pas: list[str]) -> dict:
         """
         Bulk delete existing PAs
 
         Parameters
         -----------
-            pas: list[int]
-                list of PA database ids to be deleted,
-                relational fields will also be deleted
+            pas: list[str]
+                list of Strapi documentId strings to be deleted; relational fields
+                will also be deleted.
         """
         try:
             response = requests.patch(

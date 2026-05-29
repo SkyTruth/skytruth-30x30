@@ -73,7 +73,7 @@ variable "max_backoff" {
 variable "max_doublings" {
   description = "Exponential backoff steps (0 disables exponential delays)."
   type        = number
-  default     = 0
+  default     = 16
 }
 
 #########################################

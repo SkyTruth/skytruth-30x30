@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { Check, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -10,15 +10,15 @@ import {
   CommandItem,
   CommandEmpty,
 } from '@/components/ui/command';
-import useNameField from '@/hooks/use-name-field';
+import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
-import { LocationListResponseDataItem } from '@/types/generated/strapi.schemas';
+import { Location } from '@/types/generated/strapi.schemas';
 
 type LocationDropdownProps = {
   className?: HTMLDivElement['className'];
   searchPlaceholder?: string;
-  filteredLocations: LocationListResponseDataItem[];
+  filteredLocations: Location[];
   selectedLocation: Set<string>;
   isCustomRegionTab: boolean;
   onSelected: (code: string) => void;
@@ -42,21 +42,28 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   dividerIndex,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const nameField = useNameField();
+  const getLocationName = useLocationName();
 
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const normalize = (s: string) => s.normalize?.('NFKD').toLowerCase() || s.toLowerCase();
 
+  const resolveName = useCallback(
+    (item: Location) => {
+      return item?.code === 'clear' ? t('clear-all') : getLocationName(item);
+    },
+    [getLocationName, t]
+  );
+
   const visibleLocations = useMemo(() => {
     if (!searchTerm) return filteredLocations;
 
     const query = normalize(searchTerm);
-    return filteredLocations.filter(({ attributes }) => {
-      const name = attributes?.[nameField];
+    return filteredLocations.filter((item) => {
+      const name = resolveName(item);
       return normalize(name).includes(query);
     });
-  }, [filteredLocations, searchTerm, nameField]);
+  }, [filteredLocations, searchTerm, resolveName]);
 
   return (
     <Command label={searchPlaceholder} className={cn(className)} shouldFilter={false}>
@@ -67,9 +74,9 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
       />
       <CommandEmpty>{t('no-result')}</CommandEmpty>
       <CommandGroup className="mt-4 max-h-64 overflow-y-auto">
-        {visibleLocations.map(({ attributes }, idx) => {
-          const { code, type } = attributes;
-          const locationName = attributes?.[nameField];
+        {visibleLocations.map((item, idx) => {
+          const { code, type } = item;
+          const locationName = resolveName(item);
 
           const locationType = LocationType[type] || LocationType.country;
           const Selected = isCustomRegionTab ? XCircle : Check;
@@ -102,6 +109,10 @@ const LocationDropdown: FCWithMessages<LocationDropdownProps> = ({
   );
 };
 
-LocationDropdown.messages = ['containers.map-sidebar-main-panel'];
+LocationDropdown.messages = [
+  'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
+];
 
 export default LocationDropdown;

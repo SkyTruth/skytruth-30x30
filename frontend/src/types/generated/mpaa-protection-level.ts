@@ -4,12 +4,10 @@
  * DOCUMENTATION
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type {
   UseQueryOptions,
-  UseMutationOptions,
   QueryFunction,
-  MutationFunction,
   UseQueryResult,
   QueryKey,
 } from '@tanstack/react-query';
@@ -19,11 +17,9 @@ import type {
   GetMpaaProtectionLevelsParams,
   MpaaProtectionLevelResponse,
   GetMpaaProtectionLevelsIdParams,
-  MpaaProtectionLevelLocalizationResponse,
-  MpaaProtectionLevelLocalizationRequest,
 } from './strapi.schemas';
 import { API } from '../../services/api/index';
-import type { ErrorType, BodyType } from '../../services/api/index';
+import type { ErrorType } from '../../services/api/index';
 
 // eslint-disable-next-line
 type SecondParameter<T extends (...args: any) => any> = T extends (
@@ -98,7 +94,7 @@ export const useGetMpaaProtectionLevels = <
 };
 
 export const getMpaaProtectionLevelsId = (
-  id: number,
+  id: string,
   params?: GetMpaaProtectionLevelsIdParams,
   options?: SecondParameter<typeof API>,
   signal?: AbortSignal
@@ -110,7 +106,7 @@ export const getMpaaProtectionLevelsId = (
 };
 
 export const getGetMpaaProtectionLevelsIdQueryKey = (
-  id: number,
+  id: string,
   params?: GetMpaaProtectionLevelsIdParams
 ) => {
   return [`/mpaa-protection-levels/${id}`, ...(params ? [params] : [])] as const;
@@ -120,7 +116,7 @@ export const getGetMpaaProtectionLevelsIdQueryOptions = <
   TData = Awaited<ReturnType<typeof getMpaaProtectionLevelsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetMpaaProtectionLevelsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getMpaaProtectionLevelsId>>, TError, TData>;
@@ -151,7 +147,7 @@ export const useGetMpaaProtectionLevelsId = <
   TData = Awaited<ReturnType<typeof getMpaaProtectionLevelsId>>,
   TError = ErrorType<Error>,
 >(
-  id: number,
+  id: string,
   params?: GetMpaaProtectionLevelsIdParams,
   options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getMpaaProtectionLevelsId>>, TError, TData>;
@@ -165,75 +161,4 @@ export const useGetMpaaProtectionLevelsId = <
   query.queryKey = queryOptions.queryKey;
 
   return query;
-};
-
-export const postMpaaProtectionLevelsIdLocalizations = (
-  id: number,
-  mpaaProtectionLevelLocalizationRequest: BodyType<MpaaProtectionLevelLocalizationRequest>,
-  options?: SecondParameter<typeof API>
-) => {
-  return API<MpaaProtectionLevelLocalizationResponse>(
-    {
-      url: `/mpaa-protection-levels/${id}/localizations`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data: mpaaProtectionLevelLocalizationRequest,
-    },
-    options
-  );
-};
-
-export const getPostMpaaProtectionLevelsIdLocalizationsMutationOptions = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postMpaaProtectionLevelsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<MpaaProtectionLevelLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof postMpaaProtectionLevelsIdLocalizations>>,
-  TError,
-  { id: number; data: BodyType<MpaaProtectionLevelLocalizationRequest> },
-  TContext
-> => {
-  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof postMpaaProtectionLevelsIdLocalizations>>,
-    { id: number; data: BodyType<MpaaProtectionLevelLocalizationRequest> }
-  > = (props) => {
-    const { id, data } = props ?? {};
-
-    return postMpaaProtectionLevelsIdLocalizations(id, data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type PostMpaaProtectionLevelsIdLocalizationsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof postMpaaProtectionLevelsIdLocalizations>>
->;
-export type PostMpaaProtectionLevelsIdLocalizationsMutationBody =
-  BodyType<MpaaProtectionLevelLocalizationRequest>;
-export type PostMpaaProtectionLevelsIdLocalizationsMutationError = ErrorType<Error>;
-
-export const usePostMpaaProtectionLevelsIdLocalizations = <
-  TError = ErrorType<Error>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof postMpaaProtectionLevelsIdLocalizations>>,
-    TError,
-    { id: number; data: BodyType<MpaaProtectionLevelLocalizationRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof API>;
-}) => {
-  const mutationOptions = getPostMpaaProtectionLevelsIdLocalizationsMutationOptions(options);
-
-  return useMutation(mutationOptions);
 };

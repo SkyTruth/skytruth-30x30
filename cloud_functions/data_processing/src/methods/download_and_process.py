@@ -29,13 +29,17 @@ from src.core.commons import (
 from src.core.params import (
     ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_MPATLAS_FILE_NAME,
+    ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
     ARCHIVE_PROTECTED_SEAS_FILE_NAME,
+    ARCHIVE_RAW_WDPA_FILE_NAME,
     ARCHIVE_WDPA_COUNTRY_LEVEL_FILE_NAME,
     ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME,
     BUCKET,
     MPATLAS_COUNTRY_LEVEL_API_URL,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
+    MPATLAS_GLOBAL_API_URL,
+    MPATLAS_GLOBAL_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     MPATLAS_URL,
     PP_API_KEY,
@@ -55,13 +59,16 @@ from src.core.params import (
 from src.core.processors import (
     calculate_area,
     choose_pa_area,
+    mask_mpatlas_protection_level,
     match_old_pa_naming_convantion,
 )
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
     save_file_bucket,
     upload_dataframe,
+    upload_file_to_gcs,
     upload_gdf,
 )
 from src.utils.logger import Logger
@@ -88,6 +95,31 @@ def download_mpatlas_country(
 
     upload_dataframe(bucket, pd.DataFrame(data), archive_filename, project_id=project, verbose=True)
     duplicate_blob(bucket, archive_filename, current_filename, verbose=True)
+
+
+def download_mpatlas_global(
+    bucket: str = BUCKET,
+    url: str = MPATLAS_GLOBAL_API_URL,
+    current_filename: str = MPATLAS_GLOBAL_FILE_NAME,
+    archive_filename: str = ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
+    verbose: bool = True,
+):
+    response = requests.get(url)
+    response.raise_for_status()
+
+    if verbose:
+        logger.info(
+            {"message": f"saving MPAtlas Global API Data to gs://{bucket}/{current_filename}"}
+        )
+    save_file_bucket(
+        response.content,
+        response.headers.get("Content-Type"),
+        current_filename,
+        bucket,
+        verbose=verbose,
+    )
+
+    duplicate_blob(bucket, current_filename, archive_filename, verbose=True)
 
 
 def download_mpatlas_zone(
@@ -144,6 +176,9 @@ def download_mpatlas(
     mpatlas_country_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
     mpatlas_country_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     archive_mpatlas_country_file_name: str = ARCHIVE_MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    mpatlas_global_url: str = MPATLAS_GLOBAL_API_URL,
+    mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME,
+    archive_mpatlas_global_file_name: str = ARCHIVE_MPATLAS_GLOBAL_FILE_NAME,
     verbose: bool = True,
     project_id: str = PROJECT,
 ) -> None:
@@ -165,6 +200,15 @@ def download_mpatlas(
         )
 
         retry_and_alert(
+            download_mpatlas_global,
+            bucket=bucket,
+            url=mpatlas_global_url,
+            current_filename=mpatlas_global_file_name,
+            archive_filename=archive_mpatlas_global_file_name,
+            alert_message="failed to download MPAtlas global stats",
+        )
+
+        retry_and_alert(
             download_mpatlas_zone,
             url=url,
             bucket=bucket,
@@ -173,9 +217,14 @@ def download_mpatlas(
             verbose=verbose,
             alert_message="failed to download MPAtlas zone stats",
         )
-    except RetryFailed:
-        # If downloading MPAtlas fails, try the next day for up to 3 days
-        return {"delay_seconds": 60 * 60 * 24, "max_retries": 3}, False
+
+    except RetryFailed as e:
+        cfg = METHOD_RETRY_CONFIGS["download_mpatlas"]
+        raise ScheduleRetry(
+            delay_seconds=cfg["delay_seconds"],
+            max_retries=cfg["max_retries"],
+            message=f"MPAtlas download failed: {e}",
+        ) from e
 
     if verbose:
         logger.info({"message": f"loading MPAtlas from {mpatlas_filename}"})
@@ -200,6 +249,9 @@ def download_mpatlas(
         logger.info({"message": "calculating MPA bounding box (bbox)"})
     mpa["bbox"] = mpa.geometry.apply(lambda g: g.bounds if g is not None else None)
 
+    # Set protection levels to unknown if establishment stage is not actively managed or implemented
+    mpa = mask_mpatlas_protection_level(mpa)
+
     # Upload metadata (no geometry)
     if verbose:
         logger.info({"message": f"saving metadata to {meta_file_name}"})
@@ -210,7 +262,6 @@ def download_mpatlas(
         project_id=project_id,
         verbose=verbose,
     )
-    return None, True
 
 
 def download_protected_seas(
@@ -267,6 +318,7 @@ def download_and_process_protected_planet_pas(
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     meta_file_name: str = WDPA_META_FILE_NAME,
+    archive_wdpa_file_name: str = ARCHIVE_RAW_WDPA_FILE_NAME,
     tolerance: float = TOLERANCES[0],
     verbose: bool = True,
     bucket: str = BUCKET,
@@ -468,7 +520,7 @@ def download_and_process_protected_planet_pas(
 
             try:
                 # Simplify geometries in parallel batches
-                results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 20)(
+                results = Parallel(n_jobs=n_jobs, backend="loky", timeout=60 * 60)(
                     delayed(simplify_chunk)(
                         chunk,
                         tolerance,
@@ -521,10 +573,23 @@ def download_and_process_protected_planet_pas(
     # Do not send alert unless it fails all retries
     status = download_file_with_progress(wdpa_url, base_zip_path, verbose=verbose)
     if not status:
-        logger.error({"message": f"Failed to download {wdpa_url}"})
-        return {"delay_seconds": 60 * 60 * 24, "max_retries": 7}, False
+        cfg = METHOD_RETRY_CONFIGS["download_protected_planet_pas"]
+        raise ScheduleRetry(
+            delay_seconds=cfg["delay_seconds"],
+            max_retries=cfg["max_retries"],
+            message=f"Failed to download {wdpa_url}",
+        )
 
     show_container_mem("After download")
+
+    # Save to archive in GCS
+    if verbose:
+        logger.info({"message": f"Saving to archive at {archive_wdpa_file_name}"})
+    upload_file_to_gcs(
+        bucket=bucket,
+        file_name=base_zip_path,
+        blob_name=archive_wdpa_file_name,
+    )
 
     if verbose:
         logger.info({"message": f"unzipping {base_zip_path}"})
@@ -610,13 +675,11 @@ def download_and_process_protected_planet_pas(
         )
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
     except RetryFailed:
-        return None, False
+        raise
 
     # Clean up memory
     df = pd.DataFrame()
     del df
-
-    return None, True
 
 
 def download_protected_planet_global(

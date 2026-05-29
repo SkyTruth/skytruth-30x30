@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock
+
 import pytest
 
-import main
-from tests.fixtures.utils.util_mocks import MockRequest
+import src.methods.publisher as main
+from src.core.retry_params import ScheduleRetry
 
 
 @pytest.fixture
@@ -51,7 +53,7 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
     ]
     for name in simple_targets:
-        return_value = ({"ok": True}, {"ok": True}) if name == "download_mpatlas" else {"ok": True}
+        return_value = {"ok": True}
         monkeypatch.setattr(
             main,
             name,
@@ -66,6 +68,21 @@ def patched_all(monkeypatch, call_log):
         make_recorder(call_log, "download_zip_to_gcs", return_value={"ok": True}),
         raising=True,
     )
+
+    monkeypatch.setattr(
+        main,
+        "create_task",
+        make_recorder(call_log, "create_task", return_value=MagicMock(name="tasks/fake123")),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "long_running_tasks",
+        make_recorder(call_log, "long_running_tasks", return_value=("OK", 200)),
+        raising=True,
+    )
+
+    monkeypatch.setattr(main, "LONG_RUNNING_TASKS", [], raising=False)
 
     return call_log
 
@@ -95,20 +112,23 @@ def patched_all(monkeypatch, call_log):
 )
 def test_single_call_methods_route_and_pass_verbose(patched_all, method, expected_call):
     """Each simple METHOD should call exactly one target with only verbose kwarg."""
-    resp = main.main(MockRequest({"METHOD": method}))
+    resp = main.run_from_payload({"METHOD": method})
 
     if method == "update_locations":
         # Split this out because update_locations passes on its return value
-        assert resp == {"ok": True}
+        assert resp == ('{"ok": true}', 200)
     else:
         assert resp == ("OK", 200)
 
     # Exactly one call recorded
     assert len(patched_all) == 1
     name, args, kwargs = patched_all[0]
+
     assert name == expected_call
     assert args == ()
     assert "verbose" in kwargs
+    if method == "update_locations":
+        assert kwargs["request"] == {"METHOD": "update_locations"}
 
 
 # Tests for functions that directly call download_zip_to_gcs
@@ -180,7 +200,7 @@ def test_downloader_zip_routes(patched_all, method, expected, extra):
     Each downloader METHOD must call download_zip_to_gcs keyword-only with the right values.
     Using lambdas defers constant lookup to runtime so imports/fixtures don't break collection.
     """
-    resp = main.main(MockRequest({"METHOD": method}))
+    resp = main.run_from_payload({"METHOD": method})
     assert resp == ("OK", 200)
     assert len(patched_all) == 1
 
@@ -275,7 +295,7 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     # Patch upload_stats to a recorder
     _patch_upload_stats_to_recorder(monkeypatch, recorder)
 
-    resp = main.main(MockRequest({"METHOD": method}))
+    resp = main.run_from_payload({"METHOD": method})
     assert resp == ("STATS_OK", 201)
 
     # Strapi was instantiated exactly once
@@ -294,27 +314,27 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
     assert getattr(upload_fn, "__self__", None).__class__ is MockStrapi
 
     # Verbose propagated from module
-    assert recorder["verbose"] is main.verbose
+    assert recorder["verbose"] is True
 
 
 # Non-invoking / generic flows
 def test_dry_run_calls_nothing_and_returns_ok(patched_all, monkeypatch):
     """dry_run should print and return OK without calling any target."""
-    resp = main.main(MockRequest({"METHOD": "dry_run"}))
+    resp = main.run_from_payload({"METHOD": "dry_run"})
     assert resp == ("OK", 200)
     assert patched_all == []  # no calls made
 
 
 def test_unknown_method_returns_ok_and_calls_nothing(patched_all):
     """Unknown methods should not call anything; handler still returns OK, 200."""
-    resp = main.main(MockRequest({"METHOD": "totally_unknown"}))
+    resp = main.run_from_payload({"METHOD": "totally_unknown"})
     assert resp == ("OK", 200)
     assert patched_all == []
 
 
 # Error path
-def test_error_bubbles_to_208(monkeypatch, call_log):
-    """If any called function raises, handler should catch and return 208."""
+def test_error_bubbles_to_500(monkeypatch, call_log):
+    """If any called function raises, handler should catch and return 500."""
 
     monkeypatch.setattr(
         main,
@@ -329,8 +349,130 @@ def test_error_bubbles_to_208(monkeypatch, call_log):
         make_recorder(call_log, "process_gadm_geoms", side_effect=RuntimeError("boom")),
         raising=True,
     )
-    resp = main.main(MockRequest({"METHOD": "process_gadm", "MAX_RETRIES": 0}))
+
+    resp = main.run_from_payload({"METHOD": "process_gadm", "MAX_RETRIES": 0})
     assert isinstance(resp, tuple)
     body, status = resp
-    assert status == 208
+    assert status == 500
     assert "failed after 1 attempts" in body
+
+
+# ScheduleRetry path
+def test_schedule_retry_schedules_task_on_first_attempt(monkeypatch, call_log):
+    """ScheduleRetry on attempt 1 should create a delayed Cloud Task."""
+    delay_seconds = 86400
+    monkeypatch.setattr(
+        main,
+        "download_mpatlas",
+        make_recorder(
+            call_log,
+            "download_mpatlas",
+            side_effect=ScheduleRetry(
+                delay_seconds=delay_seconds, max_retries=3, message="not found"
+            ),
+        ),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "create_task",
+        make_recorder(
+            call_log,
+            "create_task",
+            return_value=MagicMock(name="tasks/retry1"),
+        ),
+        raising=True,
+    )
+
+    resp = main.run_from_payload({"METHOD": "download_mpatlas"})
+    assert resp == (f"Retrying in {delay_seconds} seconds", 202)
+
+    # create_task was called with the right delay and incremented attempt
+    task_calls = [call for call in call_log if call[0] == "create_task"]
+    assert len(task_calls) == 1
+    _name, _args, task_kwargs = task_calls[0]
+    assert task_kwargs["delay_seconds"] == 86400
+    payload = task_kwargs["payload"]
+    assert payload["attempt"] == 2
+    assert payload["MAX_RETRIES"] == 3
+
+
+def test_schedule_retry_exhausted_returns_500_and_alerts(monkeypatch, call_log):
+    """ScheduleRetry on final attempt should return 500 and send Slack alert."""
+    monkeypatch.setattr(
+        main,
+        "download_mpatlas",
+        make_recorder(
+            call_log,
+            "download_mpatlas",
+            side_effect=ScheduleRetry(delay_seconds=86400, max_retries=3, message="not found"),
+        ),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "send_slack_alert",
+        make_recorder(call_log, "send_slack_alert", return_value={"ok": True}),
+        raising=True,
+    )
+
+    # attempt=4 with max_retries=3 means all retries are exhausted
+    resp = main.run_from_payload({"METHOD": "download_mpatlas", "attempt": 4})
+    body, status = resp
+    assert status == 500
+    assert "failed after 4 attempts" in body
+
+    # Slack alert was sent
+    alert_calls = [call for call in call_log if call[0] == "send_slack_alert"]
+    assert len(alert_calls) == 1
+
+    # No retry task was created
+    task_calls = [call for call in call_log if call[0] == "create_task"]
+    assert len(task_calls) == 0
+
+
+def test_schedule_retry_does_not_fire_on_success(patched_all):
+    """Successful download_mpatlas should return OK, not retry."""
+    resp = main.run_from_payload({"METHOD": "download_mpatlas"})
+    assert resp == ("OK", 200)
+
+    # No create_task calls (only the download_mpatlas recorder)
+    task_calls = [call for call in patched_all if call[0] == "create_task"]
+    assert len(task_calls) == 0
+
+
+def test_schedule_retry_prevents_next_steps(monkeypatch, call_log):
+    """When a download raises ScheduleRetry, downstream steps should not run."""
+    monkeypatch.setattr(
+        main,
+        "download_mpatlas",
+        make_recorder(
+            call_log,
+            "download_mpatlas",
+            side_effect=ScheduleRetry(delay_seconds=86400, max_retries=3, message="not found"),
+        ),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "create_task",
+        make_recorder(
+            call_log,
+            "create_task",
+            return_value=MagicMock(name="tasks/retry1"),
+        ),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "pipe_next_steps",
+        make_recorder(call_log, "pipe_next_steps", return_value=None),
+        raising=True,
+    )
+
+    resp = main.run_from_payload({"METHOD": "download_mpatlas", "TRIGGER_NEXT": True})
+    assert resp == (f"Retrying in {86400} seconds", 202)
+
+    # pipe_next_steps was never called
+    next_step_calls = [call for call in call_log if call[0] == "pipe_next_steps"]
+    assert len(next_step_calls) == 0

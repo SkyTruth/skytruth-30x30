@@ -2,14 +2,25 @@ import os
 
 import psycopg
 from psycopg.rows import dict_row
+from shapely.geometry import MultiPolygon, Polygon
+from sqlalchemy import create_engine, text
 
+from src.core.params import BUCKET
+from src.utils.gcp import read_parquet_from_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
 
 
-def get_connection():
-    """Establish a connection to the database"""
+def get_connection(format: str = "psycopg"):
+    """
+    Establish a connection to the database
+
+    Parameter
+    ----------
+    format : str
+      Method used to connect to database ('psycopg' or 'sqlalchemy')
+    """
     try:
         DATABASE_USERNAME = os.environ.get("DATABASE_USERNAME", None)
         DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD", None)
@@ -24,21 +35,101 @@ def get_connection():
         ):
             raise ValueError("Missing DB Crednetials")
 
-        conn = psycopg.connect(
-            dbname=DATABASE_NAME,
-            user=DATABASE_USERNAME,
-            password=DATABASE_PASSWORD,
-            host=DATABASE_HOST,
-            port=5432,
-            row_factory=dict_row,
-        )
+        if format == "psycopg":
+            return psycopg.connect(
+                dbname=DATABASE_NAME,
+                user=DATABASE_USERNAME,
+                password=DATABASE_PASSWORD,
+                host=DATABASE_HOST,
+                port=5432,
+                row_factory=dict_row,
+            )
 
-        return conn
+        elif format == "sqlalchemy":
+            return create_engine(
+                f"postgresql+psycopg://{DATABASE_USERNAME}:{DATABASE_PASSWORD}@{DATABASE_HOST}:5432/{DATABASE_NAME}"
+            )
 
     except Exception as excep:
         logger.error(
             {"message": "Failed to establish connection with database", "error": str(excep)}
         )
+
+
+def update_cb(table_name, gcs_file, verbose: bool = False):
+    """
+    Update Conservation Builder table from GCS file.
+
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    gcs_file : str
+      GCS path of the file.
+    verbose : bool
+      Whether to print progress messages.
+    """
+    try:
+        conn = get_connection(format="sqlalchemy")
+
+        if verbose:
+            logger.info({"message": f"Loading {gcs_file}..."})
+        gdf = read_parquet_from_gcs(bucket_name=BUCKET, filename=gcs_file)
+
+        # Update geometry for consistency in PostgreSQL database
+        gdf = gdf.rename_geometry("the_geom")
+        gdf["the_geom"] = gdf["the_geom"].apply(
+            lambda geom: MultiPolygon([geom]) if isinstance(geom, Polygon) else geom
+        )
+        gdf = gdf[["location", "the_geom"]]
+
+        # Upload data to PostgreSQL
+        if verbose:
+            logger.info({"message": f"Uploading data to PostgreSQL at data.{table_name}..."})
+        gdf.to_postgis(
+            name=table_name,
+            schema="data",
+            con=conn,
+            if_exists="replace",
+            dtype={"the_geom": "Geometry(MultiPolygon, 4326)"},
+        )
+
+        # Update table in PostgreSQL
+        with conn.connect() as connection:
+            # Subdivide complex geometries (max 10,000 vertices each)
+            connection.execute(
+                text(f"""
+            WITH complex_areas AS (
+                DELETE from data.{table_name}
+                WHERE ST_NPoints(the_geom) > 10000
+                RETURNING location, the_geom
+            )
+            INSERT INTO data.{table_name} (location, the_geom)
+                SELECT location,
+                    ST_Multi(ST_Subdivide(the_geom, 10000)) as the_geom
+                FROM complex_areas;
+            """)
+            )
+
+            # Add primary key
+            connection.execute(
+                text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;")
+            )
+
+            # Create GIST index for fast spatial querying
+            connection.execute(
+                text(f"""
+                CREATE INDEX gist_{table_name}_geom
+                ON data.{table_name}
+                USING GIST (the_geom);
+            """)
+            )
+
+            connection.execute(text(f"ANALYZE data.{table_name};"))
+            connection.commit()
+
+    except Exception as excep:
+        logger.error({"message": "Failed to update table", "error": str(excep)})
 
 
 def get_pas(verbose: bool = False) -> list[dict]:
@@ -48,36 +139,36 @@ def get_pas(verbose: bool = False) -> list[dict]:
 
         pas_query = """
       WITH child_ids AS (
-        SELECT 
+        SELECT
           pas.id AS pas_id
           ,jsonb_agg(
-            jsonb_build_object('id', c.id)
+            jsonb_build_object('documentId', c.document_id)
           ) FILTER (WHERE c.id IS NOT NULL) AS children
         FROM pas pas
-          LEFT JOIN pas_children_links pcl 
+          LEFT JOIN pas_children_lnk pcl
           ON pas.id = pcl.pa_id
-        LEFT JOIN pas c 
+        LEFT JOIN pas c
           ON pcl.inv_pa_id = c.id
         GROUP BY pas.id
       )
       ,parent_ids AS (
-        SELECT 
+        SELECT
           pas.id AS pas_id
-          ,CASE 
+          ,CASE
             WHEN p.id IS NULL THEN NULL
             ELSE jsonb_build_object(
-              'id', p.id
+              'documentId', p.document_id
             )
         END AS parent
         FROM pas pas
-          LEFT JOIN pas_parent_links ppl 
+          LEFT JOIN pas_parent_lnk ppl
             ON pas.id = ppl.pa_id
-        LEFT JOIN pas p 
+        LEFT JOIN pas p
           ON p.id = ppl.inv_pa_id
       )
-      SELECT 
-        pas.id
-        ,pas."name" 
+      SELECT
+        pas.document_id AS "documentId"
+        ,pas."name"
         ,pas.area
         ,pas."year"
         ,pas.bbox
@@ -103,42 +194,43 @@ def get_pas(verbose: bool = False) -> list[dict]:
         LEFT JOIN parent_ids AS pid
           ON pid.pas_id = pas.id
       -- protection status --
-        LEFT JOIN pas_protection_status_links ppsl 
+        LEFT JOIN pas_protection_status_lnk ppsl 
           ON pas.id = ppsl.pa_id
         LEFT JOIN protection_statuses ps
           ON ppsl.protection_status_id = ps.id
       -- Environment
-        LEFT JOIN pas_environment_links pel 
+        LEFT JOIN pas_environment_lnk pel 
           ON pas.id = pel.pa_id
         LEFT JOIN environments e
           ON pel.environment_id = e.id
       -- Location --
-        LEFT JOIN pas_location_links pll  
+        LEFT JOIN pas_location_lnk pll  
           ON pas.id = pll.pa_id
         LEFT JOIN locations l
           ON pll.location_id  = l.id
       -- Data Source --
-        LEFT JOIN pas_data_source_links pdsl  
+        LEFT JOIN pas_data_source_lnk pdsl  
           ON pas.id = pdsl.pa_id
         LEFT JOIN data_sources ds
           ON pdsl.data_source_id = ds.id
       -- Protection Level --
-        LEFT JOIN pas_mpaa_protection_level_links pmpll 
+        LEFT JOIN pas_mpaa_protection_level_lnk pmpll 
           ON pas.id = pmpll.pa_id
         LEFT JOIN mpaa_protection_levels mpl 
           ON pmpll.mpaa_protection_level_id = mpl.id
       -- IUCN Category --
-        LEFT JOIN pas_iucn_category_links picl 
+        LEFT JOIN pas_iucn_category_lnk picl 
           ON pas.id = picl.pa_id
         LEFT JOIN mpa_iucn_categories mic 
           ON picl.mpa_iucn_category_id  = mic.id
       -- Establishment Stage --
-        LEFT JOIN pas_mpaa_establishment_stage_links pmesl 
+        LEFT JOIN pas_mpaa_establishment_stage_lnk pmesl 
           ON pas.id = pmesl.pa_id
         LEFT JOIN mpaa_establishment_stages mes 
           ON pmesl.mpaa_establishment_stage_id  = mes.id
-      GROUP BY 
+      GROUP BY
         pas.id
+        ,pas.document_id
         ,ps.slug
         ,e.slug
         ,l.code

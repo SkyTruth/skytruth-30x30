@@ -1,6 +1,6 @@
 {
   "name": "skytruth-30x30-frontend",
-  "version": "1.1.0",
+  "version": "1.10.0",
   "private": true,
   "scripts": {
     "dev": "yarn types && next dev",
@@ -21,11 +21,12 @@
     "@deck.gl/json": "8.9.31",
     "@deck.gl/layers": "8.9.31",
     "@deck.gl/mapbox": "8.9.31",
-    "@loaders.gl/core": "^3.4.14",
-    "@loaders.gl/kml": "^3.4.14",
-    "@loaders.gl/loader-utils": "^3.4.14",
-    "@loaders.gl/shapefile": "^3.4.14",
-    "@loaders.gl/zip": "^3.4.14",
+    "@loaders.gl/core": "^4.4.1",
+    "@loaders.gl/kml": "^4.4.1",
+    "@loaders.gl/loader-utils": "^4.4.1",
+    "@loaders.gl/pmtiles": "^4.4.1",
+    "@loaders.gl/shapefile": "^4.4.1",
+    "@loaders.gl/zip": "^4.4.1",
     "@localazy/cdn-client": "^1.5.2",
     "@mapbox/mapbox-gl-draw": "1.4.3",
     "@radix-ui/react-accordion": "^1.1.2",
@@ -56,7 +57,11 @@
     "date-fns": "^2.30.0",
     "deck.gl": "8.9.31",
     "deepmerge": "^4.3.1",
+    "dexie": "^4.3.0",
+    "dexie-react-hooks": "^4.2.0",
     "embla-carousel-react": "8.0.0",
+    "html-to-image": "^1.11.11",
+    "i18n-iso-countries": "^7.14.0",
     "jotai": "2.4.3",
     "lodash-es": "^4.17.21",
     "lucide-react": "^0.274.0",
@@ -68,6 +73,8 @@
     "nuqs": "^2.4.1",
     "orval": "6.18.1",
     "postcss": "8.4.21",
+    "proj4": "^2.20.4",
+    "qs": "^6.15.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-hook-form": "^7.48.2",
@@ -86,6 +93,7 @@
     "@types/google.analytics": "0.0.42",
     "@types/mapbox__mapbox-gl-draw": "1.4.6",
     "@types/node": "18.15.0",
+    "@types/proj4": "^2.19.0",
     "@types/react": "^18.2.31",
     "@types/react-dom": "^18.2.14",
     "@types/recharts": "^1.8.26",
@@ -109,5 +117,8 @@
   },
   "husky": {
     "pre-commit": "yarn lint"
+  },
+  "resolutions": {
+    "@math.gl/types": "^4.1.0"
   }
 }

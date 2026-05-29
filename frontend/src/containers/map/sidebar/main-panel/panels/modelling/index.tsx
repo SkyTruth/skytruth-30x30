@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { useAtomValue } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { useTranslations } from 'next-intl';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { modellingAtom } from '@/containers/map/store';
+import {
+  customLayersAtom,
+  modellingAtom,
+  modellingCustomLayerIdAtom,
+} from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import useMapDefaultLayers from '@/hooks/use-map-default-layers';
+import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
 import LocationSelector from '../../location-selector';
@@ -17,15 +23,22 @@ import ModellingWidget from './widget';
 const SidebarModelling: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
-  const [headerSize, setHeaderSize] = useState<string | null>(null);
-
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const { status: modellingStatus } = useAtomValue(modellingAtom);
+  const [{ status: modellingStatus }, setModelling] = useAtom(modellingAtom);
+  const [modellingCustomLayerId, setModellingCustomLayerId] = useAtom(modellingCustomLayerIdAtom);
+  const customLayers = useAtomValue(customLayersAtom);
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
   const showIntro = useMemo(() => modellingStatus === 'idle', [modellingStatus]);
+
+  const handleViewInstructions = useCallback(() => {
+    setModellingCustomLayerId(null);
+    setModelling({ active: false, status: 'idle', data: null, errorMessage: undefined });
+  }, [setModelling, setModellingCustomLayerId]);
+
+  // Keep default map layers in sync with selected tab/environment.
+  useMapDefaultLayers();
 
   const handleTabChange = useCallback(
     (tab: string) => setSettings((prevSettings) => ({ ...prevSettings, tab })),
@@ -46,45 +59,33 @@ const SidebarModelling: FCWithMessages = () => {
     }
   }, [setSettings, tab]);
 
-  // Dynamically shrink the panel header based on available height
-  useEffect(() => {
-    const updateHeight = () => {
-      if (containerRef.current) {
-        let textSize = 'text-xl';
-        const {
-          current: { clientHeight },
-        } = containerRef;
-
-        if (clientHeight <= 700 && clientHeight > 630) {
-          textSize = 'text-3xl';
-        }
-        if (clientHeight > 700) {
-          textSize = 'text-5xl';
-        }
-        setHeaderSize(textSize);
-      }
-    };
-
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
-
   return (
-    <Tabs
-      value={tab}
-      onValueChange={handleTabChange}
-      className="flex h-full w-full flex-col"
-      ref={containerRef}
-    >
+    <Tabs value={tab} onValueChange={handleTabChange} className="flex h-full w-full flex-col">
       <div className="flex flex-shrink-0 flex-col gap-y-2 border-b border-black bg-blue-600 px-4 pt-4 md:px-8 md:pt-6">
         <div>
-          <h1 className={`text-ellipsis font-black transition-all ${headerSize}`}>
-            {showIntro ? t('conservation-scenarios') : t('custom-area')}
+          <h1
+            className={cn({
+              'min-h-[3rem] text-5xl font-black transition-all': true,
+              truncate: !showIntro,
+            })}
+          >
+            {showIntro
+              ? t('conservation-scenarios')
+              : (modellingCustomLayerId && customLayers[modellingCustomLayerId]?.name) ||
+                t('custom-area')}
           </h1>
         </div>
-        {!showIntro && <p className="mt-2 font-black">{t('custom-area-description')}</p>}
+        {!showIntro ? (
+          <button
+            type="button"
+            className="mt-2 text-left underline"
+            onClick={handleViewInstructions}
+          >
+            {t('view-instructions')}
+          </button>
+        ) : (
+          <p className="mt-2 font-black">{t('custom-area-description')}</p>
+        )}
         <TabsList className="relative top-px mt-5">
           <TabsTrigger value="terrestrial">{t('terrestrial')}</TabsTrigger>
           <TabsTrigger value="marine">{t('marine')}</TabsTrigger>
@@ -100,7 +101,7 @@ const SidebarModelling: FCWithMessages = () => {
           {!showIntro && <ModellingWidget />}
         </TabsContent>
       </div>
-      <div className="shrink-0 border-t border-t-black bg-white px-4 py-5 md:px-8">
+      <div className="shrink-0 border-t border-t-black bg-white py-5">
         <ModellingButtons />
       </div>
     </Tabs>

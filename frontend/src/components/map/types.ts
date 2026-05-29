@@ -2,7 +2,7 @@ import type { ViewState, MapProps } from 'react-map-gl';
 
 import { FitBoundsOptions } from 'mapbox-gl';
 
-export interface CustomMapProps extends MapProps {
+export interface CustomMapProps extends Omit<MapProps, 'projection'> {
   id?: string;
   /** A function that returns the map instance */
   children?: React.ReactNode;

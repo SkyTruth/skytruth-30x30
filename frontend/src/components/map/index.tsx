@@ -136,6 +136,7 @@ export const Map: FC<CustomMapProps> = ({
         onMove={handleMapMove}
         onLoad={handleMapLoad}
         mapStyle="mapbox://styles/skytruth/clnud2d3100nr01pl3b4icpyw"
+        preserveDrawingBuffer={true}
         dragRotate={false}
         touchZoomRotate={false}
         transformRequest={(url) => {
@@ -163,4 +164,5 @@ export const Map: FC<CustomMapProps> = ({
 
 export default Map;
 export { default as ZoomControls } from './zoom-controls';
+export { default as Screenshot } from './screenshot';
 export { default as Attributions } from './attributions';

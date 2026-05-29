@@ -67,7 +67,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
    */
   validateFields(pa: PA, idMaps: {[key: string]: IDMap}, errors: {msg: string, err: string}[]): boolean {
     const {
-      id,
+      documentId,
       // relational fields
       data_source,
       environment,
@@ -95,21 +95,21 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
     // Validate relational fields
     if (!dataSourceMap[data_source]) {
       errors.push({
-          msg: `Failed to find data source for PA, name: ${pa?.name}, id: ${id}`,
+          msg: `Failed to find data source for PA, name: ${pa?.name}, documentId: ${documentId}`,
           err: `Data source ${data_source} not found`
       });
       return false;
     }
     if (!environmentMap[environment]) {
       errors.push({
-          msg: `Failed to find environment for PA, name: ${pa?.name}, id: ${id}`,
+          msg: `Failed to find environment for PA, name: ${pa?.name}, documentId: ${documentId}`,
           err: `Environment ${environment} not found`
       });
       return false;
     }
     if (!locationMap[location]) {
       errors.push({
-          msg: `Failed to find location for PA, name: ${pa?.name}, id: ${id}`,
+          msg: `Failed to find location for PA, name: ${pa?.name}, documentId: ${documentId}`,
           err: `Location ${location} not found`
       });
       return false;
@@ -117,35 +117,35 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
 
     if (mpaa_establishment_stage && !mpaaEstablishmentStageMap[mpaa_establishment_stage]) {
       errors.push({
-          msg: `Failed to find MPAA Establishment Stage for PA, name: ${pa?.name}, id: ${id}`,
+          msg: `Failed to find MPAA Establishment Stage for PA, name: ${pa?.name}, documentId: ${documentId}`,
           err: `Establishment Stage ${mpaa_establishment_stage} not found`
       });
       return false;
     }
     if (iucn_category && !mpaaIucnCategoryMap[iucn_category]) {
       errors.push({
-          msg: `Failed to find MPAA IUCN Category for PA, name: ${pa?.name}, id: ${id}`,
+          msg: `Failed to find MPAA IUCN Category for PA, name: ${pa?.name}, documentId: ${documentId}`,
           err: `IUCN Category ${iucn_category} not found`
       });
       return false;
     }
       if (mpaa_protection_level && !mpaaProtectionLevelMap[mpaa_protection_level]) {
       errors.push({
-          msg: `Failed to find MPAA Protection Level for PA, name: ${pa?.name}, id: ${id}`,
+          msg: `Failed to find MPAA Protection Level for PA, name: ${pa?.name}, documentId: ${documentId}`,
           err: `Protection Level ${mpaa_protection_level} not found`
       });
       return false;
     }
     if (!protectionStatusMap[protection_status]) {
       errors.push({
-          msg: `Failed to find Protection Status for PA, name: ${pa?.name}, id: ${id}`,
+          msg: `Failed to find Protection Status for PA, name: ${pa?.name}, documentId: ${documentId}`,
           err: `Protection Status ${protection_status} not found`
       });
       return false;
     }
 
     // Validate required fields for net-new PAs
-    if (!id) {
+    if (!documentId) {
       if (!name) {
         errors.push({
           msg: `Failed to create PA, wdpa_id: ${pa?.wdpaid}`,
@@ -192,35 +192,35 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
    */
   checkParentChild(pa: InputPA, toUpdateRelations: ToUpdateRelations): PA {
     const { children, parent } = pa;
-    const paIdentifier = pa?.id ?? this.makePAKey(pa);
+    const paIdentifier = pa?.documentId ?? this.makePAKey(pa);
 
-      if (children?.length) {
-       if (!children.every(child => !!child?.id)) {
-        toUpdateRelations[paIdentifier] = { children: []};
+    if (children?.length) {
+      if (!children.every(child => !!child?.documentId)) {
+      toUpdateRelations[paIdentifier] = { children: [] };
 
-        children.forEach(child => {
-          toUpdateRelations[paIdentifier].children.push({
-            id: child?.id,
-            key: this.makePAKey(child)
-          })
+      children.forEach(child => {
+        toUpdateRelations[paIdentifier].children.push({
+          documentId: child?.documentId,
+          key: this.makePAKey(child)
         })
-        /**
-         * If we're in this block it means the Pa has childnred
-         * and at least one child is missing an ID (i.e. isn't created yet)
-         * So we will skip updating children for this PA and make that update
-         * after all new PAs are created
-         * */
-        delete pa.children
+      })
+      /**
+       * If we're in this block it means the PA has children
+       * and at least one child is missing an ID (i.e. isn't created yet)
+       * So we will skip updating children for this PA and make that update
+       * after all new PAs are created
+       * */
+      delete pa.children
       } else {
         //Every child has an ID so just clean up the child objects
-        const updatedChildren = children.map(child => child.id);
+        const updatedChildren = children.map(child => child.documentId);
         pa.children = updatedChildren;
       }
     }
 
 
     if (parent) {
-      if(!parent?.id) {
+      if(!parent?.documentId) {
         if (!toUpdateRelations[paIdentifier]) {
           toUpdateRelations[paIdentifier] = {parent: {}};
         }
@@ -233,7 +233,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
          */
         delete pa.parent
       } else {
-        pa.parent = parent.id;
+        pa.parent = parent.documentId;
       }
     }
     return pa

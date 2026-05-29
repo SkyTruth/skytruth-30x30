@@ -19,6 +19,55 @@ import TooltipButton from '../tooltip-button';
 import Loading from './loading';
 import NoData from './no-data';
 
+// d3-time-format ships no id-ID or sw-* locale, so define them inline.
+const id = {
+  dateTime: '%A, %e %B %Y, %X',
+  date: '%d/%m/%Y',
+  time: '%H:%M:%S',
+  periods: ['AM', 'PM'],
+  days: ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
+  shortDays: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
+  months: [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ],
+  shortMonths: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+};
+
+const sw = {
+  dateTime: '%A, %e %B %Y, %X',
+  date: '%d/%m/%Y',
+  time: '%H:%M:%S',
+  periods: ['AM', 'PM'],
+  days: ['Jumapili', 'Jumatatu', 'Jumanne', 'Jumatano', 'Alhamisi', 'Ijumaa', 'Jumamosi'],
+  shortDays: ['Jpl', 'Jtt', 'Jnn', 'Jtn', 'Alh', 'Ij', 'Jmo'],
+  months: [
+    'Januari',
+    'Februari',
+    'Machi',
+    'Aprili',
+    'Mei',
+    'Juni',
+    'Julai',
+    'Agosti',
+    'Septemba',
+    'Oktoba',
+    'Novemba',
+    'Desemba',
+  ],
+  shortMonths: ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ago', 'Sep', 'Okt', 'Nov', 'Des'],
+};
+
 type WidgetProps = {
   className?: string;
   title?: string;
@@ -27,6 +76,7 @@ type WidgetProps = {
   noDataMessage?: ComponentProps<typeof NoData>['message'];
   noDataClassName?: string;
   loading?: boolean;
+  loadingMessage?: ComponentProps<typeof Loading>['message'];
   error?: boolean;
   errorMessage?: ComponentProps<typeof NoData>['message'];
   info?: ComponentProps<typeof TooltipButton>['text'];
@@ -39,6 +89,8 @@ const d3Locales = {
   es,
   fr,
   pt,
+  id,
+  sw,
 };
 
 const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
@@ -49,6 +101,7 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
   noDataMessage = undefined,
   noDataClassName,
   loading = false,
+  loadingMessage = undefined,
   error = false,
   errorMessage = undefined,
   info,
@@ -59,7 +112,7 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
   const t = useTranslations('components.widget');
   const locale = useLocale();
 
-  const d3Locale = useMemo(() => timeFormatLocale(d3Locales[locale]), [locale]);
+  const d3Locale = useMemo(() => timeFormatLocale(d3Locales[locale] ?? d3Locales.en), [locale]);
 
   const formattedLastUpdated = useMemo(
     () => d3Locale.format('%B %Y')(new Date(lastUpdated)),
@@ -86,7 +139,7 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
           <span className="text-xs">{t('updated-on', { date: formattedLastUpdated })}</span>
         )}
       </div>
-      {loading && <Loading />}
+      {loading && <Loading message={loadingMessage} />}
       {!loading && error && (
         <NoData error={error} message={errorMessage} className={noDataClassName} />
       )}
@@ -98,6 +151,6 @@ const Widget: FCWithMessages<PropsWithChildren<WidgetProps>> = ({
   );
 };
 
-Widget.messages = ['components.widget', ...Loading.messages, ...NoData.messages];
+Widget.messages = ['components.widget', ...NoData.messages];
 
 export default Widget;

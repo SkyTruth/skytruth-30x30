@@ -3,56 +3,48 @@ import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
-from src.core.processors import country_wrapping
+from src.core.params import BUCKET
 from src.utils.gcp import (
-    read_json_df,
-    upload_gdf_zip,
+    read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
+    upload_gdf,  # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
 )
 from src.utils.logger import Logger
 
 logger = Logger()
 
 
-def process_country(country: str, boundary_gdf: gpd.GeoDataFrame, pa_gdf: gpd.GeoDataFrame):
+def process_country(country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame):
     """
-    Subtracts the protected area from the total area and returns a GeoDataFrame.
+    Subtracts protected areas from total area for a country.
 
     Parameters
     ----------
-    country : str
-        Country name (3-letter abbreviation).
-    boundary_gdf : gpd.GeoDataFrame
-        Total areas GeoDataFrame.
-    pa_gdf : gpd.GeoDataFrame
-        Protected areas GeoDataFrame.
+    country_pa : gpd.GeoDataFrame
+        GeoDataFrame with protected areas for a country.
+    country_area : gpd.GeoDataFrame
+        GeoDataFrame with total area for a country.
 
     Returns
     -------
-    gpd.GeoDataFrame
-        GeoDataFrame of boundary_gdf with pa_gdf subtracted, retaining the original
-            fields of boundary_gdf.
+        GeoDataFrame with protected areas subtracted from total area for a country.
     """
-    try:
-        country_area = boundary_gdf[boundary_gdf["location"] == country]
-        country_pa = pa_gdf[pa_gdf["ISO3"] == country].dissolve()
-        if country_pa.empty:
-            # If no protected areas, return original boundary
-            return country_area
-        else:
-            # If protected areas found, return original boundary with protected areas removed
-            return country_area.overlay(country_pa, how="difference")
-
-    except Exception as e:
-        logger.warning({"message": f"Error processing {country}: {e}"})
-        return None
+    if country_pa.empty:
+        # If no protected areas, return original boundary
+        return country_area
+    else:
+        # If protected areas found, return original boundary with protected areas removed
+        pa_union = country_pa.geometry.union_all()
+        country_area.geometry = country_area.geometry.difference(pa_union)
+        return country_area
 
 
 def generate_total_area_minus_pa(
-    bucket: str,
     total_area_file: str,
     pa_file: str,
     out_file: str,
+    archive_out_file: str,
     tolerance: float,
+    bucket: str = BUCKET,
     verbose: bool = True,
 ):
     """
@@ -67,6 +59,8 @@ def generate_total_area_minus_pa(
         Filename of total area geojson (GADM or EEZ).
     pa_file : str
         Filename of protected area geojson (PA or MPA).
+    is_processed : bool
+        Whether the protected areas GeoDataFrame is already processed and dissolved by country.
     out_file : str
         Filename for output zipped file.
     tolerance : float
@@ -76,7 +70,7 @@ def generate_total_area_minus_pa(
 
     Returns
     -------
-        GeoDataFrame saved to GCS as a zipped shapefile.
+        GeoDataFrame saved to GCS as a Parquet.
     """
 
     # Total areas: GADM (terrestrial) or EEZ (marine)
@@ -85,6 +79,11 @@ def generate_total_area_minus_pa(
         filename=total_area_file.replace(".geojson", f"_{tolerance}.geojson"),
         verbose=verbose,
     )
+    total_area = total_area[["location", "geometry"]]
+
+    # Get list of unique country codes
+    countries = total_area["location"].unique().tolist()
+
     # Protected areas: PA (terrestrial) or MPA (marine)
     pa = read_json_df(
         bucket_name=bucket,
@@ -92,31 +91,42 @@ def generate_total_area_minus_pa(
         verbose=verbose,
     )
 
-    # Keep only polygon records and make the geometries valid
-    pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])]
-    pa.geometry = pa.geometry.make_valid()
-
+    # Create one row per country
     pa["ISO3"] = pa["ISO3"].str.split(";")
     pa = pa.explode("ISO3")
     pa["ISO3"] = pa["ISO3"].str.strip()
 
-    # Adjust countries as needed
-    pa = country_wrapping(pa, loc_col="ISO3")
+    # Keep only polygon records and make the geometries valid
+    pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
+    pa.geometry = pa.geometry.make_valid()
 
-    # Subtract protected areas from each country in parallel
-    countries = total_area["location"].unique().tolist()
-    results = Parallel(n_jobs=4, backend="loky")(
-        delayed(process_country)(country, total_area, pa) for country in tqdm(countries)
+    # Subtract geometries
+    if verbose:
+        logger.info({"message": "Subtracting protected areas from total areas..."})
+    results = Parallel(n_jobs=-1, backend="loky")(
+        delayed(process_country)(
+            total_area[total_area["location"] == country].reset_index(),
+            pa[pa["ISO3"] == country].reset_index(),
+        )
+        for country in tqdm(countries)
     )
-    total_area_minus_pa = pd.concat(results).reset_index()
 
+    total_area_minus_pa = pd.concat(results).reset_index(drop=True)
     if verbose:
         logger.info({"message": f"Output file has {len(total_area_minus_pa)} rows."})
 
-    # Save to GCS as zipped shapefile
-    upload_gdf_zip(
+    # Save to GCS
+    upload_gdf(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=out_file,
-        output_file_type=".shp",
+        output_file_type=".parquet",
+    )
+
+    # Save to archive
+    upload_gdf(
+        bucket_name=bucket,
+        gdf=total_area_minus_pa,
+        destination_blob_name=archive_out_file,
+        output_file_type=".parquet",
     )

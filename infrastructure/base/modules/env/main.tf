@@ -58,6 +58,7 @@ module "backend_cloudrun" {
   max_scale             = var.backend_max_scale
   tag                   = var.environment
   timeout_seconds       = 1800
+  memory                = var.backend_available_memory
   use_hello_world_image = var.use_hello_world_image
 }
 
@@ -303,49 +304,76 @@ resource "google_storage_bucket" "data_bucket" {
   }
 }
 
-locals {
-  data_processing_cloud_function_env = {
-    BUCKET              = google_storage_bucket.data_bucket.name
-    DATABASE_HOST       = module.database.database_host
-    DATABASE_NAME       = module.database.database_name
-    DATABASE_USERNAME   = module.database.database_user
-    MAPBOX_USER         = var.mapbox_user
-    PROJECT             = var.gcp_project_id
-    STRAPI_API_URL      = local.api_lb_url
-    STRAPI_USERNAME     = var.backend_write_user
-    LOCATION            = var.gcp_region
-    ENVIRONMENT         = var.environment
+resource "google_storage_bucket" "pmtiles_bucket" {
+  name                        = "${var.project_name}-pm-tiles"
+  location                    = var.gcp_region
+  project                     = var.gcp_project_id
+  force_destroy               = false
+  uniform_bucket_level_access = true
+
+  cors {
+    origin          = ["http://localhost:3000", local.frontend_lb_url]
+    method          = ["GET", "HEAD"]
+    response_header = ["Content-Type", "Range", "Content-Range"]
+    max_age_seconds = 3600
   }
 
-  data_processing_cloud_function_secrets = [{
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "google_storage_bucket_iam_member" "pmtiles_public_read" {
+  bucket = google_storage_bucket.pmtiles_bucket.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
+locals {
+  data_processing_env = {
+    BUCKET            = google_storage_bucket.data_bucket.name
+    DATABASE_HOST     = module.database.database_host
+    DATABASE_NAME     = module.database.database_name
+    DATABASE_USERNAME = module.database.database_user
+    MAPBOX_USER       = var.mapbox_user
+    PROJECT           = var.gcp_project_id
+    STRAPI_API_URL    = local.api_lb_url
+    STRAPI_USERNAME   = var.backend_write_user
+    LOCATION          = var.gcp_region
+    ENVIRONMENT       = var.environment
+    PMTILES_BUCKET    = google_storage_bucket.pmtiles_bucket.name
+  }
+
+  data_processing_secrets = [{
     key        = "PP_API_KEY"
     project_id = var.gcp_project_id
     secret     = "protected-planet-api-key"
     version    = "latest"
-  },
-  {
-    key        = "STRAPI_PASSWORD"
-    project_id = var.gcp_project_id
-    secret     = "${var.project_name}_strapi_write_user_password"
-    version    = "latest"
-  },
-  {
-    key        = "MAPBOX_TOKEN"
-    project_id = var.gcp_project_id
-    secret     = "mapbox_token"
-    version    = "latest"
-  },
-  {
-    key        = "DATABASE_PASSWORD"
-    project_id = var.gcp_project_id
-    secret     = module.postgres_application_user_password.secret_name
-    version    = module.postgres_application_user_password.latest_version
-  },
-  {
-    key        = "SLACK_ALERTS_WEBHOOK"
-    project_id = var.gcp_project_id
-    secret     = "gcp-slack-alerts-webhook"
-    version    = "latest"
+    },
+    {
+      key        = "STRAPI_PASSWORD"
+      project_id = var.gcp_project_id
+      secret     = "${var.project_name}_strapi_write_user_password"
+      version    = "latest"
+    },
+    {
+      key        = "MAPBOX_TOKEN"
+      project_id = var.gcp_project_id
+      secret     = "mapbox_token"
+      version    = "latest"
+    },
+    {
+      key        = "DATABASE_PASSWORD"
+      project_id = var.gcp_project_id
+      secret     = module.postgres_application_user_password.secret_name
+      version    = module.postgres_application_user_password.latest_version
+    },
+    {
+      key        = "SLACK_ALERTS_WEBHOOK"
+      project_id = var.gcp_project_id
+      secret     = "gcp-slack-alerts-webhook"
+      version    = "latest"
   }]
 }
 
@@ -359,14 +387,31 @@ module "data_pipes_cloud_function" {
   source_dir                       = "${path.root}/../../cloud_functions/data_processing"
   runtime                          = "python313"
   entry_point                      = "main"
-  runtime_environment_variables    = local.data_processing_cloud_function_env
-  secrets                          = local.data_processing_cloud_function_secrets
+  runtime_environment_variables    = local.data_processing_env
+  secrets                          = local.data_processing_secrets
   timeout_seconds                  = var.data_processing_timeout_seconds
   available_memory                 = var.data_processing_available_memory
   available_cpu                    = var.data_processing_available_cpu
   max_instance_count               = var.data_processing_max_instance_count
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
+  additional_invokers              = [google_service_account.scheduler_invoker.email]
 }
+
+
+module "data_pipes_cloudrun_jobs" {
+  source             = "../cloudrun_job"
+  project_id         = var.gcp_project_id
+  region             = var.gcp_region
+  job_name           = "${var.project_name}-data-cloudrun-job"
+  env                = local.data_processing_env
+  secrets            = local.data_processing_secrets
+  image              = var.cloudrun_jobs_image
+  timeout_seconds    = var.cloudrun_jobs_timeout_seconds
+  cpu                = var.cloudrun_jobs_available_cpu
+  memory             = var.cloudrun_jobs_available_memory
+  vpc_connector_name = module.network.vpc_access_connector_name
+}
+
 
 resource "google_storage_bucket_iam_member" "function_writer" {
   bucket = google_storage_bucket.data_bucket.name
@@ -380,6 +425,31 @@ resource "google_storage_bucket_iam_member" "function_bucket_viewer" {
   member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
 }
 
+
+resource "google_storage_bucket_iam_member" "job_writer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
+resource "google_storage_bucket_iam_member" "job_bucket_viewer" {
+  bucket = google_storage_bucket.data_bucket.name
+  role   = "roles/storage.legacyBucketReader"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
+resource "google_storage_bucket_iam_member" "function_pmtiles_writer" {
+  bucket = google_storage_bucket.pmtiles_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloud_function.service_account_email}"
+}
+
+resource "google_storage_bucket_iam_member" "job_pmtiles_writer" {
+  bucket = google_storage_bucket.pmtiles_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
 resource "google_project_iam_member" "google_cloudtasks_iam_member" {
   count = length(var.cloud_tasks_roles)
 
@@ -388,10 +458,28 @@ resource "google_project_iam_member" "google_cloudtasks_iam_member" {
   member  = "serviceAccount:${module.data_pipes_cloud_function.runtime_service_account_email}"
 }
 
+resource "google_project_iam_member" "job_cloudtasks_iam_member" {
+  count = length(var.cloud_tasks_roles)
+
+  project = var.gcp_project_id
+  role    = var.cloud_tasks_roles[count.index]
+  member  = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
+resource "google_cloud_run_v2_job_iam_member" "caller_job_can_run_target_job" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+
+  name = module.data_pipes_cloudrun_jobs.job_name
+
+  role   = "roles/run.developer"
+  member = "serviceAccount:${module.data_pipes_cloudrun_jobs.job_service_account_email}"
+}
+
 variable "cloud_tasks_roles" {
   description = "List of roles to grant to the Data Pipes Service Account"
   type        = list(string)
-  default     = [
+  default = [
     "roles/iam.serviceAccountTokenCreator",
     "roles/iam.serviceAccountUser",
     "roles/cloudtasks.enqueuer"
@@ -409,23 +497,33 @@ resource "google_cloudfunctions2_function_iam_member" "cloudtasks_invoker" {
   cloud_function = module.data_pipes_cloud_function.function_name
   role           = "roles/cloudfunctions.invoker"
   member         = "serviceAccount:${google_service_account.cloudtasks_invoker.email}"
-  depends_on = [google_service_account.cloudtasks_invoker]
+  depends_on     = [google_service_account.cloudtasks_invoker]
+}
+
+# Allow the Data Pipes Cloud Function SA to run the Cloud Run Job
+resource "google_cloud_run_v2_job_iam_member" "data_function_can_run_job" {
+  project  = var.gcp_project_id
+  location = var.gcp_region
+  name     = module.data_pipes_cloudrun_jobs.job_name
+
+  role   = "roles/run.developer"
+  member = "serviceAccount:${module.data_pipes_cloud_function.runtime_service_account_email}"
 }
 
 module "monthly_job_queue" {
   source = "../cloudtasks"
 
-  queue_name  = "${var.project_name}-monthly-data-pipes-jobs"
-  location    = var.gcp_region
+  queue_name = "${var.project_name}-monthly-data-pipes-jobs"
+  location   = var.gcp_region
 
-  target_url = module.data_pipes_cloud_function.function_uri
+  target_url                    = module.data_pipes_cloud_function.function_uri
   invoker_service_account_email = google_service_account.cloudtasks_invoker.email
 
   max_concurrent_dispatches = 1
   max_dispatches_per_second = 1
 
   # Just try one time - retries are handled in handler
-  max_attempts       = 0
+  max_attempts = 1
 
   enable_dlq = false
 }
@@ -435,29 +533,28 @@ resource "google_service_account" "scheduler_invoker" {
   display_name = "${var.project_name} Cloud Scheduler Invoker"
 }
 
-resource "google_cloud_run_service_iam_member" "scheduler_invoker" {
-  project  = var.gcp_project_id
-  location = var.gcp_region
-  service  = module.data_pipes_cloud_function.service_name
-
-  role   = "roles/run.invoker"
-  member = "serviceAccount:${google_service_account.scheduler_invoker.email}"
-}
-
 module "data_pipes_scheduler" {
-  source                   = "../cloud_scheduler"
-  name                     = "${var.project_name}-trigger-data-pipes-method"
-  schedule                 = "0 8 1 * *"
-  target_url               = module.data_pipes_cloud_function.function_uri
-  invoker_service_account  = google_service_account.scheduler_invoker.email
+  source                  = "../cloud_scheduler"
+  name                    = "${var.project_name}-trigger-data-pipes-method"
+  schedule                = "0 8 1 * *"
+  target_url              = module.data_pipes_cloud_function.function_uri
+  invoker_service_account = google_service_account.scheduler_invoker.email
   headers = {
     "Content-Type" = "application/json"
   }
   body = jsonencode({
-    METHOD              = "publisher",
-    TRIGGER_NEXT        = true,
-    QUEUE_NAME          = module.monthly_job_queue.queue_name,
-    TARGET_URL          = module.data_pipes_cloud_function.function_uri,
-    INVOKER_SA          = google_service_account.cloudtasks_invoker.email
+    METHOD       = "publisher",
+    TRIGGER_NEXT = true,
+    QUEUE_NAME   = module.monthly_job_queue.queue_name,
+    JOB_NAME     = module.data_pipes_cloudrun_jobs.job_name,
+    TARGET_URL   = module.data_pipes_cloud_function.function_uri,
+    INVOKER_SA   = google_service_account.cloudtasks_invoker.email
   })
+}
+
+module "artifact_registry" {
+  source        = "../artifact_registry"
+  project_id    = var.gcp_project_id
+  region        = var.gcp_region
+  repository_id = "${var.project_name}-data-pipes"
 }

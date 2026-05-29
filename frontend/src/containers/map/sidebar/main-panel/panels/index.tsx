@@ -1,24 +1,21 @@
+import { useAtom } from 'jotai';
+
+import { mapTypeAtom } from '@/containers/map/store';
 import { FCWithMessages } from '@/types';
+import { MapTypes } from '@/types/map';
 
 import Details from './details';
 import Modelling from './modelling';
 
-export const PANEL_TYPES = {
-  progress_tracker: 'progress-tracker',
-  conservation_builder: 'conservation-builder',
-};
-
 const SIDEBAR_COMPONENTS = {
-  [PANEL_TYPES.progress_tracker]: Details,
-  [PANEL_TYPES.conservation_builder]: Modelling,
+  [MapTypes.ProgressTracker]: Details,
+  [MapTypes.ConservationBuilder]: Modelling,
 };
 
-type PanelsProps = {
-  type: (typeof PANEL_TYPES)[keyof typeof PANEL_TYPES];
-};
+const MainPanel: FCWithMessages = () => {
+  const [mapType] = useAtom(mapTypeAtom);
 
-const MainPanel: FCWithMessages<PanelsProps> = ({ type }) => {
-  const Component = SIDEBAR_COMPONENTS[type] || Details;
+  const Component = SIDEBAR_COMPONENTS[mapType] || Details;
 
   return <Component />;
 };

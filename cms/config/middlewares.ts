@@ -1,10 +1,24 @@
 export default [
+  'global::normalize-path',
   'strapi::logger',
   'strapi::errors',
   'strapi::security',
-  'strapi::cors',
+   {
+    name: "strapi::cors",
+    config: {
+      origin: "*",
+      headers: [
+        "Content-Type",
+        "Authorization",
+        "Origin",
+        "Accept",
+        "Strapi-Response-Format",
+      ],
+    },
+  },
   'strapi::poweredBy',
   'strapi::query',
+  'global::v4-compat-query',
   {
     name: 'strapi::body',
     config: {

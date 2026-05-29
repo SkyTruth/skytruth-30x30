@@ -14,8 +14,8 @@ import {
 } from '@/containers/map/content/map/sync-settings';
 import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import useLocationName from '@/hooks/use-location-name';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
-import useNameField from '@/hooks/use-name-field';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
 import { cn } from '@/lib/classnames';
@@ -35,7 +35,7 @@ import TerrestrialWidgets from './widgets/terrestrial-widgets';
 const SidebarDetails: FCWithMessages = () => {
   const locale = useLocale();
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const locationNameField = useNameField();
+  const getLocationName = useLocationName();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerScroll = useScrollPosition(containerRef);
@@ -63,7 +63,7 @@ const SidebarDetails: FCWithMessages = () => {
     {
       locale,
       // @ts-ignore
-      fields: ['name', 'name_es', 'name_fr', 'name_pt', 'type', 'code', 'has_shared_marine_area'],
+      fields: ['name', 'type', 'code', 'has_shared_marine_area'],
       filters: {
         code: {
           $in: location,
@@ -74,10 +74,10 @@ const SidebarDetails: FCWithMessages = () => {
         ? {
             populate: {
               members: {
-                fields: ['code', 'name', 'name_es', 'name_fr', 'name_pt'],
+                fields: ['code', 'type'],
               },
               groups: {
-                fields: ['code', 'name', 'name_es', 'name_fr', 'name_pt'],
+                fields: ['code', 'type'],
               },
             },
           }
@@ -92,20 +92,18 @@ const SidebarDetails: FCWithMessages = () => {
 
   const mapLocationRelations = useCallback(
     (relation: string) => {
-      const mappedLocs = locationsData?.data[0]?.attributes[relation]?.data?.map(
-        ({ attributes }) => ({
-          code: attributes?.code,
-          name: attributes?.[locationNameField],
-        })
-      );
+      const mappedLocs = locationsData?.data[0]?.[relation]?.map((item) => ({
+        code: item?.code,
+        name: getLocationName(item),
+      }));
       return mappedLocs;
     },
-    [locationsData?.data, locationNameField]
+    [locationsData?.data, getLocationName]
   );
 
   const titleCountry = useMemo(() => {
     if (isCustomRegion) {
-      return locationsData?.data?.find((loc) => loc?.attributes.code === CUSTOM_REGION_CODE);
+      return locationsData?.data?.find((loc) => loc?.code === CUSTOM_REGION_CODE);
     }
     return locationsData?.data[0];
   }, [locationsData, isCustomRegion]);
@@ -117,18 +115,19 @@ const SidebarDetails: FCWithMessages = () => {
     const members = [];
     const hasSharedMarineArea = [];
     for (const country of locationsData?.data) {
-      if (country.attributes.code !== CUSTOM_REGION_CODE) {
+      if (country.code !== CUSTOM_REGION_CODE) {
+        const name = getLocationName(country);
         members.push({
-          code: country.attributes.code,
-          name: country.attributes[locationNameField],
+          code: country.code,
+          name,
         });
-        if (country.attributes.has_shared_marine_area) {
-          hasSharedMarineArea.push(country.attributes[locationNameField]);
+        if (country.has_shared_marine_area) {
+          hasSharedMarineArea.push(name);
         }
       }
     }
     return [members, hasSharedMarineArea];
-  }, [mapLocationRelations, isCustomRegion, locationNameField, locationsData]);
+  }, [mapLocationRelations, isCustomRegion, getLocationName, locationsData]);
 
   setSharedMarineAreasCountries(sharedMarineAreaCountries);
 
@@ -178,7 +177,7 @@ const SidebarDetails: FCWithMessages = () => {
             'min-h-[1.75rem] text-xl': containerScroll > 0,
           })}
         >
-          {titleCountry?.attributes?.[locationNameField]}
+          {getLocationName(titleCountry)}
         </h1>
         <LocationSelector
           theme="orange"
@@ -235,7 +234,7 @@ const SidebarDetails: FCWithMessages = () => {
       <div className="shrink-0 border-t border-t-black bg-white px-4 py-5 md:px-8">
         <DetailsButton
           disabled={isCustomRegion && !customRegionLocations?.size}
-          locationType={titleCountry?.attributes.type}
+          locationType={titleCountry?.type}
         />
       </div>
     </Tabs>
@@ -244,6 +243,8 @@ const SidebarDetails: FCWithMessages = () => {
 
 SidebarDetails.messages = [
   'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
   ...LocationSelector.messages,
   ...CountriesList.messages,
   ...DetailsButton.messages,

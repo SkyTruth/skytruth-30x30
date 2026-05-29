@@ -60,7 +60,7 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
               year: targetYear,
             })}
             <TooltipButton
-              text={dataInfo?.attributes.content
+              text={dataInfo?.content
                 .replace('{target}', `${target}`)
                 .replace('{target_year}', `${targetYear}`)}
               className="align-bottom hover:bg-transparent"

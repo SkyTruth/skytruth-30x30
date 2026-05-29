@@ -31,7 +31,7 @@ const MarineWidgets: FCWithMessages = () => {
     },
     {
       query: {
-        select: ({ data }) => data[0]?.attributes ?? null,
+        select: ({ data }) => data[0] ?? null,
       },
     }
   );

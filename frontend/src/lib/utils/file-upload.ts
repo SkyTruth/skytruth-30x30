@@ -3,30 +3,33 @@ import { KMLLoader } from '@loaders.gl/kml';
 import { Loader } from '@loaders.gl/loader-utils';
 import { ShapefileLoader } from '@loaders.gl/shapefile';
 import { ZipLoader } from '@loaders.gl/zip';
-import {
-  Feature,
-  featureCollection,
-  FeatureCollection,
-  GeoJSONObject,
-  Geometries,
-  GeometryCollection,
-  MultiPolygon,
-  Polygon,
-} from '@turf/turf';
+import { featureCollection, GeoJSONObject, MultiPolygon } from '@turf/turf';
+import type { Feature, FeatureCollection, Geometry, Position } from 'geojson';
+import proj4 from 'proj4';
 
-export type ValidGeometryType = Polygon | MultiPolygon | GeometryCollection;
+import {
+  isFeature,
+  isFeatureCollection,
+  isStructurallyValidPolygonCoordinates,
+} from '@/lib/utils/geo';
 
 export enum UploadErrorType {
   Generic,
   InvalidXMLSyntax,
   SHPMissingFile,
+  SHPMissingPRJ,
   UnsupportedFile,
+  UnsupportedCRS,
+  NoPolygons,
 }
+
+export const SHAPE_EXTENSIONS = ['shp', 'prj', 'shx', 'dbf', 'cfg'];
 
 export const supportedFileformats = [
   ...KMLLoader.extensions,
   ...['kmz'],
-  ...['shp', 'prj', 'shx', 'dbf', 'cfg'],
+  ...SHAPE_EXTENSIONS,
+  ...['geojson'],
 ];
 
 /**
@@ -92,12 +95,132 @@ export const validateFile = async (
   }
 };
 
+/** Legacy CRS property found in pre-RFC 7946 GeoJSON files */
+type LegacyCrs = {
+  type?: string;
+  properties?: { name?: string; code?: string | number };
+};
+
+type GeoJSONWithCrs = GeoJSONObject & { crs?: LegacyCrs };
+
+/**
+ * Extract an EPSG code from a legacy GeoJSON `crs` property.
+ * Returns null if no crs is defined or if it's already WGS84 (4326).
+ */
+function extractNonWgs84Epsg(geojson: GeoJSONWithCrs): string | null {
+  const { crs } = geojson;
+  if (!crs?.properties) return null;
+
+  let code: number | null = null;
+
+  if (crs.type === 'name' && typeof crs.properties.name === 'string') {
+    // Formats: "urn:ogc:def:crs:EPSG::3857", "EPSG:3857"
+    const match = crs.properties.name.match(/EPSG:+(\d+)/i);
+    if (match) code = parseInt(match[1], 10);
+  } else if (typeof crs.properties.code === 'number') {
+    code = crs.properties.code;
+  } else if (typeof crs.properties.code === 'string') {
+    code = parseInt(crs.properties.code, 10);
+  }
+
+  if (!code || code === 4326) return null;
+  return `EPSG:${code}`;
+}
+
+function reprojectPosition(pos: Position, transformer: proj4.Converter): Position {
+  const [x, y, ...rest] = pos;
+  const [lon, lat] = transformer.forward([x, y]);
+  return [lon, lat, ...rest];
+}
+
+function reprojectCoordinates(coords: unknown, transformer: proj4.Converter): unknown {
+  if (!Array.isArray(coords)) return coords;
+  // A position is an array of numbers
+  if (typeof coords[0] === 'number') {
+    return reprojectPosition(coords as Position, transformer);
+  }
+  return coords.map((coord) => reprojectCoordinates(coord, transformer));
+}
+
+function reprojectGeometry(geometry: Geometry, transformer: proj4.Converter): Geometry {
+  if (geometry.type === 'GeometryCollection') {
+    return {
+      ...geometry,
+      geometries: geometry.geometries.map((g) => reprojectGeometry(g as Geometry, transformer)),
+    };
+  }
+  const geo = geometry as Exclude<Geometry, GeoJSON.GeometryCollection>;
+  return {
+    ...geo,
+    coordinates: reprojectCoordinates(geo.coordinates, transformer),
+  } as Geometry;
+}
+
+/**
+ * If the FeatureCollection has a legacy `crs` property with a non-WGS84 CRS,
+ * reproject all coordinates to EPSG:4326.
+ */
+async function reprojectIfNeeded(geojson: FeatureCollection): Promise<FeatureCollection> {
+  const sourceCrs = extractNonWgs84Epsg(geojson as GeoJSONWithCrs);
+  if (!sourceCrs) return geojson;
+
+  // proj4 knows EPSG:4326 and EPSG:3857 by default.
+  // For other codes, fetch the definition from epsg.io.
+  if (!proj4.defs(sourceCrs)) {
+    try {
+      const resp = await fetch(`https://epsg.io/${sourceCrs.replace('EPSG:', '')}.proj4`);
+
+      if (!resp.ok) {
+        throw new Error(`Unknown CRS: ${sourceCrs}`);
+      }
+
+      const def = await resp.text();
+      proj4.defs(sourceCrs, def);
+    } catch {
+      throw UploadErrorType.UnsupportedCRS;
+    }
+  }
+
+  const transformer = proj4(sourceCrs, 'EPSG:4326');
+
+  return {
+    type: 'FeatureCollection',
+    features: geojson.features.map((feature) => ({
+      ...feature,
+      geometry: feature.geometry
+        ? reprojectGeometry(feature.geometry, transformer)
+        : feature.geometry,
+    })),
+  };
+}
+
+/**
+ * Check whether any coordinate in a set of features falls outside valid WGS84 bounds,
+ * indicating the data is in a projected CRS.
+ */
+function hasOutOfBoundsCoordinates(features: Feature[]): boolean {
+  const checkPosition = (pos: Position): boolean => Math.abs(pos[0]) > 180 || Math.abs(pos[1]) > 90;
+
+  const checkCoords = (coords: unknown): boolean => {
+    if (!Array.isArray(coords)) return false;
+    if (typeof coords[0] === 'number') return checkPosition(coords as Position);
+
+    return coords.some((coord) => checkCoords(coord));
+  };
+
+  return features.some(
+    (feature) =>
+      feature.geometry &&
+      checkCoords((feature.geometry as Exclude<Geometry, GeoJSON.GeometryCollection>).coordinates)
+  );
+}
+
 /**
  * Convert files to a GeoJSON
  * @param files Files to convert
  * @returns Error code if the convertion fails
  */
-export async function convertFilesToGeojson(files: File[]): Promise<Feature<ValidGeometryType>> {
+export async function convertFilesToGeojson(files: File[]): Promise<FeatureCollection> {
   // If multiple files are uploaded and one of them is a ShapeFile, this is the one we pass to the
   // loader because it is the one `ShapefileLoader` expects (out of the .prj, .shx, etc. other
   // Shapefile-related files). If the user uploaded files of a different extension, we just take the
@@ -131,7 +254,7 @@ export async function convertFilesToGeojson(files: File[]): Promise<Feature<Vali
     loader = KMLLoader;
   } else {
     try {
-      loader = await selectLoader(fileToParse, [ShapefileLoader, KMLLoader]);
+      loader = await selectLoader(fileToParse, [ShapefileLoader, KMLLoader] as Loader[]);
     } catch (e) {
       return Promise.reject(UploadErrorType.UnsupportedFile);
     }
@@ -150,12 +273,15 @@ export async function convertFilesToGeojson(files: File[]): Promise<Feature<Vali
 
   try {
     content = (await load(fileToParse, loader, {
+      kml: {
+        shape: 'geojson-table',
+      },
       gis: {
-        format: 'geojson',
         // In case of Shapefile, if a .prj file is uploaded, we want to reproject the geometry
         reproject: true,
       },
       shp: {
+        shape: 'geojson-table',
         // Shapefiles can hold up to 4 dimensions (XYZM). By default all dimensions are parsed;
         // when set to 2 only the X and Y dimensions are parsed. If not set, the resulting geometry
         // will not match the GeoJSON Specification (RFC 7946) and Google Maps will crash.
@@ -167,7 +293,6 @@ export async function convertFilesToGeojson(files: File[]): Promise<Feature<Vali
       // server so we reroute loaders.gl to the files the user uploaded.
       fetch: async (url: string | File): Promise<Response> => {
         let file: File;
-
         if (typeof url === 'string') {
           const extension = url.split('.').pop();
           file = files.find((f) => f.name.toLowerCase().endsWith(extension.toLowerCase()));
@@ -186,51 +311,136 @@ export async function convertFilesToGeojson(files: File[]): Promise<Feature<Vali
     return Promise.reject(UploadErrorType.UnsupportedFile);
   }
 
+  let parsed: FeatureCollection;
+
   if (loader === ShapefileLoader) {
-    content = (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>).data[0];
+    const features = (content as Awaited<ReturnType<typeof ShapefileLoader.parse>>)
+      .data as Feature[];
+    const hasPrj = files.some((file) => file.name.toLowerCase().endsWith('.prj'));
+
+    if (!hasPrj && hasOutOfBoundsCoordinates(features)) {
+      return Promise.reject(UploadErrorType.SHPMissingPRJ);
+    }
+
+    parsed = {
+      type: 'FeatureCollection',
+      features,
+    };
+  } else {
+    const feature = content as GeoJSONObject;
+    if (isFeature(feature)) {
+      parsed = featureCollection([feature]);
+    } else {
+      parsed = content as FeatureCollection;
+    }
   }
 
-  let cleanedGeoJSON: Feature<ValidGeometryType>;
-
-  try {
-    cleanedGeoJSON = cleanupGeoJSON(content as GeoJSONObject);
-  } catch (e) {
-    return Promise.reject(UploadErrorType.UnsupportedFile);
-  }
-
-  return cleanedGeoJSON;
+  return reprojectIfNeeded(parsed);
 }
 
-function cleanupGeoJSON(geoJSON: GeoJSONObject): Feature<ValidGeometryType> {
-  const isFeature = (geoJSON: GeoJSONObject): geoJSON is Feature<Geometries, unknown> =>
-    geoJSON.type === 'Feature';
-
-  const isFeatureCollection = (
-    geoJSON: GeoJSONObject
-  ): geoJSON is FeatureCollection<Geometries, unknown> => geoJSON.type === 'FeatureCollection';
-
-  let collection: FeatureCollection;
-  if (isFeature(geoJSON)) {
-    collection = featureCollection([geoJSON]);
-  } else if (isFeatureCollection(geoJSON)) {
-    collection = geoJSON;
-  } else {
+/**
+ * Appends valid polygon coordinates from polygon, multipolygon and geometry collection
+ * geometry types into a shared multipolygon coordinates array.
+ * @param geometry geometry to inspect
+ * @param coordinates target multipolygon coordinates accumulator
+ * @param removed counters for geometries that are excluded
+ * @returns void
+ */
+const appendPolygonCoordinates = (
+  geometry: Geometry | null | undefined,
+  coordinates: MultiPolygon['coordinates'],
+  removed: {
+    nonPolygon: number;
+    invalidPolygon: number;
+  }
+) => {
+  if (!geometry) {
+    removed.nonPolygon += 1;
     return;
   }
 
-  const features: Feature<ValidGeometryType>[] = collection.features.filter(
-    (f) =>
-      f.geometry?.type === 'MultiPolygon' ||
-      f.geometry?.type === 'Polygon' ||
-      f.geometry?.type === 'GeometryCollection'
-  ) as Feature<ValidGeometryType>[];
-
-  // NOTE: Only the first feature is imported
-  const feature = features[0];
-  if (!feature) {
-    // No feature with polygon or multipolygon found in geojson
-    throw new Error();
+  switch (geometry.type) {
+    case 'Polygon': {
+      if (isStructurallyValidPolygonCoordinates(geometry.coordinates)) {
+        coordinates.push(geometry.coordinates);
+      } else {
+        removed.invalidPolygon += 1;
+      }
+      break;
+    }
+    case 'MultiPolygon': {
+      geometry.coordinates.forEach((polygonCoordinates) => {
+        if (isStructurallyValidPolygonCoordinates(polygonCoordinates)) {
+          coordinates.push(polygonCoordinates);
+        } else {
+          removed.invalidPolygon += 1;
+        }
+      });
+      break;
+    }
+    case 'GeometryCollection':
+      geometry.geometries.forEach((innerGeometry) =>
+        appendPolygonCoordinates(innerGeometry as Geometry, coordinates, removed)
+      );
+      break;
+    default:
+      removed.nonPolygon += 1;
+      break;
   }
+};
 
-  return feature;
+export type ExtractPolygonsResult = {
+  feature: Feature<MultiPolygon>;
+  removed: {
+    any: boolean;
+    nonPolygon: number;
+    invalidPolygon: number;
+  };
+};
+
+/**
+ * Extracts valid polygon and multipolygon geometries from GeoJSON and combines them into one multipolygon.
+ * @param geoJSON input GeoJSON to extract from
+ * @returns combined multipolygon feature and removal metadata
+ */
+export function extractPolygons(geoJSON: GeoJSONObject): ExtractPolygonsResult {
+  try {
+    const coordinates: MultiPolygon['coordinates'] = [];
+    const removed = {
+      nonPolygon: 0,
+      invalidPolygon: 0,
+    };
+
+    if (isFeatureCollection(geoJSON)) {
+      geoJSON.features.forEach((feature) =>
+        appendPolygonCoordinates(feature.geometry as Geometry, coordinates, removed)
+      );
+    } else if (isFeature(geoJSON)) {
+      appendPolygonCoordinates(geoJSON.geometry as Geometry, coordinates, removed);
+    } else {
+      appendPolygonCoordinates(geoJSON as Geometry, coordinates, removed);
+    }
+
+    if (coordinates.length === 0) {
+      throw new Error('No polygon geometry found');
+    }
+
+    return {
+      feature: {
+        type: 'Feature',
+        properties: null,
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates,
+        },
+      },
+      removed: {
+        any: removed.nonPolygon > 0 || removed.invalidPolygon > 0,
+        nonPolygon: removed.nonPolygon,
+        invalidPolygon: removed.invalidPolygon,
+      },
+    };
+  } catch {
+    throw UploadErrorType.NoPolygons;
+  }
 }

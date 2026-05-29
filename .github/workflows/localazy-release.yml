@@ -1,9 +1,7 @@
 name: Release tag on Localazy
+
 on: 
-  push:
-    workflow_dispatch:
-    branches:
-      - main
+  workflow_call:
 
 jobs:
   localazy-release:

@@ -3,6 +3,7 @@ import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 're
 import { useTranslations } from 'next-intl';
 import { LuChevronDown, LuChevronUp } from 'react-icons/lu';
 
+import { layerToggleEngaged } from '@/components/analytics/heap';
 import TooltipButton from '@/components/tooltip-button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
@@ -11,22 +12,18 @@ import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
-import {
-  DatasetUpdatedByData,
-  Layer,
-  LayerResponseDataObject,
-} from '@/types/generated/strapi.schemas';
+import { Dataset, Layer } from '@/types/generated/strapi.schemas';
 
-export const SWITCH_LABEL_CLASSES = '-mb-px cursor-pointer pt-px font-mono text-xs font-normal';
-const COLLAPSIBLE_TRIGGER_ICONS_CLASSES = 'w-5 h-5 hidden';
-const COLLAPSIBLE_TRIGGER_CLASSES =
-  'group flex w-full items-center justify-between py-2 text-xs font-bold';
-const COLLAPSIBLE_CONTENT_CLASSES =
-  'data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down border-black py-2';
+import {
+  COLLAPSIBLE_TRIGGER_ICONS_CLASSES,
+  COLLAPSIBLE_TRIGGER_CLASSES,
+  COLLAPSIBLE_CONTENT_CLASSES,
+  SWITCH_LABEL_CLASSES,
+} from '../constants';
 
 type LayersGroupProps = PropsWithChildren<{
   name: string;
-  datasets: DatasetUpdatedByData[];
+  datasets: Dataset[];
   showDatasetsNames?: boolean;
   showBottomBorder?: boolean;
   isOpen?: boolean;
@@ -51,26 +48,28 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
   const [activeLayers, setMapLayers] = useSyncMapLayers();
   const [{ tab }] = useSyncMapContentSettings();
 
-  const datasetsLayersIds = useMemo(() => {
-    return (
-      datasets?.map(({ attributes }) => attributes?.layers?.data?.map(({ id }) => id))?.flat() || []
-    );
+  const datasetsLayerSlugs = useMemo(() => {
+    return datasets?.map((item) => item?.layers?.map(({ slug }) => slug))?.flat() || [];
   }, [datasets]);
 
   const numActiveDatasetsLayers = useMemo(() => {
     return (
-      (datasetsLayersIds?.filter((id) => activeLayers?.includes(id))?.length ?? 0) +
+      (datasetsLayerSlugs?.filter((slug) => activeLayers?.includes(slug))?.length ?? 0) +
       extraActiveLayers
     );
-  }, [datasetsLayersIds, activeLayers, extraActiveLayers]);
+  }, [datasetsLayerSlugs, activeLayers, extraActiveLayers]);
 
   const onToggleLayer = useCallback(
     (layerSlug: Layer['slug'], isActive: boolean) => {
       setMapLayers(
         isActive
-          ? [...activeLayers, layerSlug]
+          ? [layerSlug, ...activeLayers]
           : activeLayers.filter((activeSlug) => activeSlug !== layerSlug)
       );
+      layerToggleEngaged({
+        layerId: layerSlug,
+        active: isActive,
+      });
     },
     [activeLayers, setMapLayers]
   );
@@ -110,30 +109,40 @@ const LayersGroup: FCWithMessages<LayersGroupProps> = ({
           {noData && <span className="font-mono text-xs">{t('no-data-available')}</span>}
           {datasets?.map((dataset) => {
             return (
-              <div key={dataset.id} className="[&:not(:first-child)]:pt-3">
-                {showDatasetsNames && <h4 className="font-mono">{dataset?.attributes?.name}</h4>}
+              <div key={dataset.documentId} className="[&:not(:first-child)]:pt-3">
+                {showDatasetsNames && <h4 className="font-mono">{dataset?.name}</h4>}
                 <ul className={cn('my-3 flex flex-col space-y-3', { '-my-0': !showDatasetsNames })}>
-                  {dataset.attributes?.layers?.data?.map((layer: LayerResponseDataObject) => {
-                    const isActive = activeLayers?.includes(layer?.attributes?.slug);
-                    const onCheckedChange = onToggleLayer.bind(null, layer?.attributes?.slug) as (
+                  {dataset?.layers?.map((layer: Layer) => {
+                    const isActive = activeLayers?.includes(layer?.slug);
+                    const onCheckedChange = onToggleLayer.bind(null, layer?.slug) as (
                       isActive: boolean
                     ) => void;
-                    const metadata = layer?.attributes?.metadata;
+                    const metadata = layer?.metadata;
                     const sources = metadata?.citation
-                      ? [{ id: layer?.id, title: metadata?.citation, url: metadata?.source }]
+                      ? [
+                          {
+                            documentId: layer?.documentId,
+                            slug: layer?.slug,
+                            title: metadata?.citation,
+                            url: metadata?.source,
+                          },
+                        ]
                       : null;
 
                     return (
-                      <li key={layer.id} className="flex items-start justify-between">
+                      <li key={layer.documentId} className="flex items-start justify-between">
                         <span className="flex items-start gap-2">
                           <Switch
-                            id={`${layer.id}-switch`}
+                            id={`${layer.documentId}-switch`}
                             className="mt-px"
                             checked={isActive}
                             onCheckedChange={onCheckedChange}
                           />
-                          <Label htmlFor={`${layer.id}-switch`} className={SWITCH_LABEL_CLASSES}>
-                            {layer.attributes.title}
+                          <Label
+                            htmlFor={`${layer.documentId}-switch`}
+                            className={SWITCH_LABEL_CLASSES}
+                          >
+                            {layer.title}
                           </Label>
                         </span>
                         {metadata?.description && (

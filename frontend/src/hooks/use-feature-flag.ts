@@ -28,7 +28,7 @@ export const useFeatureFlag = (flag: string): FeatureFlag['payload'] => {
       query: {
         select: (data) => {
           if (data[0]) {
-            return data[0]?.attributes?.payload;
+            return data[0].payload;
           }
           return null;
         },

@@ -1,9 +1,9 @@
 import { useTranslations } from 'next-intl';
 
-import useNameField from '@/hooks/use-name-field';
+import useLocationName from '@/hooks/use-location-name';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
-import { LocationListResponseDataItem } from '@/types/generated/strapi.schemas';
+import { Location } from '@/types/generated/strapi.schemas';
 
 type MissingCountriesListProps = {
   countries: string[];
@@ -11,13 +11,13 @@ type MissingCountriesListProps = {
 
 const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ countries }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const nameField = useNameField();
+  const getLocationName = useLocationName();
 
-  const { data: locations, isFetching } = useGetLocations<LocationListResponseDataItem[]>(
+  const { data: locations, isFetching } = useGetLocations<Location[]>(
     {
       //@ts-ignore
       populate: {
-        fields: ['name', 'name_es', 'name_fr', 'name_pt'],
+        fields: ['code', 'type'],
       },
       filters: {
         code: {
@@ -39,12 +39,16 @@ const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ count
     <div className="mt-2 text-xs">
       {'* ' + t('no-data-for') + ' '}
       {locations.map(
-        (loc, idx) => loc.attributes[nameField] + `${idx !== locations.length - 1 ? ', ' : ''}`
+        (loc, idx) => getLocationName(loc) + `${idx !== locations.length - 1 ? ', ' : ''}`
       )}
     </div>
   );
 };
 
-MissingCountriesList.messages = ['containers.map-sidebar-main-panel'];
+MissingCountriesList.messages = [
+  'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
+];
 
 export default MissingCountriesList;

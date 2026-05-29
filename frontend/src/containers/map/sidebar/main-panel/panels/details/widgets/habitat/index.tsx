@@ -11,6 +11,7 @@ import {
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3472: remove feature flag (climate resilient corals)
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
 import { useGetDataInfos } from '@/types/generated/data-info';
 import type { AggregatedStatsEnvelope } from '@/types/generated/strapi.schemas';
@@ -34,6 +35,12 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
 
   const [{ tab }] = useSyncMapContentSettings();
 
+  // TECH-3472: remove feature flag (climate resilient corals habitat-widget gate)
+  const isClimateResCoralsActive = useFeatureFlag('is_climate_res_corals_active');
+  const hiddenHabitatSlugs = isClimateResCoralsActive
+    ? ['warm-water corals']
+    : ['climate-resilient-corals', 'other-corals'];
+
   const [HABITAT_CHART_COLORS] = useMemo(() => {
     const total =
       tab === 'marine'
@@ -44,7 +51,11 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
   }, [tab]);
 
   const { data: habitatMetadatas } = useGetDataInfos<
-    { slug: string; info: string; sources?: { id: number; title: string; url: string }[] }[]
+    {
+      slug: string;
+      info: string;
+      sources?: { documentId: string; slug: string; title: string; url: string }[];
+    }[]
   >(
     {
       locale,
@@ -63,15 +74,14 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       query: {
         select: ({ data }) =>
           data?.map((item) => ({
-            slug: item.attributes.slug,
-            info: item.attributes.content,
-            sources: item.attributes.data_sources?.data?.map(
-              ({ id, attributes: { title, url } }) => ({
-                id,
-                title,
-                url,
-              })
-            ),
+            slug: item.slug,
+            info: item.content,
+            sources: item.data_sources?.map(({ documentId, slug, title, url }) => ({
+              documentId,
+              slug,
+              title,
+              url,
+            })),
           })) ?? [],
       },
     }
@@ -86,7 +96,7 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       protectedArea: number;
       missingLocations: string[];
       info?: string;
-      sources?: { id: number; title: string; url: string }[];
+      sources?: { documentId: string; slug: string; title: string; url: string }[];
       updatedAt: string;
     }[]
   >(
@@ -110,6 +120,10 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
           const allLocations = new Set(locations.split(','));
 
           const parsedData = reversedStats.reduce((parsed, entry) => {
+            // TECH-3472: gate climate-resilient / warm-water corals by flag.
+            if (hiddenHabitatSlugs.includes(entry.habitat.slug)) {
+              return parsed;
+            }
             if (parsedHabitats.has(entry.habitat.slug)) {
               return parsed;
             }
@@ -161,14 +175,13 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
         select: ({ data }) =>
           data[0]
             ? {
-                info: data[0].attributes.content,
-                sources: data[0].attributes?.data_sources?.data?.map(
-                  ({ id, attributes: { title, url } }) => ({
-                    id,
-                    title,
-                    url,
-                  })
-                ),
+                info: data[0].content,
+                sources: data[0]?.data_sources?.map(({ documentId, slug, title, url }) => ({
+                  documentId,
+                  slug,
+                  title,
+                  url,
+                })),
               }
             : undefined,
       },

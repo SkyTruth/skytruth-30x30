@@ -1,42 +1,70 @@
-import { PropsWithChildren, useEffect } from 'react';
+import { PropsWithChildren, useEffect, useMemo, useRef } from 'react';
+
+import debounce from 'lodash-es/debounce';
 
 import dynamic from 'next/dynamic';
 
+import { useAtom, useAtomValue } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
 import { useTranslations } from 'next-intl';
 
+import { layersImpressed } from '@/components/analytics/heap';
 import Head from '@/components/head';
 import Header from '@/components/header';
 import MobileDisclaimerDialogStatic from '@/components/mobile-disclaimer-dialog';
 import Content from '@/containers/map/content';
 import Sidebar from '@/containers/map/sidebar';
-import { drawStateAtom, modellingAtom } from '@/containers/map/store';
+import {
+  drawStateAtom,
+  modellingAtom,
+  mapTypeAtom,
+  allActiveLayersAtom,
+  customLayersAtom,
+} from '@/containers/map/store';
+import useLocationName from '@/hooks/use-location-name';
+import useSyncAllLayers from '@/hooks/use-sync-all-layers';
 import { FCWithMessages } from '@/types';
+import { MapTypes } from '@/types/map';
 
 const MobileDisclaimerDialog = dynamic(() => import('@/components/mobile-disclaimer-dialog'), {
   ssr: false,
 });
 
-const LAYOUT_TYPES = {
+export const LAYOUT_TYPES = {
   progress_tracker: 'progress-tracker',
   conservation_builder: 'conservation-builder',
 };
 
-export interface MapLayoutProps {
-  title?: string;
+export type MapLayoutProps = {
+  location?: { code?: string; type?: string } | null;
   description?: string;
-  type: (typeof LAYOUT_TYPES)[keyof typeof LAYOUT_TYPES];
-}
+  type: MapTypes;
+};
 
 const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
-  title,
+  location,
   description,
   type,
 }) => {
   const t = useTranslations('layouts.map');
+  const getLocationName = useLocationName();
+  const title = location ? getLocationName(location) : '';
 
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
+
+  const allActiveLayers = useAtomValue(allActiveLayersAtom);
+  const customLayers = useAtomValue(customLayersAtom);
+
+  const [mapType, setMapType] = useAtom(mapTypeAtom);
+
+  const activeLayersRef = useRef(allActiveLayers);
+
+  useEffect(() => {
+    setMapType(type);
+  }, [type, setMapType]);
+
+  useSyncAllLayers(mapType);
 
   useEffect(() => {
     if (type !== LAYOUT_TYPES.conservation_builder) {
@@ -44,6 +72,28 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
       resetDrawState();
     }
   }, [resetDrawState, resetModelling, type]);
+
+  const debouncedLayersImpressed = useMemo(
+    () =>
+      debounce((layers: string[], currentCustomLayers: Record<string, unknown>) => {
+        const loggedLayers = layers.map((layer) =>
+          layer in currentCustomLayers ? 'custom' : layer
+        );
+        layersImpressed({ layers: loggedLayers });
+      }, 500),
+    []
+  );
+
+  useEffect(() => {
+    if (allActiveLayers !== activeLayersRef.current) {
+      debouncedLayersImpressed(allActiveLayers, customLayers);
+      activeLayersRef.current = allActiveLayers;
+    }
+  }, [allActiveLayers, customLayers, debouncedLayersImpressed]);
+
+  useEffect(() => {
+    return () => debouncedLayersImpressed.cancel();
+  }, [debouncedLayersImpressed]);
 
   return (
     <>
@@ -63,13 +113,13 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
         <div className="relative flex h-full w-full flex-col overflow-hidden md:flex-row">
           {/* DESKTOP SIDEBAR */}
           <div className="hidden md:block">
-            <Sidebar type={type} />
+            <Sidebar />
           </div>
           {/* CONTENT: MAP/TABLES */}
           <Content />
           {/* MOBILE SIDEBAR */}
           <div className="h-1/2 flex-shrink-0 overflow-hidden bg-white md:hidden">
-            <Sidebar type={type} />
+            <Sidebar />
           </div>
         </div>
       </div>
@@ -79,6 +129,8 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
 
 MapLayout.messages = [
   'layouts.map',
+  // Required by the `useLocationName` hook
+  'locations',
   ...Header.messages,
   ...Sidebar.messages,
   ...Content.messages,
