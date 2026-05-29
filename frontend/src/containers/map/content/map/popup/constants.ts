@@ -7,6 +7,8 @@ export const EEZ_SOURCE = 'eez-countries-source';
 export const POPUP_PROPERTIES_BY_SOURCE = {
   [EEZ_SOURCE]: {
     ids: ['ISO_TER1', 'ISO_TER2', 'ISO_TER3', 'ISO_SOV1', 'ISO_SOV2', 'ISO_SOV3'],
+    // EEZ joint zones need a per-locale tile property to render their name —
+    // other sources resolve names via `useLocationName` from their code/type.
     name: {
       en: 'name',
       es: 'name_es',
@@ -16,31 +18,16 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
   },
   'marine-regions-source': {
     ids: ['region_id'],
-    name: {
-      en: 'name',
-      es: 'name_es',
-      fr: 'name_fr',
-      pt: 'name_pt',
-    },
+    locationType: 'region',
   },
   countries: {
     // There's currently only sov1 and sov2 but the code allows for sov3
     ids: ['location', 'ISO_SOV1', 'ISO_SOV2', 'ISO_SOV3'],
-    name: {
-      en: 'name',
-      es: 'name_es',
-      fr: 'name_fr',
-      pt: 'name_pt',
-    },
+    locationType: 'country',
   },
   'terrestrial-regions': {
     ids: ['region_id'],
-    name: {
-      en: 'name',
-      es: 'name_es',
-      fr: 'name_fr',
-      pt: 'name_pt',
-    },
+    locationType: 'region',
   },
 };
 

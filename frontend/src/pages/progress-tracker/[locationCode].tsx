@@ -1,3 +1,5 @@
+import { ComponentProps } from 'react';
+
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 import type { GetServerSideProps } from 'next';
 
@@ -13,30 +15,20 @@ import { MapTypes } from '@/types/map';
 import { LayoutProps } from '../_app';
 
 const ProgressTrackerPage: FCWithMessages & {
-  layout: LayoutProps<{ locale: string; location: { code: string; name: string } }>;
+  layout: LayoutProps<
+    { locale: string; location: { code: string; type: string } },
+    ComponentProps<typeof MapLayout>
+  >;
 } = () => {
   return null;
 };
 
 ProgressTrackerPage.layout = {
   Component: MapLayout,
-  props: ({ locale, location }) => {
-    let locationNameField = 'name';
-    if (locale === 'es') {
-      locationNameField = 'name_es';
-    }
-    if (locale === 'fr') {
-      locationNameField = 'name_fr';
-    }
-    if (locale === 'pt') {
-      locationNameField = 'name_pt';
-    }
-
-    return {
-      title: location?.[locationNameField],
-      type: MapTypes.ProgressTracker,
-    };
-  },
+  props: ({ location }) => ({
+    location,
+    type: MapTypes.ProgressTracker,
+  }),
 };
 
 ProgressTrackerPage.messages = ['pages.progress-tracker', ...MapLayout.messages];

@@ -317,5 +317,26 @@
       "invalid-geometry": "Invalid geometry. The uploaded shape could not be processed.",
       "general-stats-error": "An error occurred calculating statistics. Please try again or upload a different geometry."
     }
+  },
+  "locations": {
+    "andTerritories": "{country} and Territories",
+    "region": {
+      "EU": "Europe",
+      "NA": "North America",
+      "PO": "Polar",
+      "SA": "Latin America & Caribbean",
+      "AF": "Africa",
+      "AS": "Asia & Pacific",
+      "WA": "West Asia"
+    },
+    "custom_region": {
+      "CREG": "Custom Region"
+    },
+    "highseas": {
+      "ABNJ": "Areas Beyond National Jurisdiction"
+    },
+    "worldwide": {
+      "GLOB": "Global"
+    }
   }
 }

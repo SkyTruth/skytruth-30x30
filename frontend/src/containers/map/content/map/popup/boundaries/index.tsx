@@ -19,11 +19,12 @@ import {
 import { PAGES } from '@/constants/pages';
 import { useMapSearchParams, useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { layersInteractiveIdsAtom, popupAtom } from '@/containers/map/store';
+import useLocationName from '@/hooks/use-location-name';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped } from '@/types/layers';
 
-import { POPUP_PROPERTIES_BY_SOURCE } from '../constants';
+import { EEZ_SOURCE, POPUP_PROPERTIES_BY_SOURCE } from '../constants';
 
 import useFormattedStats from './hooks';
 import StatCard from './StatCard';
@@ -44,6 +45,8 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
 
   const [popup, setPopup] = useAtom(popupAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
+
+  const getLocationName = useLocationName();
 
   const { data, isFetching: isPending } = useGetLayers<{
     source: LayerTyped['config']['source'];
@@ -122,10 +125,20 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     return codes;
   }, [geometryData, source]);
 
-  const localizedLocationName = useMemo(
-    () => geometryData?.[POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.name[locale]],
-    [geometryData, locale, source]
-  );
+  const localizedLocationName = useMemo(() => {
+    const sourceId = source?.['id'];
+    if (!geometryData || !sourceId) return undefined;
+
+    if (sourceId === EEZ_SOURCE) {
+      return geometryData[POPUP_PROPERTIES_BY_SOURCE[sourceId]?.name[locale]];
+    }
+
+    const code = locationCodes[0];
+    const type = POPUP_PROPERTIES_BY_SOURCE[sourceId]?.locationType;
+
+    if (!code || !type) return undefined;
+    return getLocationName({ code, type });
+  }, [geometryData, locale, source, locationCodes, getLocationName]);
 
   const [formattedStats, isFetching] = useFormattedStats(
     locationCodes,
@@ -214,6 +227,10 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
   );
 };
 
-BoundariesPopup.messages = ['containers.map'];
+BoundariesPopup.messages = [
+  'containers.map',
+  // Required by the `useLocationName` hook (used inside `useFormattedStats`)
+  'locations',
+];
 
 export default BoundariesPopup;

@@ -14,8 +14,8 @@ import {
 } from '@/containers/map/content/map/sync-settings';
 import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import useLocationName from '@/hooks/use-location-name';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
-import useNameField from '@/hooks/use-name-field';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
 import { cn } from '@/lib/classnames';
@@ -35,7 +35,7 @@ import TerrestrialWidgets from './widgets/terrestrial-widgets';
 const SidebarDetails: FCWithMessages = () => {
   const locale = useLocale();
   const t = useTranslations('containers.map-sidebar-main-panel');
-  const locationNameField = useNameField();
+  const getLocationName = useLocationName();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerScroll = useScrollPosition(containerRef);
@@ -63,7 +63,7 @@ const SidebarDetails: FCWithMessages = () => {
     {
       locale,
       // @ts-ignore
-      fields: ['name', 'name_es', 'name_fr', 'name_pt', 'type', 'code', 'has_shared_marine_area'],
+      fields: ['name', 'type', 'code', 'has_shared_marine_area'],
       filters: {
         code: {
           $in: location,
@@ -74,10 +74,10 @@ const SidebarDetails: FCWithMessages = () => {
         ? {
             populate: {
               members: {
-                fields: ['code', 'name', 'name_es', 'name_fr', 'name_pt'],
+                fields: ['code', 'type'],
               },
               groups: {
-                fields: ['code', 'name', 'name_es', 'name_fr', 'name_pt'],
+                fields: ['code', 'type'],
               },
             },
           }
@@ -94,11 +94,11 @@ const SidebarDetails: FCWithMessages = () => {
     (relation: string) => {
       const mappedLocs = locationsData?.data[0]?.[relation]?.map((item) => ({
         code: item?.code,
-        name: item?.[locationNameField],
+        name: getLocationName(item),
       }));
       return mappedLocs;
     },
-    [locationsData?.data, locationNameField]
+    [locationsData?.data, getLocationName]
   );
 
   const titleCountry = useMemo(() => {
@@ -116,17 +116,18 @@ const SidebarDetails: FCWithMessages = () => {
     const hasSharedMarineArea = [];
     for (const country of locationsData?.data) {
       if (country.code !== CUSTOM_REGION_CODE) {
+        const name = getLocationName(country);
         members.push({
           code: country.code,
-          name: country[locationNameField],
+          name,
         });
         if (country.has_shared_marine_area) {
-          hasSharedMarineArea.push(country[locationNameField]);
+          hasSharedMarineArea.push(name);
         }
       }
     }
     return [members, hasSharedMarineArea];
-  }, [mapLocationRelations, isCustomRegion, locationNameField, locationsData]);
+  }, [mapLocationRelations, isCustomRegion, getLocationName, locationsData]);
 
   setSharedMarineAreasCountries(sharedMarineAreaCountries);
 
@@ -176,7 +177,7 @@ const SidebarDetails: FCWithMessages = () => {
             'min-h-[1.75rem] text-xl': containerScroll > 0,
           })}
         >
-          {titleCountry?.[locationNameField]}
+          {getLocationName(titleCountry)}
         </h1>
         <LocationSelector
           theme="orange"
@@ -242,6 +243,8 @@ const SidebarDetails: FCWithMessages = () => {
 
 SidebarDetails.messages = [
   'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
   ...LocationSelector.messages,
   ...CountriesList.messages,
   ...DetailsButton.messages,

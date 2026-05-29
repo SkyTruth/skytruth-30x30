@@ -1,6 +1,6 @@
 {
   "name": "skytruth-30x30-frontend",
-  "version": "1.8.1",
+  "version": "1.10.0",
   "private": true,
   "scripts": {
     "dev": "yarn types && next dev",
@@ -61,6 +61,7 @@
     "dexie-react-hooks": "^4.2.0",
     "embla-carousel-react": "8.0.0",
     "html-to-image": "^1.11.11",
+    "i18n-iso-countries": "^7.14.0",
     "jotai": "2.4.3",
     "lodash-es": "^4.17.21",
     "lucide-react": "^0.274.0",
