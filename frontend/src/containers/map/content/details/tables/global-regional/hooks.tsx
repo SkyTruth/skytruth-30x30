@@ -17,7 +17,7 @@ import {
   useMapSearchParams,
   useSyncCustomRegion,
 } from '@/containers/map/content/map/sync-settings';
-import useNameField from '@/hooks/use-name-field';
+import useLocationName from '@/hooks/use-location-name';
 import { pickLocalized } from '@/lib/utils/pick-localized';
 import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
@@ -30,10 +30,8 @@ import { ProtectionCoverageStatListResponseMetaPagination } from '@/types/genera
 export type GlobalRegionalTableColumns = {
   location: {
     name: string;
-    name_es: string;
-    name_fr: string;
-    name_pt: string;
     code: string;
+    type: string;
     mpaa_protection_level_stats: {
       percentage: number;
     };
@@ -136,7 +134,7 @@ export const useColumns = (
 ) => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
-  const nameField = useNameField();
+  const getLocationName = useLocationName();
 
   const searchParams = useMapSearchParams();
   const tooltips = useTooltips();
@@ -146,8 +144,8 @@ export const useColumns = (
   const columns: AccessorKeyColumnDef<GlobalRegionalTableColumns>[] = useMemo(() => {
     return [
       {
-        id: `location.${nameField}`,
-        accessorKey: `location.${nameField}`,
+        id: 'location.name',
+        accessorKey: 'location.name',
         header: ({ column }) => (
           <HeaderItem className="ml-1">
             <SortingButton column={column} />
@@ -167,7 +165,7 @@ export const useColumns = (
                 className="font-semibold underline"
                 href={`${PAGES.progressTracker}/${location.code}?${searchParams.toString()}`}
               >
-                {location[nameField]}
+                {getLocationName(location)}
               </Link>
             </HeaderItem>
           );
@@ -331,7 +329,7 @@ export const useColumns = (
     filters,
     onChangeFilters,
     filtersOptions,
-    nameField,
+    getLocationName,
   ]);
 
   return columns;
@@ -407,7 +405,7 @@ export const useData = (
       // @ts-ignore
       populate: {
         location: {
-          fields: ['name', 'name_es', 'name_fr', 'name_pt', 'code'],
+          fields: ['name', 'code', 'type'],
           populate: {
             ...(environment === 'marine'
               ? {
@@ -487,10 +485,8 @@ export const useData = (
               return {
                 location: {
                   name: location?.name,
-                  name_es: location?.name_es,
-                  name_fr: location?.name_fr,
-                  name_pt: location?.name_pt,
                   code: location.code,
+                  type: location?.type,
                   mpaa_protection_level_stats: {
                     percentage: location?.mpaa_protection_level_stats?.percentage,
                   },

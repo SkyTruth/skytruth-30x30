@@ -21,6 +21,7 @@ import {
   allActiveLayersAtom,
   customLayersAtom,
 } from '@/containers/map/store';
+import useLocationName from '@/hooks/use-location-name';
 import useSyncAllLayers from '@/hooks/use-sync-all-layers';
 import { FCWithMessages } from '@/types';
 import { MapTypes } from '@/types/map';
@@ -35,17 +36,19 @@ export const LAYOUT_TYPES = {
 };
 
 export type MapLayoutProps = {
-  title?: string;
+  location?: { code?: string; type?: string } | null;
   description?: string;
   type: MapTypes;
 };
 
 const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
-  title,
+  location,
   description,
   type,
 }) => {
   const t = useTranslations('layouts.map');
+  const getLocationName = useLocationName();
+  const title = location ? getLocationName(location) : '';
 
   const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
@@ -126,6 +129,8 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
 
 MapLayout.messages = [
   'layouts.map',
+  // Required by the `useLocationName` hook
+  'locations',
   ...Header.messages,
   ...Sidebar.messages,
   ...Content.messages,

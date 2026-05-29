@@ -11,7 +11,7 @@ import TooltipButton from '@/components/tooltip-button';
 import Widget from '@/components/widget';
 import { drawStateAtom, modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import useNameField from '@/hooks/use-name-field';
+import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import {
@@ -72,7 +72,7 @@ const ModellingWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const tUploads = useTranslations('services.uploads');
   const locale = useLocale();
-  const locationNameField = useNameField();
+  const getLocationName = useLocationName();
 
   const [{ tab }] = useSyncMapContentSettings();
 
@@ -188,15 +188,7 @@ const ModellingWidget: FCWithMessages = () => {
           // @ts-ignore
           populate: {
             location: {
-              fields: [
-                'name',
-                'name_es',
-                'name_fr',
-                'name_pt',
-                'code',
-                'total_marine_area',
-                'total_terrestrial_area',
-              ],
+              fields: ['name', 'code', 'type', 'total_marine_area', 'total_terrestrial_area'],
             },
           },
           'pagination[limit]': 1,
@@ -286,10 +278,9 @@ const ModellingWidget: FCWithMessages = () => {
     [locationQueries]
   );
 
-  const administrativeBoundaries = nationalLevelContributions?.map((contribution) => {
-    const locationName = contribution.location[locationNameField];
-    return locationName;
-  });
+  const administrativeBoundaries = nationalLevelContributions?.map((contribution) =>
+    getLocationName(contribution.location)
+  );
 
   return (
     <Widget
@@ -320,7 +311,7 @@ const ModellingWidget: FCWithMessages = () => {
             <WidgetLegend />
           </div>
           {nationalLevelContributions?.map((contribution) => {
-            const locationName = contribution.location[locationNameField];
+            const locationName = getLocationName(contribution.location);
 
             return (
               <StackedHorizontalBarChart
@@ -385,6 +376,8 @@ const ModellingWidget: FCWithMessages = () => {
 ModellingWidget.messages = [
   'containers.map-sidebar-main-panel',
   'services.uploads',
+  // Required by the `useLocationName` hook
+  'locations',
   ...Widget.messages,
   ...WidgetLegend.messages,
   ...StackedHorizontalBarChart.messages,

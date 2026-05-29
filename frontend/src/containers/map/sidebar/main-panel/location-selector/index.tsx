@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { popupAtom } from '@/containers/map/store';
-import useNameField from '@/hooks/use-name-field';
+import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import GlobeIcon from '@/styles/icons/globe.svg';
 import MagnifyingGlassIcon from '@/styles/icons/magnifying-glass.svg';
@@ -56,7 +56,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
-  const locationNameField = useNameField();
+  const getLocationName = useLocationName();
 
   const {
     query: { locationCode = 'GLOB' },
@@ -76,7 +76,6 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     {
       locale,
       'pagination[limit]': 1000,
-      sort: `${locationNameField}:asc`,
     },
     {
       query: {
@@ -84,6 +83,14 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
         select: ({ data }) => data,
       },
     }
+  );
+
+  const sortedLocations = useMemo(
+    () =>
+      [...locationsData].sort((a, b) =>
+        getLocationName(a).localeCompare(getLocationName(b), locale)
+      ),
+    [locationsData, getLocationName, locale]
   );
 
   const filtersSearchLabels = useMemo(
@@ -167,12 +174,12 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
   ]);
 
   const reorderedLocations = useMemo(() => {
-    const globalLocation = locationsData.find((item) => item.type === 'worldwide');
+    const globalLocation = sortedLocations.find((item) => item.type === 'worldwide');
     return [
       globalLocation,
-      ...locationsData.filter(({ documentId }) => documentId !== globalLocation?.documentId),
+      ...sortedLocations.filter(({ documentId }) => documentId !== globalLocation?.documentId),
     ].filter(Boolean);
-  }, [locationsData]);
+  }, [sortedLocations]);
 
   const filteredLocations = useMemo(() => {
     if (!locationsFilter) {
@@ -190,14 +197,9 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
     if (locationsFilter === 'customRegion') {
       if (!customRegionLocations?.size) return filtered;
 
-      // Bit of a hack to add the "clear all" button to the custom regions list
-      const clearAll = {
-        code: 'clear',
-        name: t('clear-all'),
-        name_es: t('clear-all'),
-        name_fr: t('clear-all'),
-        name_pt: t('clear-all'),
-      } as Location;
+      // Bit of a hack to add the "clear all" button to the custom regions list.
+      // LocationDropdown special-cases `code === 'clear'` to render `t('clear-all')`.
+      const clearAll = { code: 'clear' } as Location;
 
       const top = [clearAll];
       const bottom = [];
@@ -216,7 +218,7 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
       }
     }
     return filtered;
-  }, [currentLocation, locationsFilter, reorderedLocations, customRegionLocations, t]);
+  }, [currentLocation, locationsFilter, reorderedLocations, customRegionLocations]);
 
   const customRegionCTA = isCustomRegionActive
     ? t('close-custom-region')
@@ -323,6 +325,8 @@ const LocationSelector: FCWithMessages<LocationSelectorProps> = ({
 
 LocationSelector.messages = [
   'containers.map-sidebar-main-panel',
+  // Required by the `useLocationName` hook
+  'locations',
   ...LocationTypeToggle.messages,
   ...LocationDropdown.messages,
 ];

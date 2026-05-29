@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { sortBy } from 'lodash-es';
 import { useLocale } from 'next-intl';
 
-import useNameField from '@/hooks/use-name-field';
+import useLocationName from '@/hooks/use-location-name';
 import { formatPercentage, formatKM } from '@/lib/utils/formats';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { ProtectionCoverageStat } from '@/types/generated/strapi.schemas';
@@ -25,7 +25,7 @@ const useFormattedStats = (
 
   const DEFAULT_VALUE = '-';
 
-  const nameField = useNameField();
+  const getLocationName = useLocationName();
 
   const { data: protectionCoverageStats, isFetching } = useGetProtectionCoverageStats<
     ProtectionCoverageStat[]
@@ -51,8 +51,9 @@ const useFormattedStats = (
       populate: {
         location: {
           fields: [
-            nameField,
+            'name',
             'code',
+            'type',
             'total_marine_area',
             'total_terrestrial_area',
             'has_shared_marine_area',
@@ -75,7 +76,7 @@ const useFormattedStats = (
     if (protectionCoverageStats?.length > 0) {
       const stats = protectionCoverageStats.map((item, idx) => {
         const iso = item?.location?.['code'] ?? locationCodes[idx];
-        const location = item?.location?.[nameField ?? iso];
+        const location = getLocationName(item?.location ?? { code: iso, type: 'country' });
         const coverage = item?.coverage;
         const percentage =
           coverage !== null && coverage !== undefined
@@ -109,7 +110,7 @@ const useFormattedStats = (
       return sortBy(stats, (stat) => locationCodes.indexOf(stat.iso));
     }
     return null;
-  }, [environment, locale, locationCodes, nameField, protectionCoverageStats]);
+  }, [environment, locale, locationCodes, getLocationName, protectionCoverageStats]);
 
   return [formattedStats, isFetching];
 };
