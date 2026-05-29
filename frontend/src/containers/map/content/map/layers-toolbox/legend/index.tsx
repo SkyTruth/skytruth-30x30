@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   DndContext,
@@ -36,8 +36,15 @@ const Legend: FCWithMessages = () => {
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
 
   const legendContainerRef = useRef<HTMLDivElement>(null);
+  const dragAnnouncementRef = useRef<HTMLDivElement>(null);
 
-  const [announcement, setAnnouncement] = useState('');
+  const [moveAnnouncement, setMoveAnnouncement] = useState('');
+  const [dragAnnouncement, setDragAnnouncement] = useState('');
+
+  useEffect(() => {
+    if (!dragAnnouncement) return;
+    dragAnnouncementRef.current?.focus();
+  }, [dragAnnouncement]);
   const layersQuery = useGetLayers<Layer[]>(
     {
       locale,
@@ -191,21 +198,18 @@ const Legend: FCWithMessages = () => {
         toIndex >= allActiveLayers.length ||
         toIndex === fromIndex
       ) {
-        return false;
+        return null;
       }
       const neighborLabel = getLayerLabel(allActiveLayers[toIndex]);
       const reordered = arrayMove(allActiveLayers, fromIndex, toIndex);
       setAllActiveLayers(reordered);
       setPredefinedMapLayers(reordered.filter((layerSlug) => !customLayers[layerSlug]));
-      setAnnouncement(
-        t(toIndex > fromIndex ? 'layer-moved-below' : 'layer-moved-above', {
-          layer: getLayerLabel(slug),
-          neighbor: neighborLabel,
-        })
-      );
-      return true;
+      return t(toIndex > fromIndex ? 'layer-moved-below' : 'layer-moved-above', {
+        layer: getLayerLabel(slug),
+        neighbor: neighborLabel,
+      });
     },
-    [allActiveLayers, customLayers, getLayerLabel, setAllActiveLayers, setPredefinedMapLayers]
+    [allActiveLayers, customLayers, getLayerLabel, setAllActiveLayers, setPredefinedMapLayers, t]
   );
 
   const onDragEnd = useCallback(
@@ -213,7 +217,8 @@ const Legend: FCWithMessages = () => {
       if (!over || active.id === over.id) return;
       const scrollContainer = findScrollContainer();
       const savedScrollTop = scrollContainer?.scrollTop ?? 0;
-      reorderLayer(active.id as string, allActiveLayers.indexOf(over.id as string));
+      const message = reorderLayer(active.id as string, allActiveLayers.indexOf(over.id as string));
+      if (message) setDragAnnouncement(message);
       requestAnimationFrame(() => {
         if (scrollContainer) scrollContainer.scrollTop = savedScrollTop;
       });
@@ -225,8 +230,9 @@ const Legend: FCWithMessages = () => {
     (slug: string, direction: 'up' | 'down') => {
       const fromIndex = allActiveLayers.indexOf(slug);
       if (fromIndex === -1) return;
-      const moved = reorderLayer(slug, fromIndex + (direction === 'up' ? -1 : 1));
-      if (moved) {
+      const message = reorderLayer(slug, fromIndex + (direction === 'up' ? -1 : 1));
+      if (message) {
+        setMoveAnnouncement(message);
         requestAnimationFrame(() => {
           document
             .querySelector(`[data-layer-slug="${slug}"]`)
@@ -331,7 +337,10 @@ const Legend: FCWithMessages = () => {
         </p>
       )}
       <div role="alert" className="sr-only">
-        {announcement}
+        {moveAnnouncement}
+      </div>
+      <div ref={dragAnnouncementRef} tabIndex={-1} className="sr-only focus-visible:outline-none">
+        {dragAnnouncement}
       </div>
       <DndContext
         sensors={sensors}
