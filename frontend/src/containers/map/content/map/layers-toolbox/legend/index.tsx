@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+
 import {
   DndContext,
   DragEndEvent,
@@ -261,7 +262,6 @@ const Legend: FCWithMessages = () => {
         title = layer.title;
         isVisible = layerSettings[slug]?.visibility !== false;
         opacity = layerSettings[slug]?.opacity ?? 1;
-        
       } else {
         const layer = customLayers[slug];
 
@@ -322,7 +322,7 @@ const Legend: FCWithMessages = () => {
   ]);
 
   return (
-    <div ref={legendContainerRef} className="pl-2 pr-4 py-2 select-none">
+    <div ref={legendContainerRef} className="select-none py-2 pl-2 pr-4">
       {!layersQuery.data?.length && (
         <p>
           {t.rich('open-layers-to-add-to-map', {

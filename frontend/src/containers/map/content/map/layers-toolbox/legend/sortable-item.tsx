@@ -1,4 +1,5 @@
 import { type KeyboardEvent } from 'react';
+
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -91,7 +92,6 @@ const SortableLegendItem: FCWithMessages<SortableLegendItemProps> = ({
     </div>
   );
 };
-
 
 SortableLegendItem.messages = [
   'containers.map',
