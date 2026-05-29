@@ -83,7 +83,7 @@ const SortableLegendItem: FCWithMessages<SortableLegendItemProps> = ({
         onChangeLayerOpacity={onChangeLayerOpacity}
         onChangeLayerColor={onChangeLayerColor}
       />
-      <div className="pt-1.5">
+      <div className="pl-5 pt-1.5">
         <LegendItem
           config={legend_config as LayerTyped['legend_config']}
           paramsConfig={params_config as ParamsConfig}

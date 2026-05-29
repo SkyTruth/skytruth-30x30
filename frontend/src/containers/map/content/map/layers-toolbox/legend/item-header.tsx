@@ -53,7 +53,6 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
   const t = useTranslations('containers.map');
   const screenshotOpen = useAtomValue(screenshotOpenAtom);
   const layerTitleId = useId();
-  const dragInstructionsId = useId();
   const styleButtonLabel = isCustomLayer ? t('change-layer-style') : t('change-opacity');
   const styleButtonLayerLabel = isCustomLayer
     ? t('change-layer-style-layer', { layer: title })
@@ -67,27 +66,21 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
 
   return (
     <div
-      className="flex items-center justify-between gap-4"
+      className="flex items-center justify-between gap-2"
       role="group"
       aria-labelledby={layerTitleId}
     >
       {!screenshotOpen && dragHandleRef && (
-        <>
-          <span id={dragInstructionsId} className="sr-only">
-            {t('drag-reorder-instructions')}
-          </span>
-          <button
-            ref={dragHandleRef}
-            {...dragListeners}
-            type="button"
-            onKeyDown={onDragKeyDown}
-            aria-label={t('drag-to-reorder-layer', { layer: title })}
-            aria-describedby={dragInstructionsId}
-            className="shrink-0 cursor-grab touch-none rounded-sm text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1 active:cursor-grabbing"
-          >
-            <Menu className="h-4 w-4" aria-hidden />
-          </button>
-        </>
+        <button
+          ref={dragHandleRef}
+          {...dragListeners}
+          type="button"
+          onKeyDown={onDragKeyDown}
+          aria-label={t('drag-to-reorder-layer', { layer: title })}
+          className="shrink-0 cursor-grab touch-none rounded-sm text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1 active:cursor-grabbing"
+        >
+          <Menu className="h-4 w-4" aria-hidden />
+        </button>
       )}
       <TooltipProvider>
         <div
