@@ -654,7 +654,9 @@ def add_translations(
     gdf = gdf.copy()
 
     gdf = gdf.merge(
-        translations[[translation_field, "name", "name_es", "name_fr", "name_pt"]],
+        translations[
+            [translation_field, "name", "name_es", "name_fr", "name_pt", "name_sw", "name_id"]
+        ],
         left_on=gdf_field,
         right_on=translation_field,
         how="left",
