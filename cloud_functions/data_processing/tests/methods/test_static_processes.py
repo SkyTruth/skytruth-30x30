@@ -128,6 +128,8 @@ def mock_eez_translations():
             "name_es": ["Zona A", "Zona B", "Alta Mar"],
             "name_fr": ["Zone A", "Zone B", "Haute mer"],
             "name_pt": ["Área A", "Área B", "Alto-mar"],
+            "name_id": ["Área A", "Área B", "Laut Lepas"],
+            "name_sw": ["Área A", "Área B", "Bahari Kuu"],
         }
     )
 
@@ -470,6 +472,8 @@ def test_proccess_eez_multiple_sovs_happy_path(
         "name_es",
         "name_fr",
         "name_pt",
+        "name_id",
+        "name_sw"
     }
 
     assert expect_cols.issubset(out.columns)
