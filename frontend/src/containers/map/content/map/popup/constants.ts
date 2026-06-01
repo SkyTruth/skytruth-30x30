@@ -15,7 +15,7 @@ export const POPUP_PROPERTIES_BY_SOURCE = {
       fr: 'name_fr',
       pt: 'name_pt',
       id: 'name_id',
-      sw: 'name_sw'
+      sw: 'name_sw',
     },
   },
   'marine-regions-source': {

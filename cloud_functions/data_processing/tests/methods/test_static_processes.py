@@ -473,7 +473,7 @@ def test_proccess_eez_multiple_sovs_happy_path(
         "name_fr",
         "name_pt",
         "name_id",
-        "name_sw"
+        "name_sw",
     }
 
     assert expect_cols.issubset(out.columns)
