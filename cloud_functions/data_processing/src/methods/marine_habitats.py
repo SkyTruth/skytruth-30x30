@@ -20,6 +20,7 @@ from src.core.params import (
     MANGROVES_BY_COUNTRY_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
+    TOLERANCES,
     WDPA_MARINE_FILE_NAME,
 )
 from src.core.processors import clean_geometries
@@ -323,7 +324,7 @@ def create_climate_resilient_corals_subtable(
     combined_regions: dict,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
-    tolerance: float = marine_tolerance,
+    tolerance: float = TOLERANCES[0],
     bucket: str = BUCKET,
     n_jobs: int = -1,
     verbose: bool = True,
