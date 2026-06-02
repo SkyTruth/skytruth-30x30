@@ -321,7 +321,7 @@ def _rollup_corals_subtable(
 def create_climate_resilient_corals_subtable(
     marine_protected_areas: gpd.GeoDataFrame,
     combined_regions: dict,
-    eez_file: str = EEZ_FILE_NAME,
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
     tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
@@ -330,19 +330,24 @@ def create_climate_resilient_corals_subtable(
 ) -> pd.DataFrame:
     """Compute climate-resilient-coral and other-coral protection per country/region.
 
-    Loads EEZs (simplified to `tolerance`), downloads the binary coral raster,
-    runs both a country-total pass (no PA filter) and a protected pass (filtered
-    by `marine_protected_areas`), then rolls country results up to
-    `combined_regions` to match the other marine habitat subtables.
+    Loads the GADM/EEZ union (land ∪ EEZ per country, simplified to `tolerance`),
+    downloads the binary coral raster, runs both a country-total pass (no PA
+    filter) and a protected pass (filtered by `marine_protected_areas`), then
+    rolls country results up to `combined_regions` to match the other marine
+    habitat subtables.
+
+    The land+EEZ union is used instead of the bare EEZ so that corals fringing
+    atolls and coastlines—which can sit just outside the simplified EEZ
+    boundary—are still attributed to the country (mirrors the mangrove pipeline).
 
     `marine_protected_areas` is expected to be the dissolved/cleaned WDPA marine
     GeoDataFrame produced by `process_marine_habitats`, with `location` already
     set to the country ISO3.
     """
     if verbose:
-        logger.info({"message": "loading EEZs for coral coverage"})
-    eez_file_name = eez_file.replace(".geojson", f"_{tolerance}.geojson")
-    eez = read_json_df(bucket, eez_file_name, verbose=verbose)
+        logger.info({"message": "loading GADM/EEZ union for coral coverage"})
+    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    regions = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
     if verbose:
         logger.info({"message": f"downloading coral raster from {coral_source_file}"})
@@ -350,10 +355,10 @@ def create_climate_resilient_corals_subtable(
     download_file_from_gcs(bucket, coral_source_file, local_raster_path, verbose=False)
 
     if verbose:
-        logger.info({"message": "computing total coral class areas per EEZ"})
+        logger.info({"message": "computing total coral class areas per country"})
     total_stats = compute_class_areas_by_country(
         raster_path=local_raster_path,
-        regions_gdf=eez,
+        regions_gdf=regions,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
         region_col="location",
         polygons_gdf=None,
@@ -363,10 +368,10 @@ def create_climate_resilient_corals_subtable(
     )
 
     if verbose:
-        logger.info({"message": "computing protected coral class areas per EEZ"})
+        logger.info({"message": "computing protected coral class areas per country"})
     protected_stats = compute_class_areas_by_country(
         raster_path=local_raster_path,
-        regions_gdf=eez,
+        regions_gdf=regions,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
         region_col="location",
         polygons_gdf=marine_protected_areas,
@@ -456,7 +461,7 @@ def process_marine_habitats(
     corals_subtable = create_climate_resilient_corals_subtable(
         marine_protected_areas,
         combined_regions,
-        eez_file=eez_file,
+        gadm_eez_union_file_name=gadm_eez_union_file_name,
         tolerance=tolerance,
         bucket=bucket,
         verbose=verbose,
