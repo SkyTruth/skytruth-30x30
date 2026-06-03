@@ -59,7 +59,6 @@ from src.methods.generate_tables import (
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
-    process_eez_gadm_unions,
     process_eez_geoms,
     process_eez_land_union,
     process_gadm_geoms,
@@ -306,7 +305,7 @@ def dispatch_publisher(
                 chunk_size=CHUNK_SIZE,
                 verbose=verbose,
             )
-            step_list = ["process_eezs", "process_eez_gadm_unions"]
+            step_list = ["process_eezs"]
 
         case "download_high_seas":
             download_zip_to_gcs(
@@ -319,7 +318,7 @@ def dispatch_publisher(
                 chunk_size=CHUNK_SIZE,
                 verbose=verbose,
             )
-            step_list = ["process_eezs", "process_eez_gadm_unions"]
+            step_list = ["process_eezs"]
 
         case "download_eez_land_union":
             download_zip_to_gcs(
@@ -348,10 +347,6 @@ def dispatch_publisher(
             step_list = ["generate_locations_table"]
             if env == "production":
                 step_list = step_list + ["update_eez_tileset", "update_marine_regions_tileset"]
-
-        case "process_eez_gadm_unions":
-            process_eez_gadm_unions(verbose=verbose)
-            step_list = ["process_mangroves"]
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)

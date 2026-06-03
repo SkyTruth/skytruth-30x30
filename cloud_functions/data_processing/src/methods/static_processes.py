@@ -10,7 +10,6 @@ import pandas as pd
 import rasterio
 from google.cloud import storage
 from shapely.geometry import box, mapping
-from shapely.ops import unary_union
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
 
@@ -67,7 +66,7 @@ from src.utils.gcp import (
     upload_file_to_gcs,
     upload_gdf,
 )
-from src.utils.geo import fill_polygon_holes, tile_geometry
+from src.utils.geo import tile_geometry
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -379,55 +378,6 @@ def _assign_terrs_and_sovs(row):
     row["ISO_SOV2"] = row["sovs"][1] if len(row["sovs"]) >= 2 else None
     row["ISO_SOV3"] = row["sovs"][2] if len(row["sovs"]) >= 3 else None
     return row
-
-
-def process_eez_gadm_unions(
-    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    eez_file_name: str = EEZ_FILE_NAME,
-    gadm_file_name: str = GADM_FILE_NAME,
-    tolerance: float = marine_tolerance,
-    bucket: str = BUCKET,
-    verbose: bool = True,
-):
-    eez_file_name = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
-
-    eez = read_json_df(bucket, eez_file_name, verbose=verbose)
-    gadm = read_json_df(bucket, gadm_file_name, verbose=verbose).to_crs(eez.crs)
-
-    eez.drop(
-        columns=list(set(eez.columns) - set(["location", "geometry"])),
-        inplace=True,
-    )
-
-    gadm.drop(
-        columns=list(set(gadm.columns) - set(["location", "geometry"])),
-        inplace=True,
-    )
-
-    if verbose:
-        logger.info({"message": "Generating eez/gadm unions"})
-
-    eez_gadm_union = []
-    for loc in tqdm(eez["location"].dropna().unique()):
-        geom = fill_polygon_holes(
-            unary_union(
-                [
-                    gadm[gadm["location"] == loc].iloc[0]["geometry"],
-                    eez[eez["location"] == loc].iloc[0]["geometry"],
-                ]
-            )
-        )
-        eez_gadm_union.append({"location": loc, "geometry": geom})
-
-    eez_gadm_union = gpd.GeoDataFrame(eez_gadm_union, geometry="geometry", crs=eez.crs)
-
-    if verbose:
-        logger.info(
-            {"message": f"uploading GADM/eez union geometries to {gadm_eez_union_file_name}"}
-        )
-    upload_gdf(bucket, eez_gadm_union, gadm_eez_union_file_name)
 
 
 def process_eez_land_union(

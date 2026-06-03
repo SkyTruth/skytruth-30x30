@@ -36,7 +36,6 @@ def patched_all(monkeypatch, call_log):
     simple_targets = [
         "process_gadm_geoms",
         "process_eez_geoms",
-        "process_eez_gadm_unions",
         "process_eez_land_union",
         "download_marine_habitats",
         "process_terrestrial_biome_raster",
@@ -94,7 +93,6 @@ def patched_all(monkeypatch, call_log):
     [
         ("process_gadm", "process_gadm_geoms"),
         ("process_eezs", "process_eez_geoms"),
-        ("process_eez_gadm_unions", "process_eez_gadm_unions"),
         ("process_eez_land_union", "process_eez_land_union"),
         ("download_marine_habitats", "download_marine_habitats"),
         ("process_terrestrial_biomes", "process_terrestrial_biome_raster"),
