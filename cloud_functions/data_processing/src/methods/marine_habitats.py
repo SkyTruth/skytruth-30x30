@@ -24,7 +24,7 @@ from src.core.params import (
     WDPA_MARINE_FILE_NAME,
 )
 from src.core.processors import clean_geometries
-from src.core.raster_pa_stats import compute_class_areas_by_country
+from src.core.raster_pa_stats import compute_class_areas_by_country, compute_country_class_areas
 from src.utils.gcp import (
     download_file_from_gcs,
     load_zipped_shapefile_from_gcs,
@@ -293,8 +293,19 @@ def _rollup_corals_subtable(
     protected_stats: pd.DataFrame,
     combined_regions: dict,
     habitats: tuple = CLIMATE_RESILIENT_CORALS_HABITATS,
+    global_total: dict | None = None,
+    global_protected: dict | None = None,
 ) -> pd.DataFrame:
-    """Roll per-country class areas up to combined_regions and reshape into subtable rows."""
+    """Roll per-country class areas up to combined_regions and reshape into subtable rows.
+
+    Country, territory and region rows are summed from their member countries, so a
+    reef that sits in an EEZ with overlapping claims is attributed to every claimant
+    (intentional over-attribution). The GLOB row must NOT inherit that double count,
+    so when `global_total`/`global_protected` are supplied (deduplicated global class
+    areas computed once over the whole reef extent) they are used for GLOB instead of
+    summing the per-country rows. If they are omitted, GLOB falls back to the country
+    sum (legacy behaviour, used by callers that have no deduplicated global to pass).
+    """
 
     def _sum(df: pd.DataFrame, locs: list | None, habitat: str) -> float:
         if habitat not in df.columns or df.empty:
@@ -303,17 +314,26 @@ def _rollup_corals_subtable(
             return float(df[habitat].sum())
         return float(df.loc[df["country"].isin(locs), habitat].sum())
 
+    def _global(stats: dict | None, habitat: str) -> float:
+        return float(stats.get(habitat, 0.0)) if stats else 0.0
+
     rows = []
     for habitat in habitats:
         for loc in combined_regions:
-            members = None if loc == "GLOB" else combined_regions[loc]
+            if loc == "GLOB" and (global_total is not None or global_protected is not None):
+                protected_area = _global(global_protected, habitat)
+                total_area = _global(global_total, habitat)
+            else:
+                members = None if loc == "GLOB" else combined_regions[loc]
+                protected_area = _sum(protected_stats, members, habitat)
+                total_area = _sum(total_stats, members, habitat)
             rows.append(
                 {
                     "location": loc,
                     "habitat": habitat,
                     "environment": "marine",
-                    "protected_area": _sum(protected_stats, members, habitat),
-                    "total_area": _sum(total_stats, members, habitat),
+                    "protected_area": protected_area,
+                    "total_area": total_area,
                 }
             )
     return pd.DataFrame(rows)
@@ -382,7 +402,44 @@ def create_climate_resilient_corals_subtable(
         verbose=verbose,
     )
 
-    return _rollup_corals_subtable(total_stats, protected_stats, combined_regions)
+    # GLOB must not inherit the per-country double counting of reefs in EEZs with
+    # overlapping claims. Compute deduplicated global class areas once over the
+    # dissolved union of all region geometries (every reef pixel counted a single
+    # time, regardless of how many countries claim it) for both the total and
+    # protected passes, and hand them to the rollup for the GLOB row only.
+    if verbose:
+        logger.info({"message": "computing deduplicated global coral class areas"})
+    global_geom = make_valid(unary_union(regions["geometry"].values))
+    global_total = (
+        compute_country_class_areas(
+            country="GLOB",
+            country_geom=global_geom,
+            raster_path=local_raster_path,
+            class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
+            polygons_gdf=None,
+            include_zero=True,
+        )
+        or {}
+    )
+    global_protected = (
+        compute_country_class_areas(
+            country="GLOB",
+            country_geom=global_geom,
+            raster_path=local_raster_path,
+            class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
+            polygons_gdf=marine_protected_areas,
+            include_zero=True,
+        )
+        or {}
+    )
+
+    return _rollup_corals_subtable(
+        total_stats,
+        protected_stats,
+        combined_regions,
+        global_total=global_total,
+        global_protected=global_protected,
+    )
 
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:

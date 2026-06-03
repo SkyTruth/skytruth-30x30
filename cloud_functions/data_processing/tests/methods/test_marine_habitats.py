@@ -73,7 +73,10 @@ def test_rollup_region_sums_member_countries(country_class_areas, combined_regio
     assert na_other["protected_area"] == 18.0
 
 
-def test_rollup_glob_sums_all_countries(country_class_areas, combined_regions):
+def test_rollup_glob_falls_back_to_country_sum_without_override(
+    country_class_areas, combined_regions
+):
+    """Without a deduplicated global override, GLOB falls back to summing countries."""
     total, protected = country_class_areas
     result = _rollup_corals_subtable(total, protected, combined_regions)
 
@@ -82,6 +85,45 @@ def test_rollup_glob_sums_all_countries(country_class_areas, combined_regions):
     ].iloc[0]
     assert glob_crc["total_area"] == 120.0
     assert glob_crc["protected_area"] == 35.0
+
+
+def test_rollup_glob_uses_dedup_override_not_country_sum(country_class_areas, combined_regions):
+    """Overlapping-claim double counting may inflate a region but must NOT reach GLOB.
+
+    The per-country rows sum to 120 / 130 km² (climate-resilient / other), which is what
+    a region like NA still reports. GLOB instead uses the deduplicated global figures
+    (each reef pixel counted once over the whole extent), so it is lower than the sum.
+    """
+    total, protected = country_class_areas
+    global_total = {"climate-resilient-corals": 90.0, "other-corals": 110.0}
+    global_protected = {"climate-resilient-corals": 25.0, "other-corals": 12.0}
+
+    result = _rollup_corals_subtable(
+        total,
+        protected,
+        combined_regions,
+        global_total=global_total,
+        global_protected=global_protected,
+    )
+
+    glob_crc = result[
+        (result["location"] == "GLOB") & (result["habitat"] == "climate-resilient-corals")
+    ].iloc[0]
+    # GLOB uses the deduplicated override, NOT the 120 country sum
+    assert glob_crc["total_area"] == 90.0
+    assert glob_crc["protected_area"] == 25.0
+
+    glob_other = result[
+        (result["location"] == "GLOB") & (result["habitat"] == "other-corals")
+    ].iloc[0]
+    assert glob_other["total_area"] == 110.0
+    assert glob_other["protected_area"] == 12.0
+
+    # A region still sums its members (double counting is acceptable below GLOB)
+    na_crc = result[
+        (result["location"] == "NA") & (result["habitat"] == "climate-resilient-corals")
+    ].iloc[0]
+    assert na_crc["total_area"] == 120.0
 
 
 def test_rollup_handles_country_missing_from_protected_stats(combined_regions):
