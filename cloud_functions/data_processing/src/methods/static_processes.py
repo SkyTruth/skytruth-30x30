@@ -123,7 +123,9 @@ def process_gadm_geoms(
     hong_kong.loc[:, "GID_0"] = "HKG"
     hong_kong = hong_kong[["GID_0", "COUNTRY", "geometry"]]
     # Remove Hong Kong from China in the countries layer
-    countries.loc[countries["GID_0"] == "CHN", "geometry"] = countries.loc[countries["GID_0"] == "CHN", "geometry"].difference(hong_kong.geometry.iloc[0])
+    countries.loc[countries["GID_0"] == "CHN", "geometry"] = countries.loc[
+        countries["GID_0"] == "CHN", "geometry"
+    ].difference(hong_kong.geometry.iloc[0])
 
     abnj = {"GID_0": "ABNJ", "COUNTRY": "Areas Beyond National Jurisdiction", "geometry": None}
     abnj = gpd.GeoDataFrame([abnj], crs=countries.crs)
