@@ -17,6 +17,7 @@ from src.core.params import (
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     EEZ_FILE_NAME,
+    EEZ_LAND_UNION_PARAMS,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
     GADM_FILE_NAME,
@@ -318,6 +319,19 @@ def dispatch_publisher(
                 verbose=verbose,
             )
             step_list = ["process_eezs", "process_eez_gadm_unions"]
+
+        case "download_eez_land_union":
+            download_zip_to_gcs(
+                url=MARINE_REGIONS_URL,
+                bucket_name=BUCKET,
+                blob_name=EEZ_LAND_UNION_PARAMS["zipfile_name"],
+                data=MARINE_REGIONS_BODY,
+                params=EEZ_LAND_UNION_PARAMS,
+                headers=MARINE_REGIONS_HEADERS,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+            step_list = ["process_eez_land_union"]
 
         case "process_gadm":
             process_gadm_geoms(verbose=verbose)

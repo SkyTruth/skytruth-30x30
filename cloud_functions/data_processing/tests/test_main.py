@@ -193,6 +193,21 @@ def _assert_download_zip_call_kwargs(
             },
             id="high_seas",
         ),
+        pytest.param(
+            "download_eez_land_union",
+            dict(
+                url=lambda m: m.MARINE_REGIONS_URL,
+                bucket_name=lambda m: m.BUCKET,
+                blob_name=lambda m: m.EEZ_LAND_UNION_PARAMS["zipfile_name"],
+                chunk_size=lambda m: m.CHUNK_SIZE,
+            ),
+            {
+                "data": lambda m: m.MARINE_REGIONS_BODY,
+                "params": lambda m: m.EEZ_LAND_UNION_PARAMS,
+                "headers": lambda m: m.MARINE_REGIONS_HEADERS,
+            },
+            id="eez_land_union",
+        ),
     ],
 )
 def test_downloader_zip_routes(patched_all, method, expected, extra):
