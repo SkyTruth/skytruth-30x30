@@ -36,15 +36,8 @@ const Legend: FCWithMessages = () => {
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
 
   const legendContainerRef = useRef<HTMLDivElement>(null);
-  const dragAnnouncementRef = useRef<HTMLDivElement>(null);
 
   const [moveAnnouncement, setMoveAnnouncement] = useState('');
-  const [dragAnnouncement, setDragAnnouncement] = useState('');
-
-  useEffect(() => {
-    if (!dragAnnouncement) return;
-    dragAnnouncementRef.current?.focus();
-  }, [dragAnnouncement]);
   const layersQuery = useGetLayers<Layer[]>(
     {
       locale,
@@ -218,7 +211,7 @@ const Legend: FCWithMessages = () => {
       const scrollContainer = findScrollContainer();
       const savedScrollTop = scrollContainer?.scrollTop ?? 0;
       const message = reorderLayer(active.id as string, allActiveLayers.indexOf(over.id as string));
-      if (message) setDragAnnouncement(message);
+      if (message) setMoveAnnouncement(message);
       requestAnimationFrame(() => {
         if (scrollContainer) scrollContainer.scrollTop = savedScrollTop;
       });
@@ -340,9 +333,6 @@ const Legend: FCWithMessages = () => {
       )}
       <div role="alert" className="sr-only">
         {moveAnnouncement}
-      </div>
-      <div ref={dragAnnouncementRef} tabIndex={-1} className="sr-only focus-visible:outline-none">
-        {dragAnnouncement}
       </div>
       <DndContext
         sensors={sensors}
