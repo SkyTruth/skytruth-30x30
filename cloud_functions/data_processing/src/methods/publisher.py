@@ -61,6 +61,7 @@ from src.methods.static_processes import (
     generate_terrestrial_biome_stats_country,
     process_eez_gadm_unions,
     process_eez_geoms,
+    process_eez_land_union,
     process_gadm_geoms,
     process_mangroves,
     process_terrestrial_biome_raster,
@@ -350,6 +351,10 @@ def dispatch_publisher(
 
         case "process_eez_gadm_unions":
             process_eez_gadm_unions(verbose=verbose)
+            step_list = ["process_mangroves"]
+
+        case "process_eez_land_union":
+            process_eez_land_union(verbose=verbose)
             step_list = ["process_mangroves"]
 
         case "download_marine_habitats":

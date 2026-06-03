@@ -656,3 +656,128 @@ def test_process_eez_geoms_missing_columns(
         static_processes.process_eez_geoms(verbose=False)
 
     assert calls == []
+
+
+# -------------------------------
+# Tests for process_eez_land_union
+# -------------------------------
+
+
+@pytest.fixture
+def mock_eez_land_union():
+    """
+    Minimal Marine Regions EEZ-land-union features exercising the parent logic:
+      - NIC: ordinary single-territory feature.
+      - A bank with no ISO_TER and a single ISO_SOV (COL) -> attributed to COL only.
+      - A disputed feature with no ISO_TER and two ISO_SOVs (SDN, EGY)
+        -> attributed to BOTH claimants (intentional over-attribution).
+    """
+    crs = "EPSG:4326"
+    return gpd.GeoDataFrame(
+        {
+            "ISO_TER1": ["NIC", None, None],
+            "ISO_SOV1": ["NIC", "COL", "SDN"],
+            "ISO_TER2": [None, None, None],
+            "ISO_SOV2": [None, None, "EGY"],
+            "ISO_TER3": [None, None, None],
+            "ISO_SOV3": [None, None, None],
+            "geometry": [
+                Point(0, 0).buffer(1.0),
+                Point(5, 0).buffer(1.0),
+                Point(10, 0).buffer(1.0),
+            ],
+        },
+        crs=crs,
+    )
+
+
+def test_process_eez_land_union_happy_path(
+    monkeypatch, uploads_recorder, mock_eez_land_union, mock_related_countries_map
+):
+    calls, upload_gdf_mock = uploads_recorder
+    union = mock_eez_land_union.copy()
+
+    def _loader(params, bucket):
+        assert params is static_processes.EEZ_LAND_UNION_PARAMS
+        return union.copy()
+
+    monkeypatch.setattr(static_processes, "load_marine_regions", _loader, raising=True)
+    monkeypatch.setattr(
+        static_processes,
+        "read_json_from_gcs",
+        _mock_read_json_from_gcs(mock_related_countries_map),
+    )
+    monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
+    monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
+
+    resp = static_processes.process_eez_land_union(
+        eez_land_union_params=static_processes.EEZ_LAND_UNION_PARAMS,
+        gadm_eez_union_file_name="GADM_eez_union.geojson",
+        related_countries_file_name=static_processes.RELATED_COUNTRIES_FILE_NAME,
+        tolerance=0.001,
+        bucket="test-bucket",
+        verbose=False,
+    )
+    # Function returns None; uploads recorded via our mock
+    assert resp is None
+
+    # A single upload to the tolerance-suffixed union file consumed downstream
+    assert len(calls) == 1
+    out = calls[0]
+    assert out["destination_blob"] == "GADM_eez_union_0.001.geojson"
+
+    df = out["df"]
+    assert isinstance(df, gpd.GeoDataFrame)
+    assert set(df.columns) == {"location", "geometry"}
+    assert df.crs is not None
+
+    locations = set(df["location"])
+    # Single-territory feature and single-sovereign bank attributed to their owner
+    assert {"NIC", "COL"}.issubset(locations)
+    # Disputed feature double-counted to BOTH claimants
+    assert {"SDN", "EGY"}.issubset(locations)
+    # One row per location (exploded then dissolved)
+    assert len(df) == df["location"].nunique()
+
+
+def test_process_eez_land_union_no_fill_preserves_holes(
+    monkeypatch, uploads_recorder, mock_related_countries_map
+):
+    """A neighbour's enclave carved out as a hole must NOT be filled/swallowed."""
+    calls, upload_gdf_mock = uploads_recorder
+
+    # NIC EEZ is a ring with a hole; a separate COL feature sits inside that hole.
+    nic_with_hole = Point(0, 0).buffer(5.0).difference(Point(0, 0).buffer(2.0))
+    col_enclave = Point(0, 0).buffer(1.5)
+    union = gpd.GeoDataFrame(
+        {
+            "ISO_TER1": ["NIC", None],
+            "ISO_SOV1": ["NIC", "COL"],
+            "ISO_TER2": [None, None],
+            "ISO_SOV2": [None, None],
+            "ISO_TER3": [None, None],
+            "ISO_SOV3": [None, None],
+            "geometry": [nic_with_hole, col_enclave],
+        },
+        crs="EPSG:4326",
+    )
+
+    monkeypatch.setattr(
+        static_processes, "load_marine_regions", lambda params, bucket: union.copy(), raising=True
+    )
+    monkeypatch.setattr(
+        static_processes,
+        "read_json_from_gcs",
+        _mock_read_json_from_gcs(mock_related_countries_map),
+    )
+    monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
+    monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
+
+    static_processes.process_eez_land_union(
+        gadm_eez_union_file_name="GADM_eez_union.geojson", tolerance=None, bucket="b", verbose=False
+    )
+
+    df = calls[0]["df"]
+    nic_geom = df.loc[df["location"] == "NIC", "geometry"].iloc[0]
+    # The COL enclave (centre) must remain OUTSIDE NIC's geometry - holes are kept.
+    assert not nic_geom.contains(Point(0, 0))

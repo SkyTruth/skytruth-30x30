@@ -34,6 +34,7 @@ from src.core.params import (
     CHUNK_SIZE,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
+    EEZ_LAND_UNION_PARAMS,
     EEZ_MULTIPLE_SOV_FILE_NAME,
     EEZ_PARAMS,
     EEZS_TRANSLATED_FILE_NAME,
@@ -427,6 +428,73 @@ def process_eez_gadm_unions(
             {"message": f"uploading GADM/eez union geometries to {gadm_eez_union_file_name}"}
         )
     upload_gdf(bucket, eez_gadm_union, gadm_eez_union_file_name)
+
+
+def process_eez_land_union(
+    eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
+    tolerance: float = marine_tolerance,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    """Build the per-location land/EEZ union from the Marine Regions EEZ-land-union.
+
+    Replaces ``process_eez_gadm_unions``. The Marine Regions "EEZ + land union"
+    layer is already a partition: territories are distinct features and contested
+    areas (disputed / joint-regime zones, offshore banks) are their own features
+    rather than holes inside a neighbouring EEZ. It therefore needs no hole-filling
+    - atoll lagoons are already enclosed, so we avoid the over-fill that previously
+    let one country swallow another's enclaved reef.
+
+    Each feature is mapped to its parent location(s) with ``_pick_eez_parents`` -
+    the same logic ``process_eez_geoms`` uses - so a feature claimed by multiple
+    ISO_TER/ISO_SOV entries is attributed to every claimant (intentional, and
+    consistent with how shared marine areas are over-attributed elsewhere). The
+    result is exploded to one row per location, dissolved, and written to
+    ``gadm_eez_union_file_name`` - the file consumed by the mangrove and
+    climate-resilient-coral subtables.
+    """
+    if verbose:
+        logger.info(
+            {"message": f"loading eez/land union from {eez_land_union_params['zipfile_name']}"}
+        )
+
+    related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
+    union = load_marine_regions(eez_land_union_params, bucket)
+
+    # Empty ISO fields can load as NaN; coerce to None so the truthiness checks in
+    # _pick_eez_parents treat them as absent rather than as a (truthy) NaN parent.
+    iso_columns = ["ISO_TER1", "ISO_TER2", "ISO_TER3", "ISO_SOV1", "ISO_SOV2", "ISO_SOV3"]
+    for column in iso_columns:
+        union[column] = union[column].apply(
+            lambda value: value if isinstance(value, str) and value.strip() else None
+        )
+
+    union[["parents", "sovs"]] = union.apply(
+        _pick_eez_parents, args=(related_countries,), axis=1, result_type="expand"
+    )
+
+    if verbose:
+        logger.info({"message": "exploding eez/land union to one row per location"})
+
+    eez_land_union = (
+        union[["parents", "geometry"]].explode("parents").rename(columns={"parents": "location"})
+    )
+    eez_land_union = eez_land_union[eez_land_union["location"].notna()]
+    eez_land_union = eez_land_union.dissolve(by="location", as_index=False)
+
+    if tolerance is not None:
+        if verbose:
+            logger.info({"message": f"simplifying eez/land union with tolerance {tolerance}"})
+        eez_land_union["geometry"] = eez_land_union["geometry"].simplify(tolerance=tolerance)
+
+    eez_land_union = eez_land_union[["location", "geometry"]].pipe(clean_geometries)
+
+    out_fn = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    if verbose:
+        logger.info({"message": f"uploading eez/land union to {out_fn}"})
+    upload_gdf(bucket, eez_land_union, out_fn)
 
 
 def download_marine_habitats(
