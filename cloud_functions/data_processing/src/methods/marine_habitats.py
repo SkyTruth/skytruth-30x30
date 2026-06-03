@@ -463,7 +463,7 @@ def process_marine_habitats(
         marine_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
-        tolerance=0.001, # TODO fix this
+        tolerance=marine_tolerance
         bucket=bucket,
         verbose=verbose,
     )
