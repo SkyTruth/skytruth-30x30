@@ -66,6 +66,15 @@ const useSyncAllLayers = (type: MapTypes) => {
         (layer) => customLayers[layer].isActive
       );
 
+      // If only the order changed (no new layers), preserve the user-set order and
+      // skip the resorting below, which would reset custom layers above predefined
+      const allTargetLayers = new Set([...activeLayers, ...activeCustomLayers]);
+      if (
+        allActiveLayersRef.current.length === allTargetLayers.size &&
+        allActiveLayersRef.current.every((l) => allTargetLayers.has(l))
+      )
+        return;
+
       const activeCustomLayersSet = new Set(activeCustomLayers);
       const activePredefinedLayersSet = new Set(activeLayers);
 
@@ -85,6 +94,7 @@ const useSyncAllLayers = (type: MapTypes) => {
         (layer) => !preservedPredefinedLayersSet.has(layer)
       );
 
+      // Set layers to have order: new custom, existing custom, new predefined, existing predefined
       currentActiveLayers = [
         ...newCustomLayers,
         ...preservedCustomLayers,

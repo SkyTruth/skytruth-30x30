@@ -1,5 +1,15 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useAtom } from 'jotai';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -8,14 +18,12 @@ import {
   useSyncMapLayers,
 } from '@/containers/map/content/map/sync-settings';
 import { allActiveLayersAtom, customLayersAtom } from '@/containers/map/store';
-import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { Layer, LegendLegendComponent } from '@/types/generated/strapi.schemas';
 import { LayerTyped, ParamsConfig } from '@/types/layers';
 
-import LegendItem from './item';
-import LegendItemHeader from './item-header';
+import SortableLegendItem from './sortable-item';
 
 const Legend: FCWithMessages = () => {
   const t = useTranslations('containers.map');
@@ -27,6 +35,9 @@ const Legend: FCWithMessages = () => {
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const [allActiveLayers, setAllActiveLayers] = useAtom(allActiveLayersAtom);
 
+  const legendContainerRef = useRef<HTMLDivElement>(null);
+
+  const [moveAnnouncement, setMoveAnnouncement] = useState('');
   const layersQuery = useGetLayers<Layer[]>(
     {
       locale,
@@ -149,48 +160,80 @@ const Legend: FCWithMessages = () => {
     [setCustomLayers]
   );
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    })
+  );
+  const getLayerLabel = useCallback(
+    (slug: string) =>
+      customLayers[slug]?.name ??
+      layersQuery.data?.find((layer) => layer.slug === slug)?.title ??
+      slug,
+    [customLayers, layersQuery.data]
+  );
+  const findScrollContainer = useCallback((): HTMLElement | null => {
+    let el = legendContainerRef.current?.parentElement ?? null;
+    while (el) {
+      const { overflowY } = window.getComputedStyle(el);
+      if (overflowY === 'auto' || overflowY === 'scroll') return el;
+      el = el.parentElement;
+    }
+    return null;
+  }, []);
+
+  const reorderLayer = useCallback(
+    (slug: string, toIndex: number) => {
+      const fromIndex = allActiveLayers.indexOf(slug);
+      if (
+        fromIndex === -1 ||
+        toIndex < 0 ||
+        toIndex >= allActiveLayers.length ||
+        toIndex === fromIndex
+      ) {
+        return null;
+      }
+      const neighborLabel = getLayerLabel(allActiveLayers[toIndex]);
+      const reordered = arrayMove(allActiveLayers, fromIndex, toIndex);
+      setAllActiveLayers(reordered);
+      setPredefinedMapLayers(reordered.filter((layerSlug) => !customLayers[layerSlug]));
+      return t(toIndex > fromIndex ? 'layer-moved-below' : 'layer-moved-above', {
+        layer: getLayerLabel(slug),
+        neighbor: neighborLabel,
+      });
+    },
+    [allActiveLayers, customLayers, getLayerLabel, setAllActiveLayers, setPredefinedMapLayers, t]
+  );
+
+  const onDragEnd = useCallback(
+    ({ active, over }: DragEndEvent) => {
+      if (!over || active.id === over.id) return;
+      const scrollContainer = findScrollContainer();
+      const savedScrollTop = scrollContainer?.scrollTop ?? 0;
+      const message = reorderLayer(active.id as string, allActiveLayers.indexOf(over.id as string));
+      if (message) setMoveAnnouncement(message);
+      requestAnimationFrame(() => {
+        if (scrollContainer) scrollContainer.scrollTop = savedScrollTop;
+      });
+    },
+    [allActiveLayers, findScrollContainer, reorderLayer]
+  );
+
   const moveLayer = useCallback(
-    (layerSlug: string, direction: 'up' | 'down') => {
-      const layerIndex = allActiveLayers.findIndex((slug) => slug === layerSlug);
-      if (layerIndex === -1) {
-        return;
+    (slug: string, direction: 'up' | 'down') => {
+      const fromIndex = allActiveLayers.indexOf(slug);
+      if (fromIndex === -1) return;
+      const message = reorderLayer(slug, fromIndex + (direction === 'up' ? -1 : 1));
+      if (message) {
+        setMoveAnnouncement(message);
+        requestAnimationFrame(() => {
+          document
+            .querySelector(`[data-layer-slug="${slug}"]`)
+            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
       }
-      const delta = direction === 'up' ? -1 : 1;
-
-      if (!customLayers[layerSlug]) {
-        const predfinedLayerIndex = activeLayers.findIndex((slug) => slug === layerSlug);
-
-        if (
-          (direction === 'up' && predfinedLayerIndex !== 0) ||
-          (direction === 'down' && predfinedLayerIndex !== activeLayers.length - 1)
-        ) {
-          setPredefinedMapLayers((prev) => {
-            return prev
-              .toSpliced(predfinedLayerIndex, 1)
-              .toSpliced(predfinedLayerIndex + delta, 0, layerSlug);
-          });
-        }
-      }
-
-      setAllActiveLayers((prev) =>
-        prev.toSpliced(layerIndex, 1).toSpliced(layerIndex + delta, 0, layerSlug)
-      );
     },
-    [allActiveLayers, activeLayers, customLayers, setAllActiveLayers, setPredefinedMapLayers]
-  );
-
-  const onMoveLayerDown = useCallback(
-    (layerSlug: string) => {
-      moveLayer(layerSlug, 'down');
-    },
-    [moveLayer]
-  );
-
-  const onMoveLayerUp = useCallback(
-    (layerSlug: string) => {
-      moveLayer(layerSlug, 'up');
-    },
-    [moveLayer]
+    [allActiveLayers, reorderLayer]
   );
 
   const legendItems = useMemo(() => {
@@ -198,111 +241,89 @@ const Legend: FCWithMessages = () => {
       return null;
     }
 
-    return (
-      <div>
-        {allActiveLayers.map((slug, index) => {
-          const isFirst = index === 0;
-          const isLast = index + 1 === allActiveLayers.length;
+    return allActiveLayers.map((slug) => {
+      let opacity = 1;
+      let color: string | undefined;
+      let isVisible = true;
+      let isCustomLayer = false;
+      let title: string;
+      let legend_config: LegendLegendComponent;
+      let params_config;
 
-          let opacity = 1;
-          let color: string | undefined;
-          let isVisible = true;
-          let isCustomLayer = false;
-          let title: string;
-          let legend_config: LegendLegendComponent;
-          let params_config;
+      if (!customLayers[slug] && layersQuery.data?.length) {
+        const layer = layersQuery.data.filter((layer) => layer.slug === slug)[0];
 
-          if (!customLayers[slug] && layersQuery.data?.length) {
-            const layer = layersQuery.data.filter((layer) => layer.slug === slug)[0];
+        if (!layer) return null;
 
-            // Short circuit to catch when allActiveLayers state updates and the layersQuery
-            // hasn't yet returned the corresponding data
-            if (!layer) return null;
+        legend_config = layer.legend_config;
+        params_config = layer.params_config;
 
-            legend_config = layer.legend_config;
-            params_config = layer.params_config;
+        title = layer.title;
+        isVisible = layerSettings[slug]?.visibility !== false;
+        opacity = layerSettings[slug]?.opacity ?? 1;
+      } else {
+        const layer = customLayers[slug];
 
-            title = layer.title;
-            isVisible = layerSettings[slug]?.visibility !== false;
-            opacity = layerSettings[slug]?.opacity ?? 1;
-          } else {
-            const layer = customLayers[slug];
+        isCustomLayer = true;
+        title = layer.name;
+        isVisible = layer.isVisible;
+        opacity = layer.style.opacity ?? 0.5;
+        color = layer.style.fillColor ?? layer.style.lineColor;
+        legend_config = {
+          type: 'icon',
+          items: [
+            {
+              color: layer.style.fillColor,
+              description: null,
+              icon: 'circle-with-fill',
+              value: title,
+            },
+          ],
+        };
 
-            isCustomLayer = true;
-            title = layer.name;
-            isVisible = layer.isVisible;
-            opacity = layer.style.opacity ?? 0.5;
-            color = layer.style.fillColor ?? layer.style.lineColor;
-            legend_config = {
-              type: 'icon',
-              items: [
-                {
-                  color: layer.style.fillColor,
-                  description: null,
-                  icon: 'circle-with-fill',
-                  value: title,
-                },
-              ],
-            };
+        params_config = [
+          {
+            key: 'opacity',
+            default: opacity,
+          },
+        ];
+      }
 
-            params_config = [
-              {
-                key: 'opacity',
-                default: opacity,
-              },
-            ];
-          }
-
-          return (
-            <div
-              key={slug}
-              className={cn({
-                'pb-3': index + 1 < allActiveLayers.length,
-                'pt-2': index > 0,
-              })}
-            >
-              <LegendItemHeader
-                title={title}
-                isFirst={isFirst}
-                isLast={isLast}
-                onMoveLayerDown={onMoveLayerDown}
-                onMoveLayerUp={onMoveLayerUp}
-                slug={slug}
-                isVisible={isVisible}
-                onChangeLayerOpacity={onChangeLayerOpacity}
-                onChangeLayerColor={onChangeLayerColor}
-                onRemoveLayer={onRemoveLayer}
-                onToggleLayerVisibility={onToggleLayerVisibility}
-                opacity={opacity}
-                isCustomLayer={isCustomLayer}
-                color={color}
-              />
-              <div className="pt-1.5">
-                <LegendItem
-                  config={legend_config as LayerTyped['legend_config']}
-                  paramsConfig={params_config as ParamsConfig}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+      return (
+        <SortableLegendItem
+          key={slug}
+          slug={slug}
+          title={title}
+          isCustomLayer={isCustomLayer}
+          isVisible={isVisible}
+          opacity={opacity}
+          color={color}
+          legend_config={legend_config as LayerTyped['legend_config']}
+          params_config={params_config as ParamsConfig}
+          onRemoveLayer={onRemoveLayer}
+          onToggleLayerVisibility={onToggleLayerVisibility}
+          onChangeLayerOpacity={onChangeLayerOpacity}
+          onChangeLayerColor={onChangeLayerColor}
+          onDragHandleFocus={() => setMoveAnnouncement(t('drag-to-reorder-layer'))}
+          onMoveLayer={moveLayer}
+        />
+      );
+    });
   }, [
     allActiveLayers,
     customLayers,
     layerSettings,
     layersQuery.data,
+    moveLayer,
     onChangeLayerOpacity,
     onChangeLayerColor,
-    onMoveLayerDown,
-    onMoveLayerUp,
     onRemoveLayer,
     onToggleLayerVisibility,
+    t,
   ]);
 
   return (
-    <div className="px-4 py-2">
+    <div ref={legendContainerRef} className="select-none py-2 pl-2 pr-4">
       {!layersQuery.data?.length && (
         <p>
           {t.rich('open-layers-to-add-to-map', {
@@ -310,11 +331,38 @@ const Legend: FCWithMessages = () => {
           })}
         </p>
       )}
-      {legendItems}
+      <div role="alert" className="sr-only">
+        {moveAnnouncement}
+      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={(args) => {
+          if (!args.pointerCoordinates) return closestCenter(args);
+          const { x, y } = args.pointerCoordinates;
+          return closestCenter({
+            ...args,
+            collisionRect: { top: y, bottom: y, left: x, right: x, width: 0, height: 0 },
+          });
+        }}
+        onDragEnd={onDragEnd}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        accessibility={{
+          announcements: {
+            onDragStart: () => undefined,
+            onDragOver: () => undefined,
+            onDragEnd: () => undefined,
+            onDragCancel: () => undefined,
+          },
+        }}
+      >
+        <SortableContext items={allActiveLayers} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col gap-y-5">{legendItems}</div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 };
 
-Legend.messages = ['containers.map', ...LegendItem.messages, ...LegendItemHeader.messages];
+Legend.messages = ['containers.map', ...SortableLegendItem.messages];
 
 export default Legend;

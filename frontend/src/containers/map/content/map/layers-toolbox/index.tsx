@@ -36,7 +36,7 @@ const LayersToolbox: FCWithMessages = () => {
             onExpandEnd={() => setLegendReady(true)}
             className="border-l border-t border-black bg-white fill-mode-none data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down"
           >
-            <div className="relative h-full max-h-[calc(100vh-200px)] w-[380px] overflow-y-auto border">
+            <div className="relative h-full max-h-[calc(100vh-200px)] w-[400px] overflow-y-auto border">
               <LayersLegend />
             </div>
           </CollapsibleContent>
