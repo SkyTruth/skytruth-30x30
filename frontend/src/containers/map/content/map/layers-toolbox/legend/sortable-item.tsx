@@ -24,6 +24,7 @@ type SortableLegendItemProps = {
   onToggleLayerVisibility: (slug: string, isVisible: boolean) => void;
   onChangeLayerOpacity: (slug: string, opacity: number) => void;
   onChangeLayerColor?: (slug: string, color: string) => void;
+  onDragHandleFocus: () => void;
   onMoveLayer: (slug: string, direction: 'up' | 'down') => void;
 };
 
@@ -40,6 +41,7 @@ const SortableLegendItem: FCWithMessages<SortableLegendItemProps> = ({
   onToggleLayerVisibility,
   onChangeLayerOpacity,
   onChangeLayerColor,
+  onDragHandleFocus,
   onMoveLayer,
 }) => {
   const { listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
@@ -77,6 +79,7 @@ const SortableLegendItem: FCWithMessages<SortableLegendItemProps> = ({
         color={color}
         dragHandleRef={setActivatorNodeRef}
         dragListeners={listeners}
+        onDragHandleFocus={onDragHandleFocus}
         onDragKeyDown={handleKeyDown}
         onRemoveLayer={onRemoveLayer}
         onToggleLayerVisibility={onToggleLayerVisibility}

@@ -27,6 +27,7 @@ type LegendItemHeaderProps = {
   isVisible: boolean;
   onChangeLayerColor?: (slug: string, color: string) => void;
   onChangeLayerOpacity: (slug: string, opacity: number) => void;
+  onDragHandleFocus?: () => void;
   onDragKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
   opacity: number;
   onRemoveLayer: (slug: string) => void;
@@ -43,6 +44,7 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
   isVisible,
   onChangeLayerColor,
   onChangeLayerOpacity,
+  onDragHandleFocus,
   onDragKeyDown,
   opacity,
   onRemoveLayer,
@@ -76,7 +78,8 @@ const LegendItemHeader: FCWithMessages<LegendItemHeaderProps> = ({
           {...dragListeners}
           type="button"
           onKeyDown={onDragKeyDown}
-          aria-label={t('drag-to-reorder-layer', { layer: title })}
+          onFocus={onDragHandleFocus}
+          aria-label={t('drag-to-reorder-layer')}
           className="shrink-0 cursor-grab touch-none rounded-sm text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-1 active:cursor-grabbing"
         >
           <Menu className="h-4 w-4" aria-hidden />
