@@ -311,9 +311,7 @@ const Legend: FCWithMessages = () => {
           onToggleLayerVisibility={onToggleLayerVisibility}
           onChangeLayerOpacity={onChangeLayerOpacity}
           onChangeLayerColor={onChangeLayerColor}
-          onDragHandleFocus={() =>
-            setMoveAnnouncement(t('drag-to-reorder-layer'))
-          }
+          onDragHandleFocus={() => setMoveAnnouncement(t('drag-to-reorder-layer'))}
           onMoveLayer={moveLayer}
         />
       );
@@ -328,6 +326,7 @@ const Legend: FCWithMessages = () => {
     onChangeLayerColor,
     onRemoveLayer,
     onToggleLayerVisibility,
+    t,
   ]);
 
   return (
