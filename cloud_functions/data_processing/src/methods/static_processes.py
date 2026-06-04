@@ -390,13 +390,6 @@ def process_eez_land_union(
 ):
     """Build the per-location land/EEZ union from the Marine Regions EEZ-land-union.
 
-    Replaces ``process_eez_gadm_unions``. The Marine Regions "EEZ + land union"
-    layer is already a partition: territories are distinct features and contested
-    areas (disputed / joint-regime zones, offshore banks) are their own features
-    rather than holes inside a neighbouring EEZ. It therefore needs no hole-filling
-    - atoll lagoons are already enclosed, so we avoid the over-fill that previously
-    let one country swallow another's enclaved reef.
-
     Each feature is mapped to its parent location(s) with ``_pick_eez_parents`` -
     the same logic ``process_eez_geoms`` uses - so a feature claimed by multiple
     ISO_TER/ISO_SOV entries is attributed to every claimant (intentional, and
