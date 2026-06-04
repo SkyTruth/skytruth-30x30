@@ -17,6 +17,7 @@ from src.core.params import (
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     EEZ_FILE_NAME,
+    EEZ_LAND_UNION_PARAMS,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
     GADM_FILE_NAME,
@@ -58,8 +59,8 @@ from src.methods.generate_tables import (
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
-    process_eez_gadm_unions,
     process_eez_geoms,
+    process_eez_land_union,
     process_gadm_geoms,
     process_mangroves,
     process_terrestrial_biome_raster,
@@ -304,7 +305,7 @@ def dispatch_publisher(
                 chunk_size=CHUNK_SIZE,
                 verbose=verbose,
             )
-            step_list = ["process_eezs", "process_eez_gadm_unions"]
+            step_list = ["process_eezs"]
 
         case "download_high_seas":
             download_zip_to_gcs(
@@ -317,7 +318,20 @@ def dispatch_publisher(
                 chunk_size=CHUNK_SIZE,
                 verbose=verbose,
             )
-            step_list = ["process_eezs", "process_eez_gadm_unions"]
+            step_list = ["process_eezs"]
+
+        case "download_eez_land_union":
+            download_zip_to_gcs(
+                url=MARINE_REGIONS_URL,
+                bucket_name=BUCKET,
+                blob_name=EEZ_LAND_UNION_PARAMS["zipfile_name"],
+                data=MARINE_REGIONS_BODY,
+                params=EEZ_LAND_UNION_PARAMS,
+                headers=MARINE_REGIONS_HEADERS,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+            step_list = ["process_eez_land_union"]
 
         case "process_gadm":
             process_gadm_geoms(verbose=verbose)
@@ -334,8 +348,8 @@ def dispatch_publisher(
             if env == "production":
                 step_list = step_list + ["update_eez_tileset", "update_marine_regions_tileset"]
 
-        case "process_eez_gadm_unions":
-            process_eez_gadm_unions(verbose=verbose)
+        case "process_eez_land_union":
+            process_eez_land_union(verbose=verbose)
             step_list = ["process_mangroves"]
 
         case "download_marine_habitats":

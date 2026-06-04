@@ -36,7 +36,7 @@ def patched_all(monkeypatch, call_log):
     simple_targets = [
         "process_gadm_geoms",
         "process_eez_geoms",
-        "process_eez_gadm_unions",
+        "process_eez_land_union",
         "download_marine_habitats",
         "process_terrestrial_biome_raster",
         "process_mangroves",
@@ -93,7 +93,7 @@ def patched_all(monkeypatch, call_log):
     [
         ("process_gadm", "process_gadm_geoms"),
         ("process_eezs", "process_eez_geoms"),
-        ("process_eez_gadm_unions", "process_eez_gadm_unions"),
+        ("process_eez_land_union", "process_eez_land_union"),
         ("download_marine_habitats", "download_marine_habitats"),
         ("process_terrestrial_biomes", "process_terrestrial_biome_raster"),
         ("process_mangroves", "process_mangroves"),
@@ -192,6 +192,21 @@ def _assert_download_zip_call_kwargs(
                 "headers": lambda m: m.MARINE_REGIONS_HEADERS,
             },
             id="high_seas",
+        ),
+        pytest.param(
+            "download_eez_land_union",
+            dict(
+                url=lambda m: m.MARINE_REGIONS_URL,
+                bucket_name=lambda m: m.BUCKET,
+                blob_name=lambda m: m.EEZ_LAND_UNION_PARAMS["zipfile_name"],
+                chunk_size=lambda m: m.CHUNK_SIZE,
+            ),
+            {
+                "data": lambda m: m.MARINE_REGIONS_BODY,
+                "params": lambda m: m.EEZ_LAND_UNION_PARAMS,
+                "headers": lambda m: m.MARINE_REGIONS_HEADERS,
+            },
+            id="eez_land_union",
         ),
     ],
 )
