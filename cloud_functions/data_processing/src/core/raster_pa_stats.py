@@ -53,12 +53,17 @@ def extract_valid_polygons(geom):
 
 
 def clip_geoms(tile_geoms, polygons_gdf: gpd.GeoDataFrame):
-    """For each tile, return the union of `polygons_gdf` clipped to that tile."""
+    """For each tile, return the union of `polygons_gdf` clipped to that tile.
+
+    Inputs are run through `make_valid` before unioning: reprojected geometries
+    (e.g. WDPA polygons warped into EPSG:3857) can be self-intersecting, which
+    otherwise makes `unary_union` raise a GEOS TopologyException.
+    """
     clipped_geoms = []
     for tile in tile_geoms:
         subset = polygons_gdf[polygons_gdf.intersects(tile)]
         if not subset.empty:
-            unioned = unary_union(subset.geometry)
+            unioned = unary_union([make_valid(geom) for geom in subset.geometry])
             clipped = tile.intersection(unioned)
             clipped_geoms.append(clipped)
     return clipped_geoms

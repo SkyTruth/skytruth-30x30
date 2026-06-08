@@ -382,8 +382,13 @@ def create_climate_resilient_corals_subtable(
         raster_crs = src.crs
     if verbose:
         logger.info({"message": f"reprojecting region and PA geometries to {raster_crs}"})
+    # Reprojection can introduce invalid (self-intersecting) geometries from
+    # densified boundaries — e.g. JPN — which crash the unary_union in
+    # clip_geoms. Re-validate after to_crs so masking gets clean polygons.
     regions = regions.to_crs(raster_crs)
+    regions["geometry"] = regions.geometry.apply(make_valid)
     marine_protected_areas = marine_protected_areas.to_crs(raster_crs)
+    marine_protected_areas["geometry"] = marine_protected_areas.geometry.apply(make_valid)
 
     if verbose:
         logger.info({"message": "computing total coral class areas per country"})
