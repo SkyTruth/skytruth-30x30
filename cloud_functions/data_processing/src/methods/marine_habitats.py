@@ -6,10 +6,12 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio
+from shapely.geometry import box
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
+from src.core.commons import load_regions
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
@@ -22,6 +24,7 @@ from src.core.params import (
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_MARINE_FILE_NAME,
+    WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.processors import clean_geometries
 from src.core.raster_pa_stats import compute_class_areas_by_country, compute_country_class_areas
@@ -30,6 +33,7 @@ from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,
     read_json_df,
     read_json_from_gcs,
+    upload_dataframe,
 )
 from src.utils.geo import get_area_km2, robust_unary_union
 from src.utils.logger import Logger
@@ -344,6 +348,7 @@ def create_climate_resilient_corals_subtable(
     combined_regions: dict,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     n_jobs: int = -1,
@@ -351,19 +356,14 @@ def create_climate_resilient_corals_subtable(
 ) -> pd.DataFrame:
     """Compute climate-resilient-coral and other-coral protection per country/region.
 
-    Loads the GADM/EEZ union (land ∪ EEZ per country, simplified to `tolerance`),
-    downloads the binary coral raster, runs both a country-total pass (no PA
-    filter) and a protected pass (filtered by `marine_protected_areas`), then
-    rolls country results up to `combined_regions` to match the other marine
-    habitat subtables.
+    Runs a total pass and a protected pass over the coral raster and rolls the
+    results up to `combined_regions`. Regions are the land∪EEZ union so reefs
+    fringing coastlines just outside the simplified EEZ are still attributed.
 
-    The land+EEZ union is used instead of the bare EEZ so that corals fringing
-    atolls and coastlines—which can sit just outside the simplified EEZ
-    boundary—are still attributed to the country (mirrors the mangrove pipeline).
-
-    `marine_protected_areas` is expected to be the dissolved/cleaned WDPA marine
-    GeoDataFrame produced by `process_marine_habitats`, with `location` already
-    set to the country ISO3.
+    The protected pass uses the full WDPA/OECM estate — marine PAs
+    (`marine_protected_areas`) plus terrestrial-flagged PAs clipped to the reef
+    extent — since coastal reefs are often inside PAs WDPA flags MARINE=0. Only
+    reef pixels inside a PA are counted, so this can't over-count.
     """
     if verbose:
         logger.info({"message": "loading GADM/EEZ union for coral coverage"})
@@ -374,21 +374,43 @@ def create_climate_resilient_corals_subtable(
         logger.info({"message": f"downloading coral raster from {coral_source_file}"})
     local_raster_path = coral_source_file.split("/")[-1]
     download_file_from_gcs(bucket, coral_source_file, local_raster_path, verbose=False)
-
-    # rasterio.mask runs in the raster's native CRS and does not reproject, so
-    # reproject the EPSG:4326 region and WDPA geometries into the raster CRS
-    # (EPSG:3857) up front — otherwise nothing overlaps and coverage is zero.
     with rasterio.open(local_raster_path) as src:
         raster_crs = src.crs
+        raster_bounds = src.bounds
+    # The raster's footprint in 4326 (a ~±34° band); terrestrial PAs outside it
+    # can't touch a reef, so drop them before the costly dissolve.
+    coral_extent = gpd.GeoSeries([box(*raster_bounds)], crs=raster_crs).to_crs("EPSG:4326").iloc[0]
+
+    if verbose:
+        logger.info({"message": "combining marine + terrestrial PAs (full WDPA/OECM estate)"})
+    terrestrial_pa_file_name = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    terrestrial_raw = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
+    terrestrial_raw = terrestrial_raw[terrestrial_raw.intersects(coral_extent)]
+    terrestrial_pas = (
+        dissolve_multipolygons(terrestrial_raw[["ISO3", "WDPAID", "geometry"]])
+        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
+        .pipe(clean_geometries)
+    )
+    # Marine and terrestrial PAs share no WDPAIDs (MARINE is a partition), so concat.
+    protected_areas = gpd.GeoDataFrame(
+        pd.concat([marine_protected_areas, terrestrial_pas], ignore_index=True),
+        geometry="geometry",
+        crs=marine_protected_areas.crs,
+    )
+
+    # Drop regions and (marine) PAs outside the reef band before the expensive
+    # reproject/validate/union — they can't touch a reef pixel.
+    regions = regions[regions.intersects(coral_extent)]
+    protected_areas = protected_areas[protected_areas.intersects(coral_extent)]
+
+    # rasterio.mask runs in the raster CRS without reprojecting; re-validate after
+    # to_crs since reprojection can self-intersect (e.g. JPN) and break unions.
     if verbose:
         logger.info({"message": f"reprojecting region and PA geometries to {raster_crs}"})
-    # Reprojection can introduce invalid (self-intersecting) geometries from
-    # densified boundaries — e.g. JPN — which crash the unary_union in
-    # clip_geoms. Re-validate after to_crs so masking gets clean polygons.
     regions = regions.to_crs(raster_crs)
     regions["geometry"] = regions.geometry.apply(make_valid)
-    marine_protected_areas = marine_protected_areas.to_crs(raster_crs)
-    marine_protected_areas["geometry"] = marine_protected_areas.geometry.apply(make_valid)
+    protected_areas = protected_areas.to_crs(raster_crs)
+    protected_areas["geometry"] = protected_areas.geometry.apply(make_valid)
 
     if verbose:
         logger.info({"message": "computing total coral class areas per country"})
@@ -410,18 +432,15 @@ def create_climate_resilient_corals_subtable(
         regions_gdf=regions,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
         region_col="location",
-        polygons_gdf=marine_protected_areas,
+        polygons_gdf=protected_areas,
         polygon_country_col="location",
         include_zero=True,
         n_jobs=n_jobs,
         verbose=verbose,
     )
 
-    # GLOB must not inherit the per-country double counting of reefs in EEZs with
-    # overlapping claims. Compute deduplicated global class areas once over the
-    # dissolved union of all region geometries (every reef pixel counted a single
-    # time, regardless of how many countries claim it) for both the total and
-    # protected passes, and hand them to the rollup for the GLOB row only.
+    # Per-country rows double-count reefs in overlapping EEZ claims, so compute
+    # the GLOB row over the dissolved union of all regions (each reef pixel once).
     if verbose:
         logger.info({"message": "computing deduplicated global coral class areas"})
     global_geom = robust_unary_union(regions["geometry"].values)
@@ -442,7 +461,7 @@ def create_climate_resilient_corals_subtable(
             country_geom=global_geom,
             raster_path=local_raster_path,
             class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
-            polygons_gdf=marine_protected_areas,
+            polygons_gdf=protected_areas,
             include_zero=True,
         )
         or {}
@@ -455,6 +474,54 @@ def create_climate_resilient_corals_subtable(
         global_total=global_total,
         global_protected=global_protected,
     )
+
+
+def generate_corals_subtable_only(
+    bucket: str = BUCKET,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    tolerance: float = marine_tolerance,
+    out_file: str = "intermediates/TEMP_corals_subtable.json",
+    verbose: bool = True,
+) -> list[dict]:
+    """TEMP: build only the climate-resilient corals subtable for fast e2e testing.
+
+    Replicates the marine-PA prep from process_marine_habitats and runs the corals
+    subtable, skipping the seamounts/mangroves/ocean-habitat passes. Uploads to
+    `out_file` and logs the global protected share. Remove once validated.
+    """
+    combined_regions, _ = load_regions()
+    marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    marine_raw = read_json_df(bucket, marine_pa_file_name, verbose=verbose)
+    marine_protected_areas = (
+        dissolve_multipolygons(marine_raw[["ISO3", "WDPAID", "geometry"]])
+        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
+        .pipe(clean_geometries)
+    )
+    corals = create_climate_resilient_corals_subtable(
+        marine_protected_areas,
+        combined_regions,
+        tolerance=tolerance,
+        bucket=bucket,
+        verbose=verbose,
+    )
+
+    glob = corals[
+        (corals["location"] == "GLOB") & (corals["habitat"] == "climate-resilient-corals")
+    ]
+    if not glob.empty:
+        row = glob.iloc[0]
+        pct = 100 * row["protected_area"] / row["total_area"] if row["total_area"] else 0
+        logger.info(
+            {
+                "message": "GLOB climate-resilient corals",
+                "total_area_km2": round(float(row["total_area"]), 1),
+                "protected_area_km2": round(float(row["protected_area"]), 1),
+                "protected_pct": round(pct, 1),
+            }
+        )
+
+    upload_dataframe(bucket, corals, out_file, verbose=verbose)
+    return corals.to_dict(orient="records")
 
 
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:

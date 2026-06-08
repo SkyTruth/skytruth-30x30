@@ -159,22 +159,23 @@ def get_area_km2(poly):
 
 
 def robust_unary_union(geometries):
-    """``unary_union`` that retries with coordinate snapping on a GEOS robustness
-    failure.
+    """``unary_union`` that falls back to validation + coordinate snapping on a
+    GEOS robustness failure.
 
-    Reprojected or simplified polygons can have near-coincident edges (e.g. the
-    abutting/overlapping EEZ seams produced by warping country boundaries into
-    EPSG:3857) that make ``unary_union`` raise a GEOS ``TopologyException``
-    ("side location conflict") even when every input geometry is individually
-    valid. On that failure we snap coordinates to a small grid and retry. The
-    grid is scaled to the coordinate magnitude so it works in any CRS —
-    sub-millimetre in EPSG:3857, micro-degrees in EPSG:4326 — and is far finer
-    than any habitat raster pixel, so the area impact is negligible.
+    The common path is a plain ``unary_union`` — fast, and the right answer when
+    inputs are already valid (callers here validate up front). Only on a GEOS
+    ``TopologyException`` ("side location conflict"), which abutting/overlapping
+    EEZ seams warped into EPSG:3857 can still trigger, do we pay to ``make_valid``
+    and snap coordinates to a small grid and retry. The grid is scaled to the
+    coordinate magnitude so it works in any CRS — sub-millimetre in EPSG:3857,
+    micro-degrees in EPSG:4326 — far finer than any habitat raster pixel, so the
+    area impact is negligible.
     """
-    geoms = [make_valid(geom) for geom in geometries]
+    geoms = list(geometries)
     try:
-        return make_valid(unary_union(geoms))
+        return unary_union(geoms)
     except shapely.errors.GEOSException:
-        scale = max((abs(coord) for geom in geoms for coord in geom.bounds), default=1.0) or 1.0
-        snapped = [set_precision(geom, scale * 1e-9) for geom in geoms]
+        valid = [make_valid(geom) for geom in geoms]
+        scale = max((abs(coord) for geom in valid for coord in geom.bounds), default=1.0) or 1.0
+        snapped = [set_precision(geom, scale * 1e-9) for geom in valid]
         return make_valid(unary_union(snapped))
