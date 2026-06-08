@@ -1,15 +1,15 @@
-"""Tests for compute_pixel_area_map_km2 in src/utils/geo.py — per-pixel raster
-areas in km² for geographic and EPSG:3857 rasters."""
+"""Tests for src/utils/geo.py: per-pixel raster areas (compute_pixel_area_map_km2)
+and robust geometry unioning (robust_unary_union)."""
 
 import numpy as np
 import pyproj
 import pytest
 from rasterio.crs import CRS
 from rasterio.transform import Affine, from_bounds
-from shapely.geometry import box
+from shapely.geometry import Polygon, box
 from shapely.ops import transform as shp_transform
 
-from src.utils.geo import compute_pixel_area_map_km2
+from src.utils.geo import compute_pixel_area_map_km2, robust_unary_union
 
 # True WGS84 ellipsoid surface area; the graticule areas should integrate to it.
 WGS84_SURFACE_KM2 = 510_065_621
@@ -106,3 +106,27 @@ def test_coral_raster_transform_matches_equal_area():
         top = origin_y - pixel * row
         expected = _pixel_area_6933_km2(origin_x, top - pixel, origin_x + pixel, top)
         assert area_map[row, 0] == pytest.approx(expected, rel=1e-4)
+
+
+# ---------- robust_unary_union ----------
+
+
+def test_robust_unary_union_merges_overlapping_boxes():
+    result = robust_unary_union([box(0, 0, 2, 2), box(1, 1, 3, 3)])
+    assert result.is_valid
+    assert result.area == pytest.approx(7)  # 4 + 4 − 1 overlap
+
+
+def test_robust_unary_union_handles_invalid_self_intersecting_input():
+    """A self-intersecting (invalid) polygon must not raise; it's validated
+    before unioning."""
+    bowtie = Polygon([(0, 0), (4, 4), (4, 0), (0, 4)])
+    assert not bowtie.is_valid
+    result = robust_unary_union([bowtie, box(2, 2, 6, 6)])
+    assert result.is_valid
+    assert result.area > 0
+
+
+def test_robust_unary_union_empty_input_returns_empty():
+    result = robust_unary_union([])
+    assert result.is_empty

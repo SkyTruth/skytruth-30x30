@@ -2,9 +2,12 @@ import math
 
 import numpy as np
 import pyproj
+import shapely
 from rasterio.transform import Affine
+from shapely import set_precision
 from shapely.geometry import MultiPolygon, Polygon, box
 from shapely.ops import transform, unary_union
+from shapely.validation import make_valid
 
 # WGS84 ellipsoid parameters. Raster pixel areas are computed on this same
 # ellipsoid as the vector areas in `get_area_km2` (EPSG:6933 is an equal-area
@@ -153,3 +156,25 @@ def get_area_km2(poly):
     transformer = pyproj.Transformer.from_crs(wgs84, projected_crs, always_xy=True)
     projected_polygon = transform(transformer.transform, poly)
     return projected_polygon.area / 1e6
+
+
+def robust_unary_union(geometries):
+    """``unary_union`` that retries with coordinate snapping on a GEOS robustness
+    failure.
+
+    Reprojected or simplified polygons can have near-coincident edges (e.g. the
+    abutting/overlapping EEZ seams produced by warping country boundaries into
+    EPSG:3857) that make ``unary_union`` raise a GEOS ``TopologyException``
+    ("side location conflict") even when every input geometry is individually
+    valid. On that failure we snap coordinates to a small grid and retry. The
+    grid is scaled to the coordinate magnitude so it works in any CRS —
+    sub-millimetre in EPSG:3857, micro-degrees in EPSG:4326 — and is far finer
+    than any habitat raster pixel, so the area impact is negligible.
+    """
+    geoms = [make_valid(geom) for geom in geometries]
+    try:
+        return make_valid(unary_union(geoms))
+    except shapely.errors.GEOSException:
+        scale = max((abs(coord) for geom in geoms for coord in geom.bounds), default=1.0) or 1.0
+        snapped = [set_precision(geom, scale * 1e-9) for geom in geoms]
+        return make_valid(unary_union(snapped))

@@ -31,7 +31,7 @@ from src.utils.gcp import (
     read_json_df,
     read_json_from_gcs,
 )
-from src.utils.geo import get_area_km2
+from src.utils.geo import get_area_km2, robust_unary_union
 from src.utils.logger import Logger
 
 # Climate-resilient corals raster: 1 = climate-resilient corals, 0 = other corals.
@@ -424,7 +424,7 @@ def create_climate_resilient_corals_subtable(
     # protected passes, and hand them to the rollup for the GLOB row only.
     if verbose:
         logger.info({"message": "computing deduplicated global coral class areas"})
-    global_geom = make_valid(unary_union(regions["geometry"].values))
+    global_geom = robust_unary_union(regions["geometry"].values)
     global_total = (
         compute_country_class_areas(
             country="GLOB",

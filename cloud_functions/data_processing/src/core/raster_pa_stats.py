@@ -13,12 +13,11 @@ import rasterio
 from joblib import Parallel, delayed
 from rasterio.transform import rowcol
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, box, mapping
-from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import get_cover_areas
-from src.utils.geo import tile_geometry
+from src.utils.geo import robust_unary_union, tile_geometry
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -55,15 +54,15 @@ def extract_valid_polygons(geom):
 def clip_geoms(tile_geoms, polygons_gdf: gpd.GeoDataFrame):
     """For each tile, return the union of `polygons_gdf` clipped to that tile.
 
-    Inputs are run through `make_valid` before unioning: reprojected geometries
-    (e.g. WDPA polygons warped into EPSG:3857) can be self-intersecting, which
-    otherwise makes `unary_union` raise a GEOS TopologyException.
+    Uses `robust_unary_union` because reprojected geometries (e.g. WDPA polygons
+    warped into EPSG:3857) can make a plain `unary_union` raise a GEOS
+    TopologyException.
     """
     clipped_geoms = []
     for tile in tile_geoms:
         subset = polygons_gdf[polygons_gdf.intersects(tile)]
         if not subset.empty:
-            unioned = unary_union([make_valid(geom) for geom in subset.geometry])
+            unioned = robust_unary_union(subset.geometry)
             clipped = tile.intersection(unioned)
             clipped_geoms.append(clipped)
     return clipped_geoms

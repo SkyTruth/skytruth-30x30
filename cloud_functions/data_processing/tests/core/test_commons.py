@@ -15,8 +15,16 @@ CLASS_MAP = {0: "class-a", 1: "class-b"}
 def _write_raster(path, arr, crs, transform, nodata):
     h, w = arr.shape
     with rasterio.open(
-        path, "w", driver="GTiff", height=h, width=w, count=1,
-        dtype=arr.dtype, crs=crs, transform=transform, nodata=nodata,
+        path,
+        "w",
+        driver="GTiff",
+        height=h,
+        width=w,
+        count=1,
+        dtype=arr.dtype,
+        crs=crs,
+        transform=transform,
+        nodata=nodata,
     ) as dst:
         dst.write(arr, 1)
 
