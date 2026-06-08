@@ -5,6 +5,7 @@ import gcsfs
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import rasterio
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
@@ -373,6 +374,16 @@ def create_climate_resilient_corals_subtable(
         logger.info({"message": f"downloading coral raster from {coral_source_file}"})
     local_raster_path = coral_source_file.split("/")[-1]
     download_file_from_gcs(bucket, coral_source_file, local_raster_path, verbose=False)
+
+    # rasterio.mask runs in the raster's native CRS and does not reproject, so
+    # reproject the EPSG:4326 region and WDPA geometries into the raster CRS
+    # (EPSG:3857) up front — otherwise nothing overlaps and coverage is zero.
+    with rasterio.open(local_raster_path) as src:
+        raster_crs = src.crs
+    if verbose:
+        logger.info({"message": f"reprojecting region and PA geometries to {raster_crs}"})
+    regions = regions.to_crs(raster_crs)
+    marine_protected_areas = marine_protected_areas.to_crs(raster_crs)
 
     if verbose:
         logger.info({"message": "computing total coral class areas per country"})

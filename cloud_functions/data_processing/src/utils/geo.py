@@ -34,39 +34,57 @@ def _ellipsoid_area_from_equator(sin_lat: np.ndarray) -> np.ndarray:
     )
 
 
-def compute_pixel_area_map_km2(transform: Affine, width: int, height: int) -> np.ndarray:
+def compute_pixel_area_map_km2(transform: Affine, width: int, height: int, crs=None) -> np.ndarray:
+    """Compute a (height x width) array of pixel areas in km².
+
+    Each pixel's area is its lat/lon graticule cell on the WGS84 ellipsoid, the
+    same basis as the vector ``get_area_km2`` (EPSG:6933), so raster and vector
+    areas are comparable. Only two raster CRSs are supported, selected via
+    ``crs``; any other projected CRS raises ``NotImplementedError``:
+
+    * geographic (e.g. EPSG:4326) — the default when ``crs`` is None; transform
+      coordinates are degrees, used directly.
+    * EPSG:3857 (Pseudo-Mercator, projected metres) — conformal,
+      so we invert the Mercator to get each row's latitude before applying the
+      same ellipsoidal area integral.
+
+    ``transform`` units must match ``crs`` (degrees for geographic, metres for
+    EPSG:3857).
     """
-    Computes a 2D array of pixel areas (in km²) for a georeferenced image in geographic CRS.
-
-    Each pixel's area is the exact area of its graticule cell on the WGS84
-    ellipsoid (the longitude span times the surface area between the cell's
-    bounding parallels). This matches the area basis of the vector
-    ``get_area_km2`` (EPSG:6933, equal-area on WGS84), so raster- and
-    vector-derived habitat areas are directly comparable.
-
-    Parameters
-    ----------
-    transform : Affine
-        Affine transform of the raster (must be in degrees).
-    width : int
-        Width of the image (in pixels).
-    height : int
-        Height of the image (in pixels).
-
-    Returns
-    -------
-    np.ndarray
-        A (height x width) array of pixel areas in square kilometers.
-    """
-
-    # Latitudes of the top and bottom edge of every pixel row (transform.e < 0,
-    # so each row's top edge is at a higher latitude than its bottom edge).
+    # Raster-CRS coordinate of the top and bottom edge of every pixel row
+    # (transform.e < 0, so each row's top edge is "above" its bottom edge).
     rows = np.arange(height)
-    lat_top = np.radians(transform.f + transform.e * rows)
-    lat_bottom = np.radians(transform.f + transform.e * (rows + 1))
+    coord_top = transform.f + transform.e * rows
+    coord_bottom = transform.f + transform.e * (rows + 1)
 
-    # Pixel longitude span in radians (transform.a is pixel width in degrees).
-    dlon_rad = math.radians(abs(transform.a))
+    is_geographic = True
+    epsg = None
+    if crs is not None:
+        # rasterio.crs.CRS and pyproj.CRS both expose .is_geographic / .to_epsg().
+        is_geographic = bool(getattr(crs, "is_geographic", True))
+        try:
+            epsg = crs.to_epsg()
+        except Exception:
+            epsg = None
+
+    if crs is None or is_geographic:
+        # Geographic CRS: transform coordinates are already degrees of lat/lon.
+        lat_top = np.radians(coord_top)
+        lat_bottom = np.radians(coord_bottom)
+        dlon_rad = math.radians(abs(transform.a))
+    elif epsg == 3857:
+        # EPSG:3857: invert the spherical Mercator (radius WGS84_A_M) to recover
+        # the geodetic latitude of each row edge, and convert the projected pixel
+        # width (metres) to a longitude span (radians, x = R·λ).
+        r = WGS84_A_M
+        lat_top = np.pi / 2 - 2 * np.arctan(np.exp(-coord_top / r))
+        lat_bottom = np.pi / 2 - 2 * np.arctan(np.exp(-coord_bottom / r))
+        dlon_rad = abs(transform.a) / r
+    else:
+        raise NotImplementedError(
+            "compute_pixel_area_map_km2 supports geographic CRSs and EPSG:3857 only; "
+            f"got EPSG:{epsg}. Add an explicit branch for this CRS."
+        )
 
     # Area of each row's pixels: longitude span × ellipsoid area between the
     # row's bounding parallels. Constant across a row, varies by latitude.
