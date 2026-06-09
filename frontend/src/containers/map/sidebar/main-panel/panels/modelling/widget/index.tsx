@@ -341,7 +341,7 @@ const ModellingWidget: FCWithMessages = () => {
         <div className={cn(DEFAULT_ENTRY_CLASSNAMES)}>
           <div className="space-y-2">
             <WidgetSectionWidgetTitle
-              title="Global level contribution"
+              title={t('global-contribution')}
               tooltip={tooltips?.['globalContribution']}
             />
             <WidgetLegend />
