@@ -9,6 +9,7 @@ from rasterio.transform import from_bounds
 from src.utils.tileset_pipelines.raster_tile_pipeline import (
     PMTilesetConfig,
     PMTilesWriter,
+    _generate_pmtiles,
     _lng_lat_to_tile,
     _render_tile,
     _tile_bounds,
@@ -152,7 +153,7 @@ def test_render_tile_inside_bounds(tmp_path):
 
     with rasterio.open(path) as src:
         # Zoom 1, tile (1,1) covers roughly (0, -85, 180, 0) — overlaps our raster
-        png = _render_tile(src, 1, 1, 1, 256)
+        png = _render_tile(src, 1, 1, 1, 256, (-10, -10, 10, 10))
         assert png is not None
         assert len(png) > 0
         # PNG magic bytes
@@ -165,7 +166,7 @@ def test_render_tile_outside_bounds_returns_none(tmp_path):
 
     with rasterio.open(path) as src:
         # Zoom 2, tile (0, 3) is in the southern hemisphere — no overlap with (50-60, 50-60)
-        png = _render_tile(src, 0, 3, 2, 256)
+        png = _render_tile(src, 0, 3, 2, 256, (50, 50, 60, 60))
         assert png is None
 
 
@@ -189,7 +190,7 @@ def test_render_tile_all_transparent_returns_none(tmp_path):
         dst.write(data)
 
     with rasterio.open(path) as src:
-        png = _render_tile(src, 1, 1, 1, 256)
+        png = _render_tile(src, 1, 1, 1, 256, (-10, -10, 10, 10))
         assert png is None
 
 
@@ -251,6 +252,48 @@ def test_pmtiles_writer_tiles_are_sorted(tmp_path):
         )
 
     assert output.stat().st_size > 0
+
+
+# ---------- projected (non-4326) sources ----------
+
+
+def _write_rgba_raster_crs(path, crs, lonlat_bounds, width=16, height=16):
+    """Write an opaque RGBA raster in `crs` covering the given lon/lat box."""
+    from rasterio.warp import transform_bounds
+
+    bounds = (
+        lonlat_bounds
+        if crs == "EPSG:4326"
+        else transform_bounds("EPSG:4326", crs, *lonlat_bounds)
+    )
+    transform = from_bounds(*bounds, width, height)
+    data = np.zeros((4, height, width), dtype=np.uint8)
+    data[0], data[1], data[2], data[3] = 236, 118, 103, 255
+
+    with rasterio.open(
+        path, "w", driver="GTiff", dtype="uint8", count=4,
+        height=height, width=width, crs=crs, transform=transform,
+    ) as dst:
+        dst.write(data)
+
+
+def test_generate_pmtiles_projected_source_matches_geographic(tmp_path):
+    """An EPSG:3857 source tiles identically to the equivalent EPSG:4326 source.
+
+    Guards the CRS fix: before it, projected (metre) bounds were fed into the
+    lon/lat tile math and produced a wrong/empty tile set.
+    """
+    lonlat = (-10, -10, 10, 10)
+    p4326 = str(tmp_path / "src4326.tif")
+    p3857 = str(tmp_path / "src3857.tif")
+    _write_rgba_raster_crs(p4326, "EPSG:4326", lonlat)
+    _write_rgba_raster_crs(p3857, "EPSG:3857", lonlat)
+
+    n4326 = _generate_pmtiles(p4326, str(tmp_path / "a.pmtiles"), 0, 3, 64, False)
+    n3857 = _generate_pmtiles(p3857, str(tmp_path / "b.pmtiles"), 0, 3, 64, False)
+
+    assert n3857 > 0
+    assert n3857 == n4326
 
 
 # ---------- run_raster_tileset_pipeline ----------
