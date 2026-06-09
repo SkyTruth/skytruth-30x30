@@ -163,9 +163,7 @@ def _generate_pmtiles(
 
                 for tile_x in range(x_min, x_max + 1):
                     for tile_y in range(y_min, y_max + 1):
-                        png_data = _render_tile(
-                            source, tile_x, tile_y, zoom, tile_size, geo_bounds
-                        )
+                        png_data = _render_tile(source, tile_x, tile_y, zoom, tile_size, geo_bounds)
                         if png_data:
                             tile_id = zxy_to_tileid(zoom, tile_x, tile_y)
                             writer.write_tile(tile_id, png_data)

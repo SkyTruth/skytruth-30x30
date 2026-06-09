@@ -262,17 +262,22 @@ def _write_rgba_raster_crs(path, crs, lonlat_bounds, width=16, height=16):
     from rasterio.warp import transform_bounds
 
     bounds = (
-        lonlat_bounds
-        if crs == "EPSG:4326"
-        else transform_bounds("EPSG:4326", crs, *lonlat_bounds)
+        lonlat_bounds if crs == "EPSG:4326" else transform_bounds("EPSG:4326", crs, *lonlat_bounds)
     )
     transform = from_bounds(*bounds, width, height)
     data = np.zeros((4, height, width), dtype=np.uint8)
     data[0], data[1], data[2], data[3] = 236, 118, 103, 255
 
     with rasterio.open(
-        path, "w", driver="GTiff", dtype="uint8", count=4,
-        height=height, width=width, crs=crs, transform=transform,
+        path,
+        "w",
+        driver="GTiff",
+        dtype="uint8",
+        count=4,
+        height=height,
+        width=width,
+        crs=crs,
+        transform=transform,
     ) as dst:
         dst.write(data)
 
