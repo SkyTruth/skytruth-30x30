@@ -20,7 +20,7 @@ MARINE_REGIONS_URL = "https://www.marineregions.org/download_file.php"
 MARINE_REGIONS_HEADERS = {
     "content-type": "application/x-www-form-urlencoded",
     "cookie": (
-        "PHPSESSID=29190501b4503e4b33725cd6bd01e2c6; "
+        "PHPSESSID=5600795b6f0472af520dc19af739737e; "
         "vliz_webc=vliz_webc2; "
         "jwplayer.captionLabel=Off"
     ),
