@@ -188,9 +188,26 @@ def download_zip_to_gcs(
 
     try:
         if data is not None:
-            response = requests.post(
+            session = requests.Session()
+            response = session.post(
                 url, params=params, data=data, headers=headers, allow_redirects=True
             )
+            response.raise_for_status()
+            # Some endpoints return an HTML confirmation form on the first POST.
+            # Submit it a second time with the honeypot field left empty.
+            if "text/html" in response.headers.get("content-type", ""):
+                import re
+
+                honeypot = re.search(r'<input name="(firstname-[^"]+)"', response.text)
+                confirm_data = dict(data)
+                if honeypot:
+                    confirm_data[honeypot.group(1)] = ""
+                if verbose:
+                    print("confirmation form detected, resubmitting")
+                response = session.post(
+                    url, params=params, data=confirm_data, headers=headers, allow_redirects=True
+                )
+                response.raise_for_status()
         else:
             response = requests.get(url, stream=True)
         response.raise_for_status()
