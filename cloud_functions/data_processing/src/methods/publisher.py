@@ -25,6 +25,7 @@ from src.core.params import (
     GADM_ZIPFILE_NAME,
     HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
+    IHO_SEA_AREAS_PARAMS,
     LONG_RUNNING_TASKS,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
@@ -332,6 +333,19 @@ def dispatch_publisher(
                 verbose=verbose,
             )
             step_list = ["process_eez_land_union"]
+
+        case "download_iho_sea_areas":
+            download_zip_to_gcs(
+                url=MARINE_REGIONS_URL,
+                bucket_name=BUCKET,
+                blob_name=IHO_SEA_AREAS_PARAMS["zipfile_name"],
+                data=MARINE_REGIONS_BODY,
+                params=IHO_SEA_AREAS_PARAMS,
+                headers=MARINE_REGIONS_HEADERS,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+            step_list = []
 
         case "process_gadm":
             process_gadm_geoms(verbose=verbose)

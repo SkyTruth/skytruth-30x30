@@ -62,6 +62,13 @@ EEZ_LAND_UNION_PARAMS = {
     "shapefile_name": "EEZ_land_union_v4_202410.shp",
 }
 
+# TODO: verify exact zip filename at https://www.marineregions.org/stats_downloads.php
+IHO_SEA_AREAS_PARAMS = {
+    "name": "World_Seas_IHO_v3.zip",
+    "zipfile_name": "static/iho_sea_areas.zip",
+    "shapefile_name": "World_Seas_IHO_v3.shp",
+}
+
 EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 
 MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"
