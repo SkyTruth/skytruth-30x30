@@ -4,7 +4,7 @@ import debounce from 'lodash-es/debounce';
 
 import dynamic from 'next/dynamic';
 
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtomValue, useAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
 import { useTranslations } from 'next-intl';
 
@@ -16,6 +16,7 @@ import Content from '@/containers/map/content';
 import Sidebar from '@/containers/map/sidebar';
 import {
   drawStateAtom,
+  modellingAtom,
   mapTypeAtom,
   allActiveLayersAtom,
   customLayersAtom,
@@ -49,6 +50,7 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
   const getLocationName = useLocationName();
   const title = location ? getLocationName(location) : '';
 
+  const resetModelling = useResetAtom(modellingAtom);
   const resetDrawState = useResetAtom(drawStateAtom);
 
   const allActiveLayers = useAtomValue(allActiveLayersAtom);
@@ -64,14 +66,12 @@ const MapLayout: FCWithMessages<PropsWithChildren<MapLayoutProps>> = ({
 
   useSyncAllLayers(mapType);
 
-  // The modelling state is intentionally kept when leaving the conservation builder: it stays
-  // consistent with `modellingCustomLayerIdAtom`/`customLayersAtom` (which also persist), so
-  // returning to the builder doesn't replay the idle → running → success cycle and jitter.
   useEffect(() => {
     if (type !== LAYOUT_TYPES.conservation_builder) {
+      resetModelling();
       resetDrawState();
     }
-  }, [resetDrawState, type]);
+  }, [resetDrawState, resetModelling, type]);
 
   const debouncedLayersImpressed = useMemo(
     () =>
