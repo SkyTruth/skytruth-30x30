@@ -17,7 +17,7 @@ from src.core.params import (
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
-    MANGROVES_BY_COUNTRY_FILE_NAME,
+    MANGROVES_BY_REGION_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -127,7 +127,7 @@ def create_mangroves_subtable(
     mpa,
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    mangroves_by_region_file_name: str = MANGROVES_BY_REGION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
@@ -161,7 +161,7 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading pre-processed mangroves"})
-    mangroves_by_country = read_json_df(bucket, mangroves_by_country_file_name, verbose=True).pipe(
+    mangroves_by_region = read_json_df(bucket, mangroves_by_region_file_name, verbose=True).pipe(
         clean_geometries
     )
     global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)[
@@ -174,10 +174,10 @@ def create_mangroves_subtable(
     for cnt in tqdm(list(sorted(set(country_union["location"].dropna())))):
         country_geom = country_union[country_union["location"] == cnt].iloc[0].geometry
 
-        country_mangroves = mangroves_by_country[mangroves_by_country["country"] == cnt]
-        if len(country_mangroves) > 0:
-            mangrove_geom = country_mangroves.iloc[0]["geometry"]
-            country_mangrove_area_km2 = country_mangroves.iloc[0]["mangrove_area_km2"]
+        region_mangroves = mangroves_by_region[mangroves_by_region["location"] == cnt]
+        if len(region_mangroves) > 0:
+            mangrove_geom = region_mangroves.iloc[0]["geometry"]
+            region_mangrove_area_km2 = region_mangroves.iloc[0]["mangrove_area_km2"]
 
             country_pas = mpa[mpa["location"] == cnt].make_valid()
             country_pas = gpd.clip(country_pas, country_geom)
@@ -189,7 +189,7 @@ def create_mangroves_subtable(
             protected_mangroves.append(
                 {
                     "location": cnt,
-                    "total_mangrove_area_km2": country_mangrove_area_km2,
+                    "total_mangrove_area_km2": region_mangrove_area_km2,
                     "protected_mangrove_area_km2": pa_mangrove_area_km2,
                 }
             )
@@ -460,7 +460,7 @@ def process_marine_habitats(
     habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
-    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    mangroves_by_region_file_name: str = MANGROVES_BY_REGION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     eez_file: dict = EEZ_FILE_NAME,
@@ -508,7 +508,7 @@ def process_marine_habitats(
         marine_protected_areas,
         combined_regions,
         gadm_eez_union_file_name,
-        mangroves_by_country_file_name,
+        mangroves_by_region_file_name,
         global_mangrove_area_file_name,
     )
 

@@ -163,7 +163,7 @@ MANGROVES_REQUEST_HEADERS = {
 MANGROVES_ZIPFILE_NAME = "habitats/Marine-habitats_Mangroves_GlobalMangroveWatch_v3_2020.zip"
 MANGROVES_SHAPEFILE_NAME = "gmw_v3_2020_vec.shp"
 MANGROVES_FILE_NAME = "habitats/mangroves_protected_areas.csv"
-MANGROVES_BY_COUNTRY_FILE_NAME = "static/mangroves_by_country.geojson"
+MANGROVES_BY_REGION_FILE_NAME = "static/mangroves_by_region.geojson"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{today_formatted}.csv"
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"

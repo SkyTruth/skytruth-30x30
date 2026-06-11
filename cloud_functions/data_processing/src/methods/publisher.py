@@ -369,7 +369,7 @@ def dispatch_publisher(
 
         case "process_iho_sea_areas":
             process_iho_sea_areas(verbose=verbose)
-            step_list = []
+            step_list = ["process_mangroves"]
 
         case "download_marine_habitats":
             download_marine_habitats(verbose=verbose)

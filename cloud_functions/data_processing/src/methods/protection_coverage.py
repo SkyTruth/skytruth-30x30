@@ -3,10 +3,10 @@ from shapely.ops import unary_union
 from shapely.validation import make_valid
 
 from src.core.commons import load_regions, load_wdpa_global
+from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     IHO_SEA_AREAS_FILE_NAME,
-    TOLERANCES,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -27,7 +27,7 @@ def compute_iho_protection_coverage(
     bucket: str = BUCKET,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    tolerance: float = TOLERANCES[0],
+    tolerance: float = marine_tolerance,
     verbose: bool = True,
 ) -> pd.DataFrame:
     iho_file = iho_file_name.replace(".geojson", f"_{tolerance}.geojson")
@@ -187,11 +187,7 @@ def compute_country_global_coverage(
                     * df_group["oecm_count"].sum()
                     / (df_group["pas_count"] + df_group["oecm_count"]).sum()
                 )
-            global_area = (
-                # total WDPA number is calculated from 2 provided values:
-                # protection and total coverage * percentage
-                total_protected_area / (coverage / 100)
-            )
+            global_area = total_protected_area / (coverage / 100) if coverage > 0 else None
 
             return {
                 "location": loc,
@@ -201,7 +197,7 @@ def compute_country_global_coverage(
                 "coverage": 100 * total_protected_area / total_area if total_area else None,
                 "pas": pas,
                 "oecms": oecm,
-                "global_contribution": 100 * total_protected_area / global_area,
+                "global_contribution": 100 * total_protected_area / global_area if global_area else None,
                 "total_area": total_area,
             }
         else:

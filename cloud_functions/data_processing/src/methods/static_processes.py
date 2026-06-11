@@ -11,6 +11,7 @@ import rasterio
 from google.cloud import storage
 from shapely.geometry import box, mapping
 from shapely.strtree import STRtree
+from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import (
@@ -46,7 +47,7 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     IHO_SEA_AREAS_FILE_NAME,
     IHO_SEA_AREAS_PARAMS,
-    MANGROVES_BY_COUNTRY_FILE_NAME,
+    MANGROVES_BY_REGION_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
@@ -445,7 +446,7 @@ def process_eez_land_union(
 def process_iho_sea_areas(
     iho_params: dict = IHO_SEA_AREAS_PARAMS,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerances: list | tuple = TOLERANCES,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -453,18 +454,19 @@ def process_iho_sea_areas(
         logger.info({"message": f"loading IHO sea areas from {iho_params['zipfile_name']}"})
 
     iho = load_marine_regions(iho_params, bucket)
+    original_geometry = iho["geometry"].copy()
 
-    if tolerance is not None:
+    for tolerance in tolerances:
         if verbose:
             logger.info({"message": f"simplifying IHO sea areas with tolerance {tolerance}"})
-        iho["geometry"] = iho["geometry"].simplify(tolerance=tolerance)
+        iho_t = iho.copy()
+        iho_t["geometry"] = original_geometry.simplify(tolerance=tolerance)
+        iho_t = iho_t.pipe(clean_geometries)
 
-    iho = iho.pipe(clean_geometries)
-
-    out_fn = iho_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    if verbose:
-        logger.info({"message": f"uploading IHO sea areas to {out_fn}"})
-    upload_gdf(bucket, iho, out_fn)
+        out_fn = iho_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        if verbose:
+            logger.info({"message": f"uploading IHO sea areas to {out_fn}"})
+        upload_gdf(bucket, iho_t, out_fn)
 
 
 def download_marine_habitats(
@@ -528,9 +530,10 @@ def download_marine_habitats(
 
 
 def process_mangroves(
-    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    mangroves_by_region_file_name: str = MANGROVES_BY_REGION_FILE_NAME,
     mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
     gadm_eez_union_file_name: dict = GADM_EEZ_UNION_FILE_NAME,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
@@ -547,9 +550,22 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "loading eezs/gadm union"})
-
     gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
     gadm_eez_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
+
+    if verbose:
+        logger.info({"message": "loading IHO sea areas"})
+    iho = read_json_df(bucket, iho_file_name.replace(".geojson", f"_{tolerance}.geojson"), verbose=verbose)
+    iho["location"] = iho["MRGID"].astype(str)
+
+    regions = gpd.GeoDataFrame(
+        pd.concat(
+            [gadm_eez_union[["location", "geometry"]], iho[["location", "geometry"]]],
+            ignore_index=True,
+        ),
+        geometry="geometry",
+        crs=gadm_eez_union.crs,
+    )
 
     if verbose:
         logger.info({"message": "re-projecting mangroves for global area calculation"})
@@ -573,10 +589,10 @@ def process_mangroves(
     )
 
     if verbose:
-        logger.info({"message": "generating mangrove polygons by country"})
-    mangroves_by_country = []
-    for cnt in tqdm(list(sorted(set(gadm_eez_union["location"].dropna())))):
-        country_geom = gadm_eez_union[gadm_eez_union["location"] == cnt].iloc[0].geometry
+        logger.info({"message": "generating mangrove polygons by country and IHO region"})
+    mangroves_by_region = []
+    for cnt in tqdm(list(sorted(set(regions["location"].dropna())))):
+        country_geom = regions[regions["location"] == cnt].iloc[0].geometry
 
         # clip mangroves to country bounding box
         xmin, ymin, xmax, ymax = country_geom.bounds
@@ -587,26 +603,27 @@ def process_mangroves(
         tree = STRtree(mangrove_geoms)
 
         indices = tree.query(country_geom, predicate="intersects")
-        country_mangroves = mangroves_clipped.iloc[indices].copy().buffer(0)
-        if len(country_mangroves) > 0:
+        region_mangroves = mangroves_clipped.iloc[indices].copy()
+        region_mangroves["geometry"] = region_mangroves.geometry.apply(make_valid)
+        if len(region_mangroves) > 0:
             mangrove_geom = safe_union(
-                country_mangroves, batch_size=batch_size, simplify_tolerance=tolerance
+                region_mangroves, batch_size=batch_size, simplify_tolerance=tolerance
             )
-            mangroves_by_country.append(
+            mangroves_by_region.append(
                 {
-                    "country": cnt,
-                    "n_mangrove_polygons": len(country_mangroves),
+                    "location": cnt,
+                    "n_mangrove_polygons": len(region_mangroves),
                     "bbox": country_geom.bounds,
-                    "mangrove_area_km2": country_mangroves.to_crs("EPSG:6933").area.sum() / 1e6,
+                    "mangrove_area_km2": region_mangroves.to_crs("EPSG:6933").area.sum() / 1e6,
                     "geometry": mangrove_geom,
                 }
             )
 
-    mangroves_by_country = gpd.GeoDataFrame(
-        mangroves_by_country, geometry="geometry", crs="EPSG:4326"
+    mangroves_by_region = gpd.GeoDataFrame(
+        mangroves_by_region, geometry="geometry", crs="EPSG:4326"
     )
     upload_gdf(
-        bucket, mangroves_by_country, mangroves_by_country_file_name, project, True, timeout=600
+        bucket, mangroves_by_region, mangroves_by_region_file_name, project, True, timeout=600
     )
 
 
