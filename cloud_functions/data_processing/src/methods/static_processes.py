@@ -44,6 +44,8 @@ from src.core.params import (
     HABITATS_URL,
     HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
+    IHO_SEA_AREAS_FILE_NAME,
+    IHO_SEA_AREAS_PARAMS,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
@@ -438,6 +440,31 @@ def process_eez_land_union(
     if verbose:
         logger.info({"message": f"uploading eez/land union to {out_fn}"})
     upload_gdf(bucket, eez_land_union, out_fn)
+
+
+def process_iho_sea_areas(
+    iho_params: dict = IHO_SEA_AREAS_PARAMS,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
+    tolerance: float = marine_tolerance,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    if verbose:
+        logger.info({"message": f"loading IHO sea areas from {iho_params['zipfile_name']}"})
+
+    iho = load_marine_regions(iho_params, bucket)
+
+    if tolerance is not None:
+        if verbose:
+            logger.info({"message": f"simplifying IHO sea areas with tolerance {tolerance}"})
+        iho["geometry"] = iho["geometry"].simplify(tolerance=tolerance)
+
+    iho = iho.pipe(clean_geometries)
+
+    out_fn = iho_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    if verbose:
+        logger.info({"message": f"uploading IHO sea areas to {out_fn}"})
+    upload_gdf(bucket, iho, out_fn)
 
 
 def download_marine_habitats(

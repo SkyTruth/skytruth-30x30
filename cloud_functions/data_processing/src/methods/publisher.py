@@ -63,6 +63,7 @@ from src.methods.static_processes import (
     process_eez_geoms,
     process_eez_land_union,
     process_gadm_geoms,
+    process_iho_sea_areas,
     process_mangroves,
     process_terrestrial_biome_raster,
 )
@@ -365,6 +366,10 @@ def dispatch_publisher(
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
             step_list = ["process_mangroves"]
+
+        case "process_iho_sea_areas":
+            process_iho_sea_areas(verbose=verbose)
+            step_list = []
 
         case "download_marine_habitats":
             download_marine_habitats(verbose=verbose)
