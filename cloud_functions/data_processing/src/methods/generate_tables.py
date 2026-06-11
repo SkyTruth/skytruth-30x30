@@ -258,13 +258,31 @@ def _compute_iho_protection_coverage(
 
         candidates = list(sindex.intersection(region.geometry.bounds))
         if not candidates:
-            results.append({**base, "protected_area": 0.0, "coverage": 0.0, "pas": 0.0, "oecms": 0.0, "protected_areas_count": 0})
+            results.append(
+                {
+                    **base,
+                    "protected_area": 0.0,
+                    "coverage": 0.0,
+                    "pas": 0.0,
+                    "oecms": 0.0,
+                    "protected_areas_count": 0,
+                }
+            )
             continue
 
         actual = pas_proj.iloc[candidates]
         actual = actual[actual.intersects(region.geometry)]
         if actual.empty:
-            results.append({**base, "protected_area": 0.0, "coverage": 0.0, "pas": 0.0, "oecms": 0.0, "protected_areas_count": 0})
+            results.append(
+                {
+                    **base,
+                    "protected_area": 0.0,
+                    "coverage": 0.0,
+                    "pas": 0.0,
+                    "oecms": 0.0,
+                    "protected_areas_count": 0,
+                }
+            )
             continue
 
         pa = actual[actual["PA_DEF"] == 1]
@@ -282,14 +300,16 @@ def _compute_iho_protection_coverage(
         pas_pct = (pa_area / protected_area) * 100 if protected_area else 0.0
         oecms_pct = (oecm_area / protected_area) * 100 if protected_area else 0.0
 
-        results.append({
-            **base,
-            "protected_area": round(protected_area, 2),
-            "protected_areas_count": len(actual),
-            "coverage": round(coverage, 2),
-            "pas": round(pas_pct, 2),
-            "oecms": round(oecms_pct, 2),
-        })
+        results.append(
+            {
+                **base,
+                "protected_area": round(protected_area, 2),
+                "protected_areas_count": len(actual),
+                "coverage": round(coverage, 2),
+                "pas": round(pas_pct, 2),
+                "oecms": round(oecms_pct, 2),
+            }
+        )
 
     return pd.DataFrame(results)
 
