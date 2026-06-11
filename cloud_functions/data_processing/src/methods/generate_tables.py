@@ -3,6 +3,8 @@ import pickle
 import geopandas as gpd
 import pandas as pd
 from google.cloud import storage
+from shapely.ops import unary_union
+from shapely.validation import make_valid
 
 from src.core.commons import (
     load_marine_regions,
@@ -22,6 +24,7 @@ from src.core.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
+    IHO_SEA_AREAS_FILE_NAME,
     MANGROVES_BY_COUNTRY_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
@@ -61,6 +64,7 @@ from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
 from src.utils.gcp import (
     read_dataframe,
+    read_json_df,
     upload_dataframe,
 )
 from src.utils.logger import Logger
@@ -216,6 +220,78 @@ def generate_habitat_protection_table(
     upload_dataframe(bucket, habitats, file_name_out, project_id=project, verbose=True)
 
     return habitats.to_dict(orient="records")
+
+
+def _compute_iho_protection_coverage(
+    bucket: str = BUCKET,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    tolerance: float = TOLERANCES[0],
+    verbose: bool = True,
+) -> pd.DataFrame:
+    iho_file = iho_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    pa_file = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+
+    if verbose:
+        logger.info({"message": f"loading IHO sea areas from gs://{bucket}/{iho_file}"})
+    iho = read_json_df(bucket_name=bucket, filename=iho_file)
+
+    if verbose:
+        logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
+    pas = read_json_df(bucket_name=bucket, filename=pa_file)
+
+    iho_proj = iho.to_crs(epsg=6933)
+    pas_proj = pas.to_crs(epsg=6933)
+
+    iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
+    pas_proj["geometry"] = pas_proj.geometry.apply(make_valid)
+
+    sindex = pas_proj.sindex
+    results = []
+
+    for _, region in iho_proj.iterrows():
+        base = {
+            "location": str(region["MRGID"]),
+            "environment": "marine",
+            "total_area": round(region.geometry.area / 1e6, 2),
+        }
+
+        candidates = list(sindex.intersection(region.geometry.bounds))
+        if not candidates:
+            results.append({**base, "protected_area": 0.0, "coverage": 0.0, "pas": 0.0, "oecms": 0.0, "protected_areas_count": 0})
+            continue
+
+        actual = pas_proj.iloc[candidates]
+        actual = actual[actual.intersects(region.geometry)]
+        if actual.empty:
+            results.append({**base, "protected_area": 0.0, "coverage": 0.0, "pas": 0.0, "oecms": 0.0, "protected_areas_count": 0})
+            continue
+
+        pa = actual[actual["PA_DEF"] == 1]
+        oecm = actual[actual["PA_DEF"] == 0]
+
+        combined_union = unary_union(actual.geometry)
+        pa_union = unary_union(pa.geometry) if not pa.empty else None
+        oecm_union = unary_union(oecm.geometry) if not oecm.empty else None
+
+        protected_area = region.geometry.intersection(combined_union).area / 1e6
+        pa_area = region.geometry.intersection(pa_union).area / 1e6 if pa_union else 0.0
+        oecm_area = region.geometry.intersection(oecm_union).area / 1e6 if oecm_union else 0.0
+
+        coverage = (protected_area / base["total_area"]) * 100 if base["total_area"] else 0.0
+        pas_pct = (pa_area / protected_area) * 100 if protected_area else 0.0
+        oecms_pct = (oecm_area / protected_area) * 100 if protected_area else 0.0
+
+        results.append({
+            **base,
+            "protected_area": round(protected_area, 2),
+            "protected_areas_count": len(actual),
+            "coverage": round(coverage, 2),
+            "pas": round(pas_pct, 2),
+            "oecms": round(oecms_pct, 2),
+        })
+
+    return pd.DataFrame(results)
 
 
 def generate_protection_coverage_stats_table(
@@ -424,6 +500,13 @@ def generate_protection_coverage_stats_table(
     protection_coverage_table = protection_coverage_table.pipe(
         add_global_stats, wdpa_global, "marine"
     ).pipe(add_global_stats, wdpa_global, "terrestrial")
+
+    if verbose:
+        logger.info({"message": "computing IHO sea area protection coverage stats"})
+    iho_coverage = _compute_iho_protection_coverage(bucket=bucket, verbose=verbose)
+    protection_coverage_table = pd.concat(
+        (protection_coverage_table, iho_coverage), axis=0, ignore_index=True
+    )
 
     protection_coverage_table["total_area"] = (
         protection_coverage_table["total_area"].round(0).astype("Int64")
