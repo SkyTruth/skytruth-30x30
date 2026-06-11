@@ -16,10 +16,10 @@
           "registration"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -33,10 +33,10 @@
       "subject": "api::contact-detail.contact-detail",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -50,10 +50,10 @@
       "subject": "api::contact-detail.contact-detail",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -64,30 +64,6 @@
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::contact-detail.contact-detail",
-      "properties": {
-        "fields": [
-          "name",
-          "address",
-          "phone",
-          "email",
-          "registration"
-        ],
-        "locales": [
-          "en",
-          "es",
-          "fr",
-          "pt",
-          "id",
-          "sw"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::contact-detail.contact-detail",
       "properties": {
         "fields": [
@@ -98,10 +74,34 @@
           "registration"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
+          "id",
+          "sw"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::contact-detail.contact-detail",
+      "properties": {
+        "fields": [
+          "name",
+          "address",
+          "phone",
+          "email",
+          "registration"
+        ],
+        "locales": [
+          "es",
+          "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -120,10 +120,10 @@
           "data_sources"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -137,10 +137,10 @@
       "subject": "api::data-info.data-info",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -154,10 +154,10 @@
       "subject": "api::data-info.data-info",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -168,28 +168,6 @@
     },
     {
       "action": "plugin::content-manager.explorer.read",
-      "subject": "api::data-info.data-info",
-      "properties": {
-        "fields": [
-          "slug",
-          "content",
-          "data_sources"
-        ],
-        "locales": [
-          "en",
-          "es",
-          "fr",
-          "pt",
-          "id",
-          "sw"
-        ]
-      },
-      "conditions": [],
-      "actionParameters": {},
-      "locale": null
-    },
-    {
-      "action": "plugin::content-manager.explorer.update",
       "subject": "api::data-info.data-info",
       "properties": {
         "fields": [
@@ -198,10 +176,32 @@
           "data_sources"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
+          "id",
+          "sw"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.update",
+      "subject": "api::data-info.data-info",
+      "properties": {
+        "fields": [
+          "slug",
+          "content",
+          "data_sources"
+        ],
+        "locales": [
+          "es",
+          "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -220,10 +220,10 @@
           "url"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -237,10 +237,10 @@
       "subject": "api::data-source.data-source",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -254,10 +254,10 @@
       "subject": "api::data-source.data-source",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -276,10 +276,10 @@
           "url"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -298,10 +298,10 @@
           "url"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -318,10 +318,10 @@
           "name"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -335,10 +335,10 @@
       "subject": "api::data-tool-ecosystem.data-tool-ecosystem",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -352,10 +352,10 @@
       "subject": "api::data-tool-ecosystem.data-tool-ecosystem",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -372,10 +372,10 @@
           "name"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -392,10 +392,10 @@
           "name"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -414,10 +414,10 @@
           "data_tool"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -431,10 +431,10 @@
       "subject": "api::data-tool-language.data-tool-language",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -448,10 +448,10 @@
       "subject": "api::data-tool-language.data-tool-language",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -470,10 +470,10 @@
           "data_tool"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -492,10 +492,10 @@
           "data_tool"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -512,10 +512,10 @@
           "name"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -529,10 +529,10 @@
       "subject": "api::data-tool-resource-type.data-tool-resource-type",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -546,10 +546,10 @@
       "subject": "api::data-tool-resource-type.data-tool-resource-type",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -566,10 +566,10 @@
           "name"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -586,10 +586,10 @@
           "name"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -612,10 +612,10 @@
           "data_tool_ecosystems"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -629,10 +629,10 @@
       "subject": "api::data-tool.data-tool",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -646,10 +646,10 @@
       "subject": "api::data-tool.data-tool",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -672,10 +672,10 @@
           "data_tool_ecosystems"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -698,10 +698,10 @@
           "data_tool_ecosystems"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -720,10 +720,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -737,10 +737,10 @@
       "subject": "api::dataset.dataset",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -754,10 +754,10 @@
       "subject": "api::dataset.dataset",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -776,10 +776,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -798,10 +798,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -819,10 +819,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -836,10 +836,10 @@
       "subject": "api::environment.environment",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -853,10 +853,10 @@
       "subject": "api::environment.environment",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -874,10 +874,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -895,10 +895,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1045,10 +1045,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1062,10 +1062,10 @@
       "subject": "api::fishing-protection-level.fishing-protection-level",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1079,10 +1079,10 @@
       "subject": "api::fishing-protection-level.fishing-protection-level",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1101,10 +1101,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1123,10 +1123,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1212,10 +1212,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1229,10 +1229,10 @@
       "subject": "api::habitat.habitat",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1246,10 +1246,10 @@
       "subject": "api::habitat.habitat",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1268,10 +1268,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1290,10 +1290,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1329,10 +1329,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1346,10 +1346,10 @@
       "subject": "api::layer.layer",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1363,10 +1363,10 @@
       "subject": "api::layer.layer",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1402,10 +1402,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1441,10 +1441,10 @@
           "slug"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1569,10 +1569,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1586,10 +1586,10 @@
       "subject": "api::mpa-iucn-category.mpa-iucn-category",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1603,10 +1603,10 @@
       "subject": "api::mpa-iucn-category.mpa-iucn-category",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1625,10 +1625,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1647,10 +1647,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1669,10 +1669,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1686,10 +1686,10 @@
       "subject": "api::mpaa-establishment-stage.mpaa-establishment-stage",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1703,10 +1703,10 @@
       "subject": "api::mpaa-establishment-stage.mpaa-establishment-stage",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1725,10 +1725,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1747,10 +1747,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1833,10 +1833,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1850,10 +1850,10 @@
       "subject": "api::mpaa-protection-level.mpaa-protection-level",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1867,10 +1867,10 @@
       "subject": "api::mpaa-protection-level.mpaa-protection-level",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1889,10 +1889,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -1911,10 +1911,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2118,10 +2118,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2135,10 +2135,10 @@
       "subject": "api::protection-status.protection-status",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2152,10 +2152,10 @@
       "subject": "api::protection-status.protection-status",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2174,10 +2174,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2196,10 +2196,10 @@
           "info"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2219,10 +2219,10 @@
           "description"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2236,10 +2236,10 @@
       "subject": "api::static-indicator.static-indicator",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2253,10 +2253,10 @@
       "subject": "api::static-indicator.static-indicator",
       "properties": {
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2276,10 +2276,10 @@
           "description"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]
@@ -2299,10 +2299,10 @@
           "description"
         ],
         "locales": [
-          "en",
           "es",
-          "fr",
           "pt",
+          "en",
+          "fr",
           "id",
           "sw"
         ]

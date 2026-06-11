@@ -66,8 +66,7 @@ const useSyncAllLayers = (type: MapTypes) => {
         (layer) => customLayers[layer].isActive
       );
 
-      // If only the order changed (no new layers), preserve the user-set order and
-      // skip the resorting below, which would reset custom layers above predefined
+      // If only the order changed (no new layers), skip
       const allTargetLayers = new Set([...activeLayers, ...activeCustomLayers]);
       if (
         allActiveLayersRef.current.length === allTargetLayers.size &&
@@ -75,31 +74,21 @@ const useSyncAllLayers = (type: MapTypes) => {
       )
         return;
 
-      const activeCustomLayersSet = new Set(activeCustomLayers);
-      const activePredefinedLayersSet = new Set(activeLayers);
+      // Define existing layers with order preserved
+      const preservedLayers = allActiveLayersRef.current.filter((layer) =>
+        allTargetLayers.has(layer)
+      );
+      const preservedLayersSet = new Set(preservedLayers);
 
-      const preservedCustomLayers = allActiveLayersRef.current.filter((layer) =>
-        activeCustomLayersSet.has(layer)
-      );
-      const preservedCustomLayersSet = new Set(preservedCustomLayers);
-      const newCustomLayers = activeCustomLayers.filter(
-        (layer) => !preservedCustomLayersSet.has(layer)
-      );
+      // Define new layers
+      const newCustomLayers = activeCustomLayers.filter((layer) => !preservedLayersSet.has(layer));
+      const newPredefinedLayers = activeLayers.filter((layer) => !preservedLayersSet.has(layer));
 
-      const preservedPredefinedLayers = allActiveLayersRef.current.filter((layer) =>
-        activePredefinedLayersSet.has(layer)
-      );
-      const preservedPredefinedLayersSet = new Set(preservedPredefinedLayers);
-      const newPredefinedLayers = activeLayers.filter(
-        (layer) => !preservedPredefinedLayersSet.has(layer)
-      );
-
-      // Set layers to have order: new custom, existing custom, new predefined, existing predefined
+      // Set order with new layers at the top, followed by existing layers
       currentActiveLayers = [
         ...newCustomLayers,
-        ...preservedCustomLayers,
         ...newPredefinedLayers,
-        ...preservedPredefinedLayers,
+        ...preservedLayers,
       ];
     }
 
