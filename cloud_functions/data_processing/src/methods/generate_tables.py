@@ -314,15 +314,13 @@ def _compute_iho_protection_coverage(
     return pd.DataFrame(results)
 
 
-def generate_protection_coverage_stats_table(
+def _compute_country_global_coverage(
     bucket: str = BUCKET,
-    project: str = PROJECT,
-    protection_coverage_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
     wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME,
     wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
-    percent_type: str = "area",  # area or counts,
+    percent_type: str = "area",
     verbose: bool = True,
-):
+) -> tuple:
     def process_protected_area(wdpa_country, environment="marine"):
         wdpa_dict = {
             "id": "location",
@@ -475,7 +473,6 @@ def generate_protection_coverage_stats_table(
 
         return df
 
-    # Load protected planet country level statistics
     if verbose:
         logger.info(
             {
@@ -492,12 +489,10 @@ def generate_protection_coverage_stats_table(
         )
     wdpa_global = load_wdpa_global(bucket, wdpa_global_level_file_name)
 
-    # Load related countries and regions
     if verbose:
         logger.info({"message": "loading country and region groupings"})
     combined_regions, _ = load_regions()
 
-    # WDPA country level
     if verbose:
         logger.info({"message": "processing Marine and terrestrial country level stats"})
 
@@ -508,24 +503,42 @@ def generate_protection_coverage_stats_table(
     if verbose:
         logger.info({"message": "Grouping by sovereign country and region"})
 
-    # Roll up into sovereign countries and regions
     reg_t = group_by_region(wdpa_cl_t, combined_regions)
     reg_m = group_by_region(wdpa_cl_m, combined_regions)
 
-    protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
-    protection_coverage_table = protection_coverage_table[
-        protection_coverage_table["total_area"] > 0
-    ]
-    sov_country_area = protection_coverage_table[["location", "environment", "total_area"]]
-    protection_coverage_table = protection_coverage_table.pipe(
-        add_global_stats, wdpa_global, "marine"
-    ).pipe(add_global_stats, wdpa_global, "terrestrial")
+    table = pd.concat((reg_t, reg_m), axis=0)
+    table = table[table["total_area"] > 0]
+    sov_country_area = table[["location", "environment", "total_area"]]
+    table = table.pipe(add_global_stats, wdpa_global, "marine").pipe(
+        add_global_stats, wdpa_global, "terrestrial"
+    )
+
+    return table, sov_country_area
+
+
+def generate_protection_coverage_stats_table(
+    bucket: str = BUCKET,
+    project: str = PROJECT,
+    protection_coverage_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
+    wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME,
+    wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
+    percent_type: str = "area",  # area or counts
+    verbose: bool = True,
+):
+    country_global_coverage, sov_country_area = _compute_country_global_coverage(
+        bucket=bucket,
+        wdpa_country_level_file_name=wdpa_country_level_file_name,
+        wdpa_global_level_file_name=wdpa_global_level_file_name,
+        percent_type=percent_type,
+        verbose=verbose,
+    )
 
     if verbose:
         logger.info({"message": "computing IHO sea area protection coverage stats"})
     iho_coverage = _compute_iho_protection_coverage(bucket=bucket, verbose=verbose)
+
     protection_coverage_table = pd.concat(
-        (protection_coverage_table, iho_coverage), axis=0, ignore_index=True
+        (country_global_coverage, iho_coverage), axis=0, ignore_index=True
     )
 
     protection_coverage_table["total_area"] = (
