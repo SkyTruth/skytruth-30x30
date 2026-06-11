@@ -85,11 +85,7 @@ const useSyncAllLayers = (type: MapTypes) => {
       const newPredefinedLayers = activeLayers.filter((layer) => !preservedLayersSet.has(layer));
 
       // Set order with new layers at the top, followed by existing layers
-      currentActiveLayers = [
-        ...newCustomLayers,
-        ...newPredefinedLayers,
-        ...preservedLayers,
-      ];
+      currentActiveLayers = [...newCustomLayers, ...newPredefinedLayers, ...preservedLayers];
     }
 
     setAllActiveLayers(currentActiveLayers);
