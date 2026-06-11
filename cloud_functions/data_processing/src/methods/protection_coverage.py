@@ -197,7 +197,9 @@ def compute_country_global_coverage(
                 "coverage": 100 * total_protected_area / total_area if total_area else None,
                 "pas": pas,
                 "oecms": oecm,
-                "global_contribution": 100 * total_protected_area / global_area if global_area else None,
+                "global_contribution": 100 * total_protected_area / global_area
+                if global_area
+                else None,
                 "total_area": total_area,
             }
         else:

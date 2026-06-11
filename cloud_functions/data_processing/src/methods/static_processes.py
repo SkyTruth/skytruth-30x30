@@ -555,7 +555,9 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_json_df(bucket, iho_file_name.replace(".geojson", f"_{tolerance}.geojson"), verbose=verbose)
+    iho = read_json_df(
+        bucket, iho_file_name.replace(".geojson", f"_{tolerance}.geojson"), verbose=verbose
+    )
     iho["location"] = iho["MRGID"].astype(str)
 
     regions = gpd.GeoDataFrame(
