@@ -17,6 +17,7 @@ from src.core.params import (
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
+    IHO_SEA_AREAS_FILE_NAME,
     MANGROVES_BY_REGION_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
@@ -127,6 +128,7 @@ def create_mangroves_subtable(
     mpa,
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     mangroves_by_region_file_name: str = MANGROVES_BY_REGION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     tolerance: float = marine_tolerance,
@@ -159,6 +161,23 @@ def create_mangroves_subtable(
     gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
     country_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
+
+    if verbose:
+        logger.info({"message": "loading IHO sea areas"})
+    iho = read_json_df(
+        bucket, iho_file_name.replace(".geojson", f"_{tolerance}.geojson"), verbose=verbose
+    )
+    iho["location"] = iho["MRGID"].astype(str)
+
+    regions = gpd.GeoDataFrame(
+        pd.concat(
+            [country_union[["location", "geometry"]], iho[["location", "geometry"]]],
+            ignore_index=True,
+        ),
+        geometry="geometry",
+        crs=country_union.crs,
+    )
+
     if verbose:
         logger.info({"message": "loading pre-processed mangroves"})
     mangroves_by_region = read_json_df(bucket, mangroves_by_region_file_name, verbose=True).pipe(
@@ -171,24 +190,25 @@ def create_mangroves_subtable(
     if verbose:
         logger.info({"message": "getting protected mangrove area by country"})
     protected_mangroves = []
-    for cnt in tqdm(list(sorted(set(country_union["location"].dropna())))):
-        country_geom = country_union[country_union["location"] == cnt].iloc[0].geometry
+    for loc in tqdm(list(sorted(set(regions["location"].dropna())))):
+        region_geom = regions[regions["location"] == loc].iloc[0].geometry
 
-        region_mangroves = mangroves_by_region[mangroves_by_region["location"] == cnt]
+        region_mangroves = mangroves_by_region[mangroves_by_region["location"] == loc]
         if len(region_mangroves) > 0:
             mangrove_geom = region_mangroves.iloc[0]["geometry"]
             region_mangrove_area_km2 = region_mangroves.iloc[0]["mangrove_area_km2"]
 
-            country_pas = mpa[mpa["location"] == cnt].make_valid()
-            country_pas = gpd.clip(country_pas, country_geom)
+            # TODO: this won't work for IHO regions
+            region_pas = mpa[mpa["location"] == loc].make_valid()
+            region_pas = gpd.clip(region_pas, region_geom)
 
-            pa_geom = make_valid(unary_union(country_pas.geometry))
+            pa_geom = make_valid(unary_union(region_pas.geometry))
 
             pa_mangrove_area_km2 = get_area_km2(mangrove_geom.intersection(pa_geom))
 
             protected_mangroves.append(
                 {
-                    "location": cnt,
+                    "location": loc,
                     "total_mangrove_area_km2": region_mangrove_area_km2,
                     "protected_mangrove_area_km2": pa_mangrove_area_km2,
                 }

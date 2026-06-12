@@ -17,6 +17,7 @@ import requests
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
+from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.params import (
@@ -142,10 +143,10 @@ def safe_union(df, batch_size=1000, simplify_tolerance=1000):
     for i in range(0, len(df), batch_size):
         chunk = df.iloc[i : i + batch_size]
         if simplify_tolerance is None:
-            parts.append(unary_union(chunk.geometry))
+            parts.append(make_valid(unary_union(chunk.geometry)))
         else:
             parts.append(
-                unary_union(chunk.geometry).simplify(simplify_tolerance, preserve_topology=False)
+                make_valid(unary_union(chunk.geometry).simplify(simplify_tolerance, preserve_topology=False))
             )
     return unary_union(parts)
 
