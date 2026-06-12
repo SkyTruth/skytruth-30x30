@@ -50,6 +50,7 @@ def create_seamounts_subtable(
     combined_regions,
     tolerance,
     verbose,
+    iho_file_name,
 ):
     def get_group_stats(df_eez, df_pa, loc, relations, global_seamount_area):
         if loc == "GLOB":
@@ -89,7 +90,12 @@ def create_seamounts_subtable(
     eez = read_json_df(BUCKET, eez_file_name, verbose)
 
     if verbose:
-        logger.info({"message": "spatially joining seamounts with eezs and marine protected areas"})
+        logger.info({"message": "loading IHO sea areas"})
+    iho = read_json_df(bucket, iho_file_name.replace(".geojson", f"_{tolerance}.geojson"), verbose)
+    iho["location"] = iho["MRGID"].astype(str)
+
+    if verbose:
+        logger.info({"message": "spatially joining seamounts with eezs, IHO regions, and PAs"})
 
     eez_joined = gpd.sjoin(
         seamounts[["PEAKID", "AREA2D", "geometry"]],
@@ -97,8 +103,15 @@ def create_seamounts_subtable(
         how="left",
         predicate="intersects",
     )
-
     eez_seamounts = eez_joined[eez_joined["index_right"].notna()]
+
+    iho_joined = gpd.sjoin(
+        seamounts[["PEAKID", "AREA2D", "geometry"]],
+        iho[["location", "geometry"]],
+        how="left",
+        predicate="intersects",
+    )
+    iho_seamounts = iho_joined[iho_joined["index_right"].notna()]
 
     marine_pa_joined = gpd.sjoin(
         seamounts[["PEAKID", "AREA2D", "geometry"]],
@@ -108,13 +121,25 @@ def create_seamounts_subtable(
     )
     marine_pa_seamounts = marine_pa_joined[marine_pa_joined["index_right"].notna()]
 
+    iho_pa_joined = gpd.sjoin(
+        marine_pa_seamounts[["PEAKID", "AREA2D", "geometry"]],
+        iho[["location", "geometry"]],
+        how="left",
+        predicate="intersects",
+    )
+    iho_pa_seamounts = iho_pa_joined[iho_pa_joined["index_right"].notna()]
+
+    all_seamounts = pd.concat([eez_seamounts, iho_seamounts], ignore_index=True)
+    all_pa_seamounts = pd.concat([marine_pa_seamounts, iho_pa_seamounts], ignore_index=True)
+    combined_regions = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
+
     global_seamount_area = seamounts["AREA2D"].sum()
 
     return pd.DataFrame(
         [
             get_group_stats(
-                eez_seamounts,
-                marine_pa_seamounts,
+                all_seamounts,
+                all_pa_seamounts,
                 cnt,
                 combined_regions,
                 global_seamount_area,
@@ -489,6 +514,7 @@ def process_marine_habitats(
     mangroves_by_region_file_name: str = MANGROVES_BY_REGION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
     tolerance: float = marine_tolerance,
@@ -525,6 +551,7 @@ def process_marine_habitats(
         combined_regions,
         tolerance,
         verbose,
+        iho_file_name,
     )
 
     if verbose:
