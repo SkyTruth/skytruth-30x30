@@ -151,13 +151,15 @@ def compute_iho_protection_level_coverage(
         total_area = iho_geom.area / 1e6
         protected_union = group.geometry.unary_union
         area = iho_geom.intersection(protected_union).area / 1e6
-        results.append({
-            "location": str(mrgid),
-            "total_area": total_area,
-            "area": area,
-            "mpaa_protection_level": "fully-highly-protected",
-            "percentage": 100 * area / total_area if total_area else None,
-        })
+        results.append(
+            {
+                "location": str(mrgid),
+                "total_area": total_area,
+                "area": area,
+                "mpaa_protection_level": "fully-highly-protected",
+                "percentage": 100 * area / total_area if total_area else None,
+            }
+        )
 
     return pd.DataFrame(results)
 
