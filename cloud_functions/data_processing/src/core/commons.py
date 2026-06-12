@@ -146,7 +146,11 @@ def safe_union(df, batch_size=1000, simplify_tolerance=1000):
             parts.append(make_valid(unary_union(chunk.geometry)))
         else:
             parts.append(
-                make_valid(unary_union(chunk.geometry).simplify(simplify_tolerance, preserve_topology=False))
+                make_valid(
+                    unary_union(chunk.geometry).simplify(
+                        simplify_tolerance, preserve_topology=False
+                    )
+                )
             )
     return unary_union(parts)
 

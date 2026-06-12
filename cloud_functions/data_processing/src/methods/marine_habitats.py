@@ -161,7 +161,6 @@ def create_mangroves_subtable(
     gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
     country_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
-
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
     iho = read_json_df(
