@@ -1,12 +1,14 @@
+import geopandas as gpd
 import pandas as pd
 from shapely.ops import unary_union
 from shapely.validation import make_valid
 
-from src.core.commons import load_regions, load_wdpa_global
+from src.core.commons import load_regions, load_wdpa_global, read_mpatlas_from_gcs
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     IHO_SEA_AREAS_FILE_NAME,
+    MPATLAS_FILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -111,6 +113,51 @@ def compute_iho_protection_coverage(
                 "oecms": round(oecms_pct, 2),
             }
         )
+
+    return pd.DataFrame(results)
+
+
+def compute_iho_protection_level_coverage(
+    bucket: str = BUCKET,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
+    mpa_file_name: str = MPATLAS_FILE_NAME,
+    tolerance: float = marine_tolerance,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    iho_file = iho_file_name.replace(".geojson", f"_{tolerance}.geojson")
+
+    if verbose:
+        logger.info({"message": f"loading IHO sea areas from gs://{bucket}/{iho_file}"})
+    iho = read_json_df(bucket_name=bucket, filename=iho_file)
+
+    if verbose:
+        logger.info({"message": f"loading MPAtlas data from gs://{bucket}/{mpa_file_name}"})
+    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
+
+    fully_highly = mpa[mpa["protection_mpaguide_level"].isin(["full", "high"])]
+    fully_highly = fully_highly[fully_highly.geometry.notna()].copy().to_crs(epsg=6933)
+    iho_proj = iho[iho.geometry.notna()].copy().to_crs(epsg=6933)
+
+    fully_highly["geometry"] = fully_highly.geometry.apply(make_valid)
+    iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
+
+    if verbose:
+        logger.info({"message": "overlaying fully/highly protected MPAs with IHO sea areas"})
+    joined = gpd.overlay(fully_highly, iho_proj, how="intersection")
+
+    results = []
+    for mrgid, group in joined.groupby("MRGID"):
+        iho_geom = iho_proj.loc[iho_proj["MRGID"] == mrgid, "geometry"].iloc[0]
+        total_area = iho_geom.area / 1e6
+        protected_union = group.geometry.unary_union
+        area = iho_geom.intersection(protected_union).area / 1e6
+        results.append({
+            "location": str(mrgid),
+            "total_area": total_area,
+            "area": area,
+            "mpaa_protection_level": "fully-highly-protected",
+            "percentage": 100 * area / total_area if total_area else None,
+        })
 
     return pd.DataFrame(results)
 

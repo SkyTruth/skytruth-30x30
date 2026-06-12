@@ -23,6 +23,7 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     MANGROVES_BY_REGION_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
@@ -57,6 +58,7 @@ from src.methods.protected_areas.protected_areas import (
 from src.methods.protection_coverage import (
     compute_country_global_coverage,
     compute_iho_protection_coverage,
+    compute_iho_protection_level_coverage,
 )
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
@@ -270,8 +272,10 @@ def generate_protection_coverage_stats_table(
 def generate_marine_protection_level_stats_table(
     mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME,
+    mpa_file_name: str = MPATLAS_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     high_seas_params: dict = HIGH_SEAS_PARAMS,
+    tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
@@ -393,6 +397,19 @@ def generate_marine_protection_level_stats_table(
             )
         )
         is not None
+    )
+
+    if verbose:
+        logger.info({"message": "computing IHO sea area protection level stats"})
+    iho_protection_level = compute_iho_protection_level_coverage(
+        bucket=bucket,
+        mpa_file_name=mpa_file_name,
+        tolerance=tolerance,
+        verbose=verbose,
+    )
+
+    protection_level_table = pd.concat(
+        (protection_level_table, iho_protection_level), axis=0, ignore_index=True
     )
 
     protection_level_table = protection_level_table[protection_level_table["total_area"] > 0]
