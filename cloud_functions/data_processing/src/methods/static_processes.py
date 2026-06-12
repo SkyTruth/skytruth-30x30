@@ -625,7 +625,12 @@ def process_mangroves(
         mangroves_by_region, geometry="geometry", crs="EPSG:4326"
     )
     upload_gdf(
-        bucket, mangroves_by_region, mangroves_by_region_file_name, project_id=project, verbose=True, timeout=600
+        bucket,
+        mangroves_by_region,
+        mangroves_by_region_file_name,
+        project_id=project,
+        verbose=True,
+        timeout=600,
     )
 
 
