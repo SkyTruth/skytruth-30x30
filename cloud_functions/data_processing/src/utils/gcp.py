@@ -693,6 +693,17 @@ def read_json_from_gcs(bucket_name: str, filename: str, verbose: bool = True) ->
         return json.load(f)
 
 
+def write_json_to_gcs(bucket_name: str, filename: str, data: dict, verbose: bool = True) -> None:
+    fs = gcsfs.GCSFileSystem()
+    gcs_path = f"gs://{bucket_name}/{filename}"
+
+    if verbose:
+        print(f"Writing JSON to {gcs_path}")
+
+    with fs.open(gcs_path, "w") as f:
+        json.dump(data, f)
+
+
 def read_parquet_from_gcs(bucket_name: str, filename: str, verbose: bool = True):
     """
     Loads a parquet from a Google Cloud Storage (GCS) bucket into a GeoDataFrame.

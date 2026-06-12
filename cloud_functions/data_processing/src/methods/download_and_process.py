@@ -45,6 +45,8 @@ from src.core.params import (
     PP_API_KEY,
     PROJECT,
     PROTECTED_SEAS_FILE_NAME,
+    PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
+    PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTED_SEAS_URL,
     TOLERANCES,
     WDPA_API_URL,
@@ -63,6 +65,7 @@ from src.core.processors import (
     match_old_pa_naming_convantion,
 )
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
+from src.methods.protected_seas import update_protected_seas_data
 from src.utils.gcp import (
     duplicate_blob,
     read_json_from_gcs,
@@ -269,6 +272,8 @@ def download_protected_seas(
     bucket: str = BUCKET,
     filename: str = PROTECTED_SEAS_FILE_NAME,
     archive_filename: str = ARCHIVE_PROTECTED_SEAS_FILE_NAME,
+    sites_file_name=PROTECTED_SEAS_SITES_FILE_NAME,
+    last_updated_file_name=PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
     project: str = PROJECT,
     verbose: bool = True,
 ) -> None:
@@ -311,6 +316,16 @@ def download_protected_seas(
         logger.info({"message": f"saving Protected Seas to gs://{bucket}/{archive_filename}"})
     upload_dataframe(bucket, data, archive_filename, project_id=project, verbose=verbose)
     duplicate_blob(bucket, archive_filename, filename, verbose=True)
+
+    if verbose:
+        logger.info({"message": "updating Protected Seas site geometries"})
+    update_protected_seas_data(
+        sites_file_name=sites_file_name,
+        last_updated_file_name=last_updated_file_name,
+        bucket=bucket,
+        project=project,
+        verbose=verbose,
+    )
 
 
 def download_and_process_protected_planet_pas(
