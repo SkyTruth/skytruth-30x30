@@ -4,7 +4,7 @@ import debounce from 'lodash-es/debounce';
 
 import dynamic from 'next/dynamic';
 
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtomValue, useAtom } from 'jotai';
 import { useResetAtom } from 'jotai/utils';
 import { useTranslations } from 'next-intl';
 

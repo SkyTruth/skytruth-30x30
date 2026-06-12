@@ -231,6 +231,5 @@ LONG_RUNNING_TASKS = [
     "update_protected_areas",
     "generate_gadm_minus_pa",
     "generate_protected_areas_table",
-    "update_gadm_minus_pa"
-    "update_climate_resilient_coral_tileset",
+    "update_gadm_minus_paupdate_climate_resilient_coral_tileset",
 ]

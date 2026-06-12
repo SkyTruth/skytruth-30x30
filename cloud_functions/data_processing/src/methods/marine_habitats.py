@@ -11,7 +11,6 @@ from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import load_regions
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
@@ -33,7 +32,6 @@ from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,
     read_json_df,
     read_json_from_gcs,
-    upload_dataframe,
 )
 from src.utils.geo import get_area_km2, robust_unary_union
 from src.utils.logger import Logger

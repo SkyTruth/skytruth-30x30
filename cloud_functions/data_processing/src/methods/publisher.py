@@ -56,7 +56,6 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
-
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
