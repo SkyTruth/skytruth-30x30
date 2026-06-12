@@ -56,7 +56,7 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
-from src.methods.marine_habitats import generate_corals_subtable_only  # TEMP: corals-only e2e test
+
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
@@ -409,10 +409,6 @@ def dispatch_publisher(
         case "generate_habitat_protection_table":
             _ = generate_habitat_protection_table(verbose=verbose)
             step_list = ["update_habitat_protection_stats"]
-
-        # TEMP: corals-only path for fast e2e testing. Remove once validated.
-        case "generate_corals_subtable_only":
-            _ = generate_corals_subtable_only(verbose=verbose)
 
         case "generate_protection_coverage_stats_table":
             _ = generate_protection_coverage_stats_table(verbose=verbose)

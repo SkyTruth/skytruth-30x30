@@ -476,54 +476,6 @@ def create_climate_resilient_corals_subtable(
     )
 
 
-def generate_corals_subtable_only(
-    bucket: str = BUCKET,
-    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    tolerance: float = marine_tolerance,
-    out_file: str = "intermediates/TEMP_corals_subtable.json",
-    verbose: bool = True,
-) -> list[dict]:
-    """TEMP: build only the climate-resilient corals subtable for fast e2e testing.
-
-    Replicates the marine-PA prep from process_marine_habitats and runs the corals
-    subtable, skipping the seamounts/mangroves/ocean-habitat passes. Uploads to
-    `out_file` and logs the global protected share. Remove once validated.
-    """
-    combined_regions, _ = load_regions()
-    marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    marine_raw = read_json_df(bucket, marine_pa_file_name, verbose=verbose)
-    marine_protected_areas = (
-        dissolve_multipolygons(marine_raw[["ISO3", "WDPAID", "geometry"]])
-        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
-        .pipe(clean_geometries)
-    )
-    corals = create_climate_resilient_corals_subtable(
-        marine_protected_areas,
-        combined_regions,
-        tolerance=tolerance,
-        bucket=bucket,
-        verbose=verbose,
-    )
-
-    glob = corals[
-        (corals["location"] == "GLOB") & (corals["habitat"] == "climate-resilient-corals")
-    ]
-    if not glob.empty:
-        row = glob.iloc[0]
-        pct = 100 * row["protected_area"] / row["total_area"] if row["total_area"] else 0
-        logger.info(
-            {
-                "message": "GLOB climate-resilient corals",
-                "total_area_km2": round(float(row["total_area"]), 1),
-                "protected_area_km2": round(float(row["protected_area"]), 1),
-                "protected_pct": round(pct, 1),
-            }
-        )
-
-    upload_dataframe(bucket, corals, out_file, verbose=verbose)
-    return corals.to_dict(orient="records")
-
-
 def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
     counts = gdf[key].value_counts()
 
