@@ -225,6 +225,8 @@ def create_mangroves_subtable(
         / protected_mangroves["total_mangrove_area_km2"]
     )
 
+    combined_regions = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
+
     mangrove_habitat = pd.DataFrame(
         [
             stat
