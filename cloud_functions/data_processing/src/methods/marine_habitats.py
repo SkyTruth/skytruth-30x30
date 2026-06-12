@@ -188,6 +188,7 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "getting protected mangrove area by country"})
+    mpa_locations = set(mpa["location"])
     protected_mangroves = []
     for loc in tqdm(list(sorted(set(regions["location"].dropna())))):
         region_geom = regions[regions["location"] == loc].iloc[0].geometry
@@ -197,8 +198,12 @@ def create_mangroves_subtable(
             mangrove_geom = region_mangroves.iloc[0]["geometry"]
             region_mangrove_area_km2 = region_mangroves.iloc[0]["mangrove_area_km2"]
 
-            # TODO: this won't work for IHO regions
-            region_pas = mpa[mpa["location"] == loc].make_valid()
+            if loc in mpa_locations:
+                region_pas = mpa[mpa["location"] == loc].make_valid()
+            else:
+                candidates = list(mpa.sindex.intersection(region_geom.bounds))
+                region_pas = mpa.iloc[candidates]
+                region_pas = region_pas[region_pas.intersects(region_geom)].make_valid()
             region_pas = gpd.clip(region_pas, region_geom)
 
             pa_geom = make_valid(unary_union(region_pas.geometry))
