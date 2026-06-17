@@ -85,6 +85,21 @@ def test_clip_geoms_skips_tiles_with_no_overlap():
     assert result == []
 
 
+def test_clip_geoms_handles_invalid_self_intersecting_geometry():
+    """Invalid (e.g. reprojection-warped) polygons are validated before union,
+    so clip_geoms doesn't raise a GEOS TopologyException."""
+    tile = box(0, 0, 10, 10)
+    bowtie = Polygon([(0, 0), (4, 4), (4, 0), (0, 4)])  # self-intersecting
+    assert not bowtie.is_valid
+    polys = gpd.GeoDataFrame(geometry=[bowtie, box(2, 2, 6, 6)])
+
+    result = clip_geoms([tile], polys)
+
+    assert len(result) == 1
+    assert result[0].is_valid
+    assert result[0].area > 0
+
+
 # ---------- estimate_masked_pixel_count ----------
 
 

@@ -81,7 +81,7 @@ const MapSidebar: FCWithMessages = () => {
           <Button
             type="button"
             variant="white"
-            className={cn('realative top-0 -mt-px h-10 max-w-[120px] border-l-0 !py-3', {
+            className={cn('relative top-0 -mt-px h-10 max-w-[120px] border-l-0 !py-3', {
               'hidden md:flex': true,
               'px-1': isLayersOpen,
               'border-l border-black px-3': !isLayersOpen,

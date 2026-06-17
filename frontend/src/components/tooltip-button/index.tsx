@@ -62,7 +62,7 @@ const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
         className="flex max-w-[300px] flex-col gap-6 font-mono text-xs"
       >
         {text && (
-          <span>
+          <span className="whitespace-pre-line">
             <Linkify
               componentDecorator={(href, text, key) => (
                 <a
