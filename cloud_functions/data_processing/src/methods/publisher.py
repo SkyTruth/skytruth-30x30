@@ -195,6 +195,10 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
             "METHOD": "download_protected_planet_country",
             **task_config,
         },
+        {
+            "METHOD": "download_marine_habitats",
+            **task_config,
+        },
     ]
 
     for tolerance in TOLERANCES:
@@ -354,6 +358,7 @@ def dispatch_publisher(
 
         case "download_marine_habitats":
             download_marine_habitats(verbose=verbose)
+            step_list = ["generate_habitat_protection_table"]
 
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)
