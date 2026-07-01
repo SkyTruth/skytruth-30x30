@@ -21,6 +21,7 @@ variable "period" {
   default = "300s"
 }
 
-variable "email" {
-  type = string
+variable "notification_channels" {
+  type        = list(string)
+  description = "Notification channel IDs to attach to the alert policy"
 }
