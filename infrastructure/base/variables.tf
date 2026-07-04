@@ -51,7 +51,7 @@ variable "production_subdomain" {
   description = "Subdomain for the production environment"
 }
 
-variable "uptime_alert_email" {
+variable "alert_email" {
   type        = string
-  description = "Email address to which uptime alerts should be sent"
+  description = "Email address to which monitoring alerts should be sent"
 }

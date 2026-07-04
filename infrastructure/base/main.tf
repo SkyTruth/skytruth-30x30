@@ -46,7 +46,7 @@ module "staging" {
   cloudrun_jobs_max_instance_request_concurrency     = 10
   cloudrun_jobs_image                                = local.cloudrun_jobs_image
   mapbox_user                                        = "skytruth"
-  uptime_alert_email                                 = var.uptime_alert_email
+  notification_channel_ids                           = local.notification_channel_ids
   environment                                        = "staging"
   database_name                                      = "strapi"
   database_user                                      = "strapi"
@@ -88,7 +88,7 @@ module "production" {
   cloudrun_jobs_max_instance_request_concurrency     = 10
   cloudrun_jobs_image                                = local.cloudrun_jobs_image
   mapbox_user                                        = "skytruth"
-  uptime_alert_email                                 = var.uptime_alert_email
+  notification_channel_ids                           = local.notification_channel_ids
   environment                                        = "production"
   database_name                                      = "strapi"
   database_user                                      = "strapi"
