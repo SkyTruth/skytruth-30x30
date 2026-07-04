@@ -86,19 +86,19 @@ module "bastion" {
 }
 
 module "client_uptime_check" {
-  source     = "../uptime-check"
-  name       = "${var.project_name} Client"
-  host       = element(split("/", module.frontend_cloudrun.cloudrun_service_url), 2)
-  email      = var.uptime_alert_email
-  project_id = var.gcp_project_id
+  source                = "../uptime-check"
+  name                  = "${var.project_name} Client"
+  host                  = element(split("/", module.frontend_cloudrun.cloudrun_service_url), 2)
+  notification_channels = var.notification_channel_ids
+  project_id            = var.gcp_project_id
 }
 
 module "cms_uptime_check" {
-  source     = "../uptime-check"
-  name       = "${var.project_name} CMS"
-  host       = element(split("/", module.backend_cloudrun.cloudrun_service_url), 2)
-  email      = var.uptime_alert_email
-  project_id = var.gcp_project_id
+  source                = "../uptime-check"
+  name                  = "${var.project_name} CMS"
+  host                  = element(split("/", module.backend_cloudrun.cloudrun_service_url), 2)
+  notification_channels = var.notification_channel_ids
+  project_id            = var.gcp_project_id
 }
 
 module "error_reporting" {
