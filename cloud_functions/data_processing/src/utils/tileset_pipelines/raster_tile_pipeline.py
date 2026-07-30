@@ -74,18 +74,21 @@ def _render_tile(
     tile_y: int,
     zoom: int,
     tile_size: int,
+    geo_bounds: tuple[float, float, float, float],
 ) -> bytes | None:
     """
     Render a single map tile from the source RGBA GeoTIFF.
     Returns PNG bytes, or None if the tile has no data.
+
+    ``geo_bounds`` is the source footprint in EPSG:4326 (west, south, east,
+    north) — the source's own CRS may be projected (e.g. EPSG:3857).
     """
     west, south, east, north = _tile_bounds(tile_x, tile_y, zoom)
 
-    # Check if tile intersects source bounds
-    source_bounds = source.bounds
-    if west >= source_bounds.right or east <= source_bounds.left:
+    geo_left, geo_bottom, geo_right, geo_top = geo_bounds
+    if west >= geo_right or east <= geo_left:
         return None
-    if south >= source_bounds.top or north <= source_bounds.bottom:
+    if south >= geo_top or north <= geo_bottom:
         return None
 
     # Convert geographic tile bounds to Web Mercator (EPSG:3857) so tile pixels
@@ -135,15 +138,18 @@ def _generate_pmtiles(
     tile_count = 0
 
     with rasterio.open(colorized_path) as source:
-        source_bounds = source.bounds
+        # Tile indices and the PMTiles header are in EPSG:4326, but the source
+        # may be projected (e.g. EPSG:3857), so convert its footprint to lon/lat.
+        geo_bounds = transform_bounds(source.crs, "EPSG:4326", *source.bounds)
+        geo_left, geo_bottom, geo_right, geo_top = geo_bounds
 
         with open(pmtiles_path, "wb") as output_file:
             writer = PMTilesWriter(output_file)
 
             for zoom in range(min_zoom, max_zoom + 1):
-                # Calculate tile range that covers the source bounds
-                x_min, y_min = _lng_lat_to_tile(source_bounds.left, source_bounds.top, zoom)
-                x_max, y_max = _lng_lat_to_tile(source_bounds.right, source_bounds.bottom, zoom)
+                # Calculate tile range that covers the source footprint
+                x_min, y_min = _lng_lat_to_tile(geo_left, geo_top, zoom)
+                x_max, y_max = _lng_lat_to_tile(geo_right, geo_bottom, zoom)
 
                 if verbose:
                     total_at_zoom = (x_max - x_min + 1) * (y_max - y_min + 1)
@@ -157,7 +163,7 @@ def _generate_pmtiles(
 
                 for tile_x in range(x_min, x_max + 1):
                     for tile_y in range(y_min, y_max + 1):
-                        png_data = _render_tile(source, tile_x, tile_y, zoom, tile_size)
+                        png_data = _render_tile(source, tile_x, tile_y, zoom, tile_size, geo_bounds)
                         if png_data:
                             tile_id = zxy_to_tileid(zoom, tile_x, tile_y)
                             writer.write_tile(tile_id, png_data)
@@ -169,10 +175,10 @@ def _generate_pmtiles(
                     "tile_compression": Compression.NONE,
                     "min_zoom": min_zoom,
                     "max_zoom": max_zoom,
-                    "min_lon_e7": int(source_bounds.left * 1e7),
-                    "min_lat_e7": int(source_bounds.bottom * 1e7),
-                    "max_lon_e7": int(source_bounds.right * 1e7),
-                    "max_lat_e7": int(source_bounds.top * 1e7),
+                    "min_lon_e7": int(geo_left * 1e7),
+                    "min_lat_e7": int(geo_bottom * 1e7),
+                    "max_lon_e7": int(geo_right * 1e7),
+                    "max_lat_e7": int(geo_top * 1e7),
                 }
             )
 

@@ -167,9 +167,11 @@ def get_cover_areas(src, geom, identifier, id_col, land_cover_classes, include_z
     if not include_zero and np.all(out_image[0] <= 0):
         return None
 
-    # Compute area per pixel using latitude-varying resolution
+    # Compute area per pixel using latitude-varying resolution. Pass the raster
+    # CRS so the area map is correct for both geographic rasters (terrestrial
+    # habitats) and EPSG:3857 Pseudo-Mercator rasters (climate-resilient corals).
     pixel_area_map = compute_pixel_area_map_km2(
-        out_transform, width=out_image.shape[2], height=out_image.shape[1]
+        out_transform, width=out_image.shape[2], height=out_image.shape[1], crs=src.crs
     )
 
     cover_areas = {"total": pixel_area_map[valid_mask].sum()}

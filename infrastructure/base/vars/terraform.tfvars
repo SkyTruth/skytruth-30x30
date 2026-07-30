@@ -12,4 +12,4 @@ domain               = "skytruth.org"
 staging_subdomain    = "30x30-dev"
 production_subdomain = "30x30"
 
-uptime_alert_email = "agnieszka.figiel@vizzuality.com"
+alert_email = "tech@skytruth.org"
