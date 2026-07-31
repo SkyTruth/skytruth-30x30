@@ -458,13 +458,15 @@ def create_climate_resilient_corals_subtable(
     # Drop regions and (marine) PAs outside the reef band before the expensive
     # reproject/validate/union — they can't touch a reef pixel.
     regions = regions[regions.intersects(coral_extent)]
-    iho = iho[iho.intersects(coral_extent)]  
+    iho = iho[iho.intersects(coral_extent)]
     protected_areas = protected_areas[protected_areas.intersects(coral_extent)]
 
     # rasterio.mask runs in the raster CRS without reprojecting; re-validate after
     # to_crs since reprojection can self-intersect (e.g. JPN) and break unions.
     if verbose:
-        logger.info({"message": f"reprojecting region, PA geometries, and IHO areas to {raster_crs}"})
+        logger.info(
+            {"message": f"reprojecting region, PA geometries, and IHO areas to {raster_crs}"}
+        )
     regions = regions.to_crs(raster_crs)
     regions["geometry"] = regions.geometry.apply(make_valid)
     protected_areas = protected_areas.to_crs(raster_crs)
@@ -529,7 +531,7 @@ def create_climate_resilient_corals_subtable(
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
         region_col="location",
         polygons_gdf=pas_iho,
-        polygon_region_col="location",           # now the IHO MRGID, matching regions_gdf
+        polygon_region_col="location",  # now the IHO MRGID, matching regions_gdf
         include_zero=True,
         n_jobs=n_jobs,
         verbose=verbose,
