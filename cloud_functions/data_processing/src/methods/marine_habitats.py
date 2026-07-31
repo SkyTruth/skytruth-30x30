@@ -11,6 +11,7 @@ from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
+from src.core.commons import add_tolerance_suffix
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
@@ -33,6 +34,7 @@ from src.utils.gcp import (
     load_zipped_shapefile_from_gcs,
     read_json_df,
     read_json_from_gcs,
+    read_parquet_from_gcs,
 )
 from src.utils.geo import get_area_km2, robust_unary_union
 from src.utils.logger import Logger
@@ -94,7 +96,7 @@ def create_seamounts_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_json_df(bucket, iho_file_name.replace(".geojson", f"_{tolerance}.geojson"), verbose)
+    iho = read_parquet_from_gcs(bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose)
     iho["location"] = iho["MRGID"].astype(str)
 
     if verbose:
@@ -191,8 +193,8 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_json_df(
-        bucket, iho_file_name.replace(".geojson", f"_{tolerance}.geojson"), verbose=verbose
+    iho = read_parquet_from_gcs(
+        bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose=verbose
     )
     iho["location"] = iho["MRGID"].astype(str)
 

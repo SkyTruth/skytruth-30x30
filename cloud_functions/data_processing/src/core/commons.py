@@ -138,6 +138,17 @@ def download_and_duplicate_zipfile(
     duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
 
 
+def add_tolerance_suffix(filename: str, tolerance) -> str:
+    """Insert a simplification-tolerance suffix before the file extension.
+
+    e.g. ("static/iho_sea_areas_processed.parquet", 0.0001) ->
+    "static/iho_sea_areas_processed_0.0001.parquet". Format-agnostic: works for
+    any extension, so the file format can change without touching call sites.
+    """
+    stem, ext = os.path.splitext(filename)
+    return f"{stem}_{tolerance}{ext}"
+
+
 def safe_union(df, batch_size=1000, simplify_tolerance=1000):
     parts = []
     for i in range(0, len(df), batch_size):

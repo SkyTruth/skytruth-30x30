@@ -5,6 +5,7 @@ import pandas as pd
 from google.cloud import storage
 
 from src.core.commons import (
+    add_tolerance_suffix,
     load_marine_regions,
     load_mpatlas_country,
     load_mpatlas_global,
@@ -70,7 +71,6 @@ from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
 from src.utils.gcp import (
     read_dataframe,
-    read_json_df,
     read_parquet_from_gcs,
     upload_dataframe,
 )
@@ -475,9 +475,9 @@ def generate_fishing_protection_table(
 
     def get_iho_region_stats(iho_file_name, sites_file_name, tolerance):
         # Load the simplified IHO sea areas at the requested tolerance.
-        iho = read_json_df(
+        iho = read_parquet_from_gcs(
             bucket_name=bucket,
-            filename=iho_file_name.replace(".geojson", f"_{tolerance}.geojson"),
+            filename=add_tolerance_suffix(iho_file_name, tolerance),
         ).rename(columns={"area": "total_area"})
 
         # Load the current Protected Seas sites and refresh them with any sites

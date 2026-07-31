@@ -67,7 +67,7 @@ IHO_SEA_AREAS_PARAMS = {
     "zipfile_name": "static/iho_sea_areas.zip",
     "shapefile_name": "World_Seas_IHO_v3.shp",
 }
-IHO_SEA_AREAS_FILE_NAME = "static/iho_sea_areas_processed.geojson"
+IHO_SEA_AREAS_FILE_NAME = "static/iho_sea_areas_processed.parquet"
 
 EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 

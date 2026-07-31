@@ -15,6 +15,7 @@ from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import (
+    add_tolerance_suffix,
     download_and_duplicate_zipfile,
     get_cover_areas,
     load_marine_regions,
@@ -63,6 +64,7 @@ from src.utils.gcp import (
     read_dataframe,
     read_json_df,
     read_json_from_gcs,
+    read_parquet_from_gcs,
     read_zipped_gpkg_from_gcs,
     save_json_to_gcs,
     upload_dataframe,
@@ -463,7 +465,7 @@ def process_iho_sea_areas(
         iho_t["geometry"] = original_geometry.simplify(tolerance=tolerance)
         iho_t = iho_t.pipe(clean_geometries)
 
-        out_fn = iho_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        out_fn = add_tolerance_suffix(iho_file_name, tolerance)
         if verbose:
             logger.info({"message": f"uploading IHO sea areas to {out_fn}"})
         upload_gdf(bucket, iho_t, out_fn)
@@ -555,8 +557,8 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_json_df(
-        bucket, iho_file_name.replace(".geojson", f"_{tolerance}.geojson"), verbose=verbose
+    iho = read_parquet_from_gcs(
+        bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose=verbose
     )
     iho["location"] = iho["MRGID"].astype(str)
 
