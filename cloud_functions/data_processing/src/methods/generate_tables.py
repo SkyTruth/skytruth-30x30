@@ -432,7 +432,9 @@ def generate_marine_protection_level_stats_table(
     return protection_level_table.to_dict(orient="records")
 
 
-def get_iho_fishing_protection_region_stats(iho_file_name, sites_file_name, tolerance, bucket=BUCKET, verbose=True):
+def get_iho_fishing_protection_region_stats(
+    iho_file_name, sites_file_name, tolerance, bucket=BUCKET, verbose=True
+):
     # Load the simplified IHO sea areas at the requested tolerance.
     iho = read_parquet_from_gcs(
         bucket_name=bucket,
