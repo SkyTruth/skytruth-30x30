@@ -58,10 +58,6 @@ from src.methods.protected_areas.protected_areas import (
     generate_protected_areas_table,
     make_pa_updates,
 )
-from src.methods.protected_seas import (
-    fetch_updated_site_details,
-    upsert_protected_seas_sites,
-)
 from src.methods.protection_coverage import (
     compute_country_global_coverage,
     compute_iho_protection_coverage,
@@ -443,16 +439,12 @@ def get_iho_region_stats(iho_file_name, sites_file_name, tolerance, bucket=BUCKE
         filename=add_tolerance_suffix(iho_file_name, tolerance),
     ).rename(columns={"area": "total_area"})
 
-    # Load the current Protected Seas sites and refresh them with any sites
-    # that changed since the file's last_updated date.
-    current_gdf = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
-    last_update_date = current_gdf["last_updated"].iloc[0]
-    changed, update_idx = fetch_updated_site_details(changed_since=last_update_date)
-    out = upsert_protected_seas_sites(current_gdf, changed)
+    # Load the current Protected Seas sites.
+    ps_sites = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
 
     # Keep only the highly protected sites, then merge them into a single
     # geometry so we can measure their overlap with each IHO sea area.
-    highly = out[out["fishing_protection_level"] == "highly"]
+    highly = ps_sites[ps_sites["fishing_protection_level"] == "highly"]
 
     # Repair any invalid site geometries before the overlay/dissolve.
     if verbose:

@@ -1,5 +1,7 @@
 import datetime
+import glob
 import os
+import re
 import time
 
 import geopandas as gpd
@@ -29,7 +31,6 @@ def force_2d(geom):
 
 def seed_protected_seas_sites(
     json_dir: str,  # local path for the one-time run
-    last_updated_date: str = None,  # snapshot date (YYYY-MM-DD); defaults to today
     sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     archive_file_name: str = ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
     bucket: str = BUCKET,
@@ -37,22 +38,25 @@ def seed_protected_seas_sites(
     verbose: bool = True,
 ):
     os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
-    parts = [
-        gpd.read_file(
-            f"{json_dir}/Navigator_AllSites_GlobalEEZs_LFP{lfp}_071426.json", engine="pyogrio"
-        )
-        for lfp in tqdm(range(1, 6))
-    ]
+
+    site_files = sorted(glob.glob(f"{json_dir}/*LFP[0-5]*.json"))
+    if not site_files:
+        raise FileNotFoundError(f"No Navigator LFP site files found in {json_dir}")
+
+    date_match = re.search(r"_(\d{6})\.json$", site_files[0])
+    if not date_match:
+        raise ValueError(f"Could not parse a MMDDYY date from filename: {site_files[0]}")
+    last_updated = datetime.datetime.strptime(date_match.group(1), "%m%d%y").date().isoformat()
+
+    parts = [gpd.read_file(path, engine="pyogrio") for path in tqdm(site_files)]
     gdf = gpd.GeoDataFrame(
         pd.concat(parts, ignore_index=True), geometry="geometry", crs=parts[0].crs
     )
-    gdf = gdf[["SITE_ID", "site_name", "country", "lfp", "geometry"]].rename(
-        columns={"SITE_ID": "site_id"}
-    )
+    gdf = gdf.rename(
+        columns={"SITE_ID": "ps_id"}
+    )[["ps_id", "site_name", "country", "lfp", "geometry"]]
 
-    # Stamp the snapshot date into the data itself, so the first update reads its
-    # changed_since baseline straight from the sites file (no separate state file).
-    gdf["last_updated"] = last_updated_date or datetime.date.today().isoformat()
+    gdf["last_updated"] = last_updated
 
     # Save the dated archive snapshot, then duplicate it to the current file.
     upload_gdf(bucket, gdf, archive_file_name, project_id=project, verbose=verbose)
@@ -62,7 +66,7 @@ def seed_protected_seas_sites(
 def get_updated_site_index(
     changed_since: str,
     limit: int = 1000,
-    sleep_seconds: float = 1.0,
+    sleep_seconds: float = 0.1,
 ) -> pd.DataFrame:
     rows = []
     page = 1
@@ -75,6 +79,7 @@ def get_updated_site_index(
             "limit": limit,
             "page": page,
             "export_bounds": "false",
+            "include_inactive": "true"
         }
 
         response = requests.get(url, params=params, timeout=60)
@@ -147,24 +152,44 @@ def load_protected_seas_site(
 
 def fetch_updated_site_details(
     changed_since: str,
-    sleep_seconds: float = 5.0,
-) -> tuple[gpd.GeoDataFrame, pd.DataFrame]:
+    sleep_seconds: float = 0.1,
+) -> tuple[gpd.GeoDataFrame, list[str], pd.DataFrame]:
+    
     updated_index = get_updated_site_index(changed_since=changed_since)
 
     if updated_index.empty:
-        return gpd.GeoDataFrame(geometry=[], crs="EPSG:4326"), updated_index
+        return gpd.GeoDataFrame(geometry=[], crs="EPSG:4326"), [], updated_index
 
-    id_col = "ps_id" if "ps_id" in updated_index.columns else "site_id"
-    changed_ids = updated_index[id_col].dropna().astype(str).drop_duplicates().tolist()
+
+    if "status" in updated_index.columns:
+        is_removed = updated_index["status"].astype(str).str.lower() == "removed"
+    else:
+        is_removed = pd.Series(False, index=updated_index.index)
+
+    removed_ids = (
+        updated_index.loc[is_removed, "ps_id"].dropna().astype(str).drop_duplicates().tolist()
+    )
+    changed_ids = (
+        updated_index.loc[~is_removed, "ps_id"].dropna().astype(str).drop_duplicates().tolist()
+    )
+
+    logger.info(
+        {
+            "message": (
+                f"{len(changed_ids)} changed and {len(removed_ids)} removed site(s) "
+                f"since {changed_since}; fetching details for changed sites"
+            )
+        }
+    )
 
     gdfs = []
     failures = []
 
-    for site_id in tqdm(changed_ids):
+    for ps_id in tqdm(changed_ids):
         try:
-            gdfs.append(load_protected_seas_site(site_id))
+            gdfs.append(load_protected_seas_site(ps_id))
         except Exception as exc:
-            failures.append({"site_id": site_id, "error": str(exc)})
+            failures.append({"ps_id": ps_id, "error": str(exc)})
         time.sleep(sleep_seconds)
 
     if gdfs:
@@ -174,26 +199,37 @@ def fetch_updated_site_details(
         changed_gdf = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
 
     changed_gdf.attrs["failures"] = failures
-    return changed_gdf, updated_index
+    return changed_gdf, removed_ids, updated_index
 
 
 def upsert_protected_seas_sites(
     local_gdf: gpd.GeoDataFrame,
     changed_gdf: gpd.GeoDataFrame,
-    id_col: str = "site_id",
+    removed_ids: list[str] | None = None,
+    id_col: str = "ps_id",
 ) -> gpd.GeoDataFrame:
-    if changed_gdf.empty:
+    removed_ids = set(map(str, removed_ids or []))
+
+    if changed_gdf.empty and not removed_ids:
         return local_gdf
 
-    changed = changed_gdf[["ps_id", "site_name", "country", "lfp", "geometry"]].rename(
-        columns={"ps_id": "site_id"}
-    )
-    changed["lfp"] = changed["lfp"].astype(int)
+    if not changed_gdf.empty:
+        changed = changed_gdf[["ps_id", "site_name", "country", "lfp", "geometry"]].copy()
+        changed["lfp"] = changed["lfp"].astype(int)
+        changed_ids = set(changed[id_col].astype(str))
+    else:
+        changed = None
+        changed_ids = set()
 
-    changed_ids = set(changed[id_col].astype(str))
-    local_without_changed = local_gdf[~local_gdf[id_col].astype(str).isin(changed_ids)]
+    # Upsert on record identity, not version numbers: an attribute-only change
+    # (e.g. lfp 5 -> 2 from a re-coding correction) may not advance any version
+    # field, so we key off changed_since and always replace the local row.
+    # Retired sites (removed_ids) are dropped and not re-appended.
+    drop_ids = removed_ids | changed_ids
+    updated = local_gdf[~local_gdf[id_col].astype(str).isin(drop_ids)]
 
-    updated = pd.concat([local_without_changed, changed], ignore_index=True)
+    if changed is not None:
+        updated = pd.concat([updated, changed], ignore_index=True)
 
     fishing_protection_mapping = {1: "less", 2: "less", 3: "moderately", 4: "highly", 5: "highly"}
     updated["fishing_protection_level"] = updated["lfp"].map(fishing_protection_mapping)
@@ -213,16 +249,14 @@ def update_protected_seas_data(
     if verbose:
         logger.info({"message": f"fetching Protected Seas sites updated since {last_update_date}"})
 
-    changed, _ = fetch_updated_site_details(last_update_date)
+    changed, removed_ids, _ = fetch_updated_site_details(last_update_date)
 
-    if verbose:
-        logger.info({"message": f"{len(changed)} site(s) changed since {last_update_date}"})
-        if changed.attrs.get("failures"):
-            logger.warning(
-                {"message": "some sites failed to fetch", "failures": changed.attrs["failures"]}
-            )
+    if verbose and changed.attrs.get("failures"):
+        logger.warning(
+            {"message": "some sites failed to fetch", "failures": changed.attrs["failures"]}
+        )
 
-    updated = upsert_protected_seas_sites(current_gdf, changed)
+    updated = upsert_protected_seas_sites(current_gdf, changed, removed_ids=removed_ids)
 
     # Advance the baseline so the next run fetches changes since this run.
     today = datetime.date.today().isoformat()
