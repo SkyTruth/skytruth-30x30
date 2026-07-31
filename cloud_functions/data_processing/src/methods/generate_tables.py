@@ -472,7 +472,7 @@ def generate_fishing_protection_table(
             return None
 
         return return_stats(df_group, total_area, fishing_protection_level, loc)
-    
+
     def get_iho_region_stats(iho_file_name, sites_file_name, tolerance):
         # Load the simplified IHO sea areas at the requested tolerance.
         iho = read_json_df(
@@ -507,10 +507,9 @@ def generate_fishing_protection_table(
         inter = inter.to_crs(6933)
         inter["area"] = inter.geometry.area / 1e6
         inter["pct"] = 100 * inter["area"] / inter["total_area"]
-        return inter[
-            ["MRGID", "area", "fishing_protection_level", "pct", "total_area"]
-        ].rename(columns={"MRGID": "location"})
-
+        return inter[["MRGID", "area", "fishing_protection_level", "pct", "total_area"]].rename(
+            columns={"MRGID": "location"}
+        )
 
     # Load related countries and regions
     if verbose:
@@ -607,7 +606,7 @@ def generate_fishing_protection_table(
             fishing_protection_table,
             get_iho_region_stats(iho_file_name, sites_file_name, marine_tolerance),
         ),
-        axis=0
+        axis=0,
     )
 
     fishing_protection_table = fishing_protection_table[fishing_protection_table["total_area"] > 0]
