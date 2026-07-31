@@ -24,6 +24,10 @@ logger = Logger()
 
 BASE_URL = "https://map.navigatormap.org/api"
 
+# Map Level of Fishing Protection (lfp) to our fishing_protection_level buckets.
+# lfp=0 (unprotected) has no bucket and maps to NaN.
+FISHING_PROTECTION_MAPPING = {1: "less", 2: "less", 3: "moderately", 4: "highly", 5: "highly"}
+
 
 def force_2d(geom):
     return transform(lambda x, y, z=None: (x, y), geom)
@@ -55,6 +59,8 @@ def seed_protected_seas_sites(
     gdf = gdf.rename(columns={"SITE_ID": "ps_id"})[
         ["ps_id", "site_name", "country", "lfp", "geometry"]
     ]
+    gdf["lfp"] = gdf["lfp"].astype(int)
+    gdf["fishing_protection_level"] = gdf["lfp"].map(FISHING_PROTECTION_MAPPING)
 
     gdf["last_updated"] = last_updated
 
@@ -229,8 +235,7 @@ def upsert_protected_seas_sites(
     if changed is not None:
         updated = pd.concat([updated, changed], ignore_index=True)
 
-    fishing_protection_mapping = {1: "less", 2: "less", 3: "moderately", 4: "highly", 5: "highly"}
-    updated["fishing_protection_level"] = updated["lfp"].map(fishing_protection_mapping)
+    updated["fishing_protection_level"] = updated["lfp"].map(FISHING_PROTECTION_MAPPING)
     return gpd.GeoDataFrame(updated, geometry="geometry", crs=local_gdf.crs)
 
 

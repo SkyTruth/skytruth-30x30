@@ -515,6 +515,8 @@ def generate_fishing_protection_table(
             {"message": f"downloading Protected Seas from gs://{bucket}/{protected_seas_file_name}"}
         )
     protected_seas = read_dataframe(bucket, protected_seas_file_name)
+    if verbose:
+        logger.info({"message": f"loaded {len(protected_seas)} Protected Seas rows"})
 
     # Map Protected Seas ISO codes that need to be combined into a single
     # location on our end. Each key is the location code we use, and the
@@ -550,7 +552,7 @@ def generate_fishing_protection_table(
     }
 
     if verbose:
-        logger.info({"message": "processing fishing level protection"})
+        logger.info({"message": "aggregating protected-from-fishing areas by location"})
 
     lfp_cols = ["lfp5_area", "lfp4_area", "lfp3_area", "lfp2_area", "lfp1_area"]
 
@@ -572,6 +574,15 @@ def generate_fishing_protection_table(
         merged_row["location"] = target_loc
         ps_cl_fp = pd.concat([ps_cl_fp[~mask], pd.DataFrame([merged_row])], ignore_index=True)
 
+    if verbose:
+        logger.info(
+            {
+                "message": (
+                    f"computing per-region stats for {len(combined_regions)} regions "
+                    f"across levels: {', '.join(fishing_protection_levels)}"
+                )
+            }
+        )
     fishing_protection_table = pd.DataFrame()
     for level in fishing_protection_levels:
         fishing_protection_table = pd.concat(
@@ -594,6 +605,8 @@ def generate_fishing_protection_table(
             axis=0,
         )
 
+    if verbose:
+        logger.info({"message": "computing IHO sea-area fishing protection stats"})
     fishing_protection_table = pd.concat(
         (
             fishing_protection_table,
@@ -604,7 +617,18 @@ def generate_fishing_protection_table(
         axis=0,
     )
 
+    rows_before_filter = len(fishing_protection_table)
     fishing_protection_table = fishing_protection_table[fishing_protection_table["total_area"] > 0]
+    if verbose:
+        logger.info(
+            {
+                "message": (
+                    f"fishing protection table: {len(fishing_protection_table)} rows "
+                    f"({rows_before_filter - len(fishing_protection_table)} dropped for "
+                    f"total_area <= 0)"
+                )
+            }
+        )
     fishing_protection_table["total_area"] = (
         fishing_protection_table["total_area"].round(0).astype("Int64")
     )
