@@ -28,7 +28,7 @@ from src.core.params import (
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.processors import clean_geometries
-from src.core.raster_pa_stats import compute_class_areas_by_country, compute_country_class_areas
+from src.core.raster_pa_stats import compute_class_areas_by_region, compute_region_class_areas
 from src.utils.gcp import (
     download_file_from_gcs,
     load_zipped_shapefile_from_gcs,
@@ -351,14 +351,14 @@ def _rollup_corals_subtable(
     global_total: dict | None = None,
     global_protected: dict | None = None,
 ) -> pd.DataFrame:
-    """Roll per-country class areas up to combined_regions and reshape into subtable rows.
+    """Roll per-region class areas up to combined_regions and reshape into subtable rows.
 
-    Country, territory and region rows are summed from their member countries, so a
+    Region rows are summed from their member regions, so a
     reef that sits in an EEZ with overlapping claims is attributed to every claimant
     (intentional over-attribution). The GLOB row must NOT inherit that double count,
     so when `global_total`/`global_protected` are supplied (deduplicated global class
     areas computed once over the whole reef extent) they are used for GLOB instead of
-    summing the per-country rows. If they are omitted, GLOB falls back to the country
+    summing the per-region rows. If they are omitted, GLOB falls back to the region
     sum (legacy behaviour, used by callers that have no deduplicated global to pass).
     """
 
@@ -367,7 +367,7 @@ def _rollup_corals_subtable(
             return 0.0
         if locs is None:
             return float(df[habitat].sum())
-        return float(df.loc[df["country"].isin(locs), habitat].sum())
+        return float(df.loc[df["location"].isin(locs), habitat].sum())
 
     def _global(stats: dict | None, habitat: str) -> float:
         return float(stats.get(habitat, 0.0)) if stats else 0.0
@@ -398,6 +398,7 @@ def create_climate_resilient_corals_subtable(
     marine_protected_areas: gpd.GeoDataFrame,
     combined_regions: dict,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     tolerance: float = marine_tolerance,
@@ -420,6 +421,11 @@ def create_climate_resilient_corals_subtable(
         logger.info({"message": "loading GADM/EEZ union for coral coverage"})
     gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
     regions = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
+
+    if verbose:
+        logger.info({"message": "loading IHO sea areas for coral coverage"})
+    iho = read_parquet_from_gcs(bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose)
+    iho["location"] = iho["MRGID"].astype(str)
 
     if verbose:
         logger.info({"message": f"downloading coral raster from {coral_source_file}"})
@@ -452,20 +458,23 @@ def create_climate_resilient_corals_subtable(
     # Drop regions and (marine) PAs outside the reef band before the expensive
     # reproject/validate/union — they can't touch a reef pixel.
     regions = regions[regions.intersects(coral_extent)]
+    iho = iho[iho.intersects(coral_extent)]  
     protected_areas = protected_areas[protected_areas.intersects(coral_extent)]
 
     # rasterio.mask runs in the raster CRS without reprojecting; re-validate after
     # to_crs since reprojection can self-intersect (e.g. JPN) and break unions.
     if verbose:
-        logger.info({"message": f"reprojecting region and PA geometries to {raster_crs}"})
+        logger.info({"message": f"reprojecting region, PA geometries, and IHO areas to {raster_crs}"})
     regions = regions.to_crs(raster_crs)
     regions["geometry"] = regions.geometry.apply(make_valid)
     protected_areas = protected_areas.to_crs(raster_crs)
     protected_areas["geometry"] = protected_areas.geometry.apply(make_valid)
+    iho = iho.to_crs(raster_crs)
+    iho["geometry"] = iho.geometry.apply(make_valid)
 
     if verbose:
         logger.info({"message": "computing total coral class areas per country"})
-    total_stats = compute_class_areas_by_country(
+    total_stats = compute_class_areas_by_region(
         raster_path=local_raster_path,
         regions_gdf=regions,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
@@ -478,17 +487,59 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "computing protected coral class areas per country"})
-    protected_stats = compute_class_areas_by_country(
+    protected_stats = compute_class_areas_by_region(
         raster_path=local_raster_path,
         regions_gdf=regions,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
         region_col="location",
         polygons_gdf=protected_areas,
-        polygon_country_col="location",
+        polygon_region_col="location",
         include_zero=True,
         n_jobs=n_jobs,
         verbose=verbose,
     )
+
+    if verbose:
+        logger.info({"message": "computing total coral class areas per IHO region"})
+    iho_total = compute_class_areas_by_region(
+        raster_path=local_raster_path,
+        regions_gdf=iho,
+        class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
+        region_col="location",
+        polygons_gdf=None,
+        include_zero=True,
+        n_jobs=n_jobs,
+        verbose=verbose,
+    )
+
+    if verbose:
+        logger.info({"message": "tagging protected areas to IHO regions"})
+    pas_iho = gpd.sjoin(
+        protected_areas[["geometry"]],
+        iho[["location", "geometry"]],
+        how="inner",
+        predicate="intersects",
+    )
+
+    if verbose:
+        logger.info({"message": "computing protected coral class areas per IHO region"})
+    iho_protected = compute_class_areas_by_region(
+        raster_path=local_raster_path,
+        regions_gdf=iho,
+        class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
+        region_col="location",
+        polygons_gdf=pas_iho,
+        polygon_region_col="location",           # now the IHO MRGID, matching regions_gdf
+        include_zero=True,
+        n_jobs=n_jobs,
+        verbose=verbose,
+    )
+
+    if verbose:
+        logger.info({"message": f"computed IHO coral stats for {len(iho_total)} region(s)"})
+
+    total_stats = pd.concat([total_stats, iho_total], ignore_index=True)
+    protected_stats = pd.concat([protected_stats, iho_protected], ignore_index=True)
 
     # Per-country rows double-count reefs in overlapping EEZ claims, so compute
     # the GLOB row over the dissolved union of all regions (each reef pixel once).
@@ -496,9 +547,9 @@ def create_climate_resilient_corals_subtable(
         logger.info({"message": "computing deduplicated global coral class areas"})
     global_geom = robust_unary_union(regions["geometry"].values)
     global_total = (
-        compute_country_class_areas(
-            country="GLOB",
-            country_geom=global_geom,
+        compute_region_class_areas(
+            region="GLOB",
+            region_geom=global_geom,
             raster_path=local_raster_path,
             class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
             polygons_gdf=None,
@@ -507,9 +558,9 @@ def create_climate_resilient_corals_subtable(
         or {}
     )
     global_protected = (
-        compute_country_class_areas(
-            country="GLOB",
-            country_geom=global_geom,
+        compute_region_class_areas(
+            region="GLOB",
+            region_geom=global_geom,
             raster_path=local_raster_path,
             class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
             polygons_gdf=protected_areas,
@@ -518,10 +569,12 @@ def create_climate_resilient_corals_subtable(
         or {}
     )
 
+    if verbose:
+        logger.info({"message": "rolling up coral stats by region"})
     return _rollup_corals_subtable(
         total_stats,
         protected_stats,
-        combined_regions,
+        {**combined_regions, **{loc: [loc] for loc in iho["location"]}},
         global_total=global_total,
         global_protected=global_protected,
     )
@@ -595,9 +648,10 @@ def process_marine_habitats(
     mangroves_subtable = create_mangroves_subtable(
         marine_protected_areas,
         combined_regions,
-        gadm_eez_union_file_name,
-        mangroves_by_region_file_name,
-        global_mangrove_area_file_name,
+        gadm_eez_union_file_name=gadm_eez_union_file_name,
+        iho_file_name=iho_file_name,
+        mangroves_by_region_file_name=mangroves_by_region_file_name,
+        global_mangrove_area_file_name=global_mangrove_area_file_name,
     )
 
     if verbose:
@@ -607,6 +661,7 @@ def process_marine_habitats(
         marine_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
+        iho_file_name=iho_file_name,
         tolerance=marine_tolerance,
         bucket=bucket,
         verbose=verbose,

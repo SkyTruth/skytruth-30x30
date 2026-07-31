@@ -793,14 +793,14 @@ def generate_terrestrial_biome_stats_country(
             results = []
             for tile in tile_geoms:
                 entry = get_cover_areas(
-                    src, [mapping(tile)], country, "country", land_cover_classes
+                    src, [mapping(tile)], country, "location", land_cover_classes
                 )
                 if entry is not None:
                     results.append(entry)
 
             results = pd.DataFrame(results)
-            cs = results[[c for c in results.columns if c != "country"]].agg("sum").to_dict()
-            cs["country"] = country
+            cs = results[[c for c in results.columns if c != "location"]].agg("sum").to_dict()
+            cs["location"] = country
 
             country_stats.append(cs)
             fn = datetime.datetime.now()

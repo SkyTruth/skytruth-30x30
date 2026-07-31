@@ -48,6 +48,7 @@ optional = true
 [tool.poetry.group.notebooks.dependencies]
 jupyterlab = "^4.4"
 ipyleaflet = "^0.19.2"
+localtileserver = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

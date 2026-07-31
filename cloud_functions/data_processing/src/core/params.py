@@ -69,6 +69,13 @@ IHO_SEA_AREAS_PARAMS = {
 }
 IHO_SEA_AREAS_FILE_NAME = "static/iho_sea_areas_processed.parquet"
 
+GOAS_PARAMS = {
+    "name": "GOaS_v1_20211214.zip",
+    "zipfile_name": "static/goas.zip",
+    "shapefile_name": "GOaS_v1_20211214.shp",
+}
+GOAS_FILE_NAME = "static/goas_processed.parquet"
+
 EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 
 MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"

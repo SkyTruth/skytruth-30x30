@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 import src.methods.generate_tables as gen_tables
+import src.methods.protection_coverage as prot_cov
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -110,9 +111,28 @@ def _run_generate(monkeypatch, wdpa_country, wdpa_global, combined_regions, uplo
     """"""
     calls, upload_mock = upload_recorder
 
-    monkeypatch.setattr(gen_tables, "load_regions", lambda **_: (combined_regions, {}))
-    monkeypatch.setattr(gen_tables, "read_dataframe", lambda *a, **kw: wdpa_country.copy())
-    monkeypatch.setattr(gen_tables, "load_wdpa_global", lambda *a, **kw: wdpa_global.copy())
+    # compute_country_global_coverage loads its data in the protection_coverage
+    # module namespace, so patch there (not on gen_tables).
+    monkeypatch.setattr(prot_cov, "load_regions", lambda **_: (combined_regions, {}))
+    monkeypatch.setattr(prot_cov, "read_dataframe", lambda *a, **kw: wdpa_country.copy())
+    monkeypatch.setattr(prot_cov, "load_wdpa_global", lambda *a, **kw: wdpa_global.copy())
+    # Neutralize the IHO sea-area contribution (reads GCS parquet).
+    monkeypatch.setattr(
+        gen_tables,
+        "compute_iho_protection_coverage",
+        lambda *a, **kw: pd.DataFrame(
+            columns=[
+                "location",
+                "environment",
+                "total_area",
+                "protected_area",
+                "coverage",
+                "pas",
+                "oecms",
+                "protected_areas_count",
+            ]
+        ),
+    )
 
     monkeypatch.setattr(
         gen_tables,

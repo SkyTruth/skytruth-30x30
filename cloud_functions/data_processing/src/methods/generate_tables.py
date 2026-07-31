@@ -436,6 +436,45 @@ def generate_marine_protection_level_stats_table(
     return protection_level_table.to_dict(orient="records")
 
 
+def get_iho_region_stats(iho_file_name, sites_file_name, tolerance, bucket=BUCKET, verbose=True):
+    # Load the simplified IHO sea areas at the requested tolerance.
+    iho = read_parquet_from_gcs(
+        bucket_name=bucket,
+        filename=add_tolerance_suffix(iho_file_name, tolerance),
+    ).rename(columns={"area": "total_area"})
+
+    # Load the current Protected Seas sites and refresh them with any sites
+    # that changed since the file's last_updated date.
+    current_gdf = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
+    last_update_date = current_gdf["last_updated"].iloc[0]
+    changed, update_idx = fetch_updated_site_details(changed_since=last_update_date)
+    out = upsert_protected_seas_sites(current_gdf, changed)
+
+    # Keep only the highly protected sites, then merge them into a single
+    # geometry so we can measure their overlap with each IHO sea area.
+    highly = out[out["fishing_protection_level"] == "highly"]
+
+    # Repair any invalid site geometries before the overlay/dissolve.
+    if verbose:
+        logger.info({"message": "making geometries valid"})
+    highly["geometry"] = highly.make_valid()
+
+    # Dissolve all highly protected sites into one geometry.
+    if verbose:
+        logger.info({"message": "dissolving highly protected sites"})
+    geoms = highly.dissolve()
+
+    # Intersect the dissolved protection with each IHO sea area and compute
+    # the protected area (km²) and percent coverage per region.
+    inter = gpd.overlay(iho, geoms, how="intersection", keep_geom_type=True)
+    inter = inter.to_crs(6933)
+    inter["area"] = inter.geometry.area / 1e6
+    inter["pct"] = 100 * inter["area"] / inter["total_area"]
+    return inter[["MRGID", "area", "fishing_protection_level", "pct", "total_area"]].rename(
+        columns={"MRGID": "location"}
+    )
+
+
 def generate_fishing_protection_table(
     bucket: str = BUCKET,
     project: str = PROJECT,
@@ -472,44 +511,6 @@ def generate_fishing_protection_table(
             return None
 
         return return_stats(df_group, total_area, fishing_protection_level, loc)
-
-    def get_iho_region_stats(iho_file_name, sites_file_name, tolerance):
-        # Load the simplified IHO sea areas at the requested tolerance.
-        iho = read_parquet_from_gcs(
-            bucket_name=bucket,
-            filename=add_tolerance_suffix(iho_file_name, tolerance),
-        ).rename(columns={"area": "total_area"})
-
-        # Load the current Protected Seas sites and refresh them with any sites
-        # that changed since the file's last_updated date.
-        current_gdf = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
-        last_update_date = current_gdf["last_updated"].iloc[0]
-        changed, update_idx = fetch_updated_site_details(changed_since=last_update_date)
-        out = upsert_protected_seas_sites(current_gdf, changed)
-
-        # Keep only the highly protected sites, then merge them into a single
-        # geometry so we can measure their overlap with each IHO sea area.
-        highly = out[out["fishing_protection_level"] == "highly"]
-
-        # Repair any invalid site geometries before the overlay/dissolve.
-        if verbose:
-            logger.info({"message": "making geometries valid"})
-        highly["geometry"] = highly.make_valid()
-
-        # Dissolve all highly protected sites into one geometry.
-        if verbose:
-            logger.info({"message": "dissolving highly protected sites"})
-        geoms = highly.dissolve()
-
-        # Intersect the dissolved protection with each IHO sea area and compute
-        # the protected area (km²) and percent coverage per region.
-        inter = gpd.overlay(iho, geoms, how="intersection", keep_geom_type=True)
-        inter = inter.to_crs(6933)
-        inter["area"] = inter.geometry.area / 1e6
-        inter["pct"] = 100 * inter["area"] / inter["total_area"]
-        return inter[["MRGID", "area", "fishing_protection_level", "pct", "total_area"]].rename(
-            columns={"MRGID": "location"}
-        )
 
     # Load related countries and regions
     if verbose:
@@ -604,7 +605,9 @@ def generate_fishing_protection_table(
     fishing_protection_table = pd.concat(
         (
             fishing_protection_table,
-            get_iho_region_stats(iho_file_name, sites_file_name, marine_tolerance),
+            get_iho_region_stats(
+                iho_file_name, sites_file_name, marine_tolerance, bucket=bucket, verbose=verbose
+            ),
         ),
         axis=0,
     )
