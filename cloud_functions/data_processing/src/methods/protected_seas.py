@@ -52,9 +52,9 @@ def seed_protected_seas_sites(
     gdf = gpd.GeoDataFrame(
         pd.concat(parts, ignore_index=True), geometry="geometry", crs=parts[0].crs
     )
-    gdf = gdf.rename(
-        columns={"SITE_ID": "ps_id"}
-    )[["ps_id", "site_name", "country", "lfp", "geometry"]]
+    gdf = gdf.rename(columns={"SITE_ID": "ps_id"})[
+        ["ps_id", "site_name", "country", "lfp", "geometry"]
+    ]
 
     gdf["last_updated"] = last_updated
 
@@ -79,7 +79,7 @@ def get_updated_site_index(
             "limit": limit,
             "page": page,
             "export_bounds": "false",
-            "include_inactive": "true"
+            "include_inactive": "true",
         }
 
         response = requests.get(url, params=params, timeout=60)
@@ -154,12 +154,10 @@ def fetch_updated_site_details(
     changed_since: str,
     sleep_seconds: float = 0.1,
 ) -> tuple[gpd.GeoDataFrame, list[str], pd.DataFrame]:
-    
     updated_index = get_updated_site_index(changed_since=changed_since)
 
     if updated_index.empty:
         return gpd.GeoDataFrame(geometry=[], crs="EPSG:4326"), [], updated_index
-
 
     if "status" in updated_index.columns:
         is_removed = updated_index["status"].astype(str).str.lower() == "removed"
