@@ -21,6 +21,7 @@ from src.core.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
+    IHO_SEA_AREAS_FILE_NAME,
     MANGROVES_BY_REGION_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
@@ -29,6 +30,7 @@ from src.core.params import (
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROJECT,
     PROTECTED_SEAS_FILE_NAME,
+    PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
@@ -55,6 +57,10 @@ from src.methods.protected_areas.protected_areas import (
     generate_protected_areas_table,
     make_pa_updates,
 )
+from src.methods.protected_seas import (
+    fetch_updated_site_details,
+    upsert_protected_seas_sites,
+)
 from src.methods.protection_coverage import (
     compute_country_global_coverage,
     compute_iho_protection_coverage,
@@ -64,6 +70,8 @@ from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
 from src.utils.gcp import (
     read_dataframe,
+    read_json_df,
+    read_parquet_from_gcs,
     upload_dataframe,
 )
 from src.utils.logger import Logger
@@ -433,6 +441,8 @@ def generate_fishing_protection_table(
     project: str = PROJECT,
     protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
     fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
+    sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     verbose: bool = True,
 ):
     def return_stats(df_group, total_area, fishing_protection_level, loc):
@@ -462,6 +472,45 @@ def generate_fishing_protection_table(
             return None
 
         return return_stats(df_group, total_area, fishing_protection_level, loc)
+    
+    def get_iho_region_stats(iho_file_name, sites_file_name, tolerance):
+        # Load the simplified IHO sea areas at the requested tolerance.
+        iho = read_json_df(
+            bucket_name=bucket,
+            filename=iho_file_name.replace(".geojson", f"_{tolerance}.geojson"),
+        ).rename(columns={"area": "total_area"})
+
+        # Load the current Protected Seas sites and refresh them with any sites
+        # that changed since the file's last_updated date.
+        current_gdf = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
+        last_update_date = current_gdf["last_updated"].iloc[0]
+        changed, update_idx = fetch_updated_site_details(changed_since=last_update_date)
+        out = upsert_protected_seas_sites(current_gdf, changed)
+
+        # Keep only the highly protected sites, then merge them into a single
+        # geometry so we can measure their overlap with each IHO sea area.
+        highly = out[out["fishing_protection_level"] == "highly"]
+
+        # Repair any invalid site geometries before the overlay/dissolve.
+        if verbose:
+            logger.info({"message": "making geometries valid"})
+        highly["geometry"] = highly.make_valid()
+
+        # Dissolve all highly protected sites into one geometry.
+        if verbose:
+            logger.info({"message": "dissolving highly protected sites"})
+        geoms = highly.dissolve()
+
+        # Intersect the dissolved protection with each IHO sea area and compute
+        # the protected area (km²) and percent coverage per region.
+        inter = gpd.overlay(iho, geoms, how="intersection", keep_geom_type=True)
+        inter = inter.to_crs(6933)
+        inter["area"] = inter.geometry.area / 1e6
+        inter["pct"] = 100 * inter["area"] / inter["total_area"]
+        return inter[
+            ["MRGID", "area", "fishing_protection_level", "pct", "total_area"]
+        ].rename(columns={"MRGID": "location"})
+
 
     # Load related countries and regions
     if verbose:
@@ -552,6 +601,14 @@ def generate_fishing_protection_table(
             ),
             axis=0,
         )
+
+    fishing_protection_table = pd.concat(
+        (
+            fishing_protection_table,
+            get_iho_region_stats(iho_file_name, sites_file_name, marine_tolerance),
+        ),
+        axis=0
+    )
 
     fishing_protection_table = fishing_protection_table[fishing_protection_table["total_area"] > 0]
     fishing_protection_table["total_area"] = (

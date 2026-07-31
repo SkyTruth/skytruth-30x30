@@ -196,7 +196,7 @@ def upsert_protected_seas_sites(
     updated = pd.concat([local_without_changed, changed], ignore_index=True)
 
     fishing_protection_mapping = {1: "less", 2: "less", 3: "moderately", 4: "highly", 5: "highly"}
-    updated["fishing_protection"] = updated["lfp"].map(fishing_protection_mapping)
+    updated["fishing_protection_level"] = updated["lfp"].map(fishing_protection_mapping)
     return gpd.GeoDataFrame(updated, geometry="geometry", crs=local_gdf.crs)
 
 
