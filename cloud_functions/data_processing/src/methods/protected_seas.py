@@ -13,7 +13,6 @@ from src.core.params import (
     ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
     BUCKET,
     PROJECT,
-    PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
     PROTECTED_SEAS_SITES_FILE_NAME,
 )
 from src.utils.gcp import duplicate_blob, read_parquet_from_gcs, upload_gdf
@@ -33,7 +32,6 @@ def seed_protected_seas_sites(
     last_updated_date: str = None,  # snapshot date (YYYY-MM-DD); defaults to today
     sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     archive_file_name: str = ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
-    last_updated_file_name: str = PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
@@ -52,19 +50,13 @@ def seed_protected_seas_sites(
         columns={"SITE_ID": "site_id"}
     )
 
+    # Stamp the snapshot date into the data itself, so the first update reads its
+    # changed_since baseline straight from the sites file (no separate state file).
+    gdf["last_updated"] = last_updated_date or datetime.date.today().isoformat()
+
     # Save the dated archive snapshot, then duplicate it to the current file.
     upload_gdf(bucket, gdf, archive_file_name, project_id=project, verbose=verbose)
     duplicate_blob(bucket, archive_file_name, sites_file_name, project_id=project, verbose=verbose)
-
-    # Initialize the last-updated baseline so the first update knows what to fetch since.
-    last_updated_date = last_updated_date or datetime.date.today().isoformat()
-    upload_gdf(
-        bucket,
-        pd.DataFrame([{"last_updated": last_updated_date}]),
-        last_updated_file_name,
-        project_id=project,
-        verbose=verbose,
-    )
 
 
 def get_updated_site_index(
@@ -211,17 +203,15 @@ def upsert_protected_seas_sites(
 def update_protected_seas_data(
     sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     archive_file_name: str = ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
-    last_updated_file_name: str = PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    last_updated_df = pd.read_parquet(f"gs://{bucket}/{last_updated_file_name}")
-    last_update_date = last_updated_df["last_updated"].iloc[0]
+    current_gdf = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
+    last_update_date = current_gdf["last_updated"].iloc[0]
 
     if verbose:
         logger.info({"message": f"fetching Protected Seas sites updated since {last_update_date}"})
-    current_gdf = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
 
     changed, _ = fetch_updated_site_details(last_update_date)
 
@@ -234,18 +224,18 @@ def update_protected_seas_data(
 
     updated = upsert_protected_seas_sites(current_gdf, changed)
 
-    # Save the dated archive snapshot, then duplicate it to the current file.
-    upload_gdf(bucket, updated, archive_file_name, project_id=project, verbose=verbose)
-    duplicate_blob(bucket, archive_file_name, sites_file_name, project_id=project, verbose=verbose)
-
+    # Advance the baseline so the next run fetches changes since this run.
     today = datetime.date.today().isoformat()
-    upload_gdf(
-        bucket,
-        pd.DataFrame([{"last_updated": today}]),
-        last_updated_file_name,
-        project_id=project,
-        verbose=verbose,
-    )
+    updated["last_updated"] = today
+
+    # Save the dated archive snapshot, then duplicate it to the current file.
+    if verbose:
+        logger.info({"message": f"uploading protected seas to {archive_file_name}"})
+    upload_gdf(bucket, updated, archive_file_name, project_id=project, verbose=verbose)
+
+    if verbose:
+        logger.info({"message": f"duplicating blob to {sites_file_name}"})
+    duplicate_blob(bucket, archive_file_name, sites_file_name, project_id=project, verbose=verbose)
 
     if verbose:
         logger.info({"message": f"Protected Seas data updated; last_updated set to {today}"})

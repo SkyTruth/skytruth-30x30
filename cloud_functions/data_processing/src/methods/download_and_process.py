@@ -45,7 +45,6 @@ from src.core.params import (
     PP_API_KEY,
     PROJECT,
     PROTECTED_SEAS_FILE_NAME,
-    PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
     PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTED_SEAS_URL,
     TOLERANCES,
@@ -273,7 +272,6 @@ def download_protected_seas(
     filename: str = PROTECTED_SEAS_FILE_NAME,
     archive_filename: str = ARCHIVE_PROTECTED_SEAS_FILE_NAME,
     sites_file_name=PROTECTED_SEAS_SITES_FILE_NAME,
-    last_updated_file_name=PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
     project: str = PROJECT,
     verbose: bool = True,
 ) -> None:
@@ -321,7 +319,6 @@ def download_protected_seas(
         logger.info({"message": "updating Protected Seas site geometries"})
     update_protected_seas_data(
         sites_file_name=sites_file_name,
-        last_updated_file_name=last_updated_file_name,
         bucket=bucket,
         project=project,
         verbose=verbose,

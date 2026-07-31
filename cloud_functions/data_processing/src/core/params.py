@@ -121,7 +121,6 @@ PROTECTED_SEAS_SITES_FILE_NAME = "protected_seas/protected_seas_sites.parquet"
 ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME = (
     f"archive/protected_seas/protected_seas_sites_{today_formatted}.parquet"
 )
-PROTECTED_SEAS_LAST_UPDATED_FILE_NAME = "protected_seas/protected_seas_last_updated.parquet"
 
 
 # ------------------------------------------------------------
