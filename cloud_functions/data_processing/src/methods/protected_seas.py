@@ -27,9 +27,10 @@ BASE_URL = "https://map.navigatormap.org/api"
 def force_2d(geom):
     return transform(lambda x, y, z=None: (x, y), geom)
 
+
 def seed_protected_seas_sites(
-    json_dir: str,                                   # local path for the one-time run
-    last_updated_date: str = None,                   # snapshot date (YYYY-MM-DD); defaults to today
+    json_dir: str,  # local path for the one-time run
+    last_updated_date: str = None,  # snapshot date (YYYY-MM-DD); defaults to today
     sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     archive_file_name: str = ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
     last_updated_file_name: str = PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
@@ -39,12 +40,17 @@ def seed_protected_seas_sites(
 ):
     os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
     parts = [
-        gpd.read_file(f"{json_dir}/Navigator_AllSites_GlobalEEZs_LFP{lfp}_071426.json",
-                      engine="pyogrio")
+        gpd.read_file(
+            f"{json_dir}/Navigator_AllSites_GlobalEEZs_LFP{lfp}_071426.json", engine="pyogrio"
+        )
         for lfp in tqdm(range(1, 6))
     ]
-    gdf = gpd.GeoDataFrame(pd.concat(parts, ignore_index=True), geometry="geometry", crs=parts[0].crs)
-    gdf = gdf[["SITE_ID", "site_name", "country", "lfp", "geometry"]].rename(columns={"SITE_ID": "site_id"})
+    gdf = gpd.GeoDataFrame(
+        pd.concat(parts, ignore_index=True), geometry="geometry", crs=parts[0].crs
+    )
+    gdf = gdf[["SITE_ID", "site_name", "country", "lfp", "geometry"]].rename(
+        columns={"SITE_ID": "site_id"}
+    )
 
     # Save the dated archive snapshot, then duplicate it to the current file.
     upload_gdf(bucket, gdf, archive_file_name, project_id=project, verbose=verbose)
