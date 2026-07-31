@@ -149,13 +149,12 @@ def upsert_protected_seas_sites(
     changed_gdf: gpd.GeoDataFrame,
     id_col: str = "site_id",
 ) -> gpd.GeoDataFrame:
-
     if changed_gdf.empty:
         return local_gdf
 
-    changed = changed_gdf[
-        ["ps_id", "site_name", "country", "lfp", "geometry"]
-    ].rename(columns={"ps_id": "site_id"})
+    changed = changed_gdf[["ps_id", "site_name", "country", "lfp", "geometry"]].rename(
+        columns={"ps_id": "site_id"}
+    )
     changed["lfp"] = changed["lfp"].astype(int)
 
     changed_ids = set(changed[id_col].astype(str))
@@ -163,13 +162,7 @@ def upsert_protected_seas_sites(
 
     updated = pd.concat([local_without_changed, changed], ignore_index=True)
 
-    fishing_protection_mapping = {
-        1: "less",
-        2: "less",
-        3: "moderately",
-        4: "highly",
-        5: "highly"
-    }
+    fishing_protection_mapping = {1: "less", 2: "less", 3: "moderately", 4: "highly", 5: "highly"}
     updated["fishing_protection"] = updated["lfp"].map(fishing_protection_mapping)
     return gpd.GeoDataFrame(updated, geometry="geometry", crs=local_gdf.crs)
 
