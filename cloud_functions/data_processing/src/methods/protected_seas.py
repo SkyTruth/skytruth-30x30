@@ -147,26 +147,30 @@ def fetch_updated_site_details(
 def upsert_protected_seas_sites(
     local_gdf: gpd.GeoDataFrame,
     changed_gdf: gpd.GeoDataFrame,
-    id_col: str = "ps_id",
+    id_col: str = "site_id",
 ) -> gpd.GeoDataFrame:
+
     if changed_gdf.empty:
-        return local_gdf.copy()
+        return local_gdf
 
-    if id_col not in local_gdf.columns:
-        raise ValueError(f"{id_col} not found in local_gdf")
+    changed = changed_gdf[
+        ["ps_id", "site_name", "country", "lfp", "geometry"]
+    ].rename(columns={"ps_id": "site_id"})
+    changed["lfp"] = changed["lfp"].astype(int)
 
-    if id_col not in changed_gdf.columns:
-        alt_id_col = "site_id" if "site_id" in changed_gdf.columns else None
-        if alt_id_col:
-            changed_gdf = changed_gdf.rename(columns={alt_id_col: id_col})
-        else:
-            raise ValueError(f"{id_col} not found in changed_gdf")
+    changed_ids = set(changed[id_col].astype(str))
+    local_without_changed = local_gdf[~local_gdf[id_col].astype(str).isin(changed_ids)]
 
-    local_without_changed = local_gdf[
-        ~local_gdf[id_col].astype(str).isin(changed_gdf[id_col].astype(str))
-    ].copy()
+    updated = pd.concat([local_without_changed, changed], ignore_index=True)
 
-    updated = pd.concat([local_without_changed, changed_gdf], ignore_index=True)
+    fishing_protection_mapping = {
+        1: "less",
+        2: "less",
+        3: "moderately",
+        4: "highly",
+        5: "highly"
+    }
+    updated["fishing_protection"] = updated["lfp"].map(fishing_protection_mapping)
     return gpd.GeoDataFrame(updated, geometry="geometry", crs=local_gdf.crs)
 
 
