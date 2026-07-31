@@ -120,7 +120,6 @@ def generate_total_area_minus_pa(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=out_file,
-        output_file_type=".parquet",
     )
 
     # Save to archive
@@ -128,5 +127,4 @@ def generate_total_area_minus_pa(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=archive_out_file,
-        output_file_type=".parquet",
     )

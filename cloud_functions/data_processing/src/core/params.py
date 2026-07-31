@@ -117,8 +117,11 @@ PROTECTED_SEAS_URL = "https://map.navigatormap.org/api/regionStats/"
 PROTECTED_SEAS_GEOM_ZIPFILE = "static/Protected_seas_geom.zip"
 PROTECTED_SEAS_FILE_NAME = "raw/protected_seas.csv"
 ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted}.csv"
-PROTECTED_SEAS_SITES_FILE_NAME = "static/protected_seas_sites.geojson"
-PROTECTED_SEAS_LAST_UPDATED_FILE_NAME = "static/protected_seas_last_updated.json"
+PROTECTED_SEAS_SITES_FILE_NAME = "protected_seas/protected_seas_sites.parquet"
+ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME = (
+    f"archive/protected_seas/protected_seas_sites_{today_formatted}.parquet"
+)
+PROTECTED_SEAS_LAST_UPDATED_FILE_NAME = "protected_seas/protected_seas_last_updated.parquet"
 
 
 # ------------------------------------------------------------

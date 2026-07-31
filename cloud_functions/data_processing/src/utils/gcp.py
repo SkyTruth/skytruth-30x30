@@ -325,13 +325,14 @@ def upload_gdf(
     bucket_name: str,
     gdf: gpd.GeoDataFrame,
     destination_blob_name: str,
-    output_file_type: str = ".geojson",
     project_id: str = PROJECT,
     verbose: bool = True,
     timeout: int = 600,
 ) -> None:
     """
     Saves a GeoDataFrame to GCS as a .geojson or .parquet file.
+
+    The output format is inferred from the extension of ``destination_blob_name``.
 
     Parameters:
     ----------
@@ -340,7 +341,8 @@ def upload_gdf(
     gdf : gpd.GeoDataFrame
         The GeoDataFrame to upload.
     destination_blob_name : str
-        Destination path for the file in the bucket.
+        Destination path for the file in the bucket. Must end in ``.geojson``
+        or ``.parquet``; the extension determines the output format.
     project_id : str, optional
         Google Cloud project ID. Defaults to global PROJECT.
     verbose : bool, optional
@@ -348,6 +350,8 @@ def upload_gdf(
     timeout : int, optional
         Timeout in seconds for the upload. Defaults to 600 (10 minutes).
     """
+    output_file_type = os.path.splitext(destination_blob_name)[1].lower()
+
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
 
@@ -362,6 +366,11 @@ def upload_gdf(
         with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp_file:
             gdf.to_parquet(tmp_file.name)
             bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
+    else:
+        raise ValueError(
+            f"Cannot infer output format from '{destination_blob_name}'; "
+            "expected a .geojson or .parquet extension."
+        )
 
     if verbose:
         print("Upload complete.")

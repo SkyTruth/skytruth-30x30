@@ -1,4 +1,5 @@
 import datetime
+import os
 import time
 
 import geopandas as gpd
@@ -9,12 +10,13 @@ from shapely.ops import transform
 from tqdm.auto import tqdm
 
 from src.core.params import (
+    ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
     BUCKET,
     PROJECT,
     PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
     PROTECTED_SEAS_SITES_FILE_NAME,
 )
-from src.utils.gcp import read_json_from_gcs, upload_gdf, write_json_to_gcs
+from src.utils.gcp import duplicate_blob, read_parquet_from_gcs, upload_gdf
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -24,6 +26,39 @@ BASE_URL = "https://map.navigatormap.org/api"
 
 def force_2d(geom):
     return transform(lambda x, y, z=None: (x, y), geom)
+
+def seed_protected_seas_sites(
+    json_dir: str,                                   # local path for the one-time run
+    last_updated_date: str = None,                   # snapshot date (YYYY-MM-DD); defaults to today
+    sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
+    archive_file_name: str = ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
+    last_updated_file_name: str = PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
+    bucket: str = BUCKET,
+    project: str = PROJECT,
+    verbose: bool = True,
+):
+    os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
+    parts = [
+        gpd.read_file(f"{json_dir}/Navigator_AllSites_GlobalEEZs_LFP{lfp}_071426.json",
+                      engine="pyogrio")
+        for lfp in tqdm(range(1, 6))
+    ]
+    gdf = gpd.GeoDataFrame(pd.concat(parts, ignore_index=True), geometry="geometry", crs=parts[0].crs)
+    gdf = gdf[["SITE_ID", "site_name", "country", "lfp", "geometry"]].rename(columns={"SITE_ID": "site_id"})
+
+    # Save the dated archive snapshot, then duplicate it to the current file.
+    upload_gdf(bucket, gdf, archive_file_name, project_id=project, verbose=verbose)
+    duplicate_blob(bucket, archive_file_name, sites_file_name, project_id=project, verbose=verbose)
+
+    # Initialize the last-updated baseline so the first update knows what to fetch since.
+    last_updated_date = last_updated_date or datetime.date.today().isoformat()
+    upload_gdf(
+        bucket,
+        pd.DataFrame([{"last_updated": last_updated_date}]),
+        last_updated_file_name,
+        project_id=project,
+        verbose=verbose,
+    )
 
 
 def get_updated_site_index(
@@ -169,18 +204,18 @@ def upsert_protected_seas_sites(
 
 def update_protected_seas_data(
     sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
+    archive_file_name: str = ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
     last_updated_file_name: str = PROTECTED_SEAS_LAST_UPDATED_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    last_updated_meta = read_json_from_gcs(bucket, last_updated_file_name, verbose=verbose)
-    last_update_date = last_updated_meta["last_updated"]
+    last_updated_df = pd.read_parquet(f"gs://{bucket}/{last_updated_file_name}")
+    last_update_date = last_updated_df["last_updated"].iloc[0]
 
     if verbose:
         logger.info({"message": f"fetching Protected Seas sites updated since {last_update_date}"})
-    current = read_json_from_gcs(bucket, sites_file_name, verbose=verbose)
-    current_gdf = gpd.GeoDataFrame.from_features(current["features"], crs="EPSG:4326")
+    current_gdf = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
 
     changed, _ = fetch_updated_site_details(last_update_date)
 
@@ -193,10 +228,18 @@ def update_protected_seas_data(
 
     updated = upsert_protected_seas_sites(current_gdf, changed)
 
-    upload_gdf(bucket, updated, sites_file_name, project_id=project, verbose=verbose)
+    # Save the dated archive snapshot, then duplicate it to the current file.
+    upload_gdf(bucket, updated, archive_file_name, project_id=project, verbose=verbose)
+    duplicate_blob(bucket, archive_file_name, sites_file_name, project_id=project, verbose=verbose)
 
     today = datetime.date.today().isoformat()
-    write_json_to_gcs(bucket, last_updated_file_name, {"last_updated": today}, verbose=verbose)
+    upload_gdf(
+        bucket,
+        pd.DataFrame([{"last_updated": today}]),
+        last_updated_file_name,
+        project_id=project,
+        verbose=verbose,
+    )
 
     if verbose:
         logger.info({"message": f"Protected Seas data updated; last_updated set to {today}"})
