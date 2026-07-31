@@ -91,7 +91,7 @@ def create_seamounts_subtable(
 
     if verbose:
         logger.info({"message": "loading eezs"})
-    eez_file_name = eez_file.replace(".geojson", f"_{tolerance}.geojson")
+    eez_file_name = add_tolerance_suffix(eez_file, tolerance)
     eez = read_json_df(BUCKET, eez_file_name, verbose)
 
     if verbose:
@@ -188,7 +188,7 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading eez/land union"})
-    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
     country_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
     if verbose:
@@ -418,7 +418,7 @@ def create_climate_resilient_corals_subtable(
     """
     if verbose:
         logger.info({"message": "loading GADM/EEZ union for coral coverage"})
-    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
     regions = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
     if verbose:
@@ -434,7 +434,7 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "combining marine + terrestrial PAs (full WDPA/OECM estate)"})
-    terrestrial_pa_file_name = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    terrestrial_pa_file_name = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
     terrestrial_raw = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
     terrestrial_raw = terrestrial_raw[terrestrial_raw.intersects(coral_extent)]
     terrestrial_pas = (

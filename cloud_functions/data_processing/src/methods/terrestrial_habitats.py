@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 
+from src.core.commons import add_tolerance_suffix
 from src.core.land_cover_params import LAND_COVER_CLASSES, terrestrial_tolerance
 from src.core.params import (
     BUCKET,
@@ -41,8 +42,8 @@ def generate_terrestrial_biome_stats_pa(
     verbose: bool = True,
     tolerance: float = terrestrial_tolerance,
 ):
-    terrestrial_pa_file_name = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    terrestrial_pa_file_name = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
+    gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
 
     if verbose:
         logger.info({"message": f"loading GADM geometries from {gadm_file_name}"})

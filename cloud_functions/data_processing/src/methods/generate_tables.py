@@ -189,7 +189,7 @@ def generate_habitat_protection_table(
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
+    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, marine_tolerance)
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 

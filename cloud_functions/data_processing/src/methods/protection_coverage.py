@@ -38,7 +38,7 @@ def compute_iho_protection_coverage(
     verbose: bool = True,
 ) -> pd.DataFrame:
     iho_file = add_tolerance_suffix(iho_file_name, tolerance)
-    pa_file = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    pa_file = add_tolerance_suffix(marine_pa_file_name, tolerance)
 
     if verbose:
         logger.info({"message": f"loading IHO sea areas from gs://{bucket}/{iho_file}"})

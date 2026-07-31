@@ -1,7 +1,6 @@
 .DS_Store
 .jupyter_ystore.db
 package-lock.json
-diagram.drawio.png
 notebooks/
 cloud_functions/test/
 data/

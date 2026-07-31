@@ -158,7 +158,7 @@ def process_gadm_geoms(
 
         df = df.pipe(clean_geometries)
 
-        out_fn = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        out_fn = add_tolerance_suffix(gadm_file_name, tolerance)
         if verbose:
             logger.info({"message": f"uploading simplified GADM countries to {out_fn}"})
         upload_gdf(bucket, df, out_fn)
@@ -231,7 +231,7 @@ def process_eez_geoms(
 
         eez_by_sov = eez_by_sov.pipe(clean_geometries)
 
-        out_fn = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        out_fn = add_tolerance_suffix(eez_file_name, tolerance)
         if verbose:
             logger.info({"message": f"uploading eez by sovereign file to {out_fn}"})
         upload_gdf(bucket, eez_by_sov, out_fn)
@@ -248,7 +248,7 @@ def process_eez_geoms(
     eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
-    blob_name = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{TOLERANCES[1]}.geojson")
+    blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, TOLERANCES[1])
     if verbose:
         logger.info({"message": f"uploading eez with multi-sovereign file to {blob_name}"})
     upload_gdf(bucket, eez_multiple_sovs, blob_name)
@@ -439,7 +439,7 @@ def process_eez_land_union(
 
     eez_land_union = eez_land_union[["location", "geometry"]].pipe(clean_geometries)
 
-    out_fn = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    out_fn = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
     if verbose:
         logger.info({"message": f"uploading eez/land union to {out_fn}"})
     upload_gdf(bucket, eez_land_union, out_fn)
@@ -552,7 +552,7 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "loading eezs/gadm union"})
-    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
     gadm_eez_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
 
     if verbose:
@@ -771,7 +771,7 @@ def generate_terrestrial_biome_stats_country(
     tolerance: float = terrestrial_tolerance,
     verbose: bool = True,
 ):
-    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
 
     logger.info({"message": "loading and simplifying GADM geometries"})
     gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)

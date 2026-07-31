@@ -22,6 +22,7 @@ from tqdm.auto import tqdm
 
 from src.core.commons import (
     RetryFailed,
+    add_tolerance_suffix,
     download_file_with_progress,
     retry_and_alert,
     unzip_file,
@@ -660,7 +661,7 @@ def download_and_process_protected_planet_pas(
         ]
 
         # Save terrestrial PAs
-        ter_out_fn = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        ter_out_fn = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
         if verbose:
             logger.info({"message": f"saving and duplicating terrestrial PAs to {ter_out_fn}"})
 
@@ -674,7 +675,7 @@ def download_and_process_protected_planet_pas(
         duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
 
         # Save marine PAs
-        mar_out_fn = marine_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        mar_out_fn = add_tolerance_suffix(marine_pa_file_name, tolerance)
         if verbose:
             logger.info({"message": f"saving and duplicating marine PAs to {mar_out_fn}"})
 
