@@ -73,7 +73,7 @@ def _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recor
     # Seas API); these tests exercise the country/region tabular logic only.
     monkeypatch.setattr(
         gen_tables,
-        "get_iho_region_stats",
+        "get_iho_fishing_protection_region_stats",
         lambda *a, **kw: pd.DataFrame(
             columns=["location", "area", "fishing_protection_level", "pct", "total_area"]
         ),
