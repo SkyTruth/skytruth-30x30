@@ -76,7 +76,7 @@ def _run_generate(monkeypatch, mpatlas_country, mpatlas_global, combined_regions
     # exercise the country/region tabular logic only.
     monkeypatch.setattr(
         gen_tables,
-        "compute_iho_protection_level_coverage",
+        "compute_iho_protection_level",
         lambda *a, **kw: pd.DataFrame(
             columns=["location", "total_area", "area", "mpaa_protection_level", "percentage"]
         ),

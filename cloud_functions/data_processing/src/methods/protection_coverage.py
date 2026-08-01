@@ -122,7 +122,7 @@ def compute_iho_protection_coverage(
     return pd.DataFrame(results)
 
 
-def compute_iho_protection_level_coverage(
+def compute_iho_protection_level(
     bucket: str = BUCKET,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     mpa_file_name: str = MPATLAS_FILE_NAME,

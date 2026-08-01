@@ -61,7 +61,7 @@ from src.methods.protected_areas.protected_areas import (
 from src.methods.protection_coverage import (
     compute_country_global_coverage,
     compute_iho_protection_coverage,
-    compute_iho_protection_level_coverage,
+    compute_iho_protection_level,
 )
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
@@ -405,7 +405,7 @@ def generate_marine_protection_level_stats_table(
 
     if verbose:
         logger.info({"message": "computing IHO sea area protection level stats"})
-    iho_protection_level = compute_iho_protection_level_coverage(
+    iho_protection_level = compute_iho_protection_level(
         bucket=bucket,
         mpa_file_name=mpa_file_name,
         tolerance=tolerance,
