@@ -444,6 +444,7 @@ def process_eez_land_union(
         logger.info({"message": f"uploading eez/land union to {out_fn}"})
     upload_gdf(bucket, eez_land_union, out_fn)
 
+
 def stitch_mediterannean(iho):
     iho = iho.copy()
 
@@ -466,6 +467,7 @@ def stitch_mediterannean(iho):
     iho = pd.concat((iho, medi), axis=0, ignore_index=True)
 
     return iho
+
 
 def process_iho_sea_areas(
     iho_params: dict = IHO_SEA_AREAS_PARAMS,
