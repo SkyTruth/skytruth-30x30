@@ -444,6 +444,28 @@ def process_eez_land_union(
         logger.info({"message": f"uploading eez/land union to {out_fn}"})
     upload_gdf(bucket, eez_land_union, out_fn)
 
+def stitch_mediterannean(iho):
+    iho = iho.copy()
+
+    medi_mrgid = [4280, 3315, 3351, 4279, 3322, 3324, 3346, 3369, 3386, 3314, 3363]
+    medi = iho[iho["MRGID"].isin(medi_mrgid)].dissolve().reset_index(drop=True)
+
+    # Recompute the geometry-derived fields from the dissolved polygon
+    bounds = medi.total_bounds  # (minx, miny, maxx, maxy) in the layer CRS (4326)
+    centroid = medi.to_crs(epsg=6933).geometry.centroid.to_crs(epsg=4326).iloc[0]
+
+    medi["NAME"] = "Mediterranean Region"
+    medi["ID"] = None
+    medi["MRGID"] = "MEDI"
+    medi["Longitude"] = centroid.x
+    medi["Latitude"] = centroid.y
+    medi["min_X"], medi["min_Y"], medi["max_X"], medi["max_Y"] = bounds
+    medi["total_area"] = medi.to_crs(epsg=6933).geometry.area.iloc[0] / 1e6
+
+    iho["MRGID"] = iho["MRGID"].astype(str)
+    iho = pd.concat((iho, medi), axis=0, ignore_index=True)
+
+    return iho
 
 def process_iho_sea_areas(
     iho_params: dict = IHO_SEA_AREAS_PARAMS,
@@ -456,6 +478,7 @@ def process_iho_sea_areas(
         logger.info({"message": f"loading IHO sea areas from {iho_params['zipfile_name']}"})
 
     iho = load_marine_regions(iho_params, bucket)
+    iho = stitch_mediterannean(iho)
     original_geometry = iho["geometry"].copy()
 
     for tolerance in tolerances:
