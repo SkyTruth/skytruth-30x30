@@ -810,9 +810,9 @@ def generate_terrestrial_biome_stats_country(
         logger.info({"message": "getting country habitat stats"})
     country_stats = []
     with rasterio.open(local_raster_path) as src:
-        for country in tqdm(gadm["GID_0"].unique()):
+        for country in tqdm(gadm["location"].unique()):
             st = datetime.datetime.now()
-            country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
+            country_poly = gadm[gadm["location"] == country].iloc[0]["geometry"]
             tile_geoms = tile_geometry(country_poly, src.transform)
 
             results = []
