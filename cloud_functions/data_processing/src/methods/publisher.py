@@ -9,6 +9,7 @@ from google.protobuf import timestamp_pb2
 
 from src.core import map_params
 from src.core.commons import send_slack_alert
+from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
@@ -192,11 +193,7 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
         {
             "METHOD": "download_protected_seas",
             **task_config,
-        },
-        {
-            "METHOD": "download_protected_planet_country",
-            **task_config,
-        },
+        }
     ]
 
     for tolerance in TOLERANCES:
@@ -346,7 +343,7 @@ def dispatch_publisher(
                 chunk_size=CHUNK_SIZE,
                 verbose=verbose,
             )
-            step_list = []
+            step_list = ["process_iho_sea_areas"]
 
         case "process_gadm":
             process_gadm_geoms(verbose=verbose)
@@ -409,12 +406,14 @@ def dispatch_publisher(
                 tolerance=tolerance,
                 batch_size=1000,
             )
-            if tolerance == TOLERANCES[0]:
+            if tolerance == terrestrial_tolerance:
                 step_list = [
                     "generate_protected_areas_table",
                     "generate_terrestrial_biome_stats",
                     "generate_eez_minus_mpa",
                 ]
+            if tolerance == marine_tolerance:
+                step_list = ["download_protected_planet_country"]
 
         # ------------------
         #   Table updates
