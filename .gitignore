@@ -1,7 +1,0 @@
-.DS_Store
-.jupyter_ystore.db
-package-lock.json
-notebooks/
-cloud_functions/test/
-data/
-infrastructure/base/modules/pubsub_queue/
