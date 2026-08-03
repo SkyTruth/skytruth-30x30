@@ -11,6 +11,7 @@ GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
 
 today_formatted = datetime.datetime.today().strftime("%b%Y")
 
+
 # ------------------------------------------------------------
 #                    Marine Regions
 # ------------------------------------------------------------
@@ -81,7 +82,13 @@ GADM_FILE_NAME = "static/GADM_processed.geojson"
 GADM_EEZ_UNION_FILE_NAME = "static/GADM_eez_union.geojson"
 
 # ------------------------------------------------------------
-#        Locations (combined Marine Regions and GADM)
+#                    IHO SEAS
+# ------------------------------------------------------------
+
+IHO_SEA_AREAS_FILE_NAME = "static/iho_sea_areas_processed.geojson"
+
+# ------------------------------------------------------------
+#   Locations (combined Marine Regions, GADM, and IHO seas)
 # ------------------------------------------------------------
 LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
 
