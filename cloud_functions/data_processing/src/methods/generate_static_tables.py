@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from shapely.ops import unary_union
 
-from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
+from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance, iho_sea_locations_tolerance
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
@@ -38,9 +38,9 @@ def generate_locations_table(
 
     eez_file = eez_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
     gadm_file = gadm_file_name.replace(".geojson", f"_{terrestrial_tolerance}.geojson")
-    iho_sea_areas_file = iho_sea_areas_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
+    iho_sea_areas_file = iho_sea_areas_file_name.replace(".geojson", f"_{iho_sea_locations_tolerance}.geojson")
 
-    # including this to bypass 
+    # including this to bypass
 
     eez = read_json_df(bucket_name=bucket, filename=eez_file, verbose=verbose)
     gadm = read_json_df(bucket_name=bucket, filename=gadm_file, verbose=verbose)
@@ -88,14 +88,13 @@ def generate_locations_table(
         .pipe(_add_groups, group_map, "country")
         .pipe(_add_groups, region_map, "region")
     )
-    
+
     if verbose:
         logger.info({"message": "Processing IHO Sea Areas"})
-    iho_sea_areas = (
-        iho_sea_areas.rename(
-            columns={"MRGID":"code","NAME":"name", "area":"total_marine_area"})
+    iho_sea_areas = iho_sea_areas.rename(
+        columns={"MRGID": "code", "NAME": "name", "area": "total_marine_area"}
     )
-    
+    iho_sea_areas["total_marine_area"] = pd.to_numeric(iho_sea_areas["total_marine_area"], errors="coerce")
 
     # Add total areas and bounds where needed
     gadm["total_terrestrial_area"] = gadm["geometry"].apply(get_area_km2).round(0).astype("Int64")
@@ -111,7 +110,15 @@ def generate_locations_table(
     eez["marine_bounds"] = eez.geometry.bounds.apply(round_to_list, axis=1)
 
     # Adding bounds based on existing min/max coordinates
-    iho_sea_areas["marine_bounds"] = iho_sea_areas[["min_X", "min_Y", "max_X", "max_Y"]].astype(str).agg(",".join, axis=1)
+    iho_sea_areas["marine_bounds"] = (
+        iho_sea_areas[["min_X", "min_Y", "max_X", "max_Y"]].astype(str).agg(",".join, axis=1)
+    )
+
+    # Adding None for terrestrial bounds
+    iho_sea_areas["terrestrial_bounds"] = None
+
+    # Adding empty strings for translations
+    iho_sea_areas[["name_es", "name_fr", "name_pt"]] = ""
 
     # Put it all together
     locs = (
@@ -124,7 +131,11 @@ def generate_locations_table(
         .drop(columns=["geometry", "GID_0"])
     )
 
-    locs = pd.concat([locs, iho_sea_areas[["type", "marine_bounds", "total_marine_area", "code", "name"]]], ignore_index=True)
+    locs = pd.concat(
+        [locs, iho_sea_areas[["type", "terrestrial_bounds", "marine_bounds", "total_marine_area", "code", 
+                                "name", "name_es", "name_fr", "name_pt"]]],
+        ignore_index=True,
+    )
 
     # Typesafe defaults that might be missing after merger
     locs["has_shared_marine_area"] = (

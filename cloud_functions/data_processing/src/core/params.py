@@ -90,7 +90,7 @@ IHO_SEA_AREAS_FILE_NAME = "static/iho_sea_areas_processed.geojson"
 # ------------------------------------------------------------
 #   Locations (combined Marine Regions, GADM, and IHO seas)
 # ------------------------------------------------------------
-LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
+LOCATIONS_FILE_NAME = "tables/TEST_locations_processed.csv"
 
 
 # ------------------------------------------------------------

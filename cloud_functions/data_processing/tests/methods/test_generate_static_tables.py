@@ -29,6 +29,30 @@ def mock_gadm_gdf(crs):
         crs=crs,
     )
 
+@pytest.fixture
+def mock_iho_seas_gdf(crs):
+    """
+    Minimal bodies of water frame
+    """
+    return gpd.GeoDataFrame(
+        {
+            "NAME":["Gulf of Mexico", "Caribbean Sea"],
+            "ID": ["26", "27"],
+            "Longitude": ["-90.37958525236", "-74.67801130419"],
+            "Latitude": ["24.94231562654", "15.31030445709"],
+            "min_X": ["-98.05392181844", "-89.41292977359"],
+            "min_Y": ["17.40680801848", "7.70979893208"],
+            "max_X": ["-80.43304073784", "-59.42160093753"],
+            "max_Y": ["31.46484375034", "22.70652472953"],
+            "area": ["1566759", "2852792"],
+            "MRGID": ["4288", "4287"],
+            "geometry": [
+                Point(-90.37958525236, 24.94231562654).buffer(2.0),
+                Point(-74.67801130419, 15.31030445709).buffer(1.5),
+            ],
+        },
+        crs=crs
+    )
 
 @pytest.fixture
 def mock_related_countries_map():
@@ -73,7 +97,7 @@ def upload_recorder():
 
 
 # Mocks to patch in for functions and pas the fixtures
-def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix):
+def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, mock_iho_seas_gdf, eez_suffix, gadm_suffix, iho_seas_suffix):
     """
     Return the right GeoDataFrame based on the filename the function asks for.
     We detect which one by the suffix (tolerance is part of the suffix).
@@ -84,6 +108,8 @@ def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suff
             return mock_eez_by_loc_gdf.copy()
         if filename.endswith(gadm_suffix):
             return mock_gadm_gdf.copy()
+        if filename.endswith(iho_seas_suffix):
+            return mock_iho_seas_gdf.copy()
         raise AssertionError(f"Unexpected filename: {filename}")
 
     return _read_json_df
@@ -158,6 +184,7 @@ def test_generate_locations_table_happy(
     monkeypatch,
     mock_eez_by_loc_gdf,
     mock_gadm_gdf,
+    mock_iho_seas_gdf,
     mock_related_countries_map,
     mock_regions_map,
     mock_locs_translations_df,
@@ -168,16 +195,18 @@ def test_generate_locations_table_happy(
     # Fix tolerances so the code resolves eez/gadm filenames deterministically
     monkeypatch.setattr(gen_static_tbl, "marine_tolerance", 0.1, raising=True)
     monkeypatch.setattr(gen_static_tbl, "terrestrial_tolerance", 0.2, raising=True)
+    monkeypatch.setattr(gen_static_tbl, "iho_sea_locations_tolerance", 0.3, raising=True)
 
     # The filenames the function will compute internally
     eez_suffix = gen_static_tbl.EEZ_FILE_NAME.replace(".geojson", "_0.1.geojson")
     gadm_suffix = gen_static_tbl.GADM_FILE_NAME.replace(".geojson", "_0.2.geojson")
+    iho_seas_suffix = gen_static_tbl.IHO_SEA_AREAS_FILE_NAME.replace(".geojson", "_0.3.geojson")
 
     # Patch I/O internal bu imported helpers
     monkeypatch.setattr(
         gen_static_tbl,
         "read_json_df",
-        _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix),
+        _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, mock_iho_seas_gdf, eez_suffix, gadm_suffix, iho_seas_suffix),
         raising=True,
     )
     monkeypatch.setattr(
@@ -239,6 +268,7 @@ def test_generate_locations_table_happy(
 def test_generate_locations_table_read_failure(
     monkeypatch,
     mock_gadm_gdf,
+    mock_iho_seas_gdf,
     mock_related_countries_map,
     mock_regions_map,
     mock_locs_translations_df,

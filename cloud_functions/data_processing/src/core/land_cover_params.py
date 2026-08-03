@@ -10,6 +10,7 @@ terrestrial_tolerance = (
     0.001  # simplification tolerance (in degrees) for PA polygons; proportional to resolution_m
 )
 marine_tolerance = 0.0001
+iho_sea_locations_tolerance = 0.001
 
 LAND_COVER_CLASSES = {
     1: "Forest",
