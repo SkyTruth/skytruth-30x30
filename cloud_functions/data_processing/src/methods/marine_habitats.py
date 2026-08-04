@@ -198,7 +198,7 @@ def create_mangroves_subtable(
     )
     iho["location"] = iho["MRGID"].astype(str)
 
-    regions = gpd.GeoDataFrame(
+    locations = gpd.GeoDataFrame(
         pd.concat(
             [country_union[["location", "geometry"]], iho[["location", "geometry"]]],
             ignore_index=True,
@@ -220,8 +220,8 @@ def create_mangroves_subtable(
         logger.info({"message": "getting protected mangrove area by country"})
     mpa_locations = set(mpa["location"])
     protected_mangroves = []
-    for loc in tqdm(list(sorted(set(regions["location"].dropna())))):
-        location_geom = regions[regions["location"] == loc].iloc[0].geometry
+    for loc in tqdm(list(sorted(set(locations["location"].dropna())))):
+        location_geom = locations[locations["location"] == loc].iloc[0].geometry
 
         location_mangroves = mangroves_by_location[mangroves_by_location["location"] == loc]
         if len(location_mangroves) > 0:
@@ -255,15 +255,15 @@ def create_mangroves_subtable(
         / protected_mangroves["total_mangrove_area_km2"]
     )
 
-    combined_regions = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
+    combined_locations = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
 
     mangrove_habitat = pd.DataFrame(
         [
             stat
-            for loc in combined_regions
+            for loc in combined_locations
             if (
                 stat := get_group_stats(
-                    protected_mangroves, loc, combined_regions, global_mangrove_area
+                    protected_mangroves, loc, combined_locations, global_mangrove_area
                 )
             )
             is not None
