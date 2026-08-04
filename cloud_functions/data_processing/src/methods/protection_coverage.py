@@ -57,14 +57,14 @@ def compute_iho_protection_coverage(
     sindex = pas_proj.sindex
     results = []
 
-    for _, region in iho_proj.iterrows():
+    for _, sea in iho_proj.iterrows():
         base = {
-            "location": str(region["MRGID"]),
+            "location": str(sea["MRGID"]),
             "environment": "marine",
-            "total_area": round(region.geometry.area / 1e6, 2),
+            "total_area": round(sea.geometry.area / 1e6, 2),
         }
 
-        candidates = list(sindex.intersection(region.geometry.bounds))
+        candidates = list(sindex.intersection(sea.geometry.bounds))
         if not candidates:
             results.append(
                 {
@@ -79,7 +79,7 @@ def compute_iho_protection_coverage(
             continue
 
         actual = pas_proj.iloc[candidates]
-        actual = actual[actual.intersects(region.geometry)]
+        actual = actual[actual.intersects(sea.geometry)]
         if actual.empty:
             results.append(
                 {
@@ -100,9 +100,9 @@ def compute_iho_protection_coverage(
         pa_union = unary_union(pa.geometry) if not pa.empty else None
         oecm_union = unary_union(oecm.geometry) if not oecm.empty else None
 
-        protected_area = region.geometry.intersection(combined_union).area / 1e6
-        pa_area = region.geometry.intersection(pa_union).area / 1e6 if pa_union else 0.0
-        oecm_area = region.geometry.intersection(oecm_union).area / 1e6 if oecm_union else 0.0
+        protected_area = sea.geometry.intersection(combined_union).area / 1e6
+        pa_area = sea.geometry.intersection(pa_union).area / 1e6 if pa_union else 0.0
+        oecm_area = sea.geometry.intersection(oecm_union).area / 1e6 if oecm_union else 0.0
 
         coverage = (protected_area / base["total_area"]) * 100 if base["total_area"] else 0.0
         pas_pct = (pa_area / protected_area) * 100 if protected_area else 0.0
