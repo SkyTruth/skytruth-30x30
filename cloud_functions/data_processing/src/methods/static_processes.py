@@ -48,7 +48,7 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     IHO_SEA_AREAS_FILE_NAME,
     IHO_SEA_AREAS_PARAMS,
-    MANGROVES_BY_REGION_FILE_NAME,
+    MANGROVES_BY_LOCATION_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
@@ -557,7 +557,7 @@ def download_marine_habitats(
 
 
 def process_mangroves(
-    mangroves_by_region_file_name: str = MANGROVES_BY_REGION_FILE_NAME,
+    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
     mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
     gadm_eez_union_file_name: dict = GADM_EEZ_UNION_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
@@ -619,7 +619,7 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "generating mangrove polygons by country and IHO region"})
-    mangroves_by_region = []
+    mangroves_by_location = []
     for cnt in tqdm(list(sorted(set(regions["location"].dropna())))):
         country_geom = regions[regions["location"] == cnt].iloc[0].geometry
 
@@ -632,29 +632,29 @@ def process_mangroves(
         tree = STRtree(mangrove_geoms)
 
         indices = tree.query(country_geom, predicate="intersects")
-        region_mangroves = mangroves_clipped.iloc[indices].copy()
-        region_mangroves["geometry"] = region_mangroves.geometry.apply(make_valid)
-        if len(region_mangroves) > 0:
+        location_mangroves = mangroves_clipped.iloc[indices].copy()
+        location_mangroves["geometry"] = location_mangroves.geometry.apply(make_valid)
+        if len(location_mangroves) > 0:
             mangrove_geom = safe_union(
-                region_mangroves, batch_size=batch_size, simplify_tolerance=tolerance
+                location_mangroves, batch_size=batch_size, simplify_tolerance=tolerance
             )
-            mangroves_by_region.append(
+            mangroves_by_location.append(
                 {
                     "location": cnt,
-                    "n_mangrove_polygons": len(region_mangroves),
+                    "n_mangrove_polygons": len(location_mangroves),
                     "bbox": country_geom.bounds,
-                    "mangrove_area_km2": region_mangroves.to_crs("EPSG:6933").area.sum() / 1e6,
+                    "mangrove_area_km2": location_mangroves.to_crs("EPSG:6933").area.sum() / 1e6,
                     "geometry": mangrove_geom,
                 }
             )
 
-    mangroves_by_region = gpd.GeoDataFrame(
-        mangroves_by_region, geometry="geometry", crs="EPSG:4326"
+    mangroves_by_location = gpd.GeoDataFrame(
+        mangroves_by_location, geometry="geometry", crs="EPSG:4326"
     )
     upload_gdf(
         bucket,
-        mangroves_by_region,
-        mangroves_by_region_file_name,
+        mangroves_by_location,
+        mangroves_by_location_file_name,
         project_id=project,
         verbose=True,
         timeout=600,

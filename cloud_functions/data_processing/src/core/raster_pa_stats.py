@@ -1,7 +1,7 @@
 """Shared helpers for computing raster pixel-class areas inside protected areas.
 
 These were originally inlined in `methods/terrestrial_habitats.py`; they are
-generic enough to be reused for any region-by-region raster + PA stats job
+generic enough to be reused for any location-by-location raster + PA stats job
 (e.g., the climate-resilient corals marine habitat).
 """
 
@@ -68,36 +68,36 @@ def clip_geoms(tile_geoms, polygons_gdf: gpd.GeoDataFrame):
     return clipped_geoms
 
 
-def compute_region_class_areas(
-    region,
-    region_geom,
+def compute_location_class_areas(
+    location,
+    location_geom,
     raster_path: str,
     class_map: dict,
     polygons_gdf: gpd.GeoDataFrame | None = None,
     tile_size_pixels: int = 8192,
     include_zero: bool = False,
 ):
-    """Compute raster pixel-class areas (km²) within a single region.
+    """Compute raster pixel-class areas (km²) within a single location.
 
     If `polygons_gdf` is provided, results are restricted to the intersection of
-    `region_geom` with the union of those polygons (use this for protected
-    area stats). If `polygons_gdf` is None or empty, the region totals over
-    the full `region_geom` are returned.
+    `location_geom` with the union of those polygons (use this for protected
+    area stats). If `polygons_gdf` is None or empty, the location totals over
+    the full `location_geom` are returned.
 
     Parameters
     ----------
-    region : Any
-        Region identifier; written into the returned dict under "location".
-    region_geom : shapely.Geometry
-        Region boundary.
+    location : Any
+        Location identifier; written into the returned dict under "location".
+    location_geom : shapely.Geometry
+        Location boundary.
     raster_path : str
         Local path to the raster file.
     class_map : dict
         Maps raster pixel value (int) to class name (str).
     polygons_gdf : gpd.GeoDataFrame, optional
-        Polygons (e.g., PAs) already filtered to this region.
+        Polygons (e.g., PAs) already filtered to this location.
     tile_size_pixels : int
-        Tile edge length used to break large regions into manageable chunks.
+        Tile edge length used to break large locations into manageable chunks.
     include_zero : bool
         Pass through to `get_cover_areas`. Set True when 0 is a real class
         (e.g., binary 0/1 rasters).
@@ -105,33 +105,33 @@ def compute_region_class_areas(
     Returns
     -------
     dict | None
-        {"location": region, <class_name>: km², ..., "total": km²} or None
+        {"location": location, <class_name>: km², ..., "total": km²} or None
         if no valid pixels were found.
     """
     try:
         with rasterio.open(raster_path) as src:
-            # Skip silently if the region is entirely outside raster coverage.
-            # Without this, every non-overlapping region would hit
+            # Skip silently if the location is entirely outside raster coverage.
+            # Without this, every non-overlapping location would hit
             # `rasterio.mask`'s "Input shapes do not overlap raster" ValueError
             # below and spam the warning log.
             raster_bounds = box(*src.bounds)
-            if not region_geom.intersects(raster_bounds):
+            if not location_geom.intersects(raster_bounds):
                 return None
 
             tile_geoms = [
                 make_valid(tile)
                 for tile in tile_geometry(
-                    region_geom, src.transform, tile_size_pixels=tile_size_pixels
+                    location_geom, src.transform, tile_size_pixels=tile_size_pixels
                 )
             ]
 
             if polygons_gdf is None:
-                # No filter: cover the entire region geometry.
+                # No filter: cover the entire location geometry.
                 clean_geoms = []
                 for tile in tile_geoms:
                     clean_geoms.extend(extract_valid_polygons(tile))
             else:
-                # Filter to the region ∩ polygons union. An empty `polygons_gdf`
+                # Filter to the location ∩ polygons union. An empty `polygons_gdf`
                 # naturally yields no clean_geoms and the function returns None.
                 clipped = clip_geoms(tile_geoms, polygons_gdf)
                 clean_geoms = []
@@ -139,7 +139,7 @@ def compute_region_class_areas(
                     clean_geoms.extend(extract_valid_polygons(geom))
 
             # Drop polygons that fall entirely outside raster coverage. Large
-            # EEZs (e.g. ATF) have valid region fragments that lie far from any
+            # EEZs (e.g. ATF) have valid location fragments that lie far from any
             # raster pixels; without this filter `rasterio.mask` raises
             # "Input shapes do not overlap raster" for each one.
             clean_geoms = [poly for poly in clean_geoms if poly.intersects(raster_bounds)]
@@ -149,7 +149,7 @@ def compute_region_class_areas(
                 entry = get_cover_areas(
                     src,
                     [mapping(poly)],
-                    region,
+                    location,
                     "location",
                     class_map,
                     include_zero=include_zero,
@@ -163,68 +163,68 @@ def compute_region_class_areas(
             results_df = pd.DataFrame(results)
             class_columns = [column for column in results_df.columns if column != "location"]
             summed = results_df[class_columns].agg("sum").to_dict()
-            summed["location"] = region
+            summed["location"] = location
             return summed
     except Exception as exc:
         logger.warning(
             {
-                "message": f"Error processing {region}: {exc}",
+                "message": f"Error processing {location}: {exc}",
                 "traceback": traceback.format_exc(),
             }
         )
         return None
 
 
-def compute_class_areas_by_region(
+def compute_class_areas_by_location(
     raster_path: str,
     regions_gdf: gpd.GeoDataFrame,
     class_map: dict,
     region_col: str = "location",
     polygons_gdf: gpd.GeoDataFrame | None = None,
-    polygon_region_col: str | None = None,
+    polygon_location_col: str | None = None,
     tile_size_pixels: int = 8192,
     include_zero: bool = False,
     n_jobs: int = -1,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """For every region in `regions_gdf`, compute raster class areas.
+    """For every location in `regions_gdf`, compute raster class areas.
 
     When `polygons_gdf` is supplied, results are restricted to the intersection
-    of each region's region geometry with the polygons it contains (matched by
-    `polygon_region_col`). Pass `polygons_gdf=None` to get region totals.
+    of each location's region geometry with the polygons it contains (matched by
+    `polygon_location_col`). Pass `polygons_gdf=None` to get location totals.
     e.g. Without `polygons_gdf` it produces total area of of each pixel class within
-    the region. With `polygons_gdf` of protected areas it produces area of protected
-    pixel class within each region.
+    the location. With `polygons_gdf` of protected areas it produces area of protected
+    pixel class within each location.
 
-    Returns a DataFrame with one row per processed region, columns:
+    Returns a DataFrame with one row per processed location, columns:
     ["location", *class names that appeared, "total"].
     """
-    if polygons_gdf is not None and polygon_region_col is None:
-        raise ValueError("polygon_region_col must be provided when polygons_gdf is given")
+    if polygons_gdf is not None and polygon_location_col is None:
+        raise ValueError("polygon_location_col must be provided when polygons_gdf is given")
 
-    regions = regions_gdf[region_col].unique().tolist()
+    locations = regions_gdf[region_col].unique().tolist()
 
-    def _job(region):
-        region_geom = regions_gdf.loc[regions_gdf[region_col] == region, "geometry"].iloc[0]
-        region_polygons = (
-            polygons_gdf[polygons_gdf[polygon_region_col] == region]
+    def _job(location):
+        location_geom = regions_gdf.loc[regions_gdf[region_col] == location, "geometry"].iloc[0]
+        location_polygons = (
+            polygons_gdf[polygons_gdf[polygon_location_col] == location]
             if polygons_gdf is not None
             else None
         )
-        return compute_region_class_areas(
-            region=region,
-            region_geom=region_geom,
+        return compute_location_class_areas(
+            location=location,
+            location_geom=location_geom,
             raster_path=raster_path,
             class_map=class_map,
-            polygons_gdf=region_polygons,
+            polygons_gdf=location_polygons,
             tile_size_pixels=tile_size_pixels,
             include_zero=include_zero,
         )
 
-    iterable = tqdm(regions) if verbose else regions
+    iterable = tqdm(locations) if verbose else locations
     try:
         results = Parallel(n_jobs=n_jobs, backend="loky")(
-            delayed(_job)(region) for region in iterable
+            delayed(_job)(location) for location in iterable
         )
     except Exception as exc:
         # Joblib's loky pool can die hard (OOM-killed worker, segfault in a C
@@ -232,7 +232,7 @@ def compute_class_areas_by_region(
         # the failure isn't silent at the call site.
         logger.error(
             {
-                "message": "compute_class_areas_by_region parallel pool failed",
+                "message": "compute_class_areas_by_location parallel pool failed",
                 "exception": str(exc),
                 "traceback": traceback.format_exc(),
             }
@@ -241,8 +241,8 @@ def compute_class_areas_by_region(
 
     stats_df = pd.DataFrame([result for result in results if result is not None])
     if not stats_df.empty:
-        # Classes absent in some regions come back as NaN after concat; downstream
-        # callers expect 0 for "this class had no pixels in this region".
+        # Classes absent in some locations come back as NaN after concat; downstream
+        # callers expect 0 for "this class had no pixels in this location".
         class_columns = [column for column in stats_df.columns if column != "location"]
         stats_df[class_columns] = stats_df[class_columns].fillna(0)
     return stats_df

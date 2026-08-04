@@ -7,8 +7,8 @@ from shapely.geometry import GeometryCollection, LineString, MultiPolygon, Point
 
 from src.core.raster_pa_stats import (
     clip_geoms,
-    compute_class_areas_by_region,
-    compute_region_class_areas,
+    compute_class_areas_by_location,
+    compute_location_class_areas,
     estimate_masked_pixel_count,
     extract_valid_polygons,
 )
@@ -114,7 +114,7 @@ def test_estimate_masked_pixel_count(tmp_path):
         assert count == 50
 
 
-# ---------- compute_region_class_areas ----------
+# ---------- compute_location_class_areas ----------
 
 
 @pytest.fixture
@@ -127,12 +127,12 @@ def binary_coral_raster(tmp_path):
     return path
 
 
-def test_compute_region_class_areas_no_pa_returns_both_classes(binary_coral_raster):
+def test_compute_location_class_areas_no_pa_returns_both_classes(binary_coral_raster):
     country_geom = box(-10, -10, 10, 10)
 
-    result = compute_region_class_areas(
-        region="USA",
-        region_geom=country_geom,
+    result = compute_location_class_areas(
+        location="USA",
+        location_geom=country_geom,
         raster_path=binary_coral_raster,
         class_map=CORAL_CLASS_MAP,
         polygons_gdf=None,
@@ -150,14 +150,14 @@ def test_compute_region_class_areas_no_pa_returns_both_classes(binary_coral_rast
     )
 
 
-def test_compute_region_class_areas_with_pa_filter(binary_coral_raster):
+def test_compute_location_class_areas_with_pa_filter(binary_coral_raster):
     country_geom = box(-10, -10, 10, 10)
     # PA covers only the top half (where climate-resilient pixels live).
     pa_gdf = gpd.GeoDataFrame(geometry=[box(-10, 0, 10, 10)], crs="EPSG:4326")
 
-    result = compute_region_class_areas(
-        region="USA",
-        region_geom=country_geom,
+    result = compute_location_class_areas(
+        location="USA",
+        location_geom=country_geom,
         raster_path=binary_coral_raster,
         class_map=CORAL_CLASS_MAP,
         polygons_gdf=pa_gdf,
@@ -170,14 +170,14 @@ def test_compute_region_class_areas_with_pa_filter(binary_coral_raster):
     assert result.get("other-corals", 0) == pytest.approx(0, abs=1e-6)
 
 
-def test_compute_region_class_areas_returns_none_without_include_zero_for_all_zeros(tmp_path):
-    """All-zero region with include_zero=False short-circuits to None (legacy behavior)."""
+def test_compute_location_class_areas_returns_none_without_include_zero_for_all_zeros(tmp_path):
+    """All-zero location with include_zero=False short-circuits to None (legacy behavior)."""
     path = str(tmp_path / "zeros.tif")
     _write_binary_raster(path, np.zeros((10, 10), dtype=np.uint8))
 
-    result = compute_region_class_areas(
-        region="USA",
-        region_geom=box(-10, -10, 10, 10),
+    result = compute_location_class_areas(
+        location="USA",
+        location_geom=box(-10, -10, 10, 10),
         raster_path=path,
         class_map=CORAL_CLASS_MAP,
         polygons_gdf=None,
@@ -186,12 +186,12 @@ def test_compute_region_class_areas_returns_none_without_include_zero_for_all_ze
     assert result is None
 
 
-def test_compute_region_class_areas_handles_empty_pa_gdf(binary_coral_raster):
+def test_compute_location_class_areas_handles_empty_pa_gdf(binary_coral_raster):
     """A country with no PAs should return None rather than raising."""
     pa_gdf = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
-    result = compute_region_class_areas(
-        region="USA",
-        region_geom=box(-10, -10, 10, 10),
+    result = compute_location_class_areas(
+        location="USA",
+        location_geom=box(-10, -10, 10, 10),
         raster_path=binary_coral_raster,
         class_map=CORAL_CLASS_MAP,
         polygons_gdf=pa_gdf,
@@ -212,7 +212,7 @@ def test_compute_class_areas_by_country_two_countries(binary_coral_raster):
         crs="EPSG:4326",
     )
 
-    df = compute_class_areas_by_region(
+    df = compute_class_areas_by_location(
         raster_path=binary_coral_raster,
         regions_gdf=regions,
         class_map=CORAL_CLASS_MAP,
@@ -243,13 +243,13 @@ def test_compute_class_areas_by_country_with_pa_filter(binary_coral_raster):
         {"location": ["USA"], "geometry": [box(-10, 0, 10, 10)]}, crs="EPSG:4326"
     )
 
-    df = compute_class_areas_by_region(
+    df = compute_class_areas_by_location(
         raster_path=binary_coral_raster,
         regions_gdf=regions,
         class_map=CORAL_CLASS_MAP,
         region_col="location",
         polygons_gdf=pas,
-        polygon_region_col="location",
+        polygon_location_col="location",
         include_zero=True,
         n_jobs=1,
         verbose=False,
@@ -261,19 +261,19 @@ def test_compute_class_areas_by_country_with_pa_filter(binary_coral_raster):
     assert row.get("other-corals", 0) == pytest.approx(0, abs=1e-6)
 
 
-def test_compute_class_areas_by_country_requires_polygon_region_col(binary_coral_raster):
+def test_compute_class_areas_by_country_requires_polygon_location_col(binary_coral_raster):
     regions = gpd.GeoDataFrame(
         {"location": ["USA"], "geometry": [box(-10, -10, 10, 10)]}, crs="EPSG:4326"
     )
     pas = gpd.GeoDataFrame(geometry=[box(0, 0, 1, 1)], crs="EPSG:4326")
 
-    with pytest.raises(ValueError, match="polygon_region_col"):
-        compute_class_areas_by_region(
+    with pytest.raises(ValueError, match="polygon_location_col"):
+        compute_class_areas_by_location(
             raster_path=binary_coral_raster,
             regions_gdf=regions,
             class_map=CORAL_CLASS_MAP,
             polygons_gdf=pas,
-            polygon_region_col=None,
+            polygon_location_col=None,
             n_jobs=1,
             verbose=False,
         )

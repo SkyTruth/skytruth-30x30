@@ -12,7 +12,7 @@ from src.core.params import (
     PROJECT,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
-from src.core.raster_pa_stats import compute_class_areas_by_region
+from src.core.raster_pa_stats import compute_class_areas_by_location
 from src.utils.gcp import download_file_from_gcs, read_dataframe, read_json_df, upload_dataframe
 from src.utils.logger import Logger
 
@@ -64,13 +64,13 @@ def generate_terrestrial_biome_stats_pa(
     if verbose:
         logger.info({"message": "calculating terrestrial habitat area within PAs"})
 
-    pa_stats = compute_class_areas_by_region(
+    pa_stats = compute_class_areas_by_location(
         raster_path=local_raster_path,
         regions_gdf=gadm,
         class_map=land_cover_classes,
         region_col="location",
         polygons_gdf=terrestrial_pas,
-        polygon_region_col=country_col,
+        polygon_location_col=country_col,
         tile_size_pixels=tile_size_pixels,
         verbose=verbose,
     )

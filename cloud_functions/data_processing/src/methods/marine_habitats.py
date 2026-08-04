@@ -21,14 +21,14 @@ from src.core.params import (
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     IHO_SEA_AREAS_FILE_NAME,
-    MANGROVES_BY_REGION_FILE_NAME,
+    MANGROVES_BY_LOCATION_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.processors import clean_geometries
-from src.core.raster_pa_stats import compute_class_areas_by_region, compute_region_class_areas
+from src.core.raster_pa_stats import compute_class_areas_by_location, compute_location_class_areas
 from src.utils.gcp import (
     download_file_from_gcs,
     load_zipped_shapefile_from_gcs,
@@ -159,7 +159,7 @@ def create_mangroves_subtable(
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
-    mangroves_by_region_file_name: str = MANGROVES_BY_REGION_FILE_NAME,
+    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
@@ -209,7 +209,7 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading pre-processed mangroves"})
-    mangroves_by_region = read_json_df(bucket, mangroves_by_region_file_name, verbose=True).pipe(
+    mangroves_by_location = read_json_df(bucket, mangroves_by_location_file_name, verbose=True).pipe(
         clean_geometries
     )
     global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)[
@@ -221,29 +221,29 @@ def create_mangroves_subtable(
     mpa_locations = set(mpa["location"])
     protected_mangroves = []
     for loc in tqdm(list(sorted(set(regions["location"].dropna())))):
-        region_geom = regions[regions["location"] == loc].iloc[0].geometry
+        location_geom = regions[regions["location"] == loc].iloc[0].geometry
 
-        region_mangroves = mangroves_by_region[mangroves_by_region["location"] == loc]
-        if len(region_mangroves) > 0:
-            mangrove_geom = region_mangroves.iloc[0]["geometry"]
-            region_mangrove_area_km2 = region_mangroves.iloc[0]["mangrove_area_km2"]
+        location_mangroves = mangroves_by_location[mangroves_by_location["location"] == loc]
+        if len(location_mangroves) > 0:
+            mangrove_geom = location_mangroves.iloc[0]["geometry"]
+            location_mangrove_area_km2 = location_mangroves.iloc[0]["mangrove_area_km2"]
 
             if loc in mpa_locations:
-                region_pas = mpa[mpa["location"] == loc].make_valid()
+                location_pas = mpa[mpa["location"] == loc].make_valid()
             else:
-                candidates = list(mpa.sindex.intersection(region_geom.bounds))
-                region_pas = mpa.iloc[candidates]
-                region_pas = region_pas[region_pas.intersects(region_geom)].make_valid()
-            region_pas = gpd.clip(region_pas, region_geom)
+                candidates = list(mpa.sindex.intersection(location_geom.bounds))
+                location_pas = mpa.iloc[candidates]
+                location_pas = location_pas[location_pas.intersects(location_geom)].make_valid()
+            location_pas = gpd.clip(location_pas, location_geom)
 
-            pa_geom = make_valid(unary_union(region_pas.geometry))
+            pa_geom = make_valid(unary_union(location_pas.geometry))
 
             pa_mangrove_area_km2 = get_area_km2(mangrove_geom.intersection(pa_geom))
 
             protected_mangroves.append(
                 {
                     "location": loc,
-                    "total_mangrove_area_km2": region_mangrove_area_km2,
+                    "total_mangrove_area_km2": location_mangrove_area_km2,
                     "protected_mangrove_area_km2": pa_mangrove_area_km2,
                 }
             )
@@ -351,14 +351,14 @@ def _rollup_corals_subtable(
     global_total: dict | None = None,
     global_protected: dict | None = None,
 ) -> pd.DataFrame:
-    """Roll per-region class areas up to combined_regions and reshape into subtable rows.
+    """Roll per-location class areas up to combined_regions and reshape into subtable rows.
 
-    Region rows are summed from their member regions, so a
+    Location rows are summed from their member locations, so a
     reef that sits in an EEZ with overlapping claims is attributed to every claimant
     (intentional over-attribution). The GLOB row must NOT inherit that double count,
     so when `global_total`/`global_protected` are supplied (deduplicated global class
     areas computed once over the whole reef extent) they are used for GLOB instead of
-    summing the per-region rows. If they are omitted, GLOB falls back to the region
+    summing the per-location rows. If they are omitted, GLOB falls back to the location
     sum (legacy behaviour, used by callers that have no deduplicated global to pass).
     """
 
@@ -476,7 +476,7 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "computing total coral class areas per country"})
-    total_stats = compute_class_areas_by_region(
+    total_stats = compute_class_areas_by_location(
         raster_path=local_raster_path,
         regions_gdf=regions,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
@@ -489,13 +489,13 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "computing protected coral class areas per country"})
-    protected_stats = compute_class_areas_by_region(
+    protected_stats = compute_class_areas_by_location(
         raster_path=local_raster_path,
         regions_gdf=regions,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
         region_col="location",
         polygons_gdf=protected_areas,
-        polygon_region_col="location",
+        polygon_location_col="location",
         include_zero=True,
         n_jobs=n_jobs,
         verbose=verbose,
@@ -503,7 +503,7 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "computing total coral class areas per IHO region"})
-    iho_total = compute_class_areas_by_region(
+    iho_total = compute_class_areas_by_location(
         raster_path=local_raster_path,
         regions_gdf=iho,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
@@ -525,13 +525,13 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "computing protected coral class areas per IHO region"})
-    iho_protected = compute_class_areas_by_region(
+    iho_protected = compute_class_areas_by_location(
         raster_path=local_raster_path,
         regions_gdf=iho,
         class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
         region_col="location",
         polygons_gdf=pas_iho,
-        polygon_region_col="location",  # now the IHO MRGID, matching regions_gdf
+        polygon_location_col="location",  # now the IHO MRGID, matching regions_gdf
         include_zero=True,
         n_jobs=n_jobs,
         verbose=verbose,
@@ -549,9 +549,9 @@ def create_climate_resilient_corals_subtable(
         logger.info({"message": "computing deduplicated global coral class areas"})
     global_geom = robust_unary_union(regions["geometry"].values)
     global_total = (
-        compute_region_class_areas(
-            region="GLOB",
-            region_geom=global_geom,
+        compute_location_class_areas(
+            location="GLOB",
+            location_geom=global_geom,
             raster_path=local_raster_path,
             class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
             polygons_gdf=None,
@@ -560,9 +560,9 @@ def create_climate_resilient_corals_subtable(
         or {}
     )
     global_protected = (
-        compute_region_class_areas(
-            region="GLOB",
-            region_geom=global_geom,
+        compute_location_class_areas(
+            location="GLOB",
+            location_geom=global_geom,
             raster_path=local_raster_path,
             class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
             polygons_gdf=protected_areas,
@@ -601,7 +601,7 @@ def process_marine_habitats(
     habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
-    mangroves_by_region_file_name: str = MANGROVES_BY_REGION_FILE_NAME,
+    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
@@ -652,7 +652,7 @@ def process_marine_habitats(
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
         iho_file_name=iho_file_name,
-        mangroves_by_region_file_name=mangroves_by_region_file_name,
+        mangroves_by_location_file_name=mangroves_by_location_file_name,
         global_mangrove_area_file_name=global_mangrove_area_file_name,
     )
 
