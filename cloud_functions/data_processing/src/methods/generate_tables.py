@@ -450,7 +450,7 @@ def get_iho_fishing_protection_region_stats(
 
     # Repair any invalid site geometries before the overlay/dissolve.
     if verbose:
-        logger.info({"message": "making geometries valid"})
+        logger.info({"message": "making Protected Seas geometries valid"})
     highly["geometry"] = highly.make_valid()
 
     # Dissolve all highly protected sites into one geometry.
