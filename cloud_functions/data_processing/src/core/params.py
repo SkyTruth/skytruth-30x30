@@ -245,5 +245,5 @@ LONG_RUNNING_TASKS = [
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
     "generate_habitat_protection_table",
-    "generate_protection_coverage_stats_table"
+    "generate_protection_coverage_stats_table",
 ]
