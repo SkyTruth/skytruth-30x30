@@ -16,7 +16,7 @@ from src.core.params import (
     BUCKET,
     PROJECT,
     PROTECTED_SEAS_SITES_FILE_NAME,
-    PROTECTED_SEAS_SITES_URL
+    PROTECTED_SEAS_SITES_URL,
 )
 from src.utils.gcp import duplicate_blob, read_parquet_from_gcs, upload_gdf
 from src.utils.logger import Logger
