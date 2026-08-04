@@ -209,9 +209,9 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading pre-processed mangroves"})
-    mangroves_by_location = read_json_df(bucket, mangroves_by_location_file_name, verbose=True).pipe(
-        clean_geometries
-    )
+    mangroves_by_location = read_json_df(
+        bucket, mangroves_by_location_file_name, verbose=True
+    ).pipe(clean_geometries)
     global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)[
         "global_area_km2"
     ]
