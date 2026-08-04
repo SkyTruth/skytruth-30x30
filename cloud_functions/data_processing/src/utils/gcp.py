@@ -3,6 +3,7 @@ import gc
 import json
 import os
 import pickle
+import re
 import shutil
 import tempfile
 import zipfile
@@ -15,7 +16,6 @@ import fsspec
 import gcsfs
 import geopandas as gpd
 import pandas as pd
-import re
 import requests
 from google.api_core.retry import Retry
 from google.cloud import storage
@@ -203,7 +203,6 @@ def download_zip_to_gcs(
             # Some endpoints return an HTML confirmation form on the first POST.
             # Submit it a second time with the honeypot field left empty.
             if "text/html" in response.headers.get("content-type", ""):
-
                 honeypot = re.search(r'<input name="(firstname-[^"]+)"', response.text)
                 confirm_data = dict(data)
                 if honeypot:
