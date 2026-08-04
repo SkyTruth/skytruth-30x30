@@ -461,7 +461,7 @@ def stitch_mediterannean(iho):
     medi["Longitude"] = centroid.x
     medi["Latitude"] = centroid.y
     medi["min_X"], medi["min_Y"], medi["max_X"], medi["max_Y"] = bounds
-    medi["total_area"] = medi.to_crs(epsg=6933).geometry.area.iloc[0] / 1e6
+    medi["area"] = medi.to_crs(epsg=6933).geometry.area.iloc[0] / 1e6
 
     iho["MRGID"] = iho["MRGID"].astype(str)
     iho = pd.concat((iho, medi), axis=0, ignore_index=True)
