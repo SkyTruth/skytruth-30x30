@@ -40,6 +40,30 @@ def seed_protected_seas_sites(
     project: str = PROJECT,
     verbose: bool = True,
 ):
+    """Create the initial Protected Seas sites dataset from local Navigator exports.
+
+    This one-time bootstrap reads every ``*LFP[0-5]*.json`` file in ``json_dir``,
+    combines the site geometries, normalizes the fields used by the incremental
+    update workflow, and maps each numeric LFP value to a fishing-protection
+    bucket. The export date encoded as ``MMDDYY`` in the first filename becomes
+    the dataset's ``last_updated`` value.
+
+    The resulting GeoDataFrame is uploaded to ``archive_file_name`` in Cloud
+    Storage, then that object is copied to ``sites_file_name`` to establish the
+    current dataset used by :func:`update_protected_seas_data`.
+
+    Args:
+        json_dir: Local directory containing the Navigator LFP GeoJSON exports.
+        sites_file_name: Cloud Storage object name for the current dataset.
+        archive_file_name: Cloud Storage object name for the dated seed snapshot.
+        bucket: Cloud Storage bucket containing the datasets.
+        project: Google Cloud project used for storage operations.
+        verbose: Whether storage helpers should emit progress messages.
+
+    Raises:
+        FileNotFoundError: If ``json_dir`` contains no matching LFP export files.
+        ValueError: If the date cannot be parsed from the first export filename.
+    """
     os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
 
     site_files = sorted(glob.glob(f"{json_dir}/*LFP[0-5]*.json"))
