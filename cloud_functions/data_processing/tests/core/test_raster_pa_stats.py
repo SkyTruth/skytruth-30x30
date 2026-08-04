@@ -171,7 +171,7 @@ def test_compute_location_class_areas_with_pa_filter(binary_coral_raster):
 
 
 def test_compute_location_class_areas_returns_none_without_include_zero_for_all_zeros(tmp_path):
-    """All-zero location with include_zero=False short-circuits to None (legacy behavior)."""
+    """All-zero region with include_zero=False short-circuits to None (legacy behavior)."""
     path = str(tmp_path / "zeros.tif")
     _write_binary_raster(path, np.zeros((10, 10), dtype=np.uint8))
 
