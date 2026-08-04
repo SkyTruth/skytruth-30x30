@@ -64,6 +64,8 @@ def compute_iho_protection_coverage(
             "total_area": round(sea.geometry.area / 1e6, 2),
         }
 
+        # Use the spatial index to cheaply narrow the full PA dataset to features
+        # whose bounding boxes overlap this sea's bounding box.
         candidates = list(sindex.intersection(sea.geometry.bounds))
         if not candidates:
             results.append(
@@ -78,6 +80,8 @@ def compute_iho_protection_coverage(
             )
             continue
 
+        # Apply the exact geometry so that only the actual intersections
+        # contribute to the protected-area count and coverage calculations below.
         actual = pas_proj.iloc[candidates]
         actual = actual[actual.intersects(sea.geometry)]
         if actual.empty:
@@ -96,14 +100,17 @@ def compute_iho_protection_coverage(
         pa = actual[actual["PA_DEF"] == 1]
         oecm = actual[actual["PA_DEF"] == 0]
 
+        # Dissolve overlaps so shared portions of protected polygons are counted only once.
         combined_union = unary_union(actual.geometry)
         pa_union = unary_union(pa.geometry) if not pa.empty else None
         oecm_union = unary_union(oecm.geometry) if not oecm.empty else None
 
+        # Clip each dissolved geometry to the sea and convert its area from m² to km².
         protected_area = sea.geometry.intersection(combined_union).area / 1e6
         pa_area = sea.geometry.intersection(pa_union).area / 1e6 if pa_union else 0.0
         oecm_area = sea.geometry.intersection(oecm_union).area / 1e6 if oecm_union else 0.0
 
+        # Calculate sea coverage and the PA/OECM shares of its protected area.
         coverage = (protected_area / base["total_area"]) * 100 if base["total_area"] else 0.0
         pas_pct = (pa_area / protected_area) * 100 if protected_area else 0.0
         oecms_pct = (oecm_area / protected_area) * 100 if protected_area else 0.0
