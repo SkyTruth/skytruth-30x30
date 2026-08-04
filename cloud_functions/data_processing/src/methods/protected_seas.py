@@ -16,13 +16,12 @@ from src.core.params import (
     BUCKET,
     PROJECT,
     PROTECTED_SEAS_SITES_FILE_NAME,
+    PROTECTED_SEAS_SITES_URL
 )
 from src.utils.gcp import duplicate_blob, read_parquet_from_gcs, upload_gdf
 from src.utils.logger import Logger
 
 logger = Logger()
-
-BASE_URL = "https://map.navigatormap.org/api"
 
 # Map Level of Fishing Protection (lfp) to our fishing_protection_level buckets.
 # lfp=0 (unprotected) has no bucket and maps to NaN.
@@ -78,7 +77,7 @@ def get_updated_site_index(
     page = 1
 
     while True:
-        url = f"{BASE_URL}/search/"
+        url = f"{PROTECTED_SEAS_SITES_URL}/search/"
         params = {
             "type": "sites_updated",
             "changed_since": changed_since,
@@ -118,7 +117,7 @@ def load_protected_seas_site(
     max_retries: int = 5,
     base_sleep: float = 3.0,
 ) -> gpd.GeoDataFrame:
-    url = f"{BASE_URL}/detail/"
+    url = f"{PROTECTED_SEAS_SITES_URL}/detail/"
     params = {
         "ps_id": ps_id,
         "export_boundaries": "true",
