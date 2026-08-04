@@ -15,6 +15,7 @@ import fsspec
 import gcsfs
 import geopandas as gpd
 import pandas as pd
+import re
 import requests
 from google.api_core.retry import Retry
 from google.cloud import storage
@@ -202,7 +203,6 @@ def download_zip_to_gcs(
             # Some endpoints return an HTML confirmation form on the first POST.
             # Submit it a second time with the honeypot field left empty.
             if "text/html" in response.headers.get("content-type", ""):
-                import re
 
                 honeypot = re.search(r'<input name="(firstname-[^"]+)"', response.text)
                 confirm_data = dict(data)
@@ -714,17 +714,6 @@ def read_json_from_gcs(bucket_name: str, filename: str, verbose: bool = True) ->
 
     with fs.open(gcs_path, "r") as f:
         return json.load(f)
-
-
-def write_json_to_gcs(bucket_name: str, filename: str, data: dict, verbose: bool = True) -> None:
-    fs = gcsfs.GCSFileSystem()
-    gcs_path = f"gs://{bucket_name}/{filename}"
-
-    if verbose:
-        logger.info({"message": f"Writing JSON to {gcs_path}"})
-
-    with fs.open(gcs_path, "w") as f:
-        json.dump(data, f)
 
 
 def read_parquet_from_gcs(bucket_name: str, filename: str, verbose: bool = True):
