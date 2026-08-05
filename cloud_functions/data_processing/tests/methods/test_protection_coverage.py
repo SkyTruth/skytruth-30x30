@@ -1,4 +1,5 @@
 import geopandas as gpd
+import pandas as pd
 import pytest
 from shapely.geometry import Polygon, box
 
@@ -27,6 +28,146 @@ def _run_coverage(monkeypatch, iho, pas):
     return protection_coverage.compute_iho_protection_coverage(
         bucket="bucket", tolerance=0.1, verbose=False
     )
+
+
+@pytest.fixture
+def wdpa_country():
+    """Minimal country-level marine and terrestrial WDPA statistics."""
+    return pd.DataFrame(
+        {
+            "id": ["BRA"],
+            "pas_count": [10],
+            "statistics": [
+                str(
+                    {
+                        "marine_area": 1000.0,
+                        "oecms_pa_marine_area": 100.0,
+                        "percentage_oecms_pa_marine_cover": 10.0,
+                        "pa_marine_area": 80.0,
+                        "percentage_pa_marine_cover": 8.0,
+                        "protected_area_polygon_count": 5,
+                        "protected_area_point_count": 2,
+                        "oecm_polygon_count": 1,
+                        "oecm_point_count": 0,
+                        "land_area": 2000.0,
+                        "oecms_pa_land_area": 200.0,
+                        "percentage_oecms_pa_land_cover": 10.0,
+                        "pa_land_area": 160.0,
+                        "percentage_pa_land_cover": 8.0,
+                    }
+                )
+            ],
+        }
+    )
+
+
+@pytest.fixture
+def wdpa_global():
+    """Minimal global WDPA values used for GLOB and ABNJ calculations."""
+    return pd.DataFrame(
+        {
+            "type": [
+                "total_ocean_area_oecms_pas",
+                "total_ocean_area_oecms",
+                "total_ocean_oecms_pas_coverage_percentage",
+                "total_marine_oecms_pas",
+                "total_land_area_oecms_pas",
+                "total_land_area_oecms",
+                "total_land_oecms_pas_coverage_percentage",
+                "total_terrestrial_oecms_pas",
+                "high_seas_pa_coverage_area",
+                "high_seas_pa_coverage_percentage",
+                "national_waters_oecms_coverage_area",
+                "national_waters_oecms_pas_coverage_area",
+                "global_ocean_percentage",
+            ],
+            "value": [
+                36_319_197.0,
+                5_000_000.0,
+                10.0,
+                500,
+                15_000_000.0,
+                3_000_000.0,
+                10.0,
+                300,
+                1_000_000.0,
+                1.75,
+                20_000_000.0,
+                25_000_000.0,
+                64.0,
+            ],
+        }
+    )
+
+
+@pytest.fixture
+def combined_regions():
+    """Country and global groupings needed by the coverage calculation."""
+    return {"BRA": ["BRA"], "GLOB": []}
+
+
+def _run_country_global_coverage(monkeypatch, wdpa_country, wdpa_global, combined_regions):
+    monkeypatch.setattr(protection_coverage, "load_regions", lambda **_: (combined_regions, {}))
+    monkeypatch.setattr(protection_coverage, "read_dataframe", lambda *_, **__: wdpa_country.copy())
+    monkeypatch.setattr(
+        protection_coverage, "load_wdpa_global", lambda *_, **__: wdpa_global.copy()
+    )
+    table, country_areas = protection_coverage.compute_country_global_coverage(verbose=False)
+    return table, country_areas
+
+
+def _get_country_global_row(df, location, environment="marine"):
+    rows = df[(df["location"] == location) & (df["environment"] == environment)]
+    assert len(rows) == 1, f"Expected 1 row for {location}/{environment}, got {len(rows)}"
+    return rows.iloc[0]
+
+
+def test_country_global_coverage_calculates_global_marine_area(
+    monkeypatch, wdpa_country, wdpa_global, combined_regions
+):
+    """Back-calculate global marine area from protected area and coverage."""
+    table, _ = _run_country_global_coverage(
+        monkeypatch, wdpa_country, wdpa_global, combined_regions
+    )
+
+    row = _get_country_global_row(table, "GLOB")
+    assert row["total_area"] == pytest.approx(363_191_970.0)
+
+
+def test_country_global_coverage_calculates_global_terrestrial_area(
+    monkeypatch, wdpa_country, wdpa_global, combined_regions
+):
+    """Back-calculate global terrestrial area from protected area and coverage."""
+    table, _ = _run_country_global_coverage(
+        monkeypatch, wdpa_country, wdpa_global, combined_regions
+    )
+
+    row = _get_country_global_row(table, "GLOB", environment="terrestrial")
+    assert row["total_area"] == pytest.approx(150_000_000.0)
+
+
+def test_country_global_coverage_sets_global_contribution(
+    monkeypatch, wdpa_country, wdpa_global, combined_regions
+):
+    """Use global coverage as the global row's contribution percentage."""
+    table, _ = _run_country_global_coverage(
+        monkeypatch, wdpa_country, wdpa_global, combined_regions
+    )
+
+    row = _get_country_global_row(table, "GLOB")
+    assert row["global_contribution"] == 10.0
+
+
+def test_country_global_coverage_calculates_unrounded_abnj_area(
+    monkeypatch, wdpa_country, wdpa_global, combined_regions
+):
+    """Calculate ABNJ area without the table wrapper's output rounding."""
+    table, _ = _run_country_global_coverage(
+        monkeypatch, wdpa_country, wdpa_global, combined_regions
+    )
+
+    row = _get_country_global_row(table, "ABNJ")
+    assert row["total_area"] == pytest.approx(232_442_860.8)
 
 
 def test_iho_coverage_returns_zero_when_spatial_index_has_no_candidates(monkeypatch):
