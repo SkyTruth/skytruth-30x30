@@ -5,11 +5,11 @@ import pandas as pd
 from google.cloud import storage
 
 from src.core.commons import (
+    add_tolerance_suffix,
     load_marine_regions,
     load_mpatlas_country,
     load_mpatlas_global,
     load_regions,
-    load_wdpa_global,
 )
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
@@ -22,13 +22,16 @@ from src.core.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
-    MANGROVES_BY_COUNTRY_FILE_NAME,
+    IHO_SEA_AREAS_FILE_NAME,
+    MANGROVES_BY_LOCATION_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
+    MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROJECT,
     PROTECTED_SEAS_FILE_NAME,
+    PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
@@ -42,11 +45,9 @@ from src.core.params import (
 )
 from src.core.processors import (
     add_constants,
-    add_pas_oecm,
     add_protected_from_fishing_area,
     add_protected_from_fishing_percent,
     add_total_area_mp,
-    extract_column_dict_str,
     fp_location,
     remove_columns,
     rename_habitats,
@@ -57,10 +58,16 @@ from src.methods.protected_areas.protected_areas import (
     generate_protected_areas_table,
     make_pa_updates,
 )
+from src.methods.protection_coverage import (
+    compute_country_global_coverage,
+    compute_iho_protection_coverage,
+    compute_iho_protection_level,
+)
 from src.methods.terrestrial_habitats import process_terrestrial_habitats
 from src.utils.database import get_pas
 from src.utils.gcp import (
     read_dataframe,
+    read_parquet_from_gcs,
     upload_dataframe,
 )
 from src.utils.logger import Logger
@@ -167,7 +174,7 @@ def generate_habitat_protection_table(
     habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
-    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
@@ -178,7 +185,7 @@ def generate_habitat_protection_table(
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    marine_pa_file_name = marine_pa_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
+    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, marine_tolerance)
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
@@ -192,7 +199,7 @@ def generate_habitat_protection_table(
         habitats_zipfile_name=habitats_zipfile_name,
         seamounts_zipfile_name=seamounts_zipfile_name,
         seamounts_shapefile_name=seamounts_shapefile_name,
-        mangroves_by_country_file_name=mangroves_by_country_file_name,
+        mangroves_by_location_file_name=mangroves_by_location_file_name,
         global_mangrove_area_file_name=global_mangrove_area_file_name,
         marine_pa_file_name=marine_pa_file_name,
         eez_file=eez_file,
@@ -224,206 +231,24 @@ def generate_protection_coverage_stats_table(
     protection_coverage_file_name: str = PROTECTION_COVERAGE_FILE_NAME,
     wdpa_country_level_file_name: str = WDPA_COUNTRY_LEVEL_FILE_NAME,
     wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
-    percent_type: str = "area",  # area or counts,
+    percent_type: str = "area",  # area or counts
     verbose: bool = True,
 ):
-    def process_protected_area(wdpa_country, environment="marine"):
-        wdpa_dict = {
-            "id": "location",
-            "pas_count": "protected_areas_count",
-            "statistics": "statistics",
-        }
-
-        stats_dict = {
-            f"{environment}_area": "total_area",
-            f"oecms_pa_{environment}_area": "protected_area",
-            f"percentage_oecms_pa_{environment}_cover": "coverage",
-            f"pa_{environment}_area": "pa_protected_area",
-            f"percentage_pa_{environment}_cover": "pa_coverage",
-            "protected_area_polygon_count": "protected_area_polygon_count",
-            "protected_area_point_count": "protected_area_point_count",
-            "oecm_polygon_count": "oecm_polygon_count",
-            "oecm_point_count": "oecm_point_count",
-        }
-        cols = [i for i in wdpa_dict]
-        wdpa_cl = (
-            wdpa_country[cols]
-            .rename(columns=wdpa_dict)
-            .pipe(add_constants, {"environment": environment})
-            .pipe(extract_column_dict_str, stats_dict, "statistics")
-            .pipe(add_pas_oecm)
-            .pipe(
-                remove_columns,
-                [
-                    "statistics",
-                    "protected_area_polygon_count",
-                    "protected_area_point_count",
-                    "oecm_polygon_count",
-                    "oecm_point_count",
-                ],
-            )
-        )
-        return wdpa_cl
-
-    def get_group_stats(df, loc, relations, percent_type):
-        """
-        Computes summary stats for a group of related locations.
-        """
-        if loc != "GLOB":
-            df_group = df[df["location"].isin(relations[loc])]
-            total_area = df_group["total_area"].sum()
-        else:
-            return None
-
-        if len(df_group) > 0:
-            total_protected_area = df_group["protected_area"].sum()
-            if percent_type == "area":
-                coverage = df_group["coverage"].sum()
-                pas = 100 * df_group["pa_coverage"].sum() / coverage if coverage > 0 else 0
-                oecm = 100 - pas if coverage > 0 else 0
-            elif percent_type == "counts":
-                pas = (
-                    100
-                    * df_group["pas_count"].sum()
-                    / (df_group["pas_count"] + df_group["oecm_count"]).sum()
-                )
-                oecm = (
-                    100
-                    * df_group["oecm_count"].sum()
-                    / (df_group["pas_count"] + df_group["oecm_count"]).sum()
-                )
-            global_area = (
-                # total WDPA number is calculated from 2 provided values:
-                # protection and total coverage * percentage
-                total_protected_area / (coverage / 100)
-            )
-
-            return {
-                "location": loc,
-                "environment": df_group.iloc[0]["environment"] if not df_group.empty else None,
-                "protected_area": total_protected_area,
-                "protected_areas_count": df_group["protected_areas_count"].sum(),
-                "coverage": 100 * total_protected_area / total_area if total_area else None,
-                "pas": pas,
-                "oecms": oecm,
-                "global_contribution": 100 * total_protected_area / global_area,
-                "total_area": total_area,
-            }
-        else:
-            return None
-
-    def group_by_region(wdpa_cl, combined_regions):
-        reg = pd.DataFrame(
-            stat
-            for loc in combined_regions
-            if (stat := get_group_stats(wdpa_cl, loc, combined_regions, percent_type)) is not None
-        )
-        reg = reg[reg["protected_area"] > 0]
-
-        return reg
-
-    def add_global_stats(df, global_stats, environment):
-        def get_value(df, col):
-            return float(df[df["type"] == col].iloc[0]["value"])
-
-        df = df.copy()
-
-        environment2 = "ocean" if environment == "marine" else "land"
-        oecms_pas = get_value(global_stats, f"total_{environment2}_area_oecms_pas")
-        oecms = get_value(global_stats, f"total_{environment2}_area_oecms")
-        pas = oecms_pas - oecms
-        coverage = get_value(global_stats, f"total_{environment2}_oecms_pas_coverage_percentage")
-
-        global_dict = {
-            "location": "GLOB",
-            "environment": environment,
-            "protected_area": get_value(global_stats, f"total_{environment2}_area_oecms_pas"),
-            "protected_areas_count": get_value(global_stats, f"total_{environment}_oecms_pas"),
-            "coverage": coverage,
-            "pas": 100 * pas / oecms_pas,
-            "oecms": 100 * oecms / oecms_pas,
-            "global_contribution": coverage,
-            "total_area": oecms_pas / (coverage / 100),
-        }
-
-        df = pd.concat((df, pd.DataFrame([global_dict])), axis=0, ignore_index=True)
-
-        if environment == "terrestrial":
-            return df
-        else:
-            total_area = get_value(global_stats, "high_seas_pa_coverage_area")
-            global_ocean_area = oecms_pas / (coverage / 100)
-            oecms = get_value(wdpa_global, "total_ocean_area_oecms") - get_value(
-                wdpa_global, "national_waters_oecms_coverage_area"
-            )
-            oecms_pas = get_value(wdpa_global, "total_ocean_area_oecms_pas") - get_value(
-                wdpa_global, "national_waters_oecms_pas_coverage_area"
-            )
-            pas = oecms_pas - oecms
-            coverage = get_value(global_stats, "high_seas_pa_coverage_percentage")
-            high_seas_dict = {
-                "location": "ABNJ",
-                "environment": environment,
-                "protected_area": total_area,
-                "protected_areas_count": -9999,
-                "coverage": coverage,
-                "pas": 100 * pas / oecms_pas,
-                "oecms": 100 * oecms / oecms_pas,
-                "global_contribution": 100 * total_area / global_ocean_area,
-                "total_area": global_ocean_area
-                * get_value(wdpa_global, "global_ocean_percentage")
-                / 100,
-            }
-
-            df = pd.concat((df, pd.DataFrame([high_seas_dict])), axis=0, ignore_index=True)
-
-        return df
-
-    # Load protected planet country level statistics
-    if verbose:
-        logger.info(
-            {
-                "message": f"loading Protected Planet Country-level data gs://{bucket}/{wdpa_country_level_file_name}"
-            }
-        )
-    wdpa_country = read_dataframe(bucket, wdpa_country_level_file_name)
+    country_global_coverage, sov_country_area = compute_country_global_coverage(
+        bucket=bucket,
+        wdpa_country_level_file_name=wdpa_country_level_file_name,
+        wdpa_global_level_file_name=wdpa_global_level_file_name,
+        percent_type=percent_type,
+        verbose=verbose,
+    )
 
     if verbose:
-        logger.info(
-            {
-                "message": f"loading Protected Planet Global-level data gs://{bucket}/{wdpa_global_level_file_name}"
-            }
-        )
-    wdpa_global = load_wdpa_global(bucket, wdpa_global_level_file_name)
+        logger.info({"message": "computing IHO sea area protection coverage stats"})
+    iho_coverage = compute_iho_protection_coverage(bucket=bucket, verbose=verbose)
 
-    # Load related countries and regions
-    if verbose:
-        logger.info({"message": "loading country and region groupings"})
-    combined_regions, _ = load_regions()
-
-    # WDPA country level
-    if verbose:
-        logger.info({"message": "processing Marine and terrestrial country level stats"})
-
-    wdpa_cl_m = process_protected_area(wdpa_country, environment="marine")
-    wdpa_cl_t = process_protected_area(wdpa_country, environment="land")
-    wdpa_cl_t["environment"] = wdpa_cl_t["environment"].replace("land", "terrestrial")
-
-    if verbose:
-        logger.info({"message": "Grouping by sovereign country and region"})
-
-    # Roll up into sovereign countries and regions
-    reg_t = group_by_region(wdpa_cl_t, combined_regions)
-    reg_m = group_by_region(wdpa_cl_m, combined_regions)
-
-    protection_coverage_table = pd.concat((reg_t, reg_m), axis=0)
-    protection_coverage_table = protection_coverage_table[
-        protection_coverage_table["total_area"] > 0
-    ]
-    sov_country_area = protection_coverage_table[["location", "environment", "total_area"]]
-    protection_coverage_table = protection_coverage_table.pipe(
-        add_global_stats, wdpa_global, "marine"
-    ).pipe(add_global_stats, wdpa_global, "terrestrial")
+    protection_coverage_table = pd.concat(
+        (country_global_coverage, iho_coverage), axis=0, ignore_index=True
+    )
 
     protection_coverage_table["total_area"] = (
         protection_coverage_table["total_area"].round(0).astype("Int64")
@@ -451,8 +276,10 @@ def generate_protection_coverage_stats_table(
 def generate_marine_protection_level_stats_table(
     mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME,
+    mpa_file_name: str = MPATLAS_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     high_seas_params: dict = HIGH_SEAS_PARAMS,
+    tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
@@ -576,6 +403,19 @@ def generate_marine_protection_level_stats_table(
         is not None
     )
 
+    if verbose:
+        logger.info({"message": "computing IHO sea area protection level stats"})
+    iho_protection_level = compute_iho_protection_level(
+        bucket=bucket,
+        mpa_file_name=mpa_file_name,
+        tolerance=tolerance,
+        verbose=verbose,
+    )
+
+    protection_level_table = pd.concat(
+        (protection_level_table, iho_protection_level), axis=0, ignore_index=True
+    )
+
     protection_level_table = protection_level_table[protection_level_table["total_area"] > 0]
     protection_level_table["total_area"] = (
         protection_level_table["total_area"].round(0).astype("Int64")
@@ -592,11 +432,50 @@ def generate_marine_protection_level_stats_table(
     return protection_level_table.to_dict(orient="records")
 
 
+def get_iho_fishing_protection_region_stats(
+    iho_file_name, sites_file_name, tolerance, bucket=BUCKET, verbose=True
+):
+    # Load the simplified IHO sea areas at the requested tolerance.
+    iho = read_parquet_from_gcs(
+        bucket_name=bucket,
+        filename=add_tolerance_suffix(iho_file_name, tolerance),
+    ).rename(columns={"area": "total_area"})
+
+    # Load the current Protected Seas sites.
+    ps_sites = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
+
+    # Keep only the highly protected sites, then merge them into a single
+    # geometry so we can measure their overlap with each IHO sea area.
+    highly = ps_sites[ps_sites["fishing_protection_level"] == "highly"].copy()
+
+    # Repair any invalid site geometries before the overlay/dissolve.
+    if verbose:
+        logger.info({"message": "making Protected Seas geometries valid"})
+    highly["geometry"] = highly.make_valid()
+
+    # Dissolve all highly protected sites into one geometry.
+    if verbose:
+        logger.info({"message": "dissolving highly protected sites"})
+    geoms = highly.dissolve()
+
+    # Intersect the dissolved protection with each IHO sea area and compute
+    # the protected area (km²) and percent coverage per region.
+    inter = gpd.overlay(iho, geoms, how="intersection", keep_geom_type=True)
+    inter = inter.to_crs(6933)
+    inter["area"] = inter.geometry.area / 1e6
+    inter["pct"] = 100 * inter["area"] / inter["total_area"]
+    return inter[["MRGID", "area", "fishing_protection_level", "pct", "total_area"]].rename(
+        columns={"MRGID": "location"}
+    )
+
+
 def generate_fishing_protection_table(
     bucket: str = BUCKET,
     project: str = PROJECT,
     protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
     fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
+    sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     verbose: bool = True,
 ):
     def return_stats(df_group, total_area, fishing_protection_level, loc):
@@ -638,6 +517,8 @@ def generate_fishing_protection_table(
             {"message": f"downloading Protected Seas from gs://{bucket}/{protected_seas_file_name}"}
         )
     protected_seas = read_dataframe(bucket, protected_seas_file_name)
+    if verbose:
+        logger.info({"message": f"loaded {len(protected_seas)} Protected Seas rows"})
 
     # Map Protected Seas ISO codes that need to be combined into a single
     # location on our end. Each key is the location code we use, and the
@@ -673,7 +554,7 @@ def generate_fishing_protection_table(
     }
 
     if verbose:
-        logger.info({"message": "processing fishing level protection"})
+        logger.info({"message": "aggregating protected-from-fishing areas by location"})
 
     lfp_cols = ["lfp5_area", "lfp4_area", "lfp3_area", "lfp2_area", "lfp1_area"]
 
@@ -695,6 +576,15 @@ def generate_fishing_protection_table(
         merged_row["location"] = target_loc
         ps_cl_fp = pd.concat([ps_cl_fp[~mask], pd.DataFrame([merged_row])], ignore_index=True)
 
+    if verbose:
+        logger.info(
+            {
+                "message": (
+                    f"computing per-region stats for {len(combined_regions)} regions "
+                    f"across levels: {', '.join(fishing_protection_levels)}"
+                )
+            }
+        )
     fishing_protection_table = pd.DataFrame()
     for level in fishing_protection_levels:
         fishing_protection_table = pd.concat(
@@ -717,7 +607,30 @@ def generate_fishing_protection_table(
             axis=0,
         )
 
+    if verbose:
+        logger.info({"message": "computing IHO sea-area fishing protection stats"})
+    fishing_protection_table = pd.concat(
+        (
+            fishing_protection_table,
+            get_iho_fishing_protection_region_stats(
+                iho_file_name, sites_file_name, marine_tolerance, bucket=bucket, verbose=verbose
+            ),
+        ),
+        axis=0,
+    )
+
+    rows_before_filter = len(fishing_protection_table)
     fishing_protection_table = fishing_protection_table[fishing_protection_table["total_area"] > 0]
+    if verbose:
+        logger.info(
+            {
+                "message": (
+                    f"fishing protection table: {len(fishing_protection_table)} rows "
+                    f"({rows_before_filter - len(fishing_protection_table)} dropped for "
+                    f"total_area <= 0)"
+                )
+            }
+        )
     fishing_protection_table["total_area"] = (
         fishing_protection_table["total_area"].round(0).astype("Int64")
     )

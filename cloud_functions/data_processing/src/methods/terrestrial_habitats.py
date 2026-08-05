@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 
+from src.core.commons import add_tolerance_suffix
 from src.core.land_cover_params import LAND_COVER_CLASSES, terrestrial_tolerance
 from src.core.params import (
     BUCKET,
@@ -11,7 +12,7 @@ from src.core.params import (
     PROJECT,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
-from src.core.raster_pa_stats import compute_class_areas_by_country
+from src.core.raster_pa_stats import compute_class_areas_by_location
 from src.utils.gcp import download_file_from_gcs, read_dataframe, read_json_df, upload_dataframe
 from src.utils.logger import Logger
 
@@ -41,8 +42,8 @@ def generate_terrestrial_biome_stats_pa(
     verbose: bool = True,
     tolerance: float = terrestrial_tolerance,
 ):
-    terrestrial_pa_file_name = terrestrial_pa_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    terrestrial_pa_file_name = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
+    gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
 
     if verbose:
         logger.info({"message": f"loading GADM geometries from {gadm_file_name}"})
@@ -63,19 +64,19 @@ def generate_terrestrial_biome_stats_pa(
     if verbose:
         logger.info({"message": "calculating terrestrial habitat area within PAs"})
 
-    pa_stats = compute_class_areas_by_country(
+    pa_stats = compute_class_areas_by_location(
         raster_path=local_raster_path,
         regions_gdf=gadm,
         class_map=land_cover_classes,
         region_col="location",
         polygons_gdf=terrestrial_pas,
-        polygon_country_col=country_col,
+        polygon_location_col=country_col,
         tile_size_pixels=tile_size_pixels,
         verbose=verbose,
     )
 
-    class_columns = [column for column in pa_stats.columns if column not in ("country", "total")]
-    pa_stats = pa_stats[["country", *class_columns, "total"]]
+    class_columns = [column for column in pa_stats.columns if column not in ("location", "total")]
+    pa_stats = pa_stats[["location", *class_columns, "total"]]
 
     # upload PA land cover type areas (km2) per country
     upload_dataframe(
@@ -97,9 +98,9 @@ def process_terrestrial_habitats(
     verbose: bool = True,
 ):
     def get_group_stats(df, loc, relations):
-        df_group = df if loc == "GLOB" else df[df["country"].isin(relations[loc])]
+        df_group = df if loc == "GLOB" else df[df["location"].isin(relations[loc])]
 
-        out = df_group[[c for c in df_group.columns if c != "country"]].sum().to_dict()
+        out = df_group[[c for c in df_group.columns if c != "location"]].sum().to_dict()
         out["location"] = loc
 
         return out
@@ -127,7 +128,7 @@ def process_terrestrial_habitats(
     # calculate percent land cover within PA of total land cover per country
     cnt = (
         pd.melt(
-            grouped_cnt_stats.rename(columns={"total": "total_land_area", "country": "location"}),
+            grouped_cnt_stats.rename(columns={"total": "total_land_area"}),
             id_vars="location",  # Keep 'location' as identifier
             var_name="habitat",  # Name of the new column for cover type
             value_name="total_area",  # Name of the values column (optional)
@@ -138,7 +139,7 @@ def process_terrestrial_habitats(
 
     pa = (
         pd.melt(
-            grouped_pa_stats.rename(columns={"total": "total_land_area", "country": "location"}),
+            grouped_pa_stats.rename(columns={"total": "total_land_area"}),
             id_vars="location",  # Keep 'location' as identifier
             var_name="habitat",  # Name of the new column for cover type
             value_name="protected_area",  # Name of the values column (optional)

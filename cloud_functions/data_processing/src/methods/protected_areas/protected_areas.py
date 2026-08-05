@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
+from src.core.commons import add_tolerance_suffix
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
@@ -218,8 +219,8 @@ def generate_protected_areas_table(
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
 
-    eez_file_name = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
-    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    eez_file_name = add_tolerance_suffix(eez_file_name, tolerance)
+    gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
     if verbose:
         logger.info({"message": f"loading eez from {eez_file_name}"})
     eez = read_json_df(BUCKET, eez_file_name)

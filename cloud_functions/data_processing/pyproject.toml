@@ -42,6 +42,14 @@ pytest = "^8.3.5"
 responses = "^0.25.7"
 python-dotenv = "^1.1.0"
 
+[tool.poetry.group.notebooks]
+optional = true
+
+[tool.poetry.group.notebooks.dependencies]
+jupyterlab = "^4.4"
+ipyleaflet = "^0.19.2"
+localtileserver = "^1.0.0"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

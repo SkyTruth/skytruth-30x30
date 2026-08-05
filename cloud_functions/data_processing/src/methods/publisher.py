@@ -9,6 +9,7 @@ from google.protobuf import timestamp_pb2
 
 from src.core import map_params
 from src.core.commons import send_slack_alert
+from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
@@ -25,6 +26,7 @@ from src.core.params import (
     GADM_ZIPFILE_NAME,
     HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
+    IHO_SEA_AREAS_PARAMS,
     LONG_RUNNING_TASKS,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
@@ -62,6 +64,7 @@ from src.methods.static_processes import (
     process_eez_geoms,
     process_eez_land_union,
     process_gadm_geoms,
+    process_iho_sea_areas,
     process_mangroves,
     process_terrestrial_biome_raster,
 )
@@ -189,10 +192,6 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
         },
         {
             "METHOD": "download_protected_seas",
-            **task_config,
-        },
-        {
-            "METHOD": "download_protected_planet_country",
             **task_config,
         },
     ]
@@ -333,6 +332,19 @@ def dispatch_publisher(
             )
             step_list = ["process_eez_land_union"]
 
+        case "download_iho_sea_areas":
+            download_zip_to_gcs(
+                url=MARINE_REGIONS_URL,
+                bucket_name=BUCKET,
+                blob_name=IHO_SEA_AREAS_PARAMS["zipfile_name"],
+                data=MARINE_REGIONS_BODY,
+                params=IHO_SEA_AREAS_PARAMS,
+                headers=MARINE_REGIONS_HEADERS,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+            step_list = ["process_iho_sea_areas"]
+
         case "process_gadm":
             process_gadm_geoms(verbose=verbose)
             step_list = ["generate_locations_table"]
@@ -350,6 +362,10 @@ def dispatch_publisher(
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
+            step_list = ["process_mangroves"]
+
+        case "process_iho_sea_areas":
+            process_iho_sea_areas(verbose=verbose)
             step_list = ["process_mangroves"]
 
         case "download_marine_habitats":
@@ -390,12 +406,14 @@ def dispatch_publisher(
                 tolerance=tolerance,
                 batch_size=1000,
             )
-            if tolerance == TOLERANCES[0]:
+            if tolerance == terrestrial_tolerance:
                 step_list = [
                     "generate_protected_areas_table",
                     "generate_terrestrial_biome_stats",
                     "generate_eez_minus_mpa",
                 ]
+            if tolerance == marine_tolerance:
+                step_list = ["download_protected_planet_country"]
 
         # ------------------
         #   Table updates

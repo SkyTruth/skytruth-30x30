@@ -47,6 +47,16 @@ curl --location 'http://localhost:3001' \
 
 If writing to an actual GCP bucket you must be authorized locally to write to and read from the bucket in question.
 
+### Seeding Protected Seas Sites
+
+`seed_protected_seas_sites` is a one-time bootstrap for creating the Protected Seas sites dataset from local Navigator LFP GeoJSON exports. The directory must contain files with `LFP0` through `LFP5` in their names and a filename ending in `_MMDDYY.json`. From the `data_processing` directory, run:
+
+```shell
+poetry run python -c 'from src.methods.protected_seas import seed_protected_seas_sites; seed_protected_seas_sites("/path/to/navigator/exports")'
+```
+
+The function combines the exports, uploads a dated archive snapshot, and copies that snapshot to the current Protected Seas sites file. By default it uses the bucket and project configured by the local environment; they can also be supplied directly with the `bucket` and `project` arguments. Local GCP credentials must have permission to write to the target bucket.
+
 ### Running Deployed Functions
 
 Each method can be run in CLI via a statement like

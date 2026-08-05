@@ -20,7 +20,7 @@ MARINE_REGIONS_URL = "https://www.marineregions.org/download_file.php"
 MARINE_REGIONS_HEADERS = {
     "content-type": "application/x-www-form-urlencoded",
     "cookie": (
-        "PHPSESSID=29190501b4503e4b33725cd6bd01e2c6; "
+        "PHPSESSID=5600795b6f0472af520dc19af739737e; "
         "vliz_webc=vliz_webc2; "
         "jwplayer.captionLabel=Off"
     ),
@@ -61,6 +61,13 @@ EEZ_LAND_UNION_PARAMS = {
     "zipfile_name": "static/eez_land_union.zip",
     "shapefile_name": "EEZ_land_union_v4_202410.shp",
 }
+
+IHO_SEA_AREAS_PARAMS = {
+    "name": "World_Seas_IHO_v3.zip",
+    "zipfile_name": "static/iho_sea_areas.zip",
+    "shapefile_name": "World_Seas_IHO_v3.shp",
+}
+IHO_SEA_AREAS_FILE_NAME = "static/iho_sea_areas_processed.parquet"
 
 EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 
@@ -110,6 +117,11 @@ PROTECTED_SEAS_URL = "https://map.navigatormap.org/api/regionStats/"
 PROTECTED_SEAS_GEOM_ZIPFILE = "static/Protected_seas_geom.zip"
 PROTECTED_SEAS_FILE_NAME = "raw/protected_seas.csv"
 ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted}.csv"
+PROTECTED_SEAS_SITES_FILE_NAME = "protected_seas/protected_seas_sites.parquet"
+ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME = (
+    f"archive/protected_seas/protected_seas_sites_{today_formatted}.parquet"
+)
+PROTECTED_SEAS_SITES_URL = "https://map.navigatormap.org/api"
 
 
 # ------------------------------------------------------------
@@ -156,7 +168,7 @@ MANGROVES_REQUEST_HEADERS = {
 MANGROVES_ZIPFILE_NAME = "habitats/Marine-habitats_Mangroves_GlobalMangroveWatch_v3_2020.zip"
 MANGROVES_SHAPEFILE_NAME = "gmw_v3_2020_vec.shp"
 MANGROVES_FILE_NAME = "habitats/mangroves_protected_areas.csv"
-MANGROVES_BY_COUNTRY_FILE_NAME = "static/mangroves_by_country.geojson"
+MANGROVES_BY_LOCATION_FILE_NAME = "static/mangroves_by_location.geojson"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{today_formatted}.csv"
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
@@ -233,5 +245,6 @@ LONG_RUNNING_TASKS = [
     "generate_protected_areas_table",
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
-    "generate_habitat_protection_table"
+    "generate_habitat_protection_table",
+    "generate_protection_coverage_stats_table",
 ]

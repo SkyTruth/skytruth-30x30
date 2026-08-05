@@ -12,14 +12,14 @@ def country_class_areas():
     """Per-country class areas as compute_class_areas_by_country would emit them."""
     total = pd.DataFrame(
         [
-            {"country": "USA", "climate-resilient-corals": 100.0, "other-corals": 50.0},
-            {"country": "MEX", "climate-resilient-corals": 20.0, "other-corals": 80.0},
+            {"location": "USA", "climate-resilient-corals": 100.0, "other-corals": 50.0},
+            {"location": "MEX", "climate-resilient-corals": 20.0, "other-corals": 80.0},
         ]
     )
     protected = pd.DataFrame(
         [
-            {"country": "USA", "climate-resilient-corals": 30.0, "other-corals": 10.0},
-            {"country": "MEX", "climate-resilient-corals": 5.0, "other-corals": 8.0},
+            {"location": "USA", "climate-resilient-corals": 30.0, "other-corals": 10.0},
+            {"location": "MEX", "climate-resilient-corals": 5.0, "other-corals": 8.0},
         ]
     )
     return total, protected
@@ -130,12 +130,12 @@ def test_rollup_handles_country_missing_from_protected_stats(combined_regions):
     """A country with coral pixels but no PA coverage shouldn't break the rollup."""
     total = pd.DataFrame(
         [
-            {"country": "USA", "climate-resilient-corals": 100.0, "other-corals": 50.0},
-            {"country": "MEX", "climate-resilient-corals": 20.0, "other-corals": 80.0},
+            {"location": "USA", "climate-resilient-corals": 100.0, "other-corals": 50.0},
+            {"location": "MEX", "climate-resilient-corals": 20.0, "other-corals": 80.0},
         ]
     )
     protected = pd.DataFrame(
-        [{"country": "USA", "climate-resilient-corals": 30.0, "other-corals": 10.0}]
+        [{"location": "USA", "climate-resilient-corals": 30.0, "other-corals": 10.0}]
     )
 
     result = _rollup_corals_subtable(total, protected, combined_regions)
@@ -149,8 +149,8 @@ def test_rollup_handles_country_missing_from_protected_stats(combined_regions):
 
 def test_rollup_handles_missing_class_column():
     """If a class never appeared in any country, total_area and protected_area should be 0."""
-    total = pd.DataFrame([{"country": "USA", "climate-resilient-corals": 100.0}])
-    protected = pd.DataFrame([{"country": "USA", "climate-resilient-corals": 30.0}])
+    total = pd.DataFrame([{"location": "USA", "climate-resilient-corals": 100.0}])
+    protected = pd.DataFrame([{"location": "USA", "climate-resilient-corals": 30.0}])
     combined_regions = {"USA": ["USA"], "GLOB": []}
 
     result = _rollup_corals_subtable(total, protected, combined_regions)

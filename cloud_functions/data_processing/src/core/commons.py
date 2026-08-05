@@ -17,6 +17,7 @@ import requests
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
+from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.params import (
@@ -137,15 +138,30 @@ def download_and_duplicate_zipfile(
     duplicate_blob(bucket, archive_blob_name, blob_name, verbose=True)
 
 
+def add_tolerance_suffix(filename: str, tolerance) -> str:
+    """Insert a simplification-tolerance suffix before the file extension.
+
+    e.g. ("static/iho_sea_areas_processed.parquet", 0.0001) ->
+    "static/iho_sea_areas_processed_0.0001.parquet". Format-agnostic: works for
+    any extension, so the file format can change without touching call sites.
+    """
+    stem, ext = os.path.splitext(filename)
+    return f"{stem}_{tolerance}{ext}"
+
+
 def safe_union(df, batch_size=1000, simplify_tolerance=1000):
     parts = []
     for i in range(0, len(df), batch_size):
         chunk = df.iloc[i : i + batch_size]
         if simplify_tolerance is None:
-            parts.append(unary_union(chunk.geometry))
+            parts.append(make_valid(unary_union(chunk.geometry)))
         else:
             parts.append(
-                unary_union(chunk.geometry).simplify(simplify_tolerance, preserve_topology=False)
+                make_valid(
+                    unary_union(chunk.geometry).simplify(
+                        simplify_tolerance, preserve_topology=False
+                    )
+                )
             )
     return unary_union(parts)
 
