@@ -446,7 +446,7 @@ def get_iho_fishing_protection_region_stats(
 
     # Keep only the highly protected sites, then merge them into a single
     # geometry so we can measure their overlap with each IHO sea area.
-    highly = ps_sites[ps_sites["fishing_protection_level"] == "highly"]
+    highly = ps_sites[ps_sites["fishing_protection_level"] == "highly"].copy()
 
     # Repair any invalid site geometries before the overlay/dissolve.
     if verbose:
