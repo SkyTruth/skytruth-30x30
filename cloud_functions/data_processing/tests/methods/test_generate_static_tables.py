@@ -29,6 +29,7 @@ def mock_gadm_gdf(crs):
         crs=crs,
     )
 
+
 @pytest.fixture
 def mock_iho_seas_gdf(crs):
     """
@@ -36,7 +37,7 @@ def mock_iho_seas_gdf(crs):
     """
     return gpd.GeoDataFrame(
         {
-            "NAME":["Gulf of Mexico", "Caribbean Sea"],
+            "NAME": ["Gulf of Mexico", "Caribbean Sea"],
             "ID": ["26", "27"],
             "Longitude": ["-90.37958525236", "-74.67801130419"],
             "Latitude": ["24.94231562654", "15.31030445709"],
@@ -51,8 +52,9 @@ def mock_iho_seas_gdf(crs):
                 Point(-74.67801130419, 15.31030445709).buffer(1.5),
             ],
         },
-        crs=crs
+        crs=crs,
     )
+
 
 @pytest.fixture
 def mock_related_countries_map():
@@ -112,16 +114,19 @@ def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suff
 
     return _read_json_df
 
+
 def _mock_read_parquet_from_gcs(mock_iho_seas_gdf, iho_seas_suffix):
     """
     Return the IHO Seas GeoDataFrame
     """
+
     def _read_parquet_from_gcs(*, bucket_name, filename, verbose=True):
         if filename.endswith(iho_seas_suffix):
-                return mock_iho_seas_gdf.copy()
+            return mock_iho_seas_gdf.copy()
         raise AssertionError(f"Unexpected filename: {filename}")
-    
+
     return _read_parquet_from_gcs
+
 
 def _mock_read_json_from_gcs(mock_related_countries_map, mock_regions_map):
     def _reader(*, bucket_name, filename, verbose=True):
@@ -221,7 +226,7 @@ def test_generate_locations_table_happy(
         gen_static_tbl,
         "read_parquet_from_gcs",
         _mock_read_parquet_from_gcs(mock_iho_seas_gdf, iho_seas_suffix),
-        raising=True
+        raising=True,
     )
     monkeypatch.setattr(
         gen_static_tbl,
@@ -280,7 +285,11 @@ def test_generate_locations_table_happy(
     assert any(code in set(df["code"].astype(str)) for code in ["NA", "USA*", "MEX*"])
 
     # Make sure Gulf of Mexico IHO Sea Area made it in
-    assert ((df["name"] == "Gulf of Mexico") & (df["code"].astype(str) == "4288") & (df["type"] == "sea")).any()
+    assert (
+        (df["name"] == "Gulf of Mexico")
+        & (df["code"].astype(str) == "4288")
+        & (df["type"] == "sea")
+    ).any()
 
 
 def test_generate_locations_table_read_failure(

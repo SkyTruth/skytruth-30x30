@@ -4,7 +4,11 @@ import pandas as pd
 from shapely.ops import unary_union
 
 from src.core.commons import add_tolerance_suffix
-from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance, iho_sea_locations_tolerance
+from src.core.land_cover_params import (
+    iho_sea_locations_tolerance,
+    marine_tolerance,
+    terrestrial_tolerance,
+)
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
@@ -16,7 +20,13 @@ from src.core.params import (
     RELATED_COUNTRIES_FILE_NAME,
 )
 from src.core.processors import round_to_list
-from src.utils.gcp import read_dataframe, read_json_df, read_json_from_gcs, upload_dataframe, read_parquet_from_gcs
+from src.utils.gcp import (
+    read_dataframe,
+    read_json_df,
+    read_json_from_gcs,
+    read_parquet_from_gcs,
+    upload_dataframe,
+)
 from src.utils.geo import get_area_km2
 from src.utils.logger import Logger
 
@@ -43,7 +53,9 @@ def generate_locations_table(
 
     eez = read_json_df(bucket_name=bucket, filename=eez_file, verbose=verbose)
     gadm = read_json_df(bucket_name=bucket, filename=gadm_file, verbose=verbose)
-    iho_sea_areas = read_parquet_from_gcs(bucket_name=bucket, filename=iho_sea_areas_file, verbose=verbose)
+    iho_sea_areas = read_parquet_from_gcs(
+        bucket_name=bucket, filename=iho_sea_areas_file, verbose=verbose
+    )
 
     related_countries = read_json_from_gcs(
         bucket_name=bucket, filename=related_countries_file_name, verbose=verbose
@@ -93,7 +105,9 @@ def generate_locations_table(
     iho_sea_areas = iho_sea_areas.rename(
         columns={"MRGID": "code", "NAME": "name", "area": "total_marine_area"}
     )
-    iho_sea_areas["total_marine_area"] = pd.to_numeric(iho_sea_areas["total_marine_area"], errors="coerce")
+    iho_sea_areas["total_marine_area"] = pd.to_numeric(
+        iho_sea_areas["total_marine_area"], errors="coerce"
+    )
 
     # Add total areas and bounds where needed
     gadm["total_terrestrial_area"] = gadm["geometry"].apply(get_area_km2).round(0).astype("Int64")
@@ -131,8 +145,22 @@ def generate_locations_table(
     )
 
     locs = pd.concat(
-        [locs, iho_sea_areas[["type", "terrestrial_bounds", "marine_bounds", "total_marine_area", "code", 
-                                "name", "name_es", "name_fr", "name_pt"]]],
+        [
+            locs,
+            iho_sea_areas[
+                [
+                    "type",
+                    "terrestrial_bounds",
+                    "marine_bounds",
+                    "total_marine_area",
+                    "code",
+                    "name",
+                    "name_es",
+                    "name_fr",
+                    "name_pt",
+                ]
+            ],
+        ],
         ignore_index=True,
     )
 
