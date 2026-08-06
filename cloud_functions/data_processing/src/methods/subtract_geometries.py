@@ -141,7 +141,7 @@ def generate_location_minus_fhp_mpa(
     verbose: bool = True,
 ):
     """
-    Differences fully/highly protected MPAs (as defined by MPAtlas) from a location file (such as 
+    Differences fully/highly protected MPAs (as defined by MPAtlas) from a location file (such as
     Global EEZs or EEZ + IHO).
 
     Parameters
@@ -161,7 +161,7 @@ def generate_location_minus_fhp_mpa(
 
     Returns
     -------
-        GeoDataFrame of Location with areas intersecting Highly/Fully protected MPAs removed, saved 
+        GeoDataFrame of Location with areas intersecting Highly/Fully protected MPAs removed, saved
         to GCS as a Parquet file.
     """
 
@@ -173,7 +173,7 @@ def generate_location_minus_fhp_mpa(
 
     location = read_json_df(
         bucket_name=bucket,
-        filename=loc_file.replace(".geojson", f"_{tolerance}.geojson"),
+        filename=add_tolerance_suffix(loc_file, tolerance),
         verbose=verbose,
     )
 
@@ -213,7 +213,6 @@ def generate_location_minus_fhp_mpa(
         bucket_name=bucket,
         gdf=non_fh_protected_location_area,
         destination_blob_name=out_file,
-        output_file_type=".parquet",
     )
 
     # Save to archive
@@ -221,5 +220,4 @@ def generate_location_minus_fhp_mpa(
         bucket_name=bucket,
         gdf=non_fh_protected_location_area,
         destination_blob_name=archive_out_file,
-        output_file_type=".parquet",
     )
