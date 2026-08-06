@@ -141,7 +141,8 @@ def generate_location_minus_fhp_mpa(
     verbose: bool = True,
 ):
     """
-    Differences fully/highly protected MPAs (as defined by MPAtlas) from a location file (such as Global EEZs or EEZ + IHO).
+    Differences fully/highly protected MPAs (as defined by MPAtlas) from a location file (such as 
+    Global EEZs or EEZ + IHO).
 
     Parameters
     ----------
@@ -160,7 +161,8 @@ def generate_location_minus_fhp_mpa(
 
     Returns
     -------
-        GeoDataFrame of Location with areas intersecting Highly/Fully protected MPAs removed, saved to GCS as a Parquet file.
+        GeoDataFrame of Location with areas intersecting Highly/Fully protected MPAs removed, saved 
+        to GCS as a Parquet file.
     """
 
     mpa = read_json_df(
@@ -179,20 +181,14 @@ def generate_location_minus_fhp_mpa(
     mpa_fhp = mpa[mpa["protection_mpaguide_level"].isin(["full", "high"])]
 
     # Keep only polygon / multipolygon records and make the geometries valid
-    mpa_fhp = mpa_fhp[
-        mpa_fhp.geometry.geom_type.isin(["MultiPolygon", "Polygon"])
-    ].copy()
+    mpa_fhp = mpa_fhp[mpa_fhp.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
     mpa_fhp.geometry = mpa_fhp.geometry.make_valid()
 
-    location = location[
-        location.geometry.geom_type.isin(["MultiPolygon", "Polygon"])
-    ].copy()
+    location = location[location.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
     location.geometry = location.geometry.make_valid()
 
     if verbose:
-        logger.info(
-            {"message": "Subtracting fully/highly protected areas from location areas..."}
-        )
+        logger.info({"message": "Subtracting fully/highly protected areas from location areas..."})
 
     # Difference the mpa_fhp from location; where location["location"] == mpa_fhp["country"]
     mpa_by_country = mpa_fhp.dissolve(by="country")["geometry"]
@@ -210,9 +206,7 @@ def generate_location_minus_fhp_mpa(
     non_fh_protected_location_area = location.drop(columns="_mpa")
 
     if verbose:
-        logger.info(
-            {"message": f"Output file has {len(non_fh_protected_location_area)} rows."}
-        )
+        logger.info({"message": f"Output file has {len(non_fh_protected_location_area)} rows."})
 
     # Save to GCS
     upload_gdf(
