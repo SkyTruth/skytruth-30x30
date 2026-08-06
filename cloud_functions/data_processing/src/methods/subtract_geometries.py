@@ -131,9 +131,9 @@ def generate_total_area_minus_pa(
     )
 
 
-def generate_eez_minus_fully_highly_protected(
+def generate_location_minus_fhp_mpa(
     mpa_file: str,
-    eez_file: str,
+    loc_file: str,
     out_file: str,
     archive_out_file: str,
     tolerance: float,
@@ -141,16 +141,16 @@ def generate_eez_minus_fully_highly_protected(
     verbose: bool = True,
 ):
     """
-    Differences fully/highly protected MPAs (as defined by MPAtlas) from the Global EEZs.
-    
+    Differences fully/highly protected MPAs (as defined by MPAtlas) from a location file (such as Global EEZs or EEZ + IHO).
+
     Parameters
     ----------
     bucket : str
         GCS bucket name.
     mpa_file : str
             Filename of MPAtlas area geojson.
-    eez_file : str
-        Filename of EEZ geojson.
+    loc_file : str
+        Filename of location data geojson.
     out_file
         Filename for output file.
     tolerance : float
@@ -160,7 +160,7 @@ def generate_eez_minus_fully_highly_protected(
 
     Returns
     -------
-        GeoDataFrame of EEZs - Highly/Fully protected MPAs, saved to GCS as a Parquet file.
+        GeoDataFrame of Location with areas intersecting Highly/Fully protected MPAs removed, saved to GCS as a Parquet file.
     """
 
     mpa = read_json_df(
@@ -169,45 +169,55 @@ def generate_eez_minus_fully_highly_protected(
         verbose=verbose,
     )
 
-    eez = read_json_df(
+    location = read_json_df(
         bucket_name=bucket,
-        filename=eez_file.replace(".geojson", f"_{tolerance}.geojson"),
+        filename=loc_file.replace(".geojson", f"_{tolerance}.geojson"),
         verbose=verbose,
     )
-    
+
     # Select records where protection_mpaguide_level is full or high
-    mpa_fhp = mpa[mpa["protection_mpaguide_level"].isin(["full","high"])]
+    mpa_fhp = mpa[mpa["protection_mpaguide_level"].isin(["full", "high"])]
 
     # Keep only polygon / multipolygon records and make the geometries valid
-    mpa_fhp = mpa_fhp[mpa_fhp.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
+    mpa_fhp = mpa_fhp[
+        mpa_fhp.geometry.geom_type.isin(["MultiPolygon", "Polygon"])
+    ].copy()
     mpa_fhp.geometry = mpa_fhp.geometry.make_valid()
 
-    eez = eez[eez.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
-    eez.geometry = eez.geometry.make_valid()
+    location = location[
+        location.geometry.geom_type.isin(["MultiPolygon", "Polygon"])
+    ].copy()
+    location.geometry = location.geometry.make_valid()
 
     if verbose:
-        logger.info({"message": "Subtracting fully/highly protected areas from eez areas..."})
+        logger.info(
+            {"message": "Subtracting fully/highly protected areas from location areas..."}
+        )
 
-    # Difference the mpa_fhp from eez; where eez["location"] == mpa_fhp["country"]
+    # Difference the mpa_fhp from location; where location["location"] == mpa_fhp["country"]
     mpa_by_country = mpa_fhp.dissolve(by="country")["geometry"]
 
-    eez = eez.copy()
-    eez["_mpa"] = eez["location"].map(mpa_by_country)  # is NaN where a country has no FHP MPAS
+    location = location.copy()
+    location["_mpa"] = location["location"].map(
+        mpa_by_country
+    )  # is NaN where a country has no FHP MPAS
 
-    has_mpa = eez["_mpa"].notna()
+    has_mpa = location["_mpa"].notna()
 
-    eez.loc[has_mpa, "geometry"] = eez.loc[has_mpa, "geometry"].difference(
-        gpd.GeoSeries(eez.loc[has_mpa, "_mpa"], crs=eez.crs)
+    location.loc[has_mpa, "geometry"] = location.loc[has_mpa, "geometry"].difference(
+        gpd.GeoSeries(location.loc[has_mpa, "_mpa"], crs=location.crs)
     )
-    non_fh_protected_eez_area = eez.drop(columns="_mpa")
+    non_fh_protected_location_area = location.drop(columns="_mpa")
 
     if verbose:
-            logger.info({"message": f"Output file has {len(non_fh_protected_eez_area)} rows."})
+        logger.info(
+            {"message": f"Output file has {len(non_fh_protected_location_area)} rows."}
+        )
 
     # Save to GCS
     upload_gdf(
         bucket_name=bucket,
-        gdf=non_fh_protected_eez_area,
+        gdf=non_fh_protected_location_area,
         destination_blob_name=out_file,
         output_file_type=".parquet",
     )
@@ -215,8 +225,7 @@ def generate_eez_minus_fully_highly_protected(
     # Save to archive
     upload_gdf(
         bucket_name=bucket,
-        gdf=non_fh_protected_eez_area,
+        gdf=non_fh_protected_location_area,
         destination_blob_name=archive_out_file,
         output_file_type=".parquet",
     )
-
