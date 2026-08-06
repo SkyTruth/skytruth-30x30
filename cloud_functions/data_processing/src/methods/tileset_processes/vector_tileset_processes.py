@@ -3,6 +3,7 @@ from typing import Any
 import geopandas as gpd
 import pandas as pd
 
+from src.core.commons import add_tolerance_suffix
 from src.core.map_params import (
     COUNTRIES_TILESET_FILE,
     COUNTRIES_TILESET_ID,
@@ -161,7 +162,7 @@ def create_and_update_eez_tileset(
             display_name=display_name,
             local_geojson_name="eez.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file.replace(".geojson", f"_{EEZ_TOLERANCE}.geojson"),
+            source_file=add_tolerance_suffix(source_file, EEZ_TOLERANCE),
             verbose=verbose,
             keep_temp=keep_temp,
         )
@@ -194,7 +195,7 @@ def create_and_update_marine_regions_tileset(
             display_name=display_name,
             local_geojson_name="marine_regions.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file.replace(".geojson", f"_{EEZ_TOLERANCE}.geojson"),
+            source_file=add_tolerance_suffix(source_file, EEZ_TOLERANCE),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
@@ -265,7 +266,7 @@ def create_and_update_country_tileset(
             display_name=display_name,
             local_geojson_name="countries.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file.replace(".geojson", f"_{COUNTRIES_TOLERANCE}.geojson"),
+            source_file=add_tolerance_suffix(source_file, COUNTRIES_TOLERANCE),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
@@ -331,7 +332,7 @@ def create_and_update_terrestrial_regions_tileset(
             display_name=display_name,
             local_geojson_name="terrestrial_regions.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file.replace(".geojson", f"_{COUNTRIES_TOLERANCE}.geojson"),
+            source_file=add_tolerance_suffix(source_file, COUNTRIES_TOLERANCE),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
@@ -401,7 +402,7 @@ def create_and_update_protected_area_tileset(
             display_name=display_name,
             local_geojson_name=f"{tileset_id}.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=source_file.replace(".geojson", f"_{tolerance}.geojson"),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
         )

@@ -4,6 +4,7 @@
 .DS_Store
 .pytest_cache
 *.ipynb
+.ipynb_checkpoints/
 
 # environment variables
 .env

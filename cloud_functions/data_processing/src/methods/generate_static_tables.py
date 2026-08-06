@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 from shapely.ops import unary_union
 
-from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance, iho_sea_locations_tolerance
+from src.core.commons import add_tolerance_suffix
+from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
@@ -36,11 +37,8 @@ def generate_locations_table(
     if verbose:
         logger.info({"message": "Generating locations table"})
 
-    eez_file = eez_file_name.replace(".geojson", f"_{marine_tolerance}.geojson")
-    gadm_file = gadm_file_name.replace(".geojson", f"_{terrestrial_tolerance}.geojson")
-    iho_sea_areas_file = iho_sea_areas_file_name.replace(".geojson", f"_{iho_sea_locations_tolerance}.geojson")
-
-    # including this to bypass
+    eez_file = add_tolerance_suffix(eez_file_name, marine_tolerance)
+    gadm_file = add_tolerance_suffix(gadm_file_name, terrestrial_tolerance)
 
     eez = read_json_df(bucket_name=bucket, filename=eez_file, verbose=verbose)
     gadm = read_json_df(bucket_name=bucket, filename=gadm_file, verbose=verbose)

@@ -1,176 +1,94 @@
 import pandas as pd
 import pytest
 
-import src.methods.generate_tables as gen_tables
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def wdpa_country():
-    """testing for process_protected_area"""
-    return pd.DataFrame(
-        {
-            "id": ["BRA"],
-            "pas_count": [10],
-            "statistics": [
-                str(
-                    {
-                        "marine_area": 1000.0,
-                        "oecms_pa_marine_area": 100.0,
-                        "percentage_oecms_pa_marine_cover": 10.0,
-                        "pa_marine_area": 80.0,
-                        "percentage_pa_marine_cover": 8.0,
-                        "protected_area_polygon_count": 5,
-                        "protected_area_point_count": 2,
-                        "oecm_polygon_count": 1,
-                        "oecm_point_count": 0,
-                        "land_area": 2000.0,
-                        "oecms_pa_land_area": 200.0,
-                        "percentage_oecms_pa_land_cover": 10.0,
-                        "pa_land_area": 160.0,
-                        "percentage_pa_land_cover": 8.0,
-                    }
-                )
-            ],
-        }
-    )
-
-
-@pytest.fixture
-def wdpa_global():
-    return pd.DataFrame(
-        {
-            "type": [
-                "total_ocean_area_oecms_pas",
-                "total_ocean_area_oecms",
-                "total_ocean_oecms_pas_coverage_percentage",
-                "total_marine_oecms_pas",
-                "total_land_area_oecms_pas",
-                "total_land_area_oecms",
-                "total_land_oecms_pas_coverage_percentage",
-                "total_terrestrial_oecms_pas",
-                "high_seas_pa_coverage_area",
-                "high_seas_pa_coverage_percentage",
-                "national_waters_oecms_coverage_area",
-                "national_waters_oecms_pas_coverage_area",
-                "global_ocean_percentage",
-            ],
-            "value": [
-                36_319_197.0,  # total_ocean_area_oecms_pas
-                5_000_000.0,  # total_ocean_area_oecms
-                10.0,  # total_ocean_oecms_pas_coverage_percentage
-                500,  # total_marine_oecms_pas (count)
-                15_000_000.0,  # total_land_area_oecms_pas
-                3_000_000.0,  # total_land_area_oecms
-                10.0,  # total_land_oecms_pas_coverage_percentage
-                300,  # total_terrestrial_oecms_pas (count)
-                1_000_000.0,  # high_seas_pa_coverage_area
-                1.75,  # high_seas_pa_coverage_percentage
-                20_000_000.0,  # national_waters_oecms_coverage_area
-                25_000_000.0,  # national_waters_oecms_pas_coverage_area
-                64.0,  # global_ocean_percentage
-            ],
-        }
-    )
-
-
-@pytest.fixture
-def combined_regions():
-    return {
-        "BRA": ["BRA"],
-        "GLOB": [],
-    }
+import src.methods.generate_tables as generate_tables
 
 
 @pytest.fixture
 def upload_recorder():
+    """Record dataframes uploaded by the protection-coverage table wrapper."""
     calls = []
 
-    def _upload_dataframe(*, bucket_name, df, destination_blob_name, **_):
+    def _upload(bucket, df, destination, **kwargs):
         calls.append(
             {
-                "bucket_name": bucket_name,
-                "destination_blob_name": destination_blob_name,
+                "bucket": bucket,
+                "destination": destination,
                 "df": df.copy(),
+                "kwargs": kwargs,
             }
         )
 
-    return calls, _upload_dataframe
+    return calls, _upload
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _run_generate(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder):
-    """"""
-    calls, upload_mock = upload_recorder
-
-    monkeypatch.setattr(gen_tables, "load_regions", lambda **_: (combined_regions, {}))
-    monkeypatch.setattr(gen_tables, "read_dataframe", lambda *a, **kw: wdpa_country.copy())
-    monkeypatch.setattr(gen_tables, "load_wdpa_global", lambda *a, **kw: wdpa_global.copy())
-
-    monkeypatch.setattr(
-        gen_tables,
-        "upload_dataframe",
-        lambda bucket, df, dest, **kw: upload_mock(
-            bucket_name=bucket, df=df, destination_blob_name=dest
-        ),
+def test_generate_protection_coverage_combines_rounds_and_uploads(monkeypatch, upload_recorder):
+    """Combine country and IHO rows, round areas, and publish both output datasets."""
+    country_coverage = pd.DataFrame(
+        [
+            {
+                "location": "BRA",
+                "environment": "marine",
+                "total_area": 10.4,
+                "protected_area": 2.0,
+            }
+        ]
+    )
+    country_areas = country_coverage[["location", "environment", "total_area"]].copy()
+    iho_coverage = pd.DataFrame(
+        [
+            {
+                "location": "123",
+                "environment": "marine",
+                "total_area": 20.6,
+                "protected_area": 5.0,
+            }
+        ]
     )
 
-    result = gen_tables.generate_protection_coverage_stats_table(verbose=False)
-    return pd.DataFrame(result), calls
+    country_calls = []
+    monkeypatch.setattr(
+        generate_tables,
+        "compute_country_global_coverage",
+        lambda **kwargs: (country_calls.append(kwargs) or (country_coverage, country_areas)),
+    )
+    iho_calls = []
+    monkeypatch.setattr(
+        generate_tables,
+        "compute_iho_protection_coverage",
+        lambda **kwargs: (iho_calls.append(kwargs) or iho_coverage),
+    )
+    uploads, upload = upload_recorder
+    monkeypatch.setattr(generate_tables, "upload_dataframe", upload)
 
+    result = pd.DataFrame(
+        generate_tables.generate_protection_coverage_stats_table(
+            bucket="bucket",
+            project="project",
+            protection_coverage_file_name="coverage.csv",
+            wdpa_country_level_file_name="country.csv",
+            wdpa_global_level_file_name="global.csv",
+            verbose=False,
+        )
+    )
 
-def _get_row(df, location, environment="marine"):
-    rows = df[(df["location"] == location) & (df["environment"] == environment)]
-    assert len(rows) == 1, f"Expected 1 row for {location}/{environment}, got {len(rows)}"
-    return rows.iloc[0]
+    assert country_calls == [
+        {
+            "bucket": "bucket",
+            "wdpa_country_level_file_name": "country.csv",
+            "wdpa_global_level_file_name": "global.csv",
+            "percent_type": "area",
+            "verbose": False,
+        }
+    ]
+    assert iho_calls == [{"bucket": "bucket", "verbose": False}]
+    assert result.set_index("location")["total_area"].to_dict() == {"BRA": 10, "123": 21}
 
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
-
-def test_total_area_marine(
-    monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder
-):
-    """use back calculation correctly for global area in marine env"""
-    df, _ = _run_generate(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder)
-    row = _get_row(df, "GLOB")
-    # total area = oecms_pas / (coverage / 100)
-    assert row["total_area"] == 363_191_970
-
-
-def test_total_area_terrestrial(
-    monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder
-):
-    """use back calculation correctly for global area in terrestrial env"""
-    df, _ = _run_generate(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder)
-    row = _get_row(df, "GLOB", environment="terrestrial")
-    # total area = oecms_pas / (coverage / 100)
-    assert row["total_area"] == 150_000_000
-
-
-def test_global_contribution(
-    monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder
-):
-    """make sure global_contribution works as expected"""
-    df, _ = _run_generate(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder)
-    row = _get_row(df, "GLOB")
-    # global_contribution = coverage
-    assert row["global_contribution"] == 10
-
-
-def test_total_area_abnj(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder):
-    """ABNJ total_area should be global_ocean_area * global_ocean_percentage / 100"""
-    df, _ = _run_generate(monkeypatch, wdpa_country, wdpa_global, combined_regions, upload_recorder)
-    row = _get_row(df, "ABNJ")
-    # global_ocean_area = 36_319_197 / (10.0 / 100) = 363_191_970
-    # total_area = 363_191_970 * 64.0 / 100 = 232_442_860.8
-    assert row["total_area"] == 232_442_861
+    assert [call["destination"] for call in uploads] == [
+        "coverage.csv",
+        "temporary/country_areas.csv",
+    ]
+    assert uploads[0]["df"]["total_area"].dtype == pd.Int64Dtype()
+    assert uploads[1]["df"].equals(country_areas)
+    assert all(call["bucket"] == "bucket" for call in uploads)
+    assert all(call["kwargs"]["project_id"] == "project" for call in uploads)

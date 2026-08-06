@@ -3,6 +3,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
+from src.core.commons import add_tolerance_suffix
 from src.core.params import BUCKET
 from src.utils.gcp import (
     read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
@@ -76,7 +77,7 @@ def generate_total_area_minus_pa(
     # Total areas: GADM (terrestrial) or EEZ (marine)
     total_area = read_json_df(
         bucket_name=bucket,
-        filename=total_area_file.replace(".geojson", f"_{tolerance}.geojson"),
+        filename=add_tolerance_suffix(total_area_file, tolerance),
         verbose=verbose,
     )
     total_area = total_area[["location", "geometry"]]
@@ -87,7 +88,7 @@ def generate_total_area_minus_pa(
     # Protected areas: PA (terrestrial) or MPA (marine)
     pa = read_json_df(
         bucket_name=bucket,
-        filename=pa_file.replace(".geojson", f"_{tolerance}.geojson"),
+        filename=add_tolerance_suffix(pa_file, tolerance),
         verbose=verbose,
     )
 
@@ -120,7 +121,6 @@ def generate_total_area_minus_pa(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=out_file,
-        output_file_type=".parquet",
     )
 
     # Save to archive
@@ -128,5 +128,4 @@ def generate_total_area_minus_pa(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
         destination_blob_name=archive_out_file,
-        output_file_type=".parquet",
     )
