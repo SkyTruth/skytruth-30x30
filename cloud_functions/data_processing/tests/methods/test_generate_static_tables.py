@@ -97,7 +97,7 @@ def upload_recorder():
 
 
 # Mocks to patch in for functions and pas the fixtures
-def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, mock_iho_seas_gdf, eez_suffix, gadm_suffix, iho_seas_suffix):
+def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix):
     """
     Return the right GeoDataFrame based on the filename the function asks for.
     We detect which one by the suffix (tolerance is part of the suffix).
@@ -108,12 +108,20 @@ def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, mock_iho_seas_gdf, ee
             return mock_eez_by_loc_gdf.copy()
         if filename.endswith(gadm_suffix):
             return mock_gadm_gdf.copy()
-        if filename.endswith(iho_seas_suffix):
-            return mock_iho_seas_gdf.copy()
         raise AssertionError(f"Unexpected filename: {filename}")
 
     return _read_json_df
 
+def _mock_read_parquet_from_gcs(mock_iho_seas_gdf, iho_seas_suffix):
+    """
+    Return the IHO Seas GeoDataFrame
+    """
+    def _read_parquet_from_gcs(*, bucket_name, filename, verbose=True):
+        if filename.endswith(iho_seas_suffix):
+                return mock_iho_seas_gdf.copy()
+        raise AssertionError(f"Unexpected filename: {filename}")
+    
+    return _read_parquet_from_gcs
 
 def _mock_read_json_from_gcs(mock_related_countries_map, mock_regions_map):
     def _reader(*, bucket_name, filename, verbose=True):
@@ -200,14 +208,20 @@ def test_generate_locations_table_happy(
     # The filenames the function will compute internally
     eez_suffix = gen_static_tbl.EEZ_FILE_NAME.replace(".geojson", "_0.1.geojson")
     gadm_suffix = gen_static_tbl.GADM_FILE_NAME.replace(".geojson", "_0.2.geojson")
-    iho_seas_suffix = gen_static_tbl.IHO_SEA_AREAS_FILE_NAME.replace(".geojson", "_0.3.geojson")
+    iho_seas_suffix = gen_static_tbl.IHO_SEA_AREAS_FILE_NAME.replace(".parquet", "_0.3.parquet")
 
     # Patch I/O internal bu imported helpers
     monkeypatch.setattr(
         gen_static_tbl,
         "read_json_df",
-        _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, mock_iho_seas_gdf, eez_suffix, gadm_suffix, iho_seas_suffix),
+        _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix),
         raising=True,
+    )
+    monkeypatch.setattr(
+        gen_static_tbl,
+        "read_parquet_from_gcs",
+        _mock_read_parquet_from_gcs(mock_iho_seas_gdf, iho_seas_suffix),
+        raising=True
     )
     monkeypatch.setattr(
         gen_static_tbl,
@@ -243,6 +257,7 @@ def test_generate_locations_table_happy(
     assert uploaded["destination_blob_name"] == "locations.csv"
 
     df = uploaded["df"]
+    print(df["code"])
 
     assert {"code", "name", "name_es", "name_fr", "name_pt"}.issubset(df.columns)
     assert {
@@ -263,6 +278,9 @@ def test_generate_locations_table_happy(
 
     # make sure regions and soverign roll ups made it in
     assert any(code in set(df["code"].astype(str)) for code in ["NA", "USA*", "MEX*"])
+
+    # Make sure Gulf of Mexico IHO Sea Area made it in
+    assert ((df["name"] == "Gulf of Mexico") & (df["code"].astype(str) == "4288") & (df["type"] == "sea")).any()
 
 
 def test_generate_locations_table_read_failure(
