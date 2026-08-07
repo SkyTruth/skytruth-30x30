@@ -152,6 +152,7 @@ def generate_locations_table(
                 [
                     "type",
                     "terrestrial_bounds",
+                    "total_terrestrial_area"
                     "marine_bounds",
                     "total_marine_area",
                     "code",
