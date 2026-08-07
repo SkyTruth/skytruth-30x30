@@ -108,6 +108,7 @@ def generate_locations_table(
     iho_sea_areas["total_marine_area"] = pd.to_numeric(
         iho_sea_areas["total_marine_area"], errors="coerce"
     )
+    iho_sea_areas["total_terrestrial_area"] = 0
 
     # Add total areas and bounds where needed
     gadm["total_terrestrial_area"] = gadm["geometry"].apply(get_area_km2).round(0).astype("Int64")

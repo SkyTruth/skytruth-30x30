@@ -262,7 +262,6 @@ def test_generate_locations_table_happy(
     assert uploaded["destination_blob_name"] == "locations.csv"
 
     df = uploaded["df"]
-    print(df["code"])
 
     assert {"code", "name", "name_es", "name_fr", "name_pt"}.issubset(df.columns)
     assert {
