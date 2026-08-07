@@ -4,18 +4,29 @@ import pandas as pd
 from shapely.ops import unary_union
 
 from src.core.commons import add_tolerance_suffix
-from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
+from src.core.land_cover_params import (
+    iho_sea_locations_tolerance,
+    marine_tolerance,
+    terrestrial_tolerance,
+)
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
+    IHO_SEA_AREAS_FILE_NAME,
     LOCATIONS_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
 )
 from src.core.processors import round_to_list
-from src.utils.gcp import read_dataframe, read_json_df, read_json_from_gcs, upload_dataframe
+from src.utils.gcp import (
+    read_dataframe,
+    read_json_df,
+    read_json_from_gcs,
+    read_parquet_from_gcs,
+    upload_dataframe,
+)
 from src.utils.geo import get_area_km2
 from src.utils.logger import Logger
 
@@ -24,6 +35,7 @@ logger = Logger()
 
 def generate_locations_table(
     eez_file_name: str = EEZ_FILE_NAME,
+    iho_sea_areas_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     gadm_file_name: str = GADM_FILE_NAME,
     output_file_name: str = LOCATIONS_FILE_NAME,
     related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
@@ -37,9 +49,13 @@ def generate_locations_table(
 
     eez_file = add_tolerance_suffix(eez_file_name, marine_tolerance)
     gadm_file = add_tolerance_suffix(gadm_file_name, terrestrial_tolerance)
+    iho_sea_areas_file = add_tolerance_suffix(iho_sea_areas_file_name, iho_sea_locations_tolerance)
 
     eez = read_json_df(bucket_name=bucket, filename=eez_file, verbose=verbose)
     gadm = read_json_df(bucket_name=bucket, filename=gadm_file, verbose=verbose)
+    iho_sea_areas = read_parquet_from_gcs(
+        bucket_name=bucket, filename=iho_sea_areas_file, verbose=verbose
+    )
 
     related_countries = read_json_from_gcs(
         bucket_name=bucket, filename=related_countries_file_name, verbose=verbose
@@ -64,6 +80,9 @@ def generate_locations_table(
     eez["type"] = eez.apply(_add_default_types, axis=1)
     gadm["type"] = gadm.apply(_add_default_types, axis=1)
 
+    # Adding type "sea" for all the IHO bodies of water
+    iho_sea_areas["type"] = "sea"
+
     if verbose:
         logger.info({"message": "Processing EEZs and their country relation mappings"})
     # Add country groups and regions
@@ -81,6 +100,16 @@ def generate_locations_table(
         .pipe(_add_groups, region_map, "region")
     )
 
+    if verbose:
+        logger.info({"message": "Processing IHO Sea Areas"})
+    iho_sea_areas = iho_sea_areas.rename(
+        columns={"MRGID": "code", "NAME": "name", "area": "total_marine_area"}
+    )
+    iho_sea_areas["total_marine_area"] = pd.to_numeric(
+        iho_sea_areas["total_marine_area"], errors="coerce"
+    )
+    iho_sea_areas["total_terrestrial_area"] = 0
+
     # Add total areas and bounds where needed
     gadm["total_terrestrial_area"] = gadm["geometry"].apply(get_area_km2).round(0).astype("Int64")
     gadm["terrestrial_bounds"] = gadm.geometry.bounds.apply(round_to_list, axis=1)
@@ -94,6 +123,17 @@ def generate_locations_table(
     eez["total_marine_area"] = filled
     eez["marine_bounds"] = eez.geometry.bounds.apply(round_to_list, axis=1)
 
+    # Adding bounds based on existing min/max coordinates
+    iho_sea_areas["marine_bounds"] = (
+        iho_sea_areas[["min_X", "min_Y", "max_X", "max_Y"]].astype(str).agg(",".join, axis=1)
+    )
+
+    # Adding None for terrestrial bounds
+    iho_sea_areas["terrestrial_bounds"] = None
+
+    # Adding empty strings for translations
+    iho_sea_areas[["name_es", "name_fr", "name_pt"]] = ""
+
     # Put it all together
     locs = (
         gadm.merge(
@@ -103,6 +143,27 @@ def generate_locations_table(
         )
         .pipe(_add_translations, translations)
         .drop(columns=["geometry", "GID_0"])
+    )
+
+    locs = pd.concat(
+        [
+            locs,
+            iho_sea_areas[
+                [
+                    "type",
+                    "terrestrial_bounds",
+                    "total_terrestrial_area",
+                    "marine_bounds",
+                    "total_marine_area",
+                    "code",
+                    "name",
+                    "name_es",
+                    "name_fr",
+                    "name_pt",
+                ]
+            ],
+        ],
+        ignore_index=True,
     )
 
     # Typesafe defaults that might be missing after merger
