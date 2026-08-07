@@ -12,7 +12,7 @@ This project is managed using [Poetry][poetry]. Install Poetry and then run `poe
 
 ### Environment Variables
 
-There are several environment variables that need to be set for local development. These variables are all set by terraform in production, see the [infrastructure docs][infrastructure] for more information. The necessary env vars are defined in `.env.default`. Create a ne file called `.env` adjacent to `.env.default` copy `.env.default` to `.env` and populate with the needed values. These values can be found in GCP secret manager.
+There are several environment variables that need to be set for local development. These variables are all set by terraform in production, see the [infrastructure docs][infrastructure] for more information. The necessary env vars are defined in `.env.default`. Create a new file called `.env` adjacent to `.env.default` copy `.env.default` to `.env` and populate with the needed values. These values can be found in GCP secret manager.
 
 Some helpful commands while developing:
 
