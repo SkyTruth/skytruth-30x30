@@ -12,10 +12,12 @@ from src.core.commons import send_slack_alert
 from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
+    ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     BUCKET,
     CHUNK_SIZE,
     CONSERVATION_BUILDER_MARINE_DATA,
+    CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     EEZ_FILE_NAME,
     EEZ_LAND_UNION_PARAMS,
@@ -31,6 +33,7 @@ from src.core.params import (
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
+    MPATLAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCES,
@@ -68,7 +71,10 @@ from src.methods.static_processes import (
     process_mangroves,
     process_terrestrial_biome_raster,
 )
-from src.methods.subtract_geometries import generate_total_area_minus_pa
+from src.methods.subtract_geometries import (
+    generate_location_minus_fhp_mpa,
+    generate_total_area_minus_pa,
+)
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
 from src.methods.tileset_processes import (
     create_and_update_climate_resilient_coral_tileset,
@@ -135,7 +141,11 @@ def long_running_tasks(payload, timeout=5, verbose=True):
         pass
     except Exception as e:
         logger.error(
-            {"message": "Error triggering Cloud Run Job", "error": str(e), "job": job_resource_name}
+            {
+                "message": "Error triggering Cloud Run Job",
+                "error": str(e),
+                "job": job_resource_name,
+            }
         )
 
     return "OK", 200
@@ -358,7 +368,10 @@ def dispatch_publisher(
             process_eez_geoms(verbose=verbose)
             step_list = ["generate_locations_table"]
             if env == "production":
-                step_list = step_list + ["update_eez_tileset", "update_marine_regions_tileset"]
+                step_list = step_list + [
+                    "update_eez_tileset",
+                    "update_marine_regions_tileset",
+                ]
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
@@ -390,7 +403,10 @@ def dispatch_publisher(
         # ------------------
         case "download_mpatlas":
             download_mpatlas(verbose=verbose)
-            step_list = ["generate_marine_protection_level_stats_table"]
+            step_list = [
+                "generate_marine_protection_level_stats_table",
+                "generate_location_minus_fhp_mpa",
+            ]
 
         case "download_protected_seas":
             download_protected_seas(verbose=verbose)
@@ -479,6 +495,17 @@ def dispatch_publisher(
             )
             step_list = ["update_eez_minus_mpa"]
 
+        case "generate_location_minus_fhp_mpa":
+            generate_location_minus_fhp_mpa(
+                mpa_file=MPATLAS_FILE_NAME,
+                loc_file=EEZ_FILE_NAME,
+                out_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
+                archive_out_file=ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
+                tolerance=tolerance,
+                verbose=verbose,
+            )
+            step_list = ["update_location_minus_fhp_mpa"]
+
         # ------------------
         #   Database updates
         # ------------------
@@ -533,6 +560,13 @@ def dispatch_publisher(
             update_cb(
                 table_name="eez_minus_mpa_v2",
                 gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
+                verbose=verbose,
+            )
+
+        case "update_location_minus_fhp_mpa":
+            update_cb(
+                table_name="location_minus_fhp_mpa",
+                gcs_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 verbose=verbose,
             )
 

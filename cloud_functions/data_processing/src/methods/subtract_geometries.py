@@ -129,3 +129,95 @@ def generate_total_area_minus_pa(
         gdf=total_area_minus_pa,
         destination_blob_name=archive_out_file,
     )
+
+
+def generate_location_minus_fhp_mpa(
+    mpa_file: str,
+    loc_file: str,
+    out_file: str,
+    archive_out_file: str,
+    tolerance: float,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    """
+    Differences fully/highly protected MPAs (as defined by MPAtlas) from a location file (such as
+    Global EEZs or EEZ + IHO).
+
+    Parameters
+    ----------
+    bucket : str
+        GCS bucket name.
+    mpa_file : str
+            Filename of MPAtlas area geojson.
+    loc_file : str
+        Filename of location data geojson.
+    out_file
+        Filename for output file.
+    tolerance : float
+        Tolerance value used in simplification.
+    verbose : bool, optional
+        Whether to print verbose logs, by default True.
+
+    Returns
+    -------
+        GeoDataFrame of Location with areas intersecting Highly/Fully protected MPAs removed, saved
+        to GCS as a Parquet file.
+    """
+
+    mpa = read_json_df(
+        bucket_name=bucket,
+        filename=mpa_file,
+        verbose=verbose,
+    )
+
+    location = read_json_df(
+        bucket_name=bucket,
+        filename=add_tolerance_suffix(loc_file, tolerance),
+        verbose=verbose,
+    )
+
+    # Select records where protection_mpaguide_level is full or high
+    mpa_fhp = mpa[mpa["protection_mpaguide_level"].isin(["full", "high"])]
+
+    # Keep only polygon / multipolygon records and make the geometries valid
+    mpa_fhp = mpa_fhp[mpa_fhp.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
+    mpa_fhp.geometry = mpa_fhp.geometry.make_valid()
+
+    location = location[location.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
+    location.geometry = location.geometry.make_valid()
+
+    if verbose:
+        logger.info({"message": "Subtracting fully/highly protected areas from location areas..."})
+
+    # Difference the mpa_fhp from location; where location["location"] == mpa_fhp["country"]
+    mpa_by_country = mpa_fhp.dissolve(by="country")["geometry"]
+
+    location = location.copy()
+    location["_mpa"] = location["location"].map(
+        mpa_by_country
+    )  # is NaN where a country has no FHP MPAS
+
+    has_mpa = location["_mpa"].notna()
+
+    location.loc[has_mpa, "geometry"] = location.loc[has_mpa, "geometry"].difference(
+        gpd.GeoSeries(location.loc[has_mpa, "_mpa"], crs=location.crs)
+    )
+    non_fh_protected_location_area = location.drop(columns="_mpa")
+
+    if verbose:
+        logger.info({"message": f"Output file has {len(non_fh_protected_location_area)} rows."})
+
+    # Save to GCS
+    upload_gdf(
+        bucket_name=bucket,
+        gdf=non_fh_protected_location_area,
+        destination_blob_name=out_file,
+    )
+
+    # Save to archive
+    upload_gdf(
+        bucket_name=bucket,
+        gdf=non_fh_protected_location_area,
+        destination_blob_name=archive_out_file,
+    )

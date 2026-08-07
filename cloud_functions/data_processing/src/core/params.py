@@ -221,9 +221,15 @@ REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 # ------------------------------------------------------------
 
 CONSERVATION_BUILDER_MARINE_DATA = "conservation_builder/eez_minus_mpa.parquet"
+CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA = (
+    "conservation_builder/location_minus_fhp_mpa.parquet"
+)
 CONSERVATION_BUILDER_TERRESTRIAL_DATA = "conservation_builder/gadm_minus_pa.parquet"
 ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA = (
     f"archive/conservation_builder/eez_minus_mpa_{today_formatted}.parquet"
+)
+ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA = (
+    f"archive/conservation_builder/location_minus_fhp_mpa_{today_formatted}.parquet"
 )
 ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
     f"archive/conservation_builder/gadm_minus_pa_{today_formatted}.parquet"
@@ -246,5 +252,4 @@ LONG_RUNNING_TASKS = [
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
     "generate_habitat_protection_table",
-    "generate_protection_coverage_stats_table",
 ]
