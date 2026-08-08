@@ -63,6 +63,7 @@ from src.methods.generate_tables import (
 )
 from src.methods.static_processes import (
     download_marine_habitats,
+    download_marine_unep_habitats,
     generate_terrestrial_biome_stats_country,
     process_eez_geoms,
     process_eez_land_union,
@@ -383,6 +384,9 @@ def dispatch_publisher(
 
         case "download_marine_habitats":
             download_marine_habitats(verbose=verbose)
+
+        case "download_marine_unep_habitats":
+            download_marine_unep_habitats(verbose=verbose)
 
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)

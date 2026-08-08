@@ -29,10 +29,15 @@ from src.core.land_cover_params import (
     terrestrial_tolerance,
 )
 from src.core.params import (
+    ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
     ARCHIVE_HABITATS_FILE_NAME,
+    ARCHIVE_SALTMARSHES_FILE_NAME,
+    ARCHIVE_SEAGRASSES_FILE_NAME,
     ARCHIVE_SEAMOUNTS_FILE_NAME,
     BUCKET,
     CHUNK_SIZE,
+    COLD_WATER_CORALS_URL,
+    COLD_WATER_CORALS_ZIPFILE_NAME,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
     EEZ_LAND_UNION_PARAMS,
@@ -53,6 +58,10 @@ from src.core.params import (
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
+    SALTMARSHES_URL,
+    SALTMARSHES_ZIPFILE_NAME,
+    SEAGRASSES_URL,
+    SEAGRASSES_ZIPFILE_NAME,
     SEAMOUNTS_URL,
     SEAMOUNTS_ZIPFILE_NAME,
     TOLERANCES,
@@ -551,6 +560,82 @@ def download_marine_habitats(
         bucket,
         seamounts_zipfile_name,
         archive_seamounts_file_name,
+        chunk_size=chunk_size,
+        verbose=verbose,
+    )
+
+
+def download_marine_unep_habitats(
+    cold_water_corals_url: str = COLD_WATER_CORALS_URL,
+    cold_water_corals_zipfile_name: str = COLD_WATER_CORALS_ZIPFILE_NAME,
+    archive_cold_water_corals_file_name: str = ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
+    saltmarshes_url: str = SALTMARSHES_URL,
+    saltmarshes_zipfile_name: str = SALTMARSHES_ZIPFILE_NAME,
+    archive_saltmarshes_file_name: str = ARCHIVE_SALTMARSHES_FILE_NAME,
+    seagrasses_url: str = SEAGRASSES_URL,
+    seagrasses_zipfile_name: str = SEAGRASSES_ZIPFILE_NAME,
+    archive_seagrasses_file_name: str = ARCHIVE_SEAGRASSES_FILE_NAME,
+    bucket: str = BUCKET,
+    chunk_size: int = CHUNK_SIZE,
+    verbose: bool = True,
+) -> None:
+    """
+    Downloads the UNEP-WCMC marine habitat datasets (cold-water corals, saltmarshes
+    and seagrasses) and uploads them to GCS as both current and archived versions.
+
+    Parameters:
+    ----------
+    cold_water_corals_url : str
+        URL to download the cold-water corals ZIP file (UNEP-WCMC WCMC_001).
+    cold_water_corals_zipfile_name : str
+        GCS blob name for the current cold-water corals dataset.
+    archive_cold_water_corals_file_name : str
+        GCS blob name for the archived cold-water corals dataset.
+    saltmarshes_url : str
+        URL to download the saltmarshes ZIP file (UNEP-WCMC WCMC_027).
+    saltmarshes_zipfile_name : str
+        GCS blob name for the current saltmarshes dataset.
+    archive_saltmarshes_file_name : str
+        GCS blob name for the archived saltmarshes dataset.
+    seagrasses_url : str
+        URL to download the seagrasses ZIP file (UNEP-WCMC WCMC_013_014).
+    seagrasses_zipfile_name : str
+        GCS blob name for the current seagrasses dataset.
+    archive_seagrasses_file_name : str
+        GCS blob name for the archived seagrasses dataset.
+    bucket : str
+        Name of the GCS bucket where all files will be uploaded.
+    chunk_size : int, optional
+        Size in bytes of each chunk used during download.
+    verbose : bool, optional
+        If True, prints progress messages. Default is True.
+    """
+    # download cold water corals
+    download_and_duplicate_zipfile(
+        cold_water_corals_url,
+        bucket,
+        cold_water_corals_zipfile_name,
+        archive_cold_water_corals_file_name,
+        chunk_size=chunk_size,
+        verbose=verbose,
+    )
+
+    # download saltmarshes
+    download_and_duplicate_zipfile(
+        saltmarshes_url,
+        bucket,
+        saltmarshes_zipfile_name,
+        archive_saltmarshes_file_name,
+        chunk_size=chunk_size,
+        verbose=verbose,
+    )
+
+    # download seagrasses
+    download_and_duplicate_zipfile(
+        seagrasses_url,
+        bucket,
+        seagrasses_zipfile_name,
+        archive_seagrasses_file_name,
         chunk_size=chunk_size,
         verbose=verbose,
     )
