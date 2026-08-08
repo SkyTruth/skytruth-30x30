@@ -190,6 +190,29 @@ SEAGRASSES_URL = "https://wcmc.io/WCMC_013_014"
 SEAGRASSES_ZIPFILE_NAME = "habitats/seagrasses.zip"
 ARCHIVE_SEAGRASSES_FILE_NAME = "archive/habitats/WCMC013-014_SeagrassPtPy2021_v7_1.zip"
 
+MARINE_HABITAT_DOWNLOADS = {
+    "seamounts": {
+        "url": SEAMOUNTS_URL,
+        "zipfile_name": SEAMOUNTS_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SEAMOUNTS_FILE_NAME,
+    },
+    "coldwatercorals": {
+        "url": COLD_WATER_CORALS_URL,
+        "zipfile_name": COLD_WATER_CORALS_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
+    },
+    "saltmarshes": {
+        "url": SALTMARSHES_URL,
+        "zipfile_name": SALTMARSHES_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SALTMARSHES_FILE_NAME,
+    },
+    "seagrasses": {
+        "url": SEAGRASSES_URL,
+        "zipfile_name": SEAGRASSES_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SEAGRASSES_FILE_NAME,
+    },
+}
+
 # HABITATS_FILE_NAME = "habitats/habitats_table.csv"
 
 # ------------------------------------------------------------
