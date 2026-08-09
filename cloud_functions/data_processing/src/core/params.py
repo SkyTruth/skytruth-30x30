@@ -150,9 +150,6 @@ WDPA_META_FILE_NAME = "intermediates/wdpa_meta.csv"
 # ------------------------------------------------------------
 #                     Marine Habitats
 # ------------------------------------------------------------
-HABITATS_URL = "https://habitats.oceanplus.org/downloads/global_statistics.zip"
-HABITATS_ZIP_FILE_NAME = "habitats/global_statistics.zip"
-ARCHIVE_HABITATS_FILE_NAME = f"archive/habitats/global_statistics_{today_formatted}.zip"
 MANGROVES_API_URL = "https://mangrove-atlas-api.herokuapp.com/admin/widget_protected_areas.csv"
 MANGROVES_REQUEST_HEADERS = {
     "Cookie": (
@@ -212,8 +209,15 @@ MARINE_HABITAT_DOWNLOADS = {
         "archive_file_name": ARCHIVE_SEAGRASSES_FILE_NAME,
     },
 }
-
-# HABITATS_FILE_NAME = "habitats/habitats_table.csv"
+UNEP_HABITATS = {
+    habitat: MARINE_HABITAT_DOWNLOADS[habitat]
+    for habitat in ("coldwatercorals", "saltmarshes", "seagrasses")
+}
+UNEP_POINT_AREA_KM2 = 1.0
+UNEP_HABITAT_TOLERANCE = 0.0001
+UNEP_HABITAT_MERGED_FILE_PATTERN = "intermediates/habitats/{habitat}.parquet"
+UNEP_HABITAT_BY_LOCATION_FILE_PATTERN = "static/{habitat}_by_location.parquet"
+GLOBAL_UNEP_HABITAT_AREA_FILE_PATTERN = "intermediates/total_area/global_{habitat}_area.json"
 
 # ------------------------------------------------------------
 #                     Terrestrial Habitats
@@ -285,5 +289,6 @@ LONG_RUNNING_TASKS = [
     "generate_protected_areas_table",
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
+    "process_marine_unep_habitats",
     "generate_habitat_protection_table",
 ]

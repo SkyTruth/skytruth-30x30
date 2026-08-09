@@ -150,6 +150,48 @@ def fill_polygon_holes(geom):
         return geom
 
 
+def split_at_antimeridian(geom, reference_lon: float):
+    """Repair a lon/lat geometry that wrapped across the antimeridian.
+
+    The vertices are unwrapped onto a continuous longitude range around
+    reference_lon, then split back into the ±180 range as a MultiPolygon.
+
+    Parameters
+    ----------
+    geom : shapely geometry
+        Polygon/MultiPolygon in EPSG:4326 that may have wrapped.
+    reference_lon : float
+        Longitude the geometry is actually centred on.
+
+    Returns
+    -------
+    shapely geometry
+        The geometry split at the antimeridian, with the same area as the
+        unwrapped original.
+    """
+
+    def unwrap(coords):
+        unwrapped = []
+        for lon, lat, *_ in coords:
+            unwrapped.append((lon - 360 * round((lon - reference_lon) / 360), lat))
+        return unwrapped
+
+    polygons = geom.geoms if hasattr(geom, "geoms") else [geom]
+    unwrapped_polygons = [
+        Polygon(unwrap(poly.exterior.coords), [unwrap(ring.coords) for ring in poly.interiors])
+        for poly in polygons
+    ]
+    unwrapped = make_valid(unary_union(unwrapped_polygons))
+
+    parts = []
+    for offset in (-360, 0, 360):
+        band = unwrapped.intersection(box(-180 - offset, -90, 180 - offset, 90))
+        if not band.is_empty:
+            parts.append(shapely.affinity.translate(band, xoff=offset))
+
+    return make_valid(unary_union(parts)) if parts else geom
+
+
 def get_area_km2(poly):
     wgs84 = pyproj.CRS("EPSG:4326")
     projected_crs = pyproj.CRS("EPSG:6933")

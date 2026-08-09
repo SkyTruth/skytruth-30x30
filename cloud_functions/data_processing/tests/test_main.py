@@ -40,6 +40,7 @@ def patched_all(monkeypatch, call_log):
         "download_marine_habitats",
         "process_terrestrial_biome_raster",
         "process_mangroves",
+        "process_marine_unep_habitats",
         "generate_terrestrial_biome_stats_country",
         "download_mpatlas",
         "download_protected_seas",

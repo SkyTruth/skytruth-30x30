@@ -5,6 +5,7 @@ import pandas as pd
 from google.cloud import storage
 
 from src.core.commons import (
+    add_output_suffix,
     add_tolerance_suffix,
     load_marine_regions,
     load_mpatlas_country,
@@ -20,7 +21,6 @@ from src.core.params import (
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITAT_PROTECTION_FILE_NAME,
-    HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
     IHO_SEA_AREAS_FILE_NAME,
     MANGROVES_BY_LOCATION_FILE_NAME,
@@ -171,7 +171,6 @@ def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.Ge
 
 def generate_habitat_protection_table(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
     mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
@@ -181,11 +180,13 @@ def generate_habitat_protection_table(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
     eez_file: dict = EEZ_FILE_NAME,
+    output_suffix: str = "",
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
     marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, marine_tolerance)
+    file_name_out = add_output_suffix(file_name_out, output_suffix)
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
@@ -196,7 +197,6 @@ def generate_habitat_protection_table(
     marine_habitats = process_marine_habitats(
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
-        habitats_zipfile_name=habitats_zipfile_name,
         seamounts_zipfile_name=seamounts_zipfile_name,
         seamounts_shapefile_name=seamounts_shapefile_name,
         mangroves_by_location_file_name=mangroves_by_location_file_name,

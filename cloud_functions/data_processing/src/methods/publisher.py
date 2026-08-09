@@ -37,6 +37,7 @@ from src.core.params import (
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCES,
+    UNEP_HABITATS,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
@@ -69,6 +70,7 @@ from src.methods.static_processes import (
     process_gadm_geoms,
     process_iho_sea_areas,
     process_mangroves,
+    process_marine_unep_habitats,
     process_terrestrial_biome_raster,
 )
 from src.methods.subtract_geometries import (
@@ -391,6 +393,19 @@ def dispatch_publisher(
         case "process_mangroves":
             process_mangroves(verbose=verbose)
 
+        case "process_marine_unep_habitats":
+            habitat = data.get("HABITAT")
+            if habitat:
+                process_marine_unep_habitats(habitats=habitat, verbose=verbose)
+            else:
+                for unep_habitat in UNEP_HABITATS:
+                    launch_next_step(
+                        "process_marine_unep_habitats",
+                        {**task_config, "HABITAT": unep_habitat},
+                        task_type="long_running_task",
+                        verbose=verbose,
+                    )
+
         case "generate_terrestrial_biome_stats_country":
             generate_terrestrial_biome_stats_country(verbose=verbose)
 
@@ -440,8 +455,10 @@ def dispatch_publisher(
             step_list = ["generate_habitat_protection_table"]
 
         case "generate_habitat_protection_table":
-            _ = generate_habitat_protection_table(verbose=verbose)
-            step_list = ["update_habitat_protection_stats"]
+            output_suffix = data.get("OUTPUT_SUFFIX", "")
+            _ = generate_habitat_protection_table(output_suffix=output_suffix, verbose=verbose)
+            if not output_suffix:
+                step_list = ["update_habitat_protection_stats"]
 
         case "generate_protection_coverage_stats_table":
             _ = generate_protection_coverage_stats_table(verbose=verbose)

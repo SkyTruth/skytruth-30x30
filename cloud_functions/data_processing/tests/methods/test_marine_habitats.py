@@ -1,10 +1,15 @@
+import geopandas as gpd
 import pandas as pd
 import pytest
+from shapely.geometry import Point
 
+from src.core.params import UNEP_POINT_AREA_KM2
 from src.methods.marine_habitats import (
     CLIMATE_RESILIENT_CORALS_HABITATS,
     _rollup_corals_subtable,
 )
+from src.methods.static_processes import _buffer_unep_points
+from src.utils.geo import get_area_km2
 
 
 @pytest.fixture
@@ -171,3 +176,32 @@ def test_rollup_handles_empty_inputs(combined_regions):
     assert len(result) == expected_rows
     assert (result["total_area"] == 0).all()
     assert (result["protected_area"] == 0).all()
+
+
+def unep_points(geometries, reported_areas):
+    """A UNEP-WCMC point layer as process_marine_unep_habitats receives it."""
+    return gpd.GeoDataFrame({"REP_AREA_K": reported_areas}, geometry=geometries, crs="EPSG:4326")
+
+
+@pytest.mark.parametrize(
+    "unreported",
+    [0, "Not Reported"],
+    ids=["zero", "not_reported_string"],
+)
+def test_unreported_area_falls_back(unreported):
+    """Points with no reported area are buffered so that the total area 
+    equals UNEP_POINT_AREA_KM2.
+    """
+    buffered = _buffer_unep_points(unep_points([Point(0, 0)], [unreported]))
+
+    assert get_area_km2(buffered.geometry.iloc[0]) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)
+
+
+def test_antimeridian_buffer_preserves_geometry_without_wrapping():
+    """A point on the dateline must be split across it are retain the same area."""
+    geometry = _buffer_unep_points(unep_points([Point(180, -48)], [0])).geometry.iloc[0]
+
+    assert get_area_km2(geometry) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)
+    assert geometry.geom_type == "MultiPolygon"
+    assert min(part.bounds[0] for part in geometry.geoms) < -179
+    assert max(part.bounds[2] for part in geometry.geoms) > 179
