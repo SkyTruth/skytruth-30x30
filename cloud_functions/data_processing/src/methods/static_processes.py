@@ -77,7 +77,12 @@ from src.utils.gcp import (
     upload_file_to_gcs,
     upload_gdf,
 )
-from src.utils.geo import get_area_km2, split_at_antimeridian, tile_geometry
+from src.utils.geo import (
+    get_area_km2,
+    robust_unary_union,
+    split_at_antimeridian,
+    tile_geometry,
+)
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -923,11 +928,7 @@ def process_marine_unep_habitats(
         if verbose:
             logger.info({"message": f"computing global {habitat} area"})
         global_area_km2 = (
-            get_area_km2(
-                safe_union(habitat_by_location, batch_size=batch_size, simplify_tolerance=None)
-            )
-            if len(habitat_by_location) > 0
-            else 0.0
+            get_area_km2(robust_unary_union(merged.geometry.values)) if len(merged) > 0 else 0.0
         )
 
         global_area_file_name = global_area_file_pattern.format(habitat=habitat)
