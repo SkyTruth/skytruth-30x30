@@ -12,7 +12,9 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio
+import shapely
 from google.cloud import storage
+from joblib import Parallel, delayed
 from shapely.geometry import box, mapping
 from shapely.strtree import STRtree
 from shapely.validation import make_valid
@@ -57,7 +59,6 @@ from src.core.params import (
     RELATED_COUNTRIES_FILE_NAME,
     TOLERANCES,
     UNEP_HABITAT_BY_LOCATION_FILE_PATTERN,
-    UNEP_HABITAT_MERGED_FILE_PATTERN,
     UNEP_HABITAT_TOLERANCE,
     UNEP_HABITATS,
     UNEP_POINT_AREA_KM2,
@@ -711,12 +712,42 @@ def _buffer_unep_points(
     return buffered
 
 
+def _clip_and_union_habitat(
+    location: str,
+    parts: np.ndarray,
+    location_geom,
+    batch_size: int,
+) -> dict | None:
+    """Clip a location's habitat parts to its boundary and dissolve them into one geometry.
+
+    Clipping ensures that only the areas that intersect the location are considered.
+    Dissolving removes the overlap between the buffered points and the polygon layer.
+    """
+    clipped = shapely.intersection(parts, location_geom)
+    clipped = clipped[~shapely.is_missing(clipped) & ~shapely.is_empty(clipped)]
+    if len(clipped) == 0:
+        return None
+
+    habitat_geom = safe_union(
+        gpd.GeoSeries(clipped), batch_size=batch_size, simplify_tolerance=None
+    )
+    if habitat_geom is None or habitat_geom.is_empty:
+        return None
+
+    return {
+        "location": location,
+        "n_habitat_polygons": int(len(clipped)),
+        "bbox": location_geom.bounds,
+        "area_km2": get_area_km2(habitat_geom),
+        "geometry": habitat_geom,
+    }
+
+
 def process_marine_unep_habitats(
     habitats: str | list[str] | None = None,
     unep_habitats: dict = UNEP_HABITATS,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
-    merged_file_pattern: str = UNEP_HABITAT_MERGED_FILE_PATTERN,
     by_location_file_pattern: str = UNEP_HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_UNEP_HABITAT_AREA_FILE_PATTERN,
     fallback_area_km2: float = UNEP_POINT_AREA_KM2,
@@ -726,6 +757,7 @@ def process_marine_unep_habitats(
     tolerance: float = 0.001,
     simplify_tolerance: float = UNEP_HABITAT_TOLERANCE,
     batch_size: int = 3000,
+    n_jobs: int = -1,
 ) -> None:
     """
     Turn the downloaded UNEP-WCMC habitat zips into per-location habitat geometries.
@@ -747,8 +779,6 @@ def process_marine_unep_habitats(
         the set of locations to dissolve by.
     iho_file_name : str
         GCS blob of the processed IHO sea areas.
-    merged_file_pattern : str
-        Template for the merged (undissolved) geoparquet blob name.
     by_location_file_pattern : str
         Template for the dissolved per-location blob name.
     global_area_file_pattern : str
@@ -764,9 +794,12 @@ def process_marine_unep_habitats(
     tolerance : float
         Which simplification of the location boundaries to read (file suffix only).
     simplify_tolerance : float
-        Simplification applied to the habitat geometry when dissolving.
+        Simplification applied to the habitat geometry.
     batch_size : int
         Batch size passed to safe_union.
+    n_jobs : int
+        Worker count for the per-location clip and dissolve.
+        -1 uses every core.
     """
     if habitats is None:
         habitats = list(unep_habitats)
@@ -812,10 +845,12 @@ def process_marine_unep_habitats(
             zipfile_name, bucket, internal_shapefile_path=point_layer
         )
 
+        # Buffer points using reported area where available and fallback area otherwise
         if verbose:
             logger.info({"message": f"buffering {len(points)} {habitat} point records"})
         buffered_points = _buffer_unep_points(points, fallback_area_km2=fallback_area_km2)
 
+        # Combine buffered points with polygons
         if verbose:
             logger.info({"message": f"loading {habitat} polygon layer {polygon_layer}"})
         polygons = load_zipped_shapefile_from_gcs(
@@ -836,50 +871,52 @@ def process_marine_unep_habitats(
         ).pipe(clean_geometries)
         merged["habitat"] = habitat
 
-        merged_file_name = merged_file_pattern.format(habitat=habitat)
-
-        # Upload the buffered (undissolved) habitat layer to GCS
-        upload_gdf(bucket, merged, merged_file_name, project_id=project, verbose=verbose)
-
         del points, buffered_points, polygons
         gc.collect()
 
+        # Separate multi-polygons to single polygons for improved union performance
+        if verbose:
+            logger.info({"message": f"simplifying and validating {habitat} geometry"})
+        merged = merged.explode(index_parts=False, ignore_index=True)
+
+        # Make geometries valid and simplify to reduce size
+        merged["geometry"] = shapely.make_valid(
+            shapely.simplify(merged.geometry.values, simplify_tolerance)
+        )
+        merged = merged[~merged.geometry.is_empty & merged.geometry.notna()]
+
+        merged_sindex = merged.sindex
+
         if verbose:
             logger.info({"message": f"dissolving {habitat} by location"})
-        habitat_by_location = []
-        for location in tqdm(list(sorted(set(regions["location"].dropna())))):
-            location_geom = regions[regions["location"] == location].iloc[0].geometry
 
-            # Clip habitats to country bounding box
-            xmin, ymin, xmax, ymax = location_geom.bounds
-            candidates = merged[merged.intersects(box(xmin, ymin, xmax, ymax))]
-            if len(candidates) == 0:
+        # Clean location geometries
+        location_geoms = (
+            regions.dropna(subset=["location"])
+            .drop_duplicates(subset=["location"])
+            .set_index("location")
+            .geometry.sort_index()
+        )
+
+        # Dissolve in parallel by location
+        jobs = []
+        for location, location_geom in location_geoms.items():
+            if location_geom is None or location_geom.is_empty:
                 continue
-
-            # Build STRtree index
-            tree = STRtree(list(candidates.geometry))
-            indices = tree.query(location_geom, predicate="intersects")
-            location_habitat = candidates.iloc[indices].copy()
-            if len(location_habitat) == 0:
+            indices = merged_sindex.query(location_geom, predicate="intersects")
+            if len(indices) == 0:
                 continue
+            jobs.append((location, merged.geometry.values[indices], location_geom))
 
-            location_habitat["geometry"] = location_habitat.geometry.apply(make_valid)
-            habitat_geom = safe_union(
-                location_habitat, batch_size=batch_size, simplify_tolerance=simplify_tolerance
-            )
-            habitat_by_location.append(
-                {
-                    "location": location,
-                    "habitat": habitat,
-                    "n_habitat_polygons": len(location_habitat),
-                    "bbox": location_geom.bounds,
-                    "area_km2": get_area_km2(habitat_geom),
-                    "geometry": habitat_geom,
-                }
-            )
+        results = Parallel(n_jobs=n_jobs, backend="loky")(
+            delayed(_clip_and_union_habitat)(location, parts, location_geom, batch_size)
+            for location, parts, location_geom in tqdm(jobs)
+        )
 
         habitat_by_location = gpd.GeoDataFrame(
-            habitat_by_location, geometry="geometry", crs="EPSG:4326"
+            [{**result, "habitat": habitat} for result in results if result is not None],
+            geometry="geometry",
+            crs="EPSG:4326",
         )
 
         # Union all the geometries to get the global area
@@ -887,11 +924,7 @@ def process_marine_unep_habitats(
             logger.info({"message": f"computing global {habitat} area"})
         global_area_km2 = (
             get_area_km2(
-                safe_union(
-                    habitat_by_location,
-                    batch_size=batch_size,
-                    simplify_tolerance=simplify_tolerance,
-                )
+                safe_union(habitat_by_location, batch_size=batch_size, simplify_tolerance=None)
             )
             if len(habitat_by_location) > 0
             else 0.0

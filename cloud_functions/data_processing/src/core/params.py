@@ -215,7 +215,6 @@ UNEP_HABITATS = {
 }
 UNEP_POINT_AREA_KM2 = 1.0
 UNEP_HABITAT_TOLERANCE = 0.0001
-UNEP_HABITAT_MERGED_FILE_PATTERN = "intermediates/habitats/{habitat}.parquet"
 UNEP_HABITAT_BY_LOCATION_FILE_PATTERN = "static/{habitat}_by_location.parquet"
 GLOBAL_UNEP_HABITAT_AREA_FILE_PATTERN = "intermediates/total_area/global_{habitat}_area.json"
 
