@@ -228,6 +228,27 @@ def load_wdpa_global(
     return wdpa_global
 
 
+def get_wdpa_global_value(wdpa_global: pd.DataFrame, stat_name: str) -> float:
+    return float(wdpa_global[wdpa_global["type"] == stat_name].iloc[0]["value"])
+
+
+def compute_global_area(wdpa_global: pd.DataFrame, environment: str) -> float:
+    """
+    Total global area in km² for an environment ("marine" or "terrestrial").
+
+    Protected Planet only publishes the protected area and the percentage of the
+    globe it covers, so the total is back-calculated from those two values.
+    """
+    wdpa_env = "ocean" if environment == "marine" else "land"
+
+    protected_area = get_wdpa_global_value(wdpa_global, f"total_{wdpa_env}_area_oecms_pas")
+    coverage = get_wdpa_global_value(
+        wdpa_global, f"total_{wdpa_env}_oecms_pas_coverage_percentage"
+    )
+
+    return protected_area / (coverage / 100) if coverage else None
+
+
 def read_mpatlas_from_gcs(
     bucket: str = BUCKET, filename: str = MPATLAS_FILE_NAME
 ) -> gpd.GeoDataFrame:
