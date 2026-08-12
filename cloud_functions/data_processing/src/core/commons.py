@@ -242,9 +242,7 @@ def compute_global_area(wdpa_global: pd.DataFrame, environment: str) -> float:
     wdpa_env = "ocean" if environment == "marine" else "land"
 
     protected_area = get_wdpa_global_value(wdpa_global, f"total_{wdpa_env}_area_oecms_pas")
-    coverage = get_wdpa_global_value(
-        wdpa_global, f"total_{wdpa_env}_oecms_pas_coverage_percentage"
-    )
+    coverage = get_wdpa_global_value(wdpa_global, f"total_{wdpa_env}_oecms_pas_coverage_percentage")
 
     return protected_area / (coverage / 100) if coverage else None
 
