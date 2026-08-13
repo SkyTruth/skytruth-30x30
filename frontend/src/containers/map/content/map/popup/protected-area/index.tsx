@@ -12,6 +12,7 @@ import { format } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { useGetLocations } from '@/types/generated/location';
+import { useGetPas } from '@/types/generated/pa';
 import { LayerTyped } from '@/types/layers';
 
 const TERMS_CLASSES = 'font-mono uppercase';
@@ -21,7 +22,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
 
   const locale = useLocale();
   const [rendered, setRendered] = useState(false);
-  const DATA_REF = useRef<Feature['properties'] | undefined>();
+  const DATA_REF = useRef<Feature['properties'][]>([]);
   const { default: map } = useMap();
 
   const popup = useAtomValue(popupAtom);
@@ -47,7 +48,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
         select: ({ data }) => ({
           source: (data[0] as LayerTyped).config?.source,
           click: (data[0] as LayerTyped)?.interaction_config?.events.find(
-            (ev) => ev.type === 'click'
+            (event) => event.type === 'click'
           ),
         }),
       },
@@ -73,19 +74,27 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
         layers: layersInteractiveIds,
       });
 
-      const d = query.find((d) => {
-        return d.source === source.id;
-      })?.properties;
+      // Overlapping features at the click point are distinct sites (tiles are
+      // dissolved by WDPAID), but keep one entry per WDPAID just in case.
+      const seen = new Set<unknown>();
+      const features = query
+        .filter((feature) => feature.source === source.id)
+        .map((feature) => feature.properties)
+        .filter((properties) => {
+          if (properties?.WDPAID == null || seen.has(properties.WDPAID)) return false;
+          seen.add(properties.WDPAID);
+          return true;
+        });
 
-      DATA_REF.current = d;
-
-      if (d) {
-        return DATA_REF.current;
+      if (features.length) {
+        DATA_REF.current = features;
       }
     }
 
     return DATA_REF.current;
   }, [popup, layerQuery, layersInteractiveIds, map, rendered]);
+
+  const wdpaids = useMemo(() => DATA.map((properties) => String(properties.WDPAID)), [DATA]);
 
   const locationQuery = useGetLocations(
     {
@@ -97,6 +106,43 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
     {
       query: {
         select: ({ data }) => data[0],
+      },
+    }
+  );
+
+  // Assigned and rendered in the follow-up commits (merge per WDPAID + card/accordion).
+  useGetPas(
+    {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      fields: ['name', 'area', 'wdpaid', 'zone_id'],
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      populate: {
+        protection_status: {
+          fields: ['slug', 'name', 'locale'],
+          populate: { localizations: { fields: ['slug', 'name', 'locale'] } },
+        },
+        mpaa_protection_level: {
+          fields: ['slug', 'name', 'locale'],
+          populate: { localizations: { fields: ['slug', 'name', 'locale'] } },
+        },
+        iucn_category: {
+          fields: ['slug', 'name', 'locale'],
+          populate: { localizations: { fields: ['slug', 'name', 'locale'] } },
+        },
+        data_source: { fields: ['slug'] },
+        location: { fields: ['code', 'type'] },
+      },
+      filters: {
+        wdpaid: { $in: wdpaids },
+      },
+      'pagination[pageSize]': 100,
+    },
+    {
+      query: {
+        enabled: wdpaids.length > 0,
+        select: ({ data }) => data,
       },
     }
   );
@@ -116,20 +162,23 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
     };
   }, [map, handleMapRender]);
 
-  if (!DATA) return null;
+  if (!DATA.length) return null;
+
+  // Temporary: render the first site only, until the per-site card + accordion lands.
+  const [FIRST] = DATA;
 
   const globalCoveragePercentage =
-    (DATA.GIS_AREA / Number(locationQuery.data?.total_marine_area)) * 100;
+    (FIRST.GIS_AREA / Number(locationQuery.data?.total_marine_area)) * 100;
 
   const classNameByMPAType = cn({
-    'text-green': DATA?.PA_DEF === '1',
-    'text-violet': DATA?.PA_DEF === '0',
+    'text-green': FIRST?.PA_DEF === 0,
+    'text-violet': FIRST?.PA_DEF === 1,
   });
 
   return (
     <>
       <div className="space-y-2">
-        <h3 className="text-xl font-semibold">{DATA?.NAME}</h3>
+        <h3 className="text-xl font-semibold">{FIRST?.NAME}</h3>
         {locationQuery.isFetching && !locationQuery.isFetched && (
           <span className="text-sm">{t('loading')}</span>
         )}
@@ -151,7 +200,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
                 {t('area-km2', {
                   area: format({
                     locale,
-                    value: DATA?.GIS_AREA,
+                    value: FIRST?.GIS_AREA,
                     id: 'formatKM',
                     options: {
                       maximumSignificantDigits: 3,
