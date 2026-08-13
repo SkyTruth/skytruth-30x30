@@ -18,7 +18,6 @@ from src.core.params import (
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     EEZ_FILE_NAME,
     EEZ_LAND_UNION_PARAMS,
-    EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
     GADM_FILE_NAME,
     GADM_URL,
@@ -48,6 +47,7 @@ from src.methods.download_and_process import (
     download_protected_planet,
     download_protected_seas,
 )
+from src.methods.download_static import download_eez
 from src.methods.generate_static_tables import generate_locations_table
 from src.methods.generate_tables import (
     generate_fishing_protection_table,
@@ -295,16 +295,7 @@ def dispatch_publisher(
             step_list = ["process_gadm"]
 
         case "download_eezs":
-            download_zip_to_gcs(
-                url=MARINE_REGIONS_URL,
-                bucket_name=BUCKET,
-                blob_name=EEZ_PARAMS["zipfile_name"],
-                data=MARINE_REGIONS_BODY,
-                params=EEZ_PARAMS,
-                headers=MARINE_REGIONS_HEADERS,
-                chunk_size=CHUNK_SIZE,
-                verbose=verbose,
-            )
+            download_eez(verbose=verbose)
             step_list = ["process_eezs"]
 
         case "download_high_seas":
