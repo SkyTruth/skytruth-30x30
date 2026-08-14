@@ -8,7 +8,7 @@ import pyproj
 import pytest
 from rasterio.crs import CRS
 from rasterio.transform import Affine, from_bounds
-from shapely.geometry import MultiPolygon, Point, Polygon, box
+from shapely.geometry import Point, Polygon, box
 from shapely.ops import transform as shp_transform
 
 from src.utils.geo import (

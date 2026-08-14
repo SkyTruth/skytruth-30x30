@@ -155,6 +155,46 @@ def test_download_marine_habitats_without_habitat_downloads_everything(patched_a
     assert kwargs["habitats"] is None
 
 
+def _next_step_payloads(call_log):
+    """The payloads of every downstream task the dispatch enqueued."""
+    return [args[0] for name, args, _ in call_log if name == "create_task"]
+
+
+@pytest.mark.parametrize(
+    ("habitat", "expected_steps", "expected_habitat"),
+    [
+        (None, ["process_mangroves", "process_marine_unep_habitats"], None),
+        ("mangroves", ["process_mangroves"], None),
+        ("saltmarshes", ["process_marine_unep_habitats"], ["saltmarshes"]),
+        (
+            ["mangroves", "seagrasses"],
+            ["process_mangroves", "process_marine_unep_habitats"],
+            ["seagrasses"],
+        ),
+        (["seamounts", "saltmarshes"], ["process_marine_unep_habitats"], ["saltmarshes"]),
+        ("seamounts", [], None),
+    ],
+    ids=["all", "mangroves", "one_unep", "mangroves_and_unep", "seamounts_and_unep", "seamounts"],
+)
+def test_download_marine_habitats_launches_the_step_that_processes_each_habitat(
+    patched_all, habitat, expected_steps, expected_habitat
+):
+    """Mangroves and the UNEP-WCMC habitats have processing steps; seamounts do not.
+
+    An empty HABITAT downloads everything and forwards no HABITAT.
+    """
+    main.run_from_payload(
+        {"METHOD": "download_marine_habitats", "HABITAT": habitat, "TRIGGER_NEXT": True}
+    )
+
+    payloads = _next_step_payloads(patched_all)
+    assert [payload["METHOD"] for payload in payloads] == expected_steps
+
+    unep = [payload for payload in payloads if payload["METHOD"] == "process_marine_unep_habitats"]
+    if unep:
+        assert unep[0]["HABITAT"] == expected_habitat
+
+
 # Tests for functions that directly call download_zip_to_gcs
 def _assert_download_zip_call_kwargs(
     call, *, url, bucket_name, blob_name, chunk_size, extra_kwargs=None

@@ -13,13 +13,11 @@ from src.core.params import (
     CLIMATE_RES_CORAL_SOURCE_FILE,
     EEZ_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
-    GLOBAL_MANGROVE_AREA_FILE_NAME,
-    GLOBAL_UNEP_HABITAT_AREA_FILE_PATTERN,
+    GLOBAL_HABITAT_AREA_FILE_PATTERN,
+    HABITAT_BY_LOCATION_FILE_PATTERN,
     IHO_SEA_AREAS_FILE_NAME,
-    MANGROVES_BY_LOCATION_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
-    UNEP_HABITAT_BY_LOCATION_FILE_PATTERN,
     UNEP_HABITATS,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
@@ -44,16 +42,18 @@ logger = Logger()
 
 
 def create_seamounts_subtable(
-    seamounts_zipfile_name,
-    seamounts_shapefile_name,
-    bucket,
-    eez_file,
     marine_protected_areas,
     combined_regions,
-    tolerance,
-    verbose,
-    iho_file_name,
+    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
+    seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
+    eez_file_name: str = EEZ_FILE_NAME,
+    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
+    tolerance: float = marine_tolerance,
+    bucket: str = BUCKET,
+    verbose: bool = True,
 ):
+    """Compute seamount protection stats per country/region from the ZSL seamounts layer."""
+
     def get_group_stats(df_eez, df_pa, loc, relations, global_seamount_area):
         if loc == "GLOB":
             df_pa_group = df_pa[["PEAKID", "AREA2D"]].drop_duplicates()
@@ -88,8 +88,7 @@ def create_seamounts_subtable(
 
     if verbose:
         logger.info({"message": "loading eezs"})
-    eez_file_name = add_tolerance_suffix(eez_file, tolerance)
-    eez = read_json_df(BUCKET, eez_file_name, verbose)
+    eez = read_json_df(bucket, add_tolerance_suffix(eez_file_name, tolerance), verbose)
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
@@ -156,12 +155,20 @@ def create_mangroves_subtable(
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
-    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
-    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
+    by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
+    global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
     tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
+    """Compute mangrove protection stats from the pre-dissolved per-location geometries.
+
+    Uses the geometries written by process_mangroves. The Global Mangrove Watch
+    polygons do not overlap, so the stored per-location area is already the
+    dissolved area and needs no de-duplication here.
+    """
+    habitat = "mangroves"
+
     def get_group_stats(df, loc, relations, global_mangrove_area):
         if loc == "GLOB":
             df_group = df
@@ -206,46 +213,48 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading pre-processed mangroves"})
-    mangroves_by_location = read_json_df(
-        bucket, mangroves_by_location_file_name, verbose=True
+    mangroves_by_location = read_parquet_from_gcs(
+        bucket, by_location_file_pattern.format(habitat=habitat), verbose=verbose
     ).pipe(clean_geometries)
-    global_mangrove_area = read_json_from_gcs(bucket, global_mangrove_area_file_name)[
-        "global_area_km2"
-    ]
+    global_mangrove_area = read_json_from_gcs(
+        bucket, global_area_file_pattern.format(habitat=habitat)
+    )["global_area_km2"]
 
     if verbose:
         logger.info({"message": "getting protected mangrove area by country"})
     mpa_locations = set(mpa["location"])
     protected_mangroves = []
     for loc in tqdm(list(sorted(set(locations["location"].dropna())))):
-        location_geom = locations[locations["location"] == loc].iloc[0].geometry
-
         location_mangroves = mangroves_by_location[mangroves_by_location["location"] == loc]
-        if len(location_mangroves) > 0:
-            mangrove_geom = location_mangroves.iloc[0]["geometry"]
-            location_mangrove_area_km2 = location_mangroves.iloc[0]["mangrove_area_km2"]
+        if len(location_mangroves) == 0:
+            continue
 
-            if loc in mpa_locations:
-                location_pas = mpa[mpa["location"] == loc].make_valid()
-            else:
-                candidates = list(mpa.sindex.intersection(location_geom.bounds))
-                location_pas = mpa.iloc[candidates]
-                location_pas = location_pas[location_pas.intersects(location_geom)].make_valid()
-            location_pas = gpd.clip(location_pas, location_geom)
+        location_geom = locations[locations["location"] == loc].iloc[0].geometry
+        mangrove_geom = location_mangroves.iloc[0]["geometry"]
+        location_mangrove_area_km2 = location_mangroves.iloc[0]["area_km2"]
 
-            pa_geom = make_valid(unary_union(location_pas.geometry))
+        if loc in mpa_locations:
+            location_pas = mpa[mpa["location"] == loc].make_valid()
+        else:
+            candidates = list(mpa.sindex.intersection(location_geom.bounds))
+            location_pas = mpa.iloc[candidates]
+            location_pas = location_pas[location_pas.intersects(location_geom)].make_valid()
+        location_pas = gpd.clip(location_pas, location_geom)
 
-            pa_mangrove_area_km2 = get_area_km2(mangrove_geom.intersection(pa_geom))
+        pa_geom = make_valid(unary_union(location_pas.geometry))
 
-            protected_mangroves.append(
-                {
-                    "location": loc,
-                    "total_mangrove_area_km2": location_mangrove_area_km2,
-                    "protected_mangrove_area_km2": pa_mangrove_area_km2,
-                }
-            )
+        protected_mangroves.append(
+            {
+                "location": loc,
+                "total_mangrove_area_km2": location_mangrove_area_km2,
+                "protected_mangrove_area_km2": get_area_km2(mangrove_geom.intersection(pa_geom)),
+            }
+        )
 
-    protected_mangroves = pd.DataFrame(protected_mangroves)
+    protected_mangroves = pd.DataFrame(
+        protected_mangroves,
+        columns=["location", "total_mangrove_area_km2", "protected_mangrove_area_km2"],
+    )
     protected_mangroves["percent_protected"] = (
         100
         * protected_mangroves["protected_mangrove_area_km2"]
@@ -276,8 +285,8 @@ def create_unep_habitats_subtable(
     unep_habitats: dict = UNEP_HABITATS,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
-    by_location_file_pattern: str = UNEP_HABITAT_BY_LOCATION_FILE_PATTERN,
-    global_area_file_pattern: str = GLOBAL_UNEP_HABITAT_AREA_FILE_PATTERN,
+    by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
+    global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
     tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     verbose: bool = True,
@@ -644,13 +653,8 @@ def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.Ge
 def process_marine_habitats(
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
-    seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
-    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
-    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
-    eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
     tolerance: float = marine_tolerance,
     verbose: bool = True,
@@ -684,15 +688,12 @@ def process_marine_habitats(
     if verbose:
         logger.info({"message": "getting seamounts subtable"})
     seamounts_subtable = create_seamounts_subtable(
-        seamounts_zipfile_name,
-        seamounts_shapefile_name,
-        bucket,
-        eez_file,
         marine_protected_areas,
         combined_regions,
-        tolerance,
-        verbose,
-        iho_file_name,
+        iho_file_name=iho_file_name,
+        tolerance=tolerance,
+        bucket=bucket,
+        verbose=verbose,
     )
 
     if verbose:
@@ -703,8 +704,6 @@ def process_marine_habitats(
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
         iho_file_name=iho_file_name,
-        mangroves_by_location_file_name=mangroves_by_location_file_name,
-        global_mangrove_area_file_name=global_mangrove_area_file_name,
     )
 
     if verbose:

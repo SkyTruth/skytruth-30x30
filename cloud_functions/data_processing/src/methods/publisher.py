@@ -384,9 +384,18 @@ def dispatch_publisher(
             step_list = ["process_mangroves"]
 
         case "download_marine_habitats":
-            download_marine_habitats(habitats=data.get("HABITAT"), verbose=verbose)
-            task_config["HABITAT"] = data.get("HABITAT")
-            step_list=["process_marine_unep_habitats"]
+            habitat = data.get("HABITAT")
+            download_marine_habitats(habitats=habitat, verbose=verbose)
+
+            requested = [habitat] if isinstance(habitat, str) else habitat
+            unep_requested = [name for name in requested or [] if name in UNEP_HABITATS]
+
+            step_list = []
+            if requested is None or "mangroves" in requested:
+                step_list.append("process_mangroves")
+            if requested is None or unep_requested:
+                task_config["HABITAT"] = unep_requested or None
+                step_list.append("process_marine_unep_habitats")
 
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)

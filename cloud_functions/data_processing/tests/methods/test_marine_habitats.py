@@ -189,7 +189,7 @@ def unep_points(geometries, reported_areas):
     ids=["zero", "not_reported_string"],
 )
 def test_unreported_area_falls_back(unreported):
-    """Points with no reported area are buffered so that the total area 
+    """Points with no reported area are buffered so that the total area
     equals UNEP_POINT_AREA_KM2.
     """
     buffered = _buffer_unep_points(unep_points([Point(0, 0)], [unreported]))
