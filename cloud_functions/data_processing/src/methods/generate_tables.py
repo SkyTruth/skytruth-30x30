@@ -5,7 +5,6 @@ import pandas as pd
 from google.cloud import storage
 
 from src.core.commons import (
-    add_output_suffix,
     add_tolerance_suffix,
     load_marine_regions,
     load_mpatlas_country,
@@ -170,13 +169,11 @@ def generate_habitat_protection_table(
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
-    output_suffix: str = "",
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
 ):
     marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, marine_tolerance)
-    file_name_out = add_output_suffix(file_name_out, output_suffix)
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 

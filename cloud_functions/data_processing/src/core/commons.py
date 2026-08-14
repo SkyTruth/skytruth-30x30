@@ -149,23 +149,6 @@ def add_tolerance_suffix(filename: str, tolerance) -> str:
     return f"{stem}_{tolerance}{ext}"
 
 
-def add_output_suffix(filename: str, suffix: str) -> str:
-    """Insert an arbitrary suffix before the file extension, or nothing if empty.
-
-    e.g. ("tables/habitat_protection_Aug2026.csv", "_unep") ->
-    "tables/habitat_protection_Aug2026_unep.csv". Lets a trial run divert the
-    habitat protection table to a scratch name so it cannot overwrite the live
-    monthly one; an empty suffix is a no-op, which keeps call sites unconditional.
-
-    TEMPORARY: remove along with generate_habitat_protection_table's
-    `output_suffix` argument once the UNEP habitat pipeline is validated.
-    """
-    if not suffix:
-        return filename
-    stem, ext = os.path.splitext(filename)
-    return f"{stem}{suffix}{ext}"
-
-
 def safe_union(df, batch_size=1000, simplify_tolerance=1000):
     parts = []
     for i in range(0, len(df), batch_size):

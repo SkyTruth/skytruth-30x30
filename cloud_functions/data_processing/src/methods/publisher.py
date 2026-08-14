@@ -377,11 +377,11 @@ def dispatch_publisher(
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
-            step_list = ["process_mangroves"]
+            step_list = ["process_mangroves", "process_marine_unep_habitats"]
 
         case "process_iho_sea_areas":
             process_iho_sea_areas(verbose=verbose)
-            step_list = ["process_mangroves"]
+            step_list = ["process_mangroves", "process_marine_unep_habitats"]
 
         case "download_marine_habitats":
             habitat = data.get("HABITAT")
@@ -403,19 +403,20 @@ def dispatch_publisher(
 
         case "process_mangroves":
             process_mangroves(verbose=verbose)
+            step_list = ["generate_habitat_protection_table"]
 
         case "process_marine_unep_habitats":
             habitat = data.get("HABITAT")
-            if habitat:
-                process_marine_unep_habitats(habitats=habitat, verbose=verbose)
+            habitat = [habitat] if isinstance(habitat, str) else list(habitat or UNEP_HABITATS)
+            current, remaining = habitat[0], habitat[1:]
+
+            process_marine_unep_habitats(habitats=current, verbose=verbose)
+
+            if remaining:
+                task_config["HABITAT"] = remaining
+                step_list = ["process_marine_unep_habitats"]
             else:
-                for unep_habitat in UNEP_HABITATS:
-                    launch_next_step(
-                        "process_marine_unep_habitats",
-                        {**task_config, "HABITAT": unep_habitat},
-                        task_type="long_running_task",
-                        verbose=verbose,
-                    )
+                step_list = ["generate_habitat_protection_table"]
 
         case "generate_terrestrial_biome_stats_country":
             generate_terrestrial_biome_stats_country(verbose=verbose)
@@ -466,10 +467,8 @@ def dispatch_publisher(
             step_list = ["generate_habitat_protection_table"]
 
         case "generate_habitat_protection_table":
-            output_suffix = data.get("OUTPUT_SUFFIX", "")
-            _ = generate_habitat_protection_table(output_suffix=output_suffix, verbose=verbose)
-            if not output_suffix:
-                step_list = ["update_habitat_protection_stats"]
+            _ = generate_habitat_protection_table(verbose=verbose)
+            step_list = ["update_habitat_protection_stats"]
 
         case "generate_protection_coverage_stats_table":
             _ = generate_protection_coverage_stats_table(verbose=verbose)
