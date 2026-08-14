@@ -46,7 +46,7 @@ from src.core.params import (
     IHO_SEA_AREAS_PARAMS,
     MANGROVES_BY_LOCATION_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
-    MARINE_HABITAT_DOWNLOADS,
+    MARINE_HABITAT_PARAMS,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
@@ -493,7 +493,7 @@ def process_iho_sea_areas(
 
 def download_marine_habitats(
     habitats: str | list[str] | None = None,
-    marine_habitat_downloads: dict = MARINE_HABITAT_DOWNLOADS,
+    marine_habitat_params: dict = MARINE_HABITAT_PARAMS,
     bucket: str = BUCKET,
     chunk_size: int = CHUNK_SIZE,
     verbose: bool = True,
@@ -505,9 +505,9 @@ def download_marine_habitats(
     Parameters:
     ----------
     habitats : str | list[str] | None
-        Habitat key(s) from marine_habitat_downloads to download. None
+        Habitat key(s) from marine_habitat_params to download. None
         downloads all of them.
-    marine_habitat_downloads : dict
+    marine_habitat_params : dict
         Habitat key -> {"url", "zipfile_name", "archive_file_name"} config.
     bucket : str
         Name of the GCS bucket where all files will be uploaded.
@@ -517,16 +517,16 @@ def download_marine_habitats(
         If True, prints progress messages. Default is True.
     """
     if habitats is None:
-        habitats = list(marine_habitat_downloads)
+        habitats = list(marine_habitat_params)
     elif isinstance(habitats, str):
         habitats = [habitats]
 
-    unknown = set(habitats) - set(marine_habitat_downloads)
+    unknown = set(habitats) - set(marine_habitat_params)
     if unknown:
-        raise ValueError(f"unknown marine habitat(s): {sorted(unknown)}")
+        raise ValueError(f"unknown marine habitat(s): {sorted(unknown, key=repr)}")
 
     for habitat in habitats:
-        download = marine_habitat_downloads[habitat]
+        download = marine_habitat_params[habitat]
         if verbose:
             logger.info({"message": f"downloading {habitat} from {download['url']}"})
         download_and_duplicate_zipfile(
