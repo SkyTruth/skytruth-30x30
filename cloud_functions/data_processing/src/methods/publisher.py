@@ -382,7 +382,7 @@ def dispatch_publisher(
             step_list = ["process_mangroves"]
 
         case "download_marine_habitats":
-            download_marine_habitats(verbose=verbose)
+            download_marine_habitats(habitats=data.get("HABITAT"), verbose=verbose)
 
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)

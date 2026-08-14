@@ -29,8 +29,6 @@ from src.core.land_cover_params import (
     terrestrial_tolerance,
 )
 from src.core.params import (
-    ARCHIVE_HABITATS_FILE_NAME,
-    ARCHIVE_SEAMOUNTS_FILE_NAME,
     BUCKET,
     CHUNK_SIZE,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
@@ -43,18 +41,15 @@ from src.core.params import (
     GADM_FILE_NAME,
     GADM_ZIPFILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
-    HABITATS_URL,
-    HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
     IHO_SEA_AREAS_FILE_NAME,
     IHO_SEA_AREAS_PARAMS,
     MANGROVES_BY_LOCATION_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
+    MARINE_HABITAT_PARAMS,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
-    SEAMOUNTS_URL,
-    SEAMOUNTS_ZIPFILE_NAME,
     TOLERANCES,
 )
 from src.core.processors import add_translations, clean_geometries
@@ -497,34 +492,23 @@ def process_iho_sea_areas(
 
 
 def download_marine_habitats(
-    habitats_url: str = HABITATS_URL,
-    habitats_file_name: str = HABITATS_ZIP_FILE_NAME,
-    archive_habitats_file_name: str = ARCHIVE_HABITATS_FILE_NAME,
-    seamounts_url: str = SEAMOUNTS_URL,
-    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
-    archive_seamounts_file_name: str = ARCHIVE_SEAMOUNTS_FILE_NAME,
+    habitats: str | list[str] | None = None,
+    marine_habitat_params: dict = MARINE_HABITAT_PARAMS,
     bucket: str = BUCKET,
     chunk_size: int = CHUNK_SIZE,
     verbose: bool = True,
 ) -> None:
     """
-    Downloads marine habitat-related datasets (habitats and seamounts) and uploads them to GCS
-    as both current and archived versions.
+    Downloads marine habitat source datasets and uploads them to GCS as both
+    current and archived versions.
 
     Parameters:
     ----------
-    habitats_url : str
-        URL to download the general habitat ZIP file.
-    habitats_file_name : str
-        GCS blob name for the current habitat dataset.
-    archive_habitats_file_name : str
-        GCS blob name for the archived habitat dataset.
-    seamounts_url : str
-        URL to download the seamounts ZIP file.
-    seamounts_zipfile_name : str
-        GCS blob name for the current seamounts dataset.
-    archive_seamounts_file_name : str
-        GCS blob name for the archived seamounts dataset.
+    habitats : str | list[str] | None
+        Habitat key(s) from marine_habitat_params to download. None
+        downloads all of them.
+    marine_habitat_params : dict
+        Habitat key -> {"url", "zipfile_name", "archive_file_name"} config.
     bucket : str
         Name of the GCS bucket where all files will be uploaded.
     chunk_size : int, optional
@@ -532,28 +516,27 @@ def download_marine_habitats(
     verbose : bool, optional
         If True, prints progress messages. Default is True.
     """
-    # download habitats
-    download_and_duplicate_zipfile(
-        habitats_url,
-        bucket,
-        habitats_file_name,
-        archive_habitats_file_name,
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
+    if habitats is None:
+        habitats = list(marine_habitat_params)
+    elif isinstance(habitats, str):
+        habitats = [habitats]
 
-    # download mangroves
-    # TODO: Add this
+    unknown = set(habitats) - set(marine_habitat_params)
+    if unknown:
+        raise ValueError(f"unknown marine habitat(s): {sorted(unknown, key=repr)}")
 
-    # download seamounts
-    download_and_duplicate_zipfile(
-        seamounts_url,
-        bucket,
-        seamounts_zipfile_name,
-        archive_seamounts_file_name,
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
+    for habitat in habitats:
+        download = marine_habitat_params[habitat]
+        if verbose:
+            logger.info({"message": f"downloading {habitat} from {download['url']}"})
+        download_and_duplicate_zipfile(
+            download["url"],
+            bucket,
+            download["zipfile_name"],
+            download["archive_file_name"],
+            chunk_size=chunk_size,
+            verbose=verbose,
+        )
 
 
 def process_mangroves(

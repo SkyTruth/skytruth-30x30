@@ -131,6 +131,29 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
         assert kwargs["request"] == {"METHOD": "update_locations"}
 
 
+@pytest.mark.parametrize(
+    "habitat",
+    ["coldwatercorals", ["coldwatercorals", "saltmarshes", "seagrasses"]],
+    ids=["single", "list"],
+)
+def test_download_marine_habitats_forwards_habitat_selection(patched_all, habitat):
+    """HABITAT selects which source zips to fetch, one name or a list of them."""
+    resp = main.run_from_payload({"METHOD": "download_marine_habitats", "HABITAT": habitat})
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert kwargs["habitats"] == habitat
+
+
+def test_download_marine_habitats_without_habitat_downloads_everything(patched_all):
+    """Omitting HABITAT means all of them, so the monthly job needs no extra config."""
+    resp = main.run_from_payload({"METHOD": "download_marine_habitats"})
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert kwargs["habitats"] is None
+
+
 # Tests for functions that directly call download_zip_to_gcs
 def _assert_download_zip_call_kwargs(
     call, *, url, bucket_name, blob_name, chunk_size, extra_kwargs=None
