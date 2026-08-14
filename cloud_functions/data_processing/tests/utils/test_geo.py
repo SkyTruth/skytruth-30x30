@@ -1,15 +1,22 @@
-"""Tests for src/utils/geo.py: per-pixel raster areas (compute_pixel_area_map_km2)
-and robust geometry unioning (robust_unary_union)."""
+"""Tests for src/utils/geo.py: per-pixel raster areas (compute_pixel_area_map_km2),
+antimeridian repair (split_at_antimeridian) and robust geometry unioning
+(robust_unary_union)."""
 
+import geopandas as gpd
 import numpy as np
 import pyproj
 import pytest
 from rasterio.crs import CRS
 from rasterio.transform import Affine, from_bounds
-from shapely.geometry import Polygon, box
+from shapely.geometry import MultiPolygon, Point, Polygon, box
 from shapely.ops import transform as shp_transform
 
-from src.utils.geo import compute_pixel_area_map_km2, robust_unary_union
+from src.utils.geo import (
+    compute_pixel_area_map_km2,
+    get_area_km2,
+    robust_unary_union,
+    split_at_antimeridian,
+)
 
 # True WGS84 ellipsoid surface area; the graticule areas should integrate to it.
 WGS84_SURFACE_KM2 = 510_065_621
@@ -106,6 +113,77 @@ def test_coral_raster_transform_matches_equal_area():
         top = origin_y - pixel * row
         expected = _pixel_area_6933_km2(origin_x, top - pixel, origin_x + pixel, top)
         assert area_map[row, 0] == pytest.approx(expected, rel=1e-4)
+
+
+# ---------- split_at_antimeridian ----------
+
+
+WRAPPED_SQUARE = Polygon([(179, -1), (-179, -1), (-179, 1), (179, 1)])
+
+
+def test_wrapped_polygon_is_split_into_two_parts_either_side_of_180():
+    result = split_at_antimeridian(WRAPPED_SQUARE, reference_lon=180.0)
+
+    assert result.geom_type == "MultiPolygon"
+    assert len(result.geoms) == 2
+    east, west = sorted(result.geoms, key=lambda g: g.bounds[0])
+    assert east.bounds == pytest.approx((-180.0, -1.0, -179.0, 1.0))
+    assert west.bounds == pytest.approx((179.0, -1.0, 180.0, 1.0))
+
+
+def test_wrapped_polygon_recovers_the_true_area():
+    result = split_at_antimeridian(WRAPPED_SQUARE, reference_lon=180.0)
+    assert WRAPPED_SQUARE.area == pytest.approx(716)
+    assert result.area == pytest.approx(4)
+    assert result.is_valid
+
+
+@pytest.mark.parametrize("reference_lon", [179.5, 180.0, -180.0, -179.5])
+def test_reference_lon_anywhere_near_the_seam_gives_the_same_result(reference_lon):
+    """±180 are the same meridian, so either sign of reference_lon must work."""
+    result = split_at_antimeridian(WRAPPED_SQUARE, reference_lon)
+    assert result.area == pytest.approx(4)
+    assert result.bounds == pytest.approx((-180.0, -1.0, 180.0, 1.0))
+
+
+def test_result_stays_within_the_valid_lon_range():
+    result = split_at_antimeridian(WRAPPED_SQUARE, reference_lon=180.0)
+    lons = [x for geom in result.geoms for x in geom.exterior.coords.xy[0]]
+    assert min(lons) >= -180
+    assert max(lons) <= 180
+
+
+def test_non_wrapping_geometry_is_left_unchanged():
+    """Away from the seam the unwrap is a no-op and the geometry round-trips."""
+    geom = box(10, -1, 12, 1)
+    result = split_at_antimeridian(geom, reference_lon=11)
+    assert result.geom_type == "Polygon"
+    assert result.equals(geom)
+
+
+def test_interior_rings_are_preserved():
+    outer = [(179, -2), (-179, -2), (-179, 2), (179, 2)]  # unwrapped: 179°–181°
+    interior = [(-179.8, -1), (-179.2, -1), (-179.2, 1), (-179.8, 1)]  # unwrapped: 180.2°–180.8°
+    result = split_at_antimeridian(Polygon(outer, [interior]), reference_lon=180.0)
+
+    # Unwrapped: a 2° x 4° square with a 0.6° x 2° interior ring (area preserved)
+    assert result.area == pytest.approx(6.8)
+    assert sum(len(geom.interiors) for geom in result.geoms) == 1
+
+
+def test_buffered_point_next_to_the_antimeridian_keeps_its_area():
+    target_area_km2 = np.pi * 50**2  # 50 km radius
+    point = gpd.GeoSeries([Point(179.95, 0)], crs="EPSG:4326")
+    buffered = point.to_crs("EPSG:6933").buffer(50_000).to_crs("EPSG:4326").iloc[0]
+
+    assert buffered.bounds[2] - buffered.bounds[0] > 180
+    assert get_area_km2(buffered) > 100 * target_area_km2
+
+    result = split_at_antimeridian(buffered, reference_lon=179.95)
+
+    assert result.geom_type == "MultiPolygon"
+    assert len(result.geoms) == 2
+    assert get_area_km2(result) == pytest.approx(target_area_km2, rel=1e-2)
 
 
 # ---------- robust_unary_union ----------

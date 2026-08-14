@@ -385,6 +385,8 @@ def dispatch_publisher(
 
         case "download_marine_habitats":
             download_marine_habitats(habitats=data.get("HABITAT"), verbose=verbose)
+            task_config["HABITAT"] = data.get("HABITAT")
+            step_list=["process_marine_unep_habitats"]
 
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)

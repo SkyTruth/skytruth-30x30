@@ -210,7 +210,7 @@ MARINE_HABITAT_PARAMS = {
     },
 }
 UNEP_HABITATS = {
-    habitat: MARINE_HABITAT_DOWNLOADS[habitat]
+    habitat: MARINE_HABITAT_PARAMS[habitat]
     for habitat in ("coldwatercorals", "saltmarshes", "seagrasses")
 }
 UNEP_POINT_AREA_KM2 = 1.0
