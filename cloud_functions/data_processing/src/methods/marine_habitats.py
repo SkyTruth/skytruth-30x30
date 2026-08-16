@@ -1,12 +1,15 @@
+import gc
+
 import geopandas as gpd
 import pandas as pd
 import rasterio
+import shapely
+from joblib import Parallel, delayed
 from shapely.geometry import box
-from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import add_tolerance_suffix
+from src.core.commons import add_tolerance_suffix, extract_polygons
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
@@ -76,7 +79,6 @@ def create_seamounts_subtable(
             "environment": "marine",
             "protected_area": protected_area,
             "total_area": total_area,
-            # "percent_protected": 100 * protected_area / total_area if total_area > 0 else np.nan,
         }
 
     if verbose:
@@ -150,8 +152,132 @@ def create_seamounts_subtable(
     )
 
 
+def _keep_polygonal(geom):
+    """Drop line/point slivers an intersection can leave behind, so unions stay robust."""
+    if geom is None or geom.is_empty:
+        return None
+    polygonal = extract_polygons(geom)
+    if polygonal is None or polygonal.is_empty:
+        return None
+    return make_valid(polygonal)
+
+
+def _union_parallel(geoms: list, n_jobs: int, batch_size: int = 32):
+    """Dissolve many geometries by unioning batches concurrently, then combining."""
+    if len(geoms) <= batch_size:
+        return robust_unary_union(geoms)
+
+    batches = [geoms[i : i + batch_size] for i in range(0, len(geoms), batch_size)]
+    partials = Parallel(n_jobs=n_jobs, backend="threading")(
+        delayed(robust_unary_union)(batch) for batch in batches
+    )
+    return robust_unary_union(partials)
+
+
+def _protected_habitat_for_location(
+    loc: str,
+    habitat_geom,
+    total_habitat_area_km2: float,
+    pa_geoms,
+    pa_location_values,
+    pa_locations: set,
+    pa_sindex,
+) -> tuple[dict, object]:
+    """One location's row, plus its contribution to the deduplicated global geometry."""
+    shapely.prepare(habitat_geom)
+    try:
+        candidates = pa_sindex.query(habitat_geom, predicate="intersects")
+    finally:
+        shapely.destroy_prepared(habitat_geom)
+
+    global_protected = (
+        habitat_geom.intersection(robust_unary_union(pa_geoms[candidates]))
+        if len(candidates)
+        else None
+    )
+
+    if loc in pa_locations:
+        same_location = pa_location_values[candidates] == loc
+        if same_location.all():
+            location_protected = global_protected
+        elif same_location.any():
+            location_protected = habitat_geom.intersection(
+                robust_unary_union(pa_geoms[candidates[same_location]])
+            )
+        else:
+            location_protected = None
+    else:
+        location_protected = global_protected
+
+    row = {
+        "location": loc,
+        "total_habitat_area_km2": total_habitat_area_km2,
+        "protected_habitat_area_km2": (
+            0.0 if location_protected is None else get_area_km2(location_protected)
+        ),
+    }
+    return row, _keep_polygonal(global_protected)
+
+
+def _protected_habitat_by_location(
+    habitat_by_location: gpd.GeoDataFrame,
+    locations: gpd.GeoDataFrame,
+    protected_areas: gpd.GeoDataFrame,
+    n_jobs: int = -1,
+) -> tuple[pd.DataFrame, float]:
+    """Intersect each location's dissolved habitat geometry with the PAs covering it.
+
+    Returns (per-location rows, global_protected_area_km2).
+    """
+    pa_location_values = protected_areas["location"].values
+    pa_geoms = protected_areas.geometry.values
+    pa_locations = set(protected_areas["location"])
+    pa_sindex = protected_areas.sindex
+
+    habitat_rows = (
+        habitat_by_location.dropna(subset=["location"])
+        .drop_duplicates(subset=["location"])
+        .set_index("location")
+    )
+    habitat_locations = sorted(set(locations["location"].dropna()) & set(habitat_rows.index))
+
+    jobs = [
+        (loc, habitat_rows.geometry.at[loc], float(habitat_rows["area_km2"].at[loc]))
+        for loc in habitat_locations
+    ]
+    pa_sindex.query(box(0, 0, 0, 0))
+
+    results = Parallel(n_jobs=n_jobs, backend="threading")(
+        delayed(_protected_habitat_for_location)(
+            loc,
+            habitat_geom,
+            total_area_km2,
+            pa_geoms,
+            pa_location_values,
+            pa_locations,
+            pa_sindex,
+        )
+        for loc, habitat_geom, total_area_km2 in tqdm(jobs)
+    )
+
+    rows = [row for row, _ in results]
+    global_protected_geoms = [geom for _, geom in results if geom is not None]
+
+    protected_by_location = pd.DataFrame(
+        rows, columns=["location", "total_habitat_area_km2", "protected_habitat_area_km2"]
+    )
+
+    global_protected_area_km2 = (
+        get_area_km2(_union_parallel(global_protected_geoms, n_jobs))
+        if global_protected_geoms
+        else 0.0
+    )
+
+    return protected_by_location, global_protected_area_km2
+
+
 def create_mangroves_subtable(
-    mpa,
+    all_protected_areas,
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
@@ -164,30 +290,30 @@ def create_mangroves_subtable(
     """Compute mangrove protection stats from the pre-dissolved per-location geometries.
 
     Uses the geometries written by process_mangroves. The Global Mangrove Watch
-    polygons do not overlap, so the stored per-location area is already the
-    dissolved area and needs no de-duplication here.
+    polygons do not overlap, so a location's stored area is already its dissolved area.
+    Locations overlap each other, though, so the GLOB row takes its protected area
+    from a deduplicated global geometry.
     """
     habitat = "mangroves"
 
-    def get_group_stats(df, loc, relations, global_mangrove_area):
+    def get_group_stats(df, loc, relations, global_mangrove_area, global_protected_area):
         if loc == "GLOB":
-            df_group = df
-            total_area = global_mangrove_area
-        else:
-            df_group = df[df["location"].isin(relations[loc])]
+            return {
+                "location": loc,
+                "habitat": habitat,
+                "environment": "marine",
+                "protected_area": global_protected_area,
+                "total_area": global_mangrove_area,
+            }
 
-            # Ensure numeric conversion
-            total_area = df_group["total_mangrove_area_km2"].sum()
-
-        protected_area = df_group["protected_mangrove_area_km2"].sum()
+        df_group = df[df["location"].isin(relations[loc])]
 
         return {
             "location": loc,
-            "habitat": "mangroves",
+            "habitat": habitat,
             "environment": "marine",
-            "protected_area": protected_area,
-            "total_area": total_area,
-            # "percent_protected": 100 * protected_area / total_area if total_area else None,
+            "protected_area": df_group["protected_habitat_area_km2"].sum(),
+            "total_area": df_group["total_habitat_area_km2"].sum(),
         }
 
     if verbose:
@@ -222,57 +348,22 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "getting protected mangrove area by country"})
-    mpa_locations = set(mpa["location"])
-    protected_mangroves = []
-    for loc in tqdm(list(sorted(set(locations["location"].dropna())))):
-        location_mangroves = mangroves_by_location[mangroves_by_location["location"] == loc]
-        if len(location_mangroves) == 0:
-            continue
-
-        location_geom = locations[locations["location"] == loc].iloc[0].geometry
-        mangrove_geom = location_mangroves.iloc[0]["geometry"]
-        location_mangrove_area_km2 = location_mangroves.iloc[0]["area_km2"]
-
-        if loc in mpa_locations:
-            location_pas = mpa[mpa["location"] == loc].make_valid()
-        else:
-            candidates = list(mpa.sindex.intersection(location_geom.bounds))
-            location_pas = mpa.iloc[candidates]
-            location_pas = location_pas[location_pas.intersects(location_geom)].make_valid()
-        location_pas = gpd.clip(location_pas, location_geom)
-
-        pa_geom = make_valid(unary_union(location_pas.geometry))
-
-        protected_mangroves.append(
-            {
-                "location": loc,
-                "total_mangrove_area_km2": location_mangrove_area_km2,
-                "protected_mangrove_area_km2": get_area_km2(mangrove_geom.intersection(pa_geom)),
-            }
-        )
-
-    protected_mangroves = pd.DataFrame(
-        protected_mangroves,
-        columns=["location", "total_mangrove_area_km2", "protected_mangrove_area_km2"],
-    )
-    protected_mangroves["percent_protected"] = (
-        100
-        * protected_mangroves["protected_mangrove_area_km2"]
-        / protected_mangroves["total_mangrove_area_km2"]
+    protected_mangroves, global_protected_area = _protected_habitat_by_location(
+        mangroves_by_location, locations, all_protected_areas
     )
 
     combined_locations = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
 
     mangrove_habitat = pd.DataFrame(
         [
-            stat
-            for loc in combined_locations
-            if (
-                stat := get_group_stats(
-                    protected_mangroves, loc, combined_locations, global_mangrove_area
-                )
+            get_group_stats(
+                protected_mangroves,
+                loc,
+                combined_locations,
+                global_mangrove_area,
+                global_protected_area,
             )
-            is not None
+            for loc in combined_locations
         ]
     )
 
@@ -280,7 +371,7 @@ def create_mangroves_subtable(
 
 
 def create_unep_habitats_subtable(
-    mpa,
+    all_protected_areas,
     combined_regions,
     unep_habitats: dict = UNEP_HABITATS,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
@@ -295,24 +386,29 @@ def create_unep_habitats_subtable(
 
     Uses per-location geometries written by process_marine_unep_habitats, and returns
     a subtable with one row per habitat per location.
+
+    Locations overlap each other, so the GLOB row takes both its total and its protected
+    area from deduplicated global geometries (see _protected_habitat_by_location).
     """
 
-    def get_group_stats(df, loc, relations, habitat, global_area_km2):
+    def get_group_stats(df, loc, relations, habitat, global_area_km2, global_protected_km2):
         if loc == "GLOB":
-            df_group = df
-            total_area = global_area_km2
-        else:
-            df_group = df[df["location"].isin(relations[loc])]
-            total_area = df_group["total_habitat_area_km2"].sum()
+            return {
+                "location": loc,
+                "habitat": habitat,
+                "environment": "marine",
+                "protected_area": global_protected_km2,
+                "total_area": global_area_km2,
+            }
 
-        protected_area = df_group["protected_habitat_area_km2"].sum()
+        df_group = df[df["location"].isin(relations[loc])]
 
         return {
             "location": loc,
             "habitat": habitat,
             "environment": "marine",
-            "protected_area": protected_area,
-            "total_area": total_area,
+            "protected_area": df_group["protected_habitat_area_km2"].sum(),
+            "total_area": df_group["total_habitat_area_km2"].sum(),
         }
 
     if verbose:
@@ -337,7 +433,6 @@ def create_unep_habitats_subtable(
     )
 
     combined_locations = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
-    mpa_locations = set(mpa["location"])
 
     subtables = []
     for habitat in unep_habitats:
@@ -352,43 +447,19 @@ def create_unep_habitats_subtable(
 
         if verbose:
             logger.info({"message": f"getting protected {habitat} area by location"})
-        protected_habitat = []
-        for loc in tqdm(list(sorted(set(locations["location"].dropna())))):
-            location_habitat = habitat_by_location[habitat_by_location["location"] == loc]
-            if len(location_habitat) == 0:
-                continue
-
-            location_geom = locations[locations["location"] == loc].iloc[0].geometry
-            habitat_geom = location_habitat.iloc[0]["geometry"]
-            total_habitat_area_km2 = location_habitat.iloc[0]["area_km2"]
-
-            if loc in mpa_locations:
-                location_pas = mpa[mpa["location"] == loc].make_valid()
-            else:
-                candidates = list(mpa.sindex.intersection(location_geom.bounds))
-                location_pas = mpa.iloc[candidates]
-                location_pas = location_pas[location_pas.intersects(location_geom)].make_valid()
-            location_pas = gpd.clip(location_pas, location_geom)
-
-            pa_geom = make_valid(unary_union(location_pas.geometry))
-
-            protected_habitat.append(
-                {
-                    "location": loc,
-                    "total_habitat_area_km2": total_habitat_area_km2,
-                    "protected_habitat_area_km2": get_area_km2(habitat_geom.intersection(pa_geom)),
-                }
-            )
-
-        protected_habitat = pd.DataFrame(
-            protected_habitat,
-            columns=["location", "total_habitat_area_km2", "protected_habitat_area_km2"],
+        protected_habitat, global_protected_km2 = _protected_habitat_by_location(
+            habitat_by_location, locations, all_protected_areas
         )
 
         habitat_stats = pd.DataFrame(
             [
                 get_group_stats(
-                    protected_habitat, loc, combined_locations, habitat, global_area_km2
+                    protected_habitat,
+                    loc,
+                    combined_locations,
+                    habitat,
+                    global_area_km2,
+                    global_protected_km2,
                 )
                 for loc in combined_locations
             ]
@@ -455,6 +526,7 @@ def create_climate_resilient_corals_subtable(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
+    terrestrial_protected_areas: gpd.GeoDataFrame | None = None,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
@@ -495,17 +567,18 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "combining marine + terrestrial PAs (full WDPA/OECM estate)"})
-    terrestrial_pa_file_name = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
-    terrestrial_raw = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
-    terrestrial_raw = terrestrial_raw[terrestrial_raw.intersects(coral_extent)]
-    terrestrial_pas = (
-        dissolve_multipolygons(terrestrial_raw[["ISO3", "WDPAID", "geometry"]])
-        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
-        .pipe(clean_geometries)
-    )
+    if terrestrial_protected_areas is None:
+        terrestrial_pa_file_name = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
+        terrestrial_raw = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
+        terrestrial_raw = terrestrial_raw[terrestrial_raw.intersects(coral_extent)]
+        terrestrial_protected_areas = (
+            dissolve_multipolygons(terrestrial_raw[["ISO3", "WDPAID", "geometry"]])
+            .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
+            .pipe(clean_geometries)
+        )
     # Marine and terrestrial PAs share no WDPAIDs (MARINE is a partition), so concat.
     protected_areas = gpd.GeoDataFrame(
-        pd.concat([marine_protected_areas, terrestrial_pas], ignore_index=True),
+        pd.concat([marine_protected_areas, terrestrial_protected_areas], ignore_index=True),
         geometry="geometry",
         crs=marine_protected_areas.crs,
     )
@@ -650,33 +723,79 @@ def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.Ge
     return result
 
 
+def _load_and_dissolve_pas(
+    pa_file_name: str,
+    bucket: str,
+    verbose: bool,
+) -> gpd.GeoDataFrame:
+    """Read one WDPA/OECM geojson and dissolve its multi-part records into one row per PA."""
+    pas = read_json_df(bucket, pa_file_name, verbose=verbose)
+    return (
+        dissolve_multipolygons(pas[["ISO3", "WDPAID", "geometry"]])
+        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
+        .pipe(clean_geometries)
+    )
+
+
+def load_marine_terrestrial_pa(
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
+    bucket: str = BUCKET,
+    tolerance: float = marine_tolerance,
+    verbose: bool = True,
+) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    """Load the dissolved marine PAs, the dissolved terrestrial PAs, and the full estate.
+
+    Returns (marine_protected_areas, terrestrial_protected_areas, all_protected_areas).
+    The intertidal and coastal habitats (saltmarshes and mangroves) are frequently
+    designated inside PAs that WDPA flags MARINE=0, so intersecting them against only the
+    marine PAs undercounts their protection. Habitats that can sit on land therefore use
+    the full terrestrial + marine areas; seamounts, which are deep-sea by definition,
+    stay on the marine PAs.
+    """
+    if verbose:
+        logger.info({"message": "getting marine protected areas"})
+    marine_protected_areas = _load_and_dissolve_pas(marine_pa_file_name, bucket, verbose)
+
+    if verbose:
+        logger.info({"message": "getting terrestrial protected areas"})
+    terrestrial_protected_areas = _load_and_dissolve_pas(
+        add_tolerance_suffix(terrestrial_pa_file_name, tolerance), bucket, verbose
+    )
+
+    all_protected_areas = gpd.GeoDataFrame(
+        pd.concat([marine_protected_areas, terrestrial_protected_areas], ignore_index=True),
+        geometry="geometry",
+        crs=marine_protected_areas.crs,
+    )
+
+    return marine_protected_areas, terrestrial_protected_areas, all_protected_areas
+
+
 def process_marine_habitats(
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     bucket: str = BUCKET,
     tolerance: float = marine_tolerance,
     verbose: bool = True,
 ):
-    if verbose:
-        logger.info({"message": "getting protected areas (this may take a few minutes)"})
-
-    marine_protected_areas = read_json_df(bucket, marine_pa_file_name, verbose=verbose)
-
-    if verbose:
-        logger.info({"message": "dissolving over protected areas"})
-
-    marine_protected_areas = (
-        dissolve_multipolygons(marine_protected_areas[["ISO3", "WDPAID", "geometry"]])
-        .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})
-        .pipe(clean_geometries)
+    marine_protected_areas, terrestrial_protected_areas, all_protected_areas = (
+        load_marine_terrestrial_pa(
+            marine_pa_file_name=marine_pa_file_name,
+            terrestrial_pa_file_name=terrestrial_pa_file_name,
+            bucket=bucket,
+            tolerance=tolerance,
+            verbose=verbose,
+        )
     )
 
     if verbose:
         logger.info({"message": "getting UNEP-WCMC habitats subtable"})
     unep_habitats_subtable = create_unep_habitats_subtable(
-        marine_protected_areas,
+        all_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
         iho_file_name=iho_file_name,
@@ -700,11 +819,17 @@ def process_marine_habitats(
         logger.info({"message": "getting mangroves subtable"})
 
     mangroves_subtable = create_mangroves_subtable(
-        marine_protected_areas,
+        all_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
         iho_file_name=iho_file_name,
+        tolerance=tolerance,
+        bucket=bucket,
+        verbose=verbose,
     )
+
+    del all_protected_areas
+    gc.collect()
 
     if verbose:
         logger.info({"message": "getting climate-resilient corals subtable"})
@@ -714,7 +839,9 @@ def process_marine_habitats(
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
         iho_file_name=iho_file_name,
-        tolerance=marine_tolerance,
+        terrestrial_protected_areas=terrestrial_protected_areas,
+        terrestrial_pa_file_name=terrestrial_pa_file_name,
+        tolerance=tolerance,
         bucket=bucket,
         verbose=verbose,
     )

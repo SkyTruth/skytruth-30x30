@@ -6,7 +6,7 @@ import shapely
 from rasterio.transform import Affine
 from shapely import set_precision
 from shapely.geometry import MultiPolygon, Polygon, box
-from shapely.ops import transform, unary_union
+from shapely.ops import unary_union
 from shapely.validation import make_valid
 
 # WGS84 ellipsoid parameters. Raster pixel areas are computed on this same
@@ -193,11 +193,14 @@ def split_at_antimeridian(geom, reference_lon: float):
 
 
 def get_area_km2(poly):
-    wgs84 = pyproj.CRS("EPSG:4326")
-    projected_crs = pyproj.CRS("EPSG:6933")
-    transformer = pyproj.Transformer.from_crs(wgs84, projected_crs, always_xy=True)
-    projected_polygon = transform(transformer.transform, poly)
-    return projected_polygon.area / 1e6
+    """Area of a lon/lat geometry in km2, via the EPSG:6933 equal-area projection."""
+    transformer = pyproj.Transformer.from_crs(
+        pyproj.CRS("EPSG:4326"), pyproj.CRS("EPSG:6933"), always_xy=True
+    )
+    projected = shapely.transform(
+        poly, lambda coords: np.column_stack(transformer.transform(coords[:, 0], coords[:, 1]))
+    )
+    return projected.area / 1e6
 
 
 def robust_unary_union(geometries):
