@@ -5,12 +5,9 @@ from shapely.validation import make_valid
 
 from src.core.commons import (
     add_tolerance_suffix,
-<<<<<<< HEAD
-    load_iho_regions,
-=======
     compute_global_area,
     get_wdpa_global_value,
->>>>>>> main
+    load_iho_regions,
     load_regions,
     load_wdpa_global,
     read_mpatlas_from_gcs,
