@@ -6,6 +6,7 @@ from google.cloud import storage
 
 from src.core.commons import (
     add_tolerance_suffix,
+    load_iho_regions,
     load_marine_regions,
     load_mpatlas_country,
     load_mpatlas_global,
@@ -22,7 +23,6 @@ from src.core.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
-    IHO_SEA_AREAS_FILE_NAME,
     MANGROVES_BY_LOCATION_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
@@ -432,14 +432,9 @@ def generate_marine_protection_level_stats_table(
     return protection_level_table.to_dict(orient="records")
 
 
-def get_iho_fishing_protection_region_stats(
-    iho_file_name, sites_file_name, tolerance, bucket=BUCKET, verbose=True
-):
+def get_iho_fishing_protection_region_stats(sites_file_name, bucket=BUCKET, verbose=True):
     # Load the simplified IHO sea areas at the requested tolerance.
-    iho = read_parquet_from_gcs(
-        bucket_name=bucket,
-        filename=add_tolerance_suffix(iho_file_name, tolerance),
-    ).rename(columns={"area": "total_area"})
+    iho = load_iho_regions().rename(columns={"area": "total_area"})
 
     # Load the current Protected Seas sites.
     ps_sites = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
@@ -474,7 +469,6 @@ def generate_fishing_protection_table(
     project: str = PROJECT,
     protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
     fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     verbose: bool = True,
 ):
@@ -613,7 +607,7 @@ def generate_fishing_protection_table(
         (
             fishing_protection_table,
             get_iho_fishing_protection_region_stats(
-                iho_file_name, sites_file_name, marine_tolerance, bucket=bucket, verbose=verbose
+                sites_file_name, bucket=bucket, verbose=verbose
             ),
         ),
         axis=0,

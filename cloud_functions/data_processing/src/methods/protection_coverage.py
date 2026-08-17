@@ -5,6 +5,7 @@ from shapely.validation import make_valid
 
 from src.core.commons import (
     add_tolerance_suffix,
+    load_iho_regions,
     load_regions,
     load_wdpa_global,
     read_mpatlas_from_gcs,
@@ -12,7 +13,6 @@ from src.core.commons import (
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
-    IHO_SEA_AREAS_FILE_NAME,
     MPATLAS_FILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -24,7 +24,7 @@ from src.core.processors import (
     extract_column_dict_str,
     remove_columns,
 )
-from src.utils.gcp import read_dataframe, read_json_df, read_parquet_from_gcs
+from src.utils.gcp import read_dataframe, read_json_df
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -32,17 +32,15 @@ logger = Logger()
 
 def compute_iho_protection_coverage(
     bucket: str = BUCKET,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     tolerance: float = marine_tolerance,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    iho_file = add_tolerance_suffix(iho_file_name, tolerance)
     pa_file = add_tolerance_suffix(marine_pa_file_name, tolerance)
 
     if verbose:
-        logger.info({"message": f"loading IHO sea areas from gs://{bucket}/{iho_file}"})
-    iho = read_parquet_from_gcs(bucket_name=bucket, filename=iho_file)
+        logger.info({"message": "loading IHO sea areas from shared datasets"})
+    iho = load_iho_regions()
 
     if verbose:
         logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
@@ -131,16 +129,12 @@ def compute_iho_protection_coverage(
 
 def compute_iho_protection_level(
     bucket: str = BUCKET,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     mpa_file_name: str = MPATLAS_FILE_NAME,
-    tolerance: float = marine_tolerance,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    iho_file = add_tolerance_suffix(iho_file_name, tolerance)
-
     if verbose:
-        logger.info({"message": f"loading IHO sea areas from gs://{bucket}/{iho_file}"})
-    iho = read_parquet_from_gcs(bucket_name=bucket, filename=iho_file)
+        logger.info({"message": "loading IHO sea areas from shared datasets"})
+    iho = load_iho_regions()
 
     if verbose:
         logger.info({"message": f"loading MPAtlas data from gs://{bucket}/{mpa_file_name}"})
