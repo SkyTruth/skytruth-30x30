@@ -1,6 +1,8 @@
 import gc
+from collections import defaultdict
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import rasterio
 import shapely
@@ -162,16 +164,72 @@ def _keep_polygonal(geom):
     return make_valid(polygonal)
 
 
-def _union_parallel(geoms: list, n_jobs: int, batch_size: int = 32):
-    """Dissolve many geometries by unioning batches concurrently, then combining."""
-    if len(geoms) <= batch_size:
-        return robust_unary_union(geoms)
+def _union_tile_km2(
+    geoms: list,
+    n_jobs: int = -1,
+    tile_size_deg: float = 5.0,
+    tile_key_stride: int = 100_100,
+) -> float:
+    """Area of the union of overlapping geometries, computed by tile for faster processing.
+    
+    The geometries are split into tiles of size tile_size_deg, and the union is computed 
+    per tile. The tile areas are summed to get the total area.
+    """
+    if not geoms:
+        return 0.0
 
-    batches = [geoms[i : i + batch_size] for i in range(0, len(geoms), batch_size)]
-    partials = Parallel(n_jobs=n_jobs, backend="threading")(
-        delayed(robust_unary_union)(batch) for batch in batches
+    # Prepare the geometries for faster intersection
+    parts = np.concatenate([shapely.get_parts(geom) for geom in geoms])
+    if len(parts) == 0:
+        return 0.0
+
+    bounds = shapely.bounds(parts)
+    tx0 = np.floor(bounds[:, 0] / tile_size_deg).astype(np.int64)
+    ty0 = np.floor(bounds[:, 1] / tile_size_deg).astype(np.int64)
+    tx1 = np.floor(bounds[:, 2] / tile_size_deg).astype(np.int64)
+    ty1 = np.floor(bounds[:, 3] / tile_size_deg).astype(np.int64)
+    within = (tx0 == tx1) & (ty0 == ty1)
+
+    buckets = defaultdict(list)
+
+    # Parts contained by a single tile need no clipping
+    inside = parts[within]
+    if len(inside):
+        keys = tx0[within] * tile_key_stride + ty0[within]
+        unique_keys, inverse = np.unique(keys, return_inverse=True)
+        order = np.argsort(inverse, kind="stable")
+        starts = np.searchsorted(inverse[order], np.arange(len(unique_keys)))
+        ends = np.append(starts[1:], len(order))
+        for key, start, end in zip(unique_keys, starts, ends, strict=True):
+            buckets[int(key)] = list(inside[order[start:end]])
+
+    # Parts against a tile edge are clipped to each tile they intersect
+    for idx in np.flatnonzero(~within):
+        geom = parts[idx]
+        for tx in range(tx0[idx], tx1[idx] + 1):
+            for ty in range(ty0[idx], ty1[idx] + 1):
+                clipped = geom.intersection(
+                    box(
+                        tx * tile_size_deg,
+                        ty * tile_size_deg,
+                        (tx + 1) * tile_size_deg,
+                        (ty + 1) * tile_size_deg,
+                    )
+                )
+                if not clipped.is_empty:
+                    buckets[int(tx * tile_key_stride + ty)].append(clipped)
+
+    areas = Parallel(n_jobs=n_jobs, backend="threading")(
+        delayed(_tile_area_km2)(tile_parts) for tile_parts in buckets.values()
     )
-    return robust_unary_union(partials)
+    return float(sum(areas))
+
+
+def _tile_area_km2(tile_parts: list) -> float:
+    """Deduplicated area of one tile's parts."""
+    if len(tile_parts) == 1:
+        return get_area_km2(tile_parts[0])
+    return get_area_km2(robust_unary_union(tile_parts))
 
 
 def _protected_habitat_for_location(
@@ -267,11 +325,7 @@ def _protected_habitat_by_location(
         rows, columns=["location", "total_habitat_area_km2", "protected_habitat_area_km2"]
     )
 
-    global_protected_area_km2 = (
-        get_area_km2(_union_parallel(global_protected_geoms, n_jobs))
-        if global_protected_geoms
-        else 0.0
-    )
+    global_protected_area_km2 = _union_tile_km2(global_protected_geoms, n_jobs)
 
     return protected_by_location, global_protected_area_km2
 
