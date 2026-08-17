@@ -18,6 +18,7 @@ from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
 from shapely.validation import make_valid
+from skytruth_shared_datasets import Catalog
 from tqdm.auto import tqdm
 
 from src.core.params import (
@@ -43,6 +44,38 @@ from src.utils.logger import Logger
 logger = Logger()
 
 SLACK_ALERTS_WEBHOOK = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
+
+
+def stitch_mediterannean(iho):
+    iho = iho.copy()
+
+    medi_mrgid = [4280, 3315, 3351, 4279, 3322, 3324, 3346, 3369, 3386, 3314, 3363]
+    medi = iho[iho["MRGID"].isin(medi_mrgid)].dissolve().reset_index(drop=True)
+
+    # Recompute the geometry-derived fields from the dissolved polygon
+    bounds = medi.total_bounds  # (minx, miny, maxx, maxy) in the layer CRS (4326)
+    centroid = medi.to_crs(epsg=6933).geometry.centroid.to_crs(epsg=4326).iloc[0]
+
+    medi["NAME"] = "Mediterranean Region"
+    medi["ID"] = None
+    medi["MRGID"] = "MEDI"
+    medi["Longitude"] = centroid.x
+    medi["Latitude"] = centroid.y
+    medi["min_X"], medi["min_Y"], medi["max_X"], medi["max_Y"] = bounds
+    medi["area"] = medi.to_crs(epsg=6933).geometry.area.iloc[0] / 1e6
+
+    iho["MRGID"] = iho["MRGID"].astype(str)
+    iho = pd.concat((iho, medi), axis=0, ignore_index=True)
+
+    return iho
+
+
+def load_iho_regions():
+    ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
+    water_bodies = gpd.read_file(ref.cache_path)
+    water_bodies = stitch_mediterannean(water_bodies)
+    water_bodies["location"] = water_bodies["MRGID"].astype(str)
+    return water_bodies
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
