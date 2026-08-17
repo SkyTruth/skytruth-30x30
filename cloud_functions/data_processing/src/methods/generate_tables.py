@@ -244,7 +244,11 @@ def generate_protection_coverage_stats_table(
 
     if verbose:
         logger.info({"message": "computing IHO sea area protection coverage stats"})
-    iho_coverage = compute_iho_protection_coverage(bucket=bucket, verbose=verbose)
+    iho_coverage = compute_iho_protection_coverage(
+        bucket=bucket,
+        wdpa_global_level_file_name=wdpa_global_level_file_name,
+        verbose=verbose,
+    )
 
     protection_coverage_table = pd.concat(
         (country_global_coverage, iho_coverage), axis=0, ignore_index=True

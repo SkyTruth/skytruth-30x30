@@ -454,6 +454,10 @@ def dispatch_publisher(
                         ]
                     )
 
+        # ------------------------------------
+        #   Conservation Builder table updates
+        # ------------------------------------
+
         case "generate_gadm_minus_pa":
             generate_total_area_minus_pa(
                 total_area_file=GADM_FILE_NAME,
