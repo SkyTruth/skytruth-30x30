@@ -81,7 +81,9 @@ def test_generate_protection_coverage_combines_rounds_and_uploads(monkeypatch, u
             "verbose": False,
         }
     ]
-    assert iho_calls == [{"bucket": "bucket", "verbose": False}]
+    assert iho_calls == [
+        {"bucket": "bucket", "wdpa_global_level_file_name": "global.csv", "verbose": False}
+    ]
     assert result.set_index("location")["total_area"].to_dict() == {"BRA": 10, "123": 21}
 
     assert [call["destination"] for call in uploads] == [
