@@ -18,7 +18,7 @@ from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
 from shapely.validation import make_valid
-from skytruth_shared_datasets import fetch_dataset
+from skytruth_shared_datasets import Catalog
 from tqdm.auto import tqdm
 
 from src.core.params import (
@@ -71,7 +71,7 @@ def stitch_mediterannean(iho):
 
 
 def load_iho_regions():
-    ref = fetch_dataset("iho-world-seas", "fgb")
+    ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
     water_bodies = gpd.read_file(ref.cache_path)
     water_bodies = stitch_mediterannean(water_bodies)
     water_bodies["location"] = water_bodies["MRGID"].astype(str)
