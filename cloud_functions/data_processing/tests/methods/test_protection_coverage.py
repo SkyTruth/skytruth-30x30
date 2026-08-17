@@ -17,8 +17,8 @@ def _pa_gdf(rows):
 def _run_coverage(monkeypatch, iho, pas):
     monkeypatch.setattr(
         protection_coverage,
-        "read_parquet_from_gcs",
-        lambda **_: iho.copy(),
+        "load_iho_regions",
+        lambda: iho.copy(),
     )
     monkeypatch.setattr(
         protection_coverage,

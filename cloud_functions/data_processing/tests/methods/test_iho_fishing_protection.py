@@ -6,15 +6,12 @@ import src.methods.generate_tables as generate_tables
 
 
 def _run_iho_fishing_stats(monkeypatch, iho, sites):
-    def fake_read(*args, **kwargs):
-        filename = kwargs.get("filename") or args[1]
-        return iho.copy() if "iho" in filename else sites.copy()
-
-    monkeypatch.setattr(generate_tables, "read_parquet_from_gcs", fake_read)
+    monkeypatch.setattr(generate_tables, "load_iho_regions", lambda: iho.copy())
+    monkeypatch.setattr(
+        generate_tables, "read_parquet_from_gcs", lambda *args, **kwargs: sites.copy()
+    )
     return generate_tables.get_iho_fishing_protection_region_stats(
-        iho_file_name="iho.parquet",
         sites_file_name="sites.parquet",
-        tolerance=0.1,
         bucket="bucket",
         verbose=False,
     )
