@@ -37,8 +37,6 @@ dependencies = [
     "skytruth-shared-datasets[gcs]",
 ]
 
-# Git source for skytruth-shared-datasets; the package lives in the api/python
-# subdirectory of the shared-datasets-1 repo, which PEP 508 URLs can't express here.
 [tool.poetry.dependencies]
 skytruth-shared-datasets = { git = "https://github.com/SkyTruth/shared-datasets-1.git", branch = "main", subdirectory = "api/python" }
 
