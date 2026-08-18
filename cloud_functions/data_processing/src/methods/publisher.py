@@ -294,9 +294,9 @@ def dispatch_publisher(
             )
             step_list = ["process_gadm"]
 
-        case "download_eezs":
+        case "download_eez":
             download_eez(verbose=verbose)
-            step_list = ["process_eezs"]
+            step_list = ["process_eez"] 
 
         case "download_high_seas":
             download_zip_to_gcs(
