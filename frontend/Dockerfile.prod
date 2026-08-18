@@ -6,7 +6,9 @@ WORKDIR /app
 COPY .yarn ./.yarn
 COPY package.json yarn.lock .yarnrc.yml ./
 
-RUN yarn install
+# Node images no longer ship yarn, and corepack was removed from Node in 25.x,
+# so invoke the yarn release vendored in .yarn/releases directly.
+RUN node .yarn/releases/yarn-3.5.0.cjs install
 
 # If using npm with a `package-lock.json` comment out above and use below instead
 # COPY package.json package-lock.json ./
@@ -23,7 +25,7 @@ COPY --from=deps /app/node_modules ./node_modules
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN yarn build
+RUN node .yarn/releases/yarn-3.5.0.cjs build
 
 # Production image, copy all the files and run next
 FROM node:26-bookworm-slim AS runner
