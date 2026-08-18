@@ -3,15 +3,13 @@ import math
 import numpy as np
 import pyproj
 import shapely
+from pyproj import CRS, Transformer
 from rasterio.transform import Affine
 from shapely import set_precision
+from shapely.affinity import translate
 from shapely.geometry import MultiPolygon, Polygon, box
 from shapely.ops import transform, unary_union
 from shapely.validation import make_valid
-import math
-import numpy as np
-from pyproj import CRS, Transformer
-from shapely.affinity import translate
 from tqdm.auto import tqdm
 
 tqdm.pandas()
