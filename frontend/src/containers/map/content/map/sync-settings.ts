@@ -60,7 +60,7 @@ export const useSyncMapLayerSettings = () => {
    them from the nuqs state here instead. If you are syncing a new state through nuqs in
    the data-tool's map page, remember to register it here
 */
-  export const useMapSearchParams = (): URLSearchParams => {
+export const useMapSearchParams = (): URLSearchParams => {
   const [settings] = useSyncMapSettings();
   const [layers] = useSyncMapLayers();
   const [layerSettings] = useSyncMapLayerSettings();
