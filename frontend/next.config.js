@@ -11,7 +11,7 @@ const nextConfig = {
     // Next 14's file tracer resolves the `default` export condition, but Node >=20.19
     // resolves `module-sync` instead, so these files are required at runtime yet never
     // traced into the standalone bundle. Remove once on a Next version whose tracer
-    // understands `module-sync`.
+    // understands `module-sync` Can potentially remove with upgrade to Next15.
     outputFileTracingIncludes: {
       '*': [
         './node_modules/async-function/require.mjs',
