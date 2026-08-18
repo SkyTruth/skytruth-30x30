@@ -13,7 +13,7 @@
     "postinstall": "cd .. && husky install"
   },
   "engines": {
-    "node": "~18.17"
+    "node": "26.x"
   },
   "packageManager": "yarn@3.5.0",
   "dependencies": {
