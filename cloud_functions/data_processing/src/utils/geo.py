@@ -236,7 +236,17 @@ def _wrap_to_180(geom):
     if not pieces:
         return geom
 
-    return shapely.make_valid(shapely.union_all(pieces))
+    return _ensure_valid(shapely.union_all(pieces))
+
+
+def _ensure_valid(geom):
+    """Repair ``geom``, but only when it needs repairing.
+
+    ``make_valid`` rebuilds a geometry whether or not it is already valid, and on
+    dense polygons that rebuild costs far more than the ``is_valid`` check that
+    can rule it out.
+    """
+    return geom if geom.is_valid else shapely.make_valid(geom)
 
 
 def buffer_km(geom, km=2, src_crs="EPSG:4326"):
@@ -245,7 +255,7 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
 
     The returned geometry:
       - is in src_crs;
-      - is repaired with make_valid();
+      - is repaired when it is not already valid;
       - uses -180–180 longitudes when src_crs is geographic;
       - is split at the antimeridian when necessary.
     """
@@ -253,7 +263,7 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
         return geom
 
     src_crs = CRS.from_user_input(src_crs)
-    geom = shapely.make_valid(geom)
+    geom = _ensure_valid(geom)
 
     to_wgs84 = Transformer.from_crs(
         src_crs,
@@ -262,7 +272,7 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
         force_over=True,
     ).transform
 
-    geographic = shapely.make_valid(transform(to_wgs84, geom))
+    geographic = _ensure_valid(transform(to_wgs84, geom))
 
     minx, miny, maxx, maxy = geographic.bounds
 
@@ -277,7 +287,7 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
         # Make an ordinary antimeridian-crossing polygon continuous
         # before selecting its projection and buffering it.
         if maxx - minx > 180:
-            geographic = shapely.make_valid(
+            geographic = _ensure_valid(
                 transform(
                     _shift_negative_longitudes,
                     geographic,
@@ -311,16 +321,16 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
         force_over=True,
     ).transform
 
-    projected = shapely.make_valid(transform(to_metric, geographic))
+    projected = _ensure_valid(transform(to_metric, geographic))
 
-    buffered_projected = shapely.make_valid(projected.buffer(km * 1_000))
+    buffered_projected = _ensure_valid(projected.buffer(km * 1_000))
 
-    buffered_wgs84 = shapely.make_valid(transform(metric_to_wgs84, buffered_projected))
+    buffered_wgs84 = _ensure_valid(transform(metric_to_wgs84, buffered_projected))
 
     # Restore conventional longitude coordinates. This splits crossing
     # polygons instead of shifting the complete final polygon by 360°.
     buffered_wgs84 = _wrap_to_180(buffered_wgs84)
 
-    result = shapely.make_valid(transform(from_wgs84, buffered_wgs84))
+    result = _ensure_valid(transform(from_wgs84, buffered_wgs84))
 
     return result
