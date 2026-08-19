@@ -83,11 +83,6 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
     buffers IHO regions and clips them to neighboring IHO bounds
     """
 
-    # TODO: should we do this once and save to a file for reload? My instinct is no
-    # because if the IHO boundary gets updated in shared-datasets, they might get out
-    # of sync unless we set this up with the monthly cron. However, this takes ~8 minutes
-    # to run locally
-
     logger.info({"message": f"buffering IHO sea areas by {km} km"})
 
     def _buffer_km(geom):
