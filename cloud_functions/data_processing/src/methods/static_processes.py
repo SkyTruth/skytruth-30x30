@@ -277,7 +277,7 @@ def _build_bvt_eez(
     bvt_12 = eez_12[eez_12["ISO_TER1"] == iso_code]
 
     #Subtract 12 from 24 here to get new geometry for BVT
-    bvt = bvt_24.geometry.iloc[0].union_all(bvt_12.geometry.iloc[0])
+    bvt = bvt_24.geometry.iloc[0].union(bvt_12.geometry.iloc[0])
 
     #Puts it back in the original 200NM eez, reindexes
     bvt_row = bvt_24.copy()

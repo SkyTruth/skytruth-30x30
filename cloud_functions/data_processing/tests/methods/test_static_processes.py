@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from shapely.geometry import Point
+from shapely.geometry import Polygon
 
 from src.methods import static_processes
 from src.methods.static_processes import (
@@ -174,14 +175,18 @@ def _mock_read_zipped_gpkg_from_gcs_success(countries, sub_countries):
     return _reader
 
 
-def _mock_load_marine_regions(eez_gdf, hs_gdf):
-    """Return a loader that returns EEZ for EEZ_PARAMS and HS for HIGH_SEAS_PARAMS."""
+def _mock_load_marine_regions(eez_gdf, hs_gdf, eez_24nm_gdf=None, eez_12nm_gdf=None):
+    """Return a loader that returns the right mock gdf based on which params object is passed."""
 
     def _loader(params, bucket):
         if params is static_processes.EEZ_PARAMS:
             return eez_gdf.copy()
         if params is static_processes.HIGH_SEAS_PARAMS:
             return hs_gdf.copy()
+        if eez_24nm_gdf is not None and params is static_processes.EEZ_PARAMS_24NM:
+            return eez_24nm_gdf.copy()
+        if eez_12nm_gdf is not None and params is static_processes.EEZ_PARAMS_12NM:
+            return eez_12nm_gdf.copy()
         raise ValueError("Unexpected params passed to load_marine_regions")
 
     return _loader
@@ -494,11 +499,33 @@ def test_proccess_eez_multiple_sovs_happy_path(
     assert row2["ISO_SOV1"] == "FRA*"
 
 
+@pytest.fixture
+def mock_eez_24nm():
+    return gpd.GeoDataFrame(
+        {
+            "ISO_TER1": ["BVT"],
+            "geometry": [Polygon([(3, -55), (3.5, -55), (3.5, -54.5), (3, -54.5)])],
+        }
+    )
+
+
+@pytest.fixture
+def mock_eez_12nm():
+    return gpd.GeoDataFrame(
+        {
+            "ISO_TER1": ["BVT"],
+            "geometry": [Polygon([(3.1, -54.9), (3.4, -54.9), (3.4, -54.6), (3.1, -54.6)])],
+        }
+    )
+
+
 def test_process_eez_geoms_happy_path(
     monkeypatch,
     uploads_recorder,
     mock_eez,
     mock_high_seas,
+    mock_eez_24nm,
+    mock_eez_12nm,
     mock_eez_translations,
     mock_related_countries_map,
 ):
@@ -509,7 +536,10 @@ def test_process_eez_geoms_happy_path(
 
     # Patch dependencies in the module under test
     monkeypatch.setattr(
-        static_processes, "load_marine_regions", _mock_load_marine_regions(eez, hs), raising=True
+        static_processes,
+        "load_marine_regions",
+        _mock_load_marine_regions(eez, hs, mock_eez_24nm, mock_eez_12nm),
+        raising=True,
     )
     monkeypatch.setattr(
         static_processes,
@@ -602,7 +632,12 @@ def test_process_eez_geoms_loader_failure(
 
 
 def test_process_eez_geoms_missing_columns(
-    monkeypatch, uploads_recorder, mock_eez_translations, mock_related_countries_map
+    monkeypatch,
+    uploads_recorder,
+    mock_eez_24nm,
+    mock_eez_12nm,
+    mock_eez_translations,
+    mock_related_countries_map,
 ):
     """
     If EEZ input lacks required columns, we should fail before uploading.
@@ -635,7 +670,7 @@ def test_process_eez_geoms_missing_columns(
     monkeypatch.setattr(
         static_processes,
         "load_marine_regions",
-        _mock_load_marine_regions(bad_eez, hs),
+        _mock_load_marine_regions(bad_eez, hs, mock_eez_24nm, mock_eez_12nm),
         raising=True,
     )
     monkeypatch.setattr(

@@ -2,7 +2,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from src.core import params
 import src.methods.publisher as main
+import src.methods.download_static as downloads_static
 from src.core.retry_params import ScheduleRetry
 
 
@@ -69,6 +71,12 @@ def patched_all(monkeypatch, call_log):
         raising=True,
     )
 
+    monkeypatch.setattr(
+        downloads_static,
+        "download_zip_to_gcs",
+        make_recorder(call_log, "download_zip_to_gcs", return_value={"ok": True}),
+        raising=True,
+    )
     monkeypatch.setattr(
         main,
         "create_task",
@@ -164,21 +172,6 @@ def _assert_download_zip_call_kwargs(
             id="gadm",
         ),
         pytest.param(
-            "download_eezs",
-            dict(
-                url=lambda m: m.MARINE_REGIONS_URL,
-                bucket_name=lambda m: m.BUCKET,
-                blob_name=lambda m: m.EEZ_PARAMS["zipfile_name"],
-                chunk_size=lambda m: m.CHUNK_SIZE,
-            ),
-            {
-                "data": lambda m: m.MARINE_REGIONS_BODY,
-                "params": lambda m: m.EEZ_PARAMS,
-                "headers": lambda m: m.MARINE_REGIONS_HEADERS,
-            },
-            id="eezs",
-        ),
-        pytest.param(
             "download_high_seas",
             dict(
                 url=lambda m: m.MARINE_REGIONS_URL,
@@ -229,6 +222,35 @@ def test_downloader_zip_routes(patched_all, method, expected, extra):
         extra_kwargs={k: v(main) for k, v in extra.items()} if extra else None,
     )
 
+def test_download_bvt_eez_makes_three_calls(patched_all):
+    """
+    download_eez should download all three EEZ zone files needed to build
+    the Bouvet Island (BVT) EEZ: 200nm, 24nm, and 12nm.
+    """
+    resp = main.run_from_payload({"METHOD": "download_eez"})
+    assert resp == ("OK", 200)
+
+    assert len(patched_all) == 3
+
+    expected_param_sets = [
+        params.EEZ_PARAMS,
+        params.EEZ_PARAMS_24NM,
+        params.EEZ_PARAMS_12NM,
+    ]
+
+    for call, p in zip(patched_all, expected_param_sets):
+        _assert_download_zip_call_kwargs(
+            call,
+            url=main.MARINE_REGIONS_URL,
+            bucket_name=main.BUCKET,
+            blob_name=p["zipfile_name"],
+            chunk_size=main.CHUNK_SIZE,
+            extra_kwargs={
+                "data": main.MARINE_REGIONS_BODY,
+                "params": p,
+                "headers": main.MARINE_REGIONS_HEADERS,
+            },
+        )
 
 def _make_mock_strapi(recorder):
     """
