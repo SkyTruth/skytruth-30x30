@@ -88,6 +88,7 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
     # to run locally
 
     logger.info({"message": f"buffering IHO sea areas by {km} km"})
+
     def _buffer_km(geom):
         return buffer_km(geom, km=km, src_crs=iho.crs)
 
