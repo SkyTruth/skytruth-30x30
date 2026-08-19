@@ -21,6 +21,7 @@ from src.core.params import (
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     MANGROVES_BY_LOCATION_FILE_NAME,
+    NEAR_SHORE_BUFFER_KM,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -188,7 +189,7 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions()
+    iho = load_iho_regions(buffer_km=NEAR_SHORE_BUFFER_KM)
 
     locations = gpd.GeoDataFrame(
         pd.concat(
@@ -415,7 +416,7 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas for coral coverage"})
-    iho = load_iho_regions()
+    iho = load_iho_regions(buffer_km=NEAR_SHORE_BUFFER_KM)
 
     if verbose:
         logger.info({"message": f"downloading coral raster from {coral_source_file}"})

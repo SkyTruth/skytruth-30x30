@@ -28,6 +28,7 @@ from src.core.params import (
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
     MPATLAS_META_FILE_NAME,
+    NEAR_SHORE_BUFFER_KM,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROJECT,
     PROTECTED_SEAS_FILE_NAME,
@@ -438,7 +439,7 @@ def generate_marine_protection_level_stats_table(
 
 def get_iho_fishing_protection_region_stats(sites_file_name, bucket=BUCKET, verbose=True):
     # Load the simplified IHO sea areas at the requested tolerance.
-    iho = load_iho_regions().rename(columns={"area": "total_area"})
+    iho = load_iho_regions(buffer_km=NEAR_SHORE_BUFFER_KM).rename(columns={"area": "total_area"})
 
     # Load the current Protected Seas sites.
     ps_sites = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)

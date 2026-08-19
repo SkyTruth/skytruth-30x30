@@ -38,19 +38,19 @@ from src.utils.gcp import (
     read_dataframe,
     read_json_from_gcs,
 )
-from src.utils.geo import compute_pixel_area_map_km2
+from src.utils.geo import compute_pixel_area_map_km2, buffer_km
 from src.utils.logger import Logger
 
 logger = Logger()
 
 SLACK_ALERTS_WEBHOOK = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
+MEDI_MRGID = [4280, 3315, 3351, 4279, 3322, 3324, 3346, 3369, 3386, 3314, 3363]
 
 
 def stitch_mediterannean(iho):
     iho = iho.copy()
 
-    medi_mrgid = [4280, 3315, 3351, 4279, 3322, 3324, 3346, 3369, 3386, 3314, 3363]
-    medi = iho[iho["MRGID"].isin(medi_mrgid)].dissolve().reset_index(drop=True)
+    medi = iho[iho["MRGID"].isin(MEDI_MRGID)].dissolve().reset_index(drop=True)
 
     # Recompute the geometry-derived fields from the dissolved polygon
     bounds = medi.total_bounds  # (minx, miny, maxx, maxy) in the layer CRS (4326)
@@ -69,12 +69,58 @@ def stitch_mediterannean(iho):
 
     return iho
 
+def process_buffered_iho(iho):
 
-def load_iho_regions():
+    """
+    buffers IHO regions and clips them to 
+    """
+
+    # TODO: should we do this once and save to a file for reload? My instinct is no
+    # because if the IHO boundary gets updated in shared-datasets, they might get out
+    # of sync unless we set this up with the monthly cron.
+
+    def _buffer_km(geom):
+        return buffer_km(geom, km=2, src_crs=iho.crs)
+
+    iho_buffer = iho.copy()
+    iho_buffer["geometry"] = iho_buffer["geometry"].progress_apply(_buffer_km)
+
+    if not all(iho_buffer.geometry.is_valid):
+        logger.warning("Invalid geometries in buffered IHO areas")
+
+    iho_sindex = iho.sindex
+    
+    for idx, row in tqdm(iho_buffer.iterrows(), total=len(iho_buffer)):
+        positions = iho_sindex.query(
+            row.geometry,
+            predicate="intersects",
+        )
+    
+        neighbors = iho.iloc[positions]
+        neighbors = neighbors[
+            neighbors["MRGID"].ne(row["MRGID"])
+        ]
+    
+        if not neighbors.empty:
+            neighboring_geometry = neighbors.geometry.union_all()
+    
+            iho_buffer.at[idx, "geometry"] = (
+                row.geometry.difference(neighboring_geometry)
+            )
+
+    return iho_buffer
+
+
+def load_iho_regions(buffer_km=None):
     ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
     water_bodies = gpd.read_file(ref.cache_path)
+
+    if buffer_km is not None:
+        water_bodies = process_buffered_iho(water_bodies, km=buffer_km)
+
     water_bodies = stitch_mediterannean(water_bodies)
     water_bodies["location"] = water_bodies["MRGID"].astype(str)
+
     return water_bodies
 
 

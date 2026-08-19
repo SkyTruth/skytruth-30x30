@@ -46,6 +46,7 @@ from src.core.params import (
     MANGROVES_BY_LOCATION_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
     MARINE_HABITAT_PARAMS,
+    NEAR_SHORE_BUFFER_KM,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
@@ -511,7 +512,7 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions()
+    iho = load_iho_regions(buffer_km=NEAR_SHORE_BUFFER_KM)
 
     regions = gpd.GeoDataFrame(
         pd.concat(
