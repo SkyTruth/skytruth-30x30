@@ -38,7 +38,7 @@ from src.utils.gcp import (
     read_dataframe,
     read_json_from_gcs,
 )
-from src.utils.geo import compute_pixel_area_map_km2, buffer_km
+from src.utils.geo import buffer_km, compute_pixel_area_map_km2
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -69,10 +69,10 @@ def stitch_mediterannean(iho):
 
     return iho
 
-def process_buffered_iho(iho):
 
+def process_buffered_iho(iho):
     """
-    buffers IHO regions and clips them to 
+    buffers IHO regions and clips them to
     """
 
     # TODO: should we do this once and save to a file for reload? My instinct is no
@@ -89,24 +89,20 @@ def process_buffered_iho(iho):
         logger.warning("Invalid geometries in buffered IHO areas")
 
     iho_sindex = iho.sindex
-    
+
     for idx, row in tqdm(iho_buffer.iterrows(), total=len(iho_buffer)):
         positions = iho_sindex.query(
             row.geometry,
             predicate="intersects",
         )
-    
+
         neighbors = iho.iloc[positions]
-        neighbors = neighbors[
-            neighbors["MRGID"].ne(row["MRGID"])
-        ]
-    
+        neighbors = neighbors[neighbors["MRGID"].ne(row["MRGID"])]
+
         if not neighbors.empty:
             neighboring_geometry = neighbors.geometry.union_all()
-    
-            iho_buffer.at[idx, "geometry"] = (
-                row.geometry.difference(neighboring_geometry)
-            )
+
+            iho_buffer.at[idx, "geometry"] = row.geometry.difference(neighboring_geometry)
 
     return iho_buffer
 
