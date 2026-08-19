@@ -4,8 +4,12 @@
 .DS_Store
 .pytest_cache
 *.ipynb
+.ipynb_checkpoints/
 
 # environment variables
 .env
 !.env.default
 x30-399415-4269c33acb8a.json
+
+# Scratch directory for local tests and snippets being workshopped
+local_scratch/

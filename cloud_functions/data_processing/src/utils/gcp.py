@@ -3,6 +3,7 @@ import gc
 import json
 import os
 import pickle
+import re
 import shutil
 import tempfile
 import zipfile
@@ -101,9 +102,13 @@ def save_file_bucket(
     file_obj = TqdmBytesIO(data, total_size, chunk_size)
 
     if verbose:
-        print(
-            f"Uploading {total_size / 1e6:.2f} MB to gs://{bucket_name}/{blob_name} "
-            f"in {chunk_size_mb} MB chunks..."
+        logger.info(
+            {
+                "message": (
+                    f"Uploading {total_size / 1e6:.2f} MB to gs://{bucket_name}/{blob_name} "
+                    f"in {chunk_size_mb} MB chunks..."
+                )
+            }
         )
 
     blob.upload_from_file(
@@ -113,7 +118,7 @@ def save_file_bucket(
     file_obj.close()
 
     if verbose:
-        print("Upload complete.")
+        logger.info({"message": "Upload complete."})
 
 
 def duplicate_blob(
@@ -145,7 +150,9 @@ def duplicate_blob(
     bucket.copy_blob(source_blob, bucket, new_name=filename_out)
 
     if verbose:
-        print(f"File copied from {filename_in} to {filename_out} in bucket {bucket_name}")
+        logger.info(
+            {"message": f"File copied from {filename_in} to {filename_out} in bucket {bucket_name}"}
+        )
 
 
 def download_zip_to_gcs(
@@ -180,17 +187,32 @@ def download_zip_to_gcs(
     chunk_size : int, optional
         Number of bytes to read at a time while streaming. Default is 8192 (8 KB).
     verbose : bool, optional
-        If True, prints progress messages. Default is True.
+        If True, logs progress messages. Default is True.
     """
     # Start HTTP download stream
     if verbose:
-        print(f"getting data from {url}")
+        logger.info({"message": f"getting data from {url}"})
 
     try:
         if data is not None:
-            response = requests.post(
+            session = requests.Session()
+            response = session.post(
                 url, params=params, data=data, headers=headers, allow_redirects=True
             )
+            response.raise_for_status()
+            # Some endpoints return an HTML confirmation form on the first POST.
+            # Submit it a second time with the honeypot field left empty.
+            if "text/html" in response.headers.get("content-type", ""):
+                honeypot = re.search(r'<input name="(firstname-[^"]+)"', response.text)
+                confirm_data = dict(data)
+                if honeypot:
+                    confirm_data[honeypot.group(1)] = ""
+                if verbose:
+                    logger.info({"message": "confirmation form detected, resubmitting"})
+                response = session.post(
+                    url, params=params, data=confirm_data, headers=headers, allow_redirects=True
+                )
+                response.raise_for_status()
         else:
             response = requests.get(url, stream=True)
         response.raise_for_status()
@@ -207,7 +229,7 @@ def download_zip_to_gcs(
         raw_buffer = BytesIO()
 
         if verbose:
-            print("streaming data into buffer")
+            logger.info({"message": "streaming data into buffer"})
         for chunk in tqdm(
             response.iter_content(chunk_size=chunk_size),
             total=total_size // chunk_size + 1,
@@ -228,7 +250,7 @@ def download_zip_to_gcs(
         blob = bucket.blob(blob_name)
 
         if verbose:
-            print(f"Uploading to gs://{bucket_name}/{blob_name}")
+            logger.info({"message": f"Uploading to gs://{bucket_name}/{blob_name}"})
         blob.upload_from_file(tqdm_buffer, content_type="application/zip", rewind=True, timeout=600)
         tqdm_buffer.close()
         gc.collect()
@@ -265,7 +287,9 @@ def upload_dataframe(
     client = storage.Client(project=project_id)
     bucket = client.get_bucket(bucket_name)
     if verbose:
-        print(f"Uploading dataframe to gs://{bucket_name}/{destination_blob_name}.")
+        logger.info(
+            {"message": f"Uploading dataframe to gs://{bucket_name}/{destination_blob_name}."}
+        )
     bucket.blob(destination_blob_name).upload_from_string(
         df.to_csv(index=False, float_format="%.10f"), "csv"
     )
@@ -297,7 +321,9 @@ def save_json_to_gcs(
     None
     """
     if verbose:
-        print(f"Uploading dataframe to gs://{bucket_name}/{destination_blob_name}.")
+        logger.info(
+            {"message": f"Uploading dataframe to gs://{bucket_name}/{destination_blob_name}."}
+        )
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
@@ -308,13 +334,14 @@ def upload_gdf(
     bucket_name: str,
     gdf: gpd.GeoDataFrame,
     destination_blob_name: str,
-    output_file_type: str = ".geojson",
     project_id: str = PROJECT,
     verbose: bool = True,
     timeout: int = 600,
 ) -> None:
     """
     Saves a GeoDataFrame to GCS as a .geojson or .parquet file.
+
+    The output format is inferred from the extension of ``destination_blob_name``.
 
     Parameters:
     ----------
@@ -323,7 +350,8 @@ def upload_gdf(
     gdf : gpd.GeoDataFrame
         The GeoDataFrame to upload.
     destination_blob_name : str
-        Destination path for the file in the bucket.
+        Destination path for the file in the bucket. Must end in ``.geojson``
+        or ``.parquet``; the extension determines the output format.
     project_id : str, optional
         Google Cloud project ID. Defaults to global PROJECT.
     verbose : bool, optional
@@ -331,11 +359,15 @@ def upload_gdf(
     timeout : int, optional
         Timeout in seconds for the upload. Defaults to 600 (10 minutes).
     """
+    output_file_type = os.path.splitext(destination_blob_name)[1].lower()
+
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_name)
 
     if verbose:
-        print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
+        logger.info(
+            {"message": f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}"}
+        )
 
     if output_file_type == ".geojson":
         with tempfile.NamedTemporaryFile(suffix=".geojson") as tmp_file:
@@ -345,9 +377,14 @@ def upload_gdf(
         with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp_file:
             gdf.to_parquet(tmp_file.name)
             bucket.blob(destination_blob_name).upload_from_filename(tmp_file.name, timeout=timeout)
+    else:
+        raise ValueError(
+            f"Cannot infer output format from '{destination_blob_name}'; "
+            "expected a .geojson or .parquet extension."
+        )
 
     if verbose:
-        print("Upload complete.")
+        logger.info({"message": "Upload complete."})
 
 
 def upload_gdf_zip(
@@ -408,12 +445,14 @@ def upload_gdf_zip(
                 )
 
         if verbose:
-            print(f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}")
+            logger.info(
+                {"message": f"Uploading geodataframe to gs://{bucket_name}/{destination_blob_name}"}
+            )
 
         bucket.blob(destination_blob_name).upload_from_filename(zip_path, timeout=timeout)
 
     if verbose:
-        print("Upload complete.")
+        logger.info({"message": "Upload complete."})
 
 
 def upload_file_to_gcs(bucket, file_name, blob_name, project_id=PROJECT, timeout=600):
@@ -534,7 +573,7 @@ def read_zipped_gpkg_from_gcs(
         else:
             response = []
             for layer in layers:
-                print("Adding layers to response!")
+                logger.info({"message": "Adding layers to response!"})
                 response.append(gpd.read_file(gpkg_files[0], layer=layer))
 
             return response
@@ -584,7 +623,7 @@ def read_dataframe(
         file_info = fs.info(fpath)
         if file_info["size"] <= skip_empty_val:
             if verbose:
-                print(f"Skipping empty file: {filename}")
+                logger.info({"message": f"Skipping empty file: {filename}"})
             return None
 
     if kwargs is not None:
@@ -621,7 +660,7 @@ def read_json_df(
     file_type = filename.lower().split(".")[-1]
 
     if verbose:
-        print(f"Loading from gs://{bucket_name}/{filename} (type: {file_type})")
+        logger.info({"message": f"Loading from gs://{bucket_name}/{filename} (type: {file_type})"})
 
     fs = gcsfs.GCSFileSystem(cache_timeout=0)
 
@@ -670,7 +709,7 @@ def read_json_from_gcs(bucket_name: str, filename: str, verbose: bool = True) ->
     gcs_path = f"gs://{bucket_name}/{filename}"
 
     if verbose:
-        print(f"Reading JSON from {gcs_path}")
+        logger.info({"message": f"Reading JSON from {gcs_path}"})
 
     with fs.open(gcs_path, "r") as f:
         return json.load(f)
@@ -696,7 +735,7 @@ def read_parquet_from_gcs(bucket_name: str, filename: str, verbose: bool = True)
     gcs_path = f"gs://{bucket_name}/{filename}"
 
     if verbose:
-        print(f"Reading Parquet from {gcs_path}")
+        logger.info({"message": f"Reading Parquet from {gcs_path}"})
 
     gdf = gpd.read_parquet(gcs_path)
 
@@ -726,7 +765,7 @@ def download_zipfile_from_gcs(bucket_name: str, zip_filename: str, verbose: bool
     gcs_path = f"gs://{bucket_name}/{zip_filename}"
 
     if verbose:
-        print(f"Downloading {gcs_path}...")
+        logger.info({"message": f"Downloading {gcs_path}..."})
 
     # Create a temp dir to hold zip and extracted files
     temp_dir = Path(tempfile.mkdtemp())
@@ -748,7 +787,7 @@ def download_zipfile_from_gcs(bucket_name: str, zip_filename: str, verbose: bool
     shutil.unpack_archive(zip_path, extract_dir)
 
     if verbose:
-        print(f"Extracted to: {extract_dir}")
+        logger.info({"message": f"Extracted to: {extract_dir}"})
 
     return extract_dir
 
@@ -775,7 +814,7 @@ def load_gdb_layer_from_gcs(
         with tempfile.TemporaryDirectory() as tmpdir:
             zip_path = os.path.join(tmpdir, "data.zip")
             with open(zip_path, "wb") as local_zip:
-                print(f"Downloading {zip_filename} from GCS...")
+                logger.info({"message": f"Downloading {zip_filename} from GCS..."})
                 with tqdm(total=file_size, unit="B", unit_scale=True, desc="Downloading") as pbar:
                     while True:
                         chunk = f.read(chunk_size)
@@ -785,7 +824,7 @@ def load_gdb_layer_from_gcs(
                         pbar.update(len(chunk))
 
             # Extract ZIP
-            print("Extracting ZIP...")
+            logger.info({"message": "Extracting ZIP..."})
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(tmpdir)
 
@@ -800,11 +839,11 @@ def load_gdb_layer_from_gcs(
             if layers is None:
                 layers = fiona.listlayers(gdb_path)
 
-            print("Extracting layers:", layers)
+            logger.info({"message": f"Extracting layers: {layers}"})
 
             to_append = []
             for layer in layers:
-                print(f"Loading layer: {layer}")
+                logger.info({"message": f"Loading layer: {layer}"})
                 gdf = gpd.read_file(gdb_path, layer=layer)
                 gdf["gdb_layer_name"] = layer
                 to_append.append(gdf)
@@ -826,7 +865,7 @@ def rename_blob(bucket_name, old_name, new_name, project_id=PROJECT, verbose=Tru
     blob.delete()
 
     if verbose:
-        print(f"Renamed '{old_name}' → '{new_name}' in bucket '{bucket_name}'")
+        logger.info({"message": f"Renamed '{old_name}' → '{new_name}' in bucket '{bucket_name}'"})
 
 
 def download_file_from_gcs(
@@ -854,7 +893,14 @@ def download_file_from_gcs(
 
     blob.download_to_filename(destination_file_name)
     if verbose:
-        print(f"Downloaded '{blob_name}' from bucket '{bucket_name}' to '{destination_file_name}'.")
+        logger.info(
+            {
+                "message": (
+                    f"Downloaded '{blob_name}' from bucket '{bucket_name}' "
+                    f"to '{destination_file_name}'."
+                )
+            }
+        )
 
 
 def load_pickle_from_gcs(
@@ -871,7 +917,7 @@ def load_pickle_from_gcs(
     blob = bucket.blob(blob_name)
 
     if verbose:
-        print("downloading pickle file of PA changes")
+        logger.info({"message": "downloading pickle file of PA changes"})
 
     data = blob.download_as_bytes()
 

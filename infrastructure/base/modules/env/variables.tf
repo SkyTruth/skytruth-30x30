@@ -88,9 +88,9 @@ variable "mapbox_user" {
   description = "Service account username for mapbox"
 }
 
-variable "uptime_alert_email" {
-  type        = string
-  description = "Email address to which uptime alerts should be sent"
+variable "notification_channel_ids" {
+  type        = list(string)
+  description = "Notification channel IDs to attach to monitoring alert policies"
 }
 
 variable "environment" {

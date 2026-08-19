@@ -11,11 +11,14 @@ import rasterio
 from google.cloud import storage
 from shapely.geometry import box, mapping
 from shapely.strtree import STRtree
+from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import (
+    add_tolerance_suffix,
     download_and_duplicate_zipfile,
     get_cover_areas,
+    load_iho_regions,
     load_marine_regions,
     safe_union,
 )
@@ -27,8 +30,6 @@ from src.core.land_cover_params import (
     terrestrial_tolerance,
 )
 from src.core.params import (
-    ARCHIVE_HABITATS_FILE_NAME,
-    ARCHIVE_SEAMOUNTS_FILE_NAME,
     BUCKET,
     CHUNK_SIZE,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
@@ -43,16 +44,13 @@ from src.core.params import (
     GADM_FILE_NAME,
     GADM_ZIPFILE_NAME,
     GLOBAL_MANGROVE_AREA_FILE_NAME,
-    HABITATS_URL,
-    HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
-    MANGROVES_BY_COUNTRY_FILE_NAME,
+    MANGROVES_BY_LOCATION_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
+    MARINE_HABITAT_PARAMS,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
-    SEAMOUNTS_URL,
-    SEAMOUNTS_ZIPFILE_NAME,
     TOLERANCES,
 )
 from src.core.processors import add_translations, clean_geometries
@@ -155,7 +153,7 @@ def process_gadm_geoms(
 
         df = df.pipe(clean_geometries)
 
-        out_fn = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        out_fn = add_tolerance_suffix(gadm_file_name, tolerance)
         if verbose:
             logger.info({"message": f"uploading simplified GADM countries to {out_fn}"})
         upload_gdf(bucket, df, out_fn)
@@ -230,7 +228,7 @@ def process_eez_geoms(
 
         eez_by_sov = eez_by_sov.pipe(clean_geometries)
 
-        out_fn = eez_file_name.replace(".geojson", f"_{tolerance}.geojson")
+        out_fn = add_tolerance_suffix(eez_file_name, tolerance)
         if verbose:
             logger.info({"message": f"uploading eez by sovereign file to {out_fn}"})
         upload_gdf(bucket, eez_by_sov, out_fn)
@@ -247,7 +245,7 @@ def process_eez_geoms(
     eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
-    blob_name = EEZ_MULTIPLE_SOV_FILE_NAME.replace(".geojson", f"_{TOLERANCES[1]}.geojson")
+    blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, TOLERANCES[1])
     if verbose:
         logger.info({"message": f"uploading eez with multi-sovereign file to {blob_name}"})
     upload_gdf(bucket, eez_multiple_sovs, blob_name)
@@ -472,41 +470,30 @@ def process_eez_land_union(
 
     eez_land_union = eez_land_union[["location", "geometry"]].pipe(clean_geometries)
 
-    out_fn = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    out_fn = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
     if verbose:
         logger.info({"message": f"uploading eez/land union to {out_fn}"})
     upload_gdf(bucket, eez_land_union, out_fn)
 
 
 def download_marine_habitats(
-    habitats_url: str = HABITATS_URL,
-    habitats_file_name: str = HABITATS_ZIP_FILE_NAME,
-    archive_habitats_file_name: str = ARCHIVE_HABITATS_FILE_NAME,
-    seamounts_url: str = SEAMOUNTS_URL,
-    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
-    archive_seamounts_file_name: str = ARCHIVE_SEAMOUNTS_FILE_NAME,
+    habitats: str | list[str] | None = None,
+    marine_habitat_params: dict = MARINE_HABITAT_PARAMS,
     bucket: str = BUCKET,
     chunk_size: int = CHUNK_SIZE,
     verbose: bool = True,
 ) -> None:
     """
-    Downloads marine habitat-related datasets (habitats and seamounts) and uploads them to GCS
-    as both current and archived versions.
+    Downloads marine habitat source datasets and uploads them to GCS as both
+    current and archived versions.
 
     Parameters:
     ----------
-    habitats_url : str
-        URL to download the general habitat ZIP file.
-    habitats_file_name : str
-        GCS blob name for the current habitat dataset.
-    archive_habitats_file_name : str
-        GCS blob name for the archived habitat dataset.
-    seamounts_url : str
-        URL to download the seamounts ZIP file.
-    seamounts_zipfile_name : str
-        GCS blob name for the current seamounts dataset.
-    archive_seamounts_file_name : str
-        GCS blob name for the archived seamounts dataset.
+    habitats : str | list[str] | None
+        Habitat key(s) from marine_habitat_params to download. None
+        downloads all of them.
+    marine_habitat_params : dict
+        Habitat key -> {"url", "zipfile_name", "archive_file_name"} config.
     bucket : str
         Name of the GCS bucket where all files will be uploaded.
     chunk_size : int, optional
@@ -514,32 +501,31 @@ def download_marine_habitats(
     verbose : bool, optional
         If True, prints progress messages. Default is True.
     """
-    # download habitats
-    download_and_duplicate_zipfile(
-        habitats_url,
-        bucket,
-        habitats_file_name,
-        archive_habitats_file_name,
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
+    if habitats is None:
+        habitats = list(marine_habitat_params)
+    elif isinstance(habitats, str):
+        habitats = [habitats]
 
-    # download mangroves
-    # TODO: Add this
+    unknown = set(habitats) - set(marine_habitat_params)
+    if unknown:
+        raise ValueError(f"unknown marine habitat(s): {sorted(unknown, key=repr)}")
 
-    # download seamounts
-    download_and_duplicate_zipfile(
-        seamounts_url,
-        bucket,
-        seamounts_zipfile_name,
-        archive_seamounts_file_name,
-        chunk_size=chunk_size,
-        verbose=verbose,
-    )
+    for habitat in habitats:
+        download = marine_habitat_params[habitat]
+        if verbose:
+            logger.info({"message": f"downloading {habitat} from {download['url']}"})
+        download_and_duplicate_zipfile(
+            download["url"],
+            bucket,
+            download["zipfile_name"],
+            download["archive_file_name"],
+            chunk_size=chunk_size,
+            verbose=verbose,
+        )
 
 
 def process_mangroves(
-    mangroves_by_country_file_name: str = MANGROVES_BY_COUNTRY_FILE_NAME,
+    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
     mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
     gadm_eez_union_file_name: dict = GADM_EEZ_UNION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
@@ -558,9 +544,21 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "loading eezs/gadm union"})
-
-    gadm_eez_union_file_name = gadm_eez_union_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
     gadm_eez_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
+
+    if verbose:
+        logger.info({"message": "loading IHO sea areas"})
+    iho = load_iho_regions()
+
+    regions = gpd.GeoDataFrame(
+        pd.concat(
+            [gadm_eez_union[["location", "geometry"]], iho[["location", "geometry"]]],
+            ignore_index=True,
+        ),
+        geometry="geometry",
+        crs=gadm_eez_union.crs,
+    )
 
     if verbose:
         logger.info({"message": "re-projecting mangroves for global area calculation"})
@@ -584,10 +582,10 @@ def process_mangroves(
     )
 
     if verbose:
-        logger.info({"message": "generating mangrove polygons by country"})
-    mangroves_by_country = []
-    for cnt in tqdm(list(sorted(set(gadm_eez_union["location"].dropna())))):
-        country_geom = gadm_eez_union[gadm_eez_union["location"] == cnt].iloc[0].geometry
+        logger.info({"message": "generating mangrove polygons by country and IHO region"})
+    mangroves_by_location = []
+    for cnt in tqdm(list(sorted(set(regions["location"].dropna())))):
+        country_geom = regions[regions["location"] == cnt].iloc[0].geometry
 
         # clip mangroves to country bounding box
         xmin, ymin, xmax, ymax = country_geom.bounds
@@ -598,26 +596,32 @@ def process_mangroves(
         tree = STRtree(mangrove_geoms)
 
         indices = tree.query(country_geom, predicate="intersects")
-        country_mangroves = mangroves_clipped.iloc[indices].copy().buffer(0)
-        if len(country_mangroves) > 0:
+        location_mangroves = mangroves_clipped.iloc[indices].copy()
+        location_mangroves["geometry"] = location_mangroves.geometry.apply(make_valid)
+        if len(location_mangroves) > 0:
             mangrove_geom = safe_union(
-                country_mangroves, batch_size=batch_size, simplify_tolerance=tolerance
+                location_mangroves, batch_size=batch_size, simplify_tolerance=tolerance
             )
-            mangroves_by_country.append(
+            mangroves_by_location.append(
                 {
-                    "country": cnt,
-                    "n_mangrove_polygons": len(country_mangroves),
+                    "location": cnt,
+                    "n_mangrove_polygons": len(location_mangroves),
                     "bbox": country_geom.bounds,
-                    "mangrove_area_km2": country_mangroves.to_crs("EPSG:6933").area.sum() / 1e6,
+                    "mangrove_area_km2": location_mangroves.to_crs("EPSG:6933").area.sum() / 1e6,
                     "geometry": mangrove_geom,
                 }
             )
 
-    mangroves_by_country = gpd.GeoDataFrame(
-        mangroves_by_country, geometry="geometry", crs="EPSG:4326"
+    mangroves_by_location = gpd.GeoDataFrame(
+        mangroves_by_location, geometry="geometry", crs="EPSG:4326"
     )
     upload_gdf(
-        bucket, mangroves_by_country, mangroves_by_country_file_name, project, True, timeout=600
+        bucket,
+        mangroves_by_location,
+        mangroves_by_location_file_name,
+        project_id=project,
+        verbose=True,
+        timeout=600,
     )
 
 
@@ -756,7 +760,7 @@ def generate_terrestrial_biome_stats_country(
     tolerance: float = terrestrial_tolerance,
     verbose: bool = True,
 ):
-    gadm_file_name = gadm_file_name.replace(".geojson", f"_{tolerance}.geojson")
+    gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
 
     logger.info({"message": "loading and simplifying GADM geometries"})
     gadm = read_json_df(bucket, gadm_file_name, verbose=verbose)
@@ -770,22 +774,22 @@ def generate_terrestrial_biome_stats_country(
         logger.info({"message": "getting country habitat stats"})
     country_stats = []
     with rasterio.open(local_raster_path) as src:
-        for country in tqdm(gadm["GID_0"].unique()):
+        for country in tqdm(gadm["location"].unique()):
             st = datetime.datetime.now()
-            country_poly = gadm[gadm["GID_0"] == country].iloc[0]["geometry"]
+            country_poly = gadm[gadm["location"] == country].iloc[0]["geometry"]
             tile_geoms = tile_geometry(country_poly, src.transform)
 
             results = []
             for tile in tile_geoms:
                 entry = get_cover_areas(
-                    src, [mapping(tile)], country, "country", land_cover_classes
+                    src, [mapping(tile)], country, "location", land_cover_classes
                 )
                 if entry is not None:
                     results.append(entry)
 
             results = pd.DataFrame(results)
-            cs = results[[c for c in results.columns if c != "country"]].agg("sum").to_dict()
-            cs["country"] = country
+            cs = results[[c for c in results.columns if c != "location"]].agg("sum").to_dict()
+            cs["location"] = country
 
             country_stats.append(cs)
             fn = datetime.datetime.now()

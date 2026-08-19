@@ -37,15 +37,5 @@ resource "google_monitoring_alert_policy" "alert_policy" {
     }
   }
 
-  notification_channels = [
-    google_monitoring_notification_channel.email.id
-  ]
-}
-
-resource "google_monitoring_notification_channel" "email" {
-  display_name = "${var.name} Alert email"
-  type         = "email"
-  labels = {
-    email_address = var.email
-  }
+  notification_channels = var.notification_channels
 }

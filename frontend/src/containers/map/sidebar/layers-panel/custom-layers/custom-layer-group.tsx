@@ -11,7 +11,6 @@ import {
 } from '@/components/analytics/heap';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
-  allActiveLayersAtom,
   bboxLocationAtom,
   customLayersAtom,
   drawStateAtom,
@@ -56,7 +55,6 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
   const persistActionError = persistActionKey ? t(persistActionKey) : null;
 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
-  const [allActiveLayers] = useAtom(allActiveLayersAtom);
   const [modellingCustomLayerId, setModellingCustomLayerId] = useAtom(modellingCustomLayerIdAtom);
   const setDrawState = useSetAtom(drawStateAtom);
   const setModellingState = useSetAtom(modellingAtom);
@@ -69,23 +67,14 @@ const CustomLayerGroup: FCWithMessages<CustomLayerGroupProps> = ({
   const onToggleLayer = useCallback(
     (toggled: CustomLayer, checked: boolean) => {
       const updatedLayers = { ...customLayers };
-      let updatedActiveLayers = [...allActiveLayers];
       updatedLayers[toggled.id].isActive = checked;
-
-      if (checked) {
-        updatedActiveLayers.unshift(toggled.id);
-      } else {
-        updatedActiveLayers = updatedActiveLayers.filter((id) => id !== toggled.id);
-      }
-
       setCustomLayers(updatedLayers);
-
       layerToggleEngaged({
         layerId: 'custom',
         active: checked,
       });
     },
-    [allActiveLayers, customLayers, setCustomLayers]
+    [customLayers, setCustomLayers]
   );
 
   const onDeleteLayer = useCallback(

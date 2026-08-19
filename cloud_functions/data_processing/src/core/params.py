@@ -11,6 +11,7 @@ GLOBAL_TERRESTRIAL_AREA_KM2 = 134954835
 
 today_formatted = datetime.datetime.today().strftime("%b%Y")
 
+
 # ------------------------------------------------------------
 #                    Marine Regions
 # ------------------------------------------------------------
@@ -20,7 +21,7 @@ MARINE_REGIONS_URL = "https://www.marineregions.org/download_file.php"
 MARINE_REGIONS_HEADERS = {
     "content-type": "application/x-www-form-urlencoded",
     "cookie": (
-        "PHPSESSID=29190501b4503e4b33725cd6bd01e2c6; "
+        "PHPSESSID=5600795b6f0472af520dc19af739737e; "
         "vliz_webc=vliz_webc2; "
         "jwplayer.captionLabel=Off"
     ),
@@ -93,7 +94,7 @@ GADM_FILE_NAME = "static/GADM_processed.geojson"
 GADM_EEZ_UNION_FILE_NAME = "static/GADM_eez_union.geojson"
 
 # ------------------------------------------------------------
-#        Locations (combined Marine Regions and GADM)
+#   Locations (combined Marine Regions, GADM, and IHO seas)
 # ------------------------------------------------------------
 LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
 
@@ -122,6 +123,11 @@ PROTECTED_SEAS_URL = "https://map.navigatormap.org/api/regionStats/"
 PROTECTED_SEAS_GEOM_ZIPFILE = "static/Protected_seas_geom.zip"
 PROTECTED_SEAS_FILE_NAME = "raw/protected_seas.csv"
 ARCHIVE_PROTECTED_SEAS_FILE_NAME = f"archive/raw/protected_seas_{today_formatted}.csv"
+PROTECTED_SEAS_SITES_FILE_NAME = "protected_seas/protected_seas_sites.parquet"
+ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME = (
+    f"archive/protected_seas/protected_seas_sites_{today_formatted}.parquet"
+)
+PROTECTED_SEAS_SITES_URL = "https://map.navigatormap.org/api"
 
 
 # ------------------------------------------------------------
@@ -168,7 +174,7 @@ MANGROVES_REQUEST_HEADERS = {
 MANGROVES_ZIPFILE_NAME = "habitats/Marine-habitats_Mangroves_GlobalMangroveWatch_v3_2020.zip"
 MANGROVES_SHAPEFILE_NAME = "gmw_v3_2020_vec.shp"
 MANGROVES_FILE_NAME = "habitats/mangroves_protected_areas.csv"
-MANGROVES_BY_COUNTRY_FILE_NAME = "static/mangroves_by_country.geojson"
+MANGROVES_BY_LOCATION_FILE_NAME = "static/mangroves_by_location.geojson"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{today_formatted}.csv"
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
@@ -178,6 +184,39 @@ SEAMOUNTS_SHAPEFILE_NAME = (
     "DownloadPack-14_001_ZSL002_ModelledSeamounts2011_v1/01_Data/Seamounts/Seamounts.shp"
 )
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
+
+COLD_WATER_CORALS_URL = "https://wcmc.io/WCMC_001"
+COLD_WATER_CORALS_ZIPFILE_NAME = "habitats/cold_water_corals.zip"
+ARCHIVE_COLD_WATER_CORALS_FILE_NAME = f"archive/habitats/cold_water_corals_{today_formatted}.zip"
+SALTMARSHES_URL = "https://wcmc.io/WCMC_027"
+SALTMARSHES_ZIPFILE_NAME = "habitats/saltmarshes.zip"
+ARCHIVE_SALTMARSHES_FILE_NAME = f"archive/habitats/saltmarshes_{today_formatted}.zip"
+SEAGRASSES_URL = "https://wcmc.io/WCMC_013_014"
+SEAGRASSES_ZIPFILE_NAME = "habitats/seagrasses.zip"
+ARCHIVE_SEAGRASSES_FILE_NAME = f"archive/habitats/seagrasses_{today_formatted}.zip"
+
+MARINE_HABITAT_PARAMS = {
+    "seamounts": {
+        "url": SEAMOUNTS_URL,
+        "zipfile_name": SEAMOUNTS_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SEAMOUNTS_FILE_NAME,
+    },
+    "coldwatercorals": {
+        "url": COLD_WATER_CORALS_URL,
+        "zipfile_name": COLD_WATER_CORALS_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
+    },
+    "saltmarshes": {
+        "url": SALTMARSHES_URL,
+        "zipfile_name": SALTMARSHES_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SALTMARSHES_FILE_NAME,
+    },
+    "seagrasses": {
+        "url": SEAGRASSES_URL,
+        "zipfile_name": SEAGRASSES_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SEAGRASSES_FILE_NAME,
+    },
+}
 
 # HABITATS_FILE_NAME = "habitats/habitats_table.csv"
 
@@ -221,9 +260,15 @@ REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 # ------------------------------------------------------------
 
 CONSERVATION_BUILDER_MARINE_DATA = "conservation_builder/eez_minus_mpa.parquet"
+CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA = (
+    "conservation_builder/location_minus_fhp_mpa.parquet"
+)
 CONSERVATION_BUILDER_TERRESTRIAL_DATA = "conservation_builder/gadm_minus_pa.parquet"
 ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA = (
     f"archive/conservation_builder/eez_minus_mpa_{today_formatted}.parquet"
+)
+ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA = (
+    f"archive/conservation_builder/location_minus_fhp_mpa_{today_formatted}.parquet"
 )
 ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
     f"archive/conservation_builder/gadm_minus_pa_{today_formatted}.parquet"

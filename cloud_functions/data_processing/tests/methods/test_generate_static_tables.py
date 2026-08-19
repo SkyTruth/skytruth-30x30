@@ -31,6 +31,32 @@ def mock_gadm_gdf(crs):
 
 
 @pytest.fixture
+def mock_iho_seas_gdf(crs):
+    """
+    Minimal bodies of water frame
+    """
+    return gpd.GeoDataFrame(
+        {
+            "NAME": ["Gulf of Mexico", "Caribbean Sea"],
+            "ID": ["26", "27"],
+            "Longitude": ["-90.37958525236", "-74.67801130419"],
+            "Latitude": ["24.94231562654", "15.31030445709"],
+            "min_X": ["-98.05392181844", "-89.41292977359"],
+            "min_Y": ["17.40680801848", "7.70979893208"],
+            "max_X": ["-80.43304073784", "-59.42160093753"],
+            "max_Y": ["31.46484375034", "22.70652472953"],
+            "area": ["1566759", "2852792"],
+            "MRGID": ["4288", "4287"],
+            "geometry": [
+                Point(-90.37958525236, 24.94231562654).buffer(2.0),
+                Point(-74.67801130419, 15.31030445709).buffer(1.5),
+            ],
+        },
+        crs=crs,
+    )
+
+
+@pytest.fixture
 def mock_related_countries_map():
     """
     Minimal related_countries mock
@@ -87,6 +113,17 @@ def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suff
         raise AssertionError(f"Unexpected filename: {filename}")
 
     return _read_json_df
+
+
+def _mock_load_iho_regions(mock_iho_seas_gdf):
+    """
+    Return the IHO Seas GeoDataFrame
+    """
+
+    def _load_iho_regions():
+        return mock_iho_seas_gdf.copy()
+
+    return _load_iho_regions
 
 
 def _mock_read_json_from_gcs(mock_related_countries_map, mock_regions_map):
@@ -158,6 +195,7 @@ def test_generate_locations_table_happy(
     monkeypatch,
     mock_eez_by_loc_gdf,
     mock_gadm_gdf,
+    mock_iho_seas_gdf,
     mock_related_countries_map,
     mock_regions_map,
     mock_locs_translations_df,
@@ -178,6 +216,12 @@ def test_generate_locations_table_happy(
         gen_static_tbl,
         "read_json_df",
         _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suffix),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        gen_static_tbl,
+        "load_iho_regions",
+        _mock_load_iho_regions(mock_iho_seas_gdf),
         raising=True,
     )
     monkeypatch.setattr(
@@ -235,10 +279,18 @@ def test_generate_locations_table_happy(
     # make sure regions and soverign roll ups made it in
     assert any(code in set(df["code"].astype(str)) for code in ["NA", "USA*", "MEX*"])
 
+    # Make sure Gulf of Mexico IHO Sea Area made it in
+    assert (
+        (df["name"] == "Gulf of Mexico")
+        & (df["code"].astype(str) == "4288")
+        & (df["type"] == "sea")
+    ).any()
+
 
 def test_generate_locations_table_read_failure(
     monkeypatch,
     mock_gadm_gdf,
+    mock_iho_seas_gdf,
     mock_related_countries_map,
     mock_regions_map,
     mock_locs_translations_df,
@@ -258,6 +310,13 @@ def test_generate_locations_table_read_failure(
         return mock_gadm_gdf.copy()
 
     monkeypatch.setattr(gen_static_tbl, "read_json_df", failing_read_json_df, raising=True)
+    # Stubbed even though the EEZ read fails first, so a reordering can't reach the network.
+    monkeypatch.setattr(
+        gen_static_tbl,
+        "load_iho_regions",
+        _mock_load_iho_regions(mock_iho_seas_gdf),
+        raising=True,
+    )
     monkeypatch.setattr(
         gen_static_tbl,
         "read_json_from_gcs",

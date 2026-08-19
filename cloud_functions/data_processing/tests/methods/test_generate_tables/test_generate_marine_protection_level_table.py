@@ -72,6 +72,15 @@ def _run_generate(monkeypatch, mpatlas_country, mpatlas_global, combined_regions
         "load_marine_regions",
         lambda *a, **kw: pd.DataFrame({"area_km2": [5_000_000.0]}),
     )
+    # Neutralize the IHO sea-area contribution (reads GCS parquet); these tests
+    # exercise the country/region tabular logic only.
+    monkeypatch.setattr(
+        gen_tables,
+        "compute_iho_protection_level",
+        lambda *a, **kw: pd.DataFrame(
+            columns=["location", "total_area", "area", "mpaa_protection_level", "percentage"]
+        ),
+    )
 
     monkeypatch.setattr(
         gen_tables,

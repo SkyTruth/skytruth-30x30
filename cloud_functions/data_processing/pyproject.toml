@@ -1,6 +1,6 @@
 [project]
 name = "data-processing"
-version = "0.7.0"
+version = "0.7.1"
 description = "Cloud function for agregating, processing, and updating data for the 30x30 Progress Tracker"
 authors = [
     {name = "SkyTruth"}
@@ -34,13 +34,25 @@ dependencies = [
     "google-cloud-run (>=0.15.0,<0.16.0)",
     "pmtiles (>=3.4.1,<4.0.0)",
     "Pillow (>=11.0.0,<12.0.0)",
+    "skytruth-shared-datasets[gcs]",
 ]
+
+[tool.poetry.dependencies]
+skytruth-shared-datasets = { git = "https://github.com/SkyTruth/shared-datasets-1.git", branch = "main", subdirectory = "api/python" }
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.14.3"
 pytest = "^8.3.5"
 responses = "^0.25.7"
 python-dotenv = "^1.1.0"
+
+[tool.poetry.group.notebooks]
+optional = true
+
+[tool.poetry.group.notebooks.dependencies]
+jupyterlab = "^4.4"
+ipyleaflet = "^0.19.2"
+localtileserver = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

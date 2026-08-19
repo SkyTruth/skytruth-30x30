@@ -69,6 +69,15 @@ def _run_generate(monkeypatch, protected_seas_df, combined_regions, upload_recor
 
     monkeypatch.setattr(gen_tables, "load_regions", lambda **_: (combined_regions, {}))
     monkeypatch.setattr(gen_tables, "read_dataframe", lambda *a, **kw: protected_seas_df.copy())
+    # Neutralize the IHO sea-area contribution (reads GCS parquet + the Protected
+    # Seas API); these tests exercise the country/region tabular logic only.
+    monkeypatch.setattr(
+        gen_tables,
+        "get_iho_fishing_protection_region_stats",
+        lambda *a, **kw: pd.DataFrame(
+            columns=["location", "area", "fishing_protection_level", "pct", "total_area"]
+        ),
+    )
     monkeypatch.setattr(
         gen_tables,
         "upload_dataframe",
