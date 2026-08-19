@@ -5,6 +5,7 @@ import tempfile
 import time
 import traceback
 import zipfile
+from functools import cache
 from io import BytesIO
 
 import fiona
@@ -122,7 +123,10 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
     return iho_buffer
 
 
-def load_iho_regions(buffer_km=None, n_jobs=-1):
+@cache
+def _load_iho_regions_cached(buffer_km=None, n_jobs=-1):
+    """Memoized loader. The returned frame is shared by all callers — do not
+    mutate it. Call load_iho_regions() instead, which hands back a copy."""
     logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
     ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
     water_bodies = gpd.read_file(ref.cache_path)
@@ -136,6 +140,16 @@ def load_iho_regions(buffer_km=None, n_jobs=-1):
     water_bodies["location"] = water_bodies["MRGID"].astype(str)
 
     return water_bodies
+
+
+def load_iho_regions(buffer_km=None, n_jobs=-1):
+    """Load IHO regions, buffered and clipped by ``buffer_km`` when given.
+
+    Memoized per (buffer_km, n_jobs) for the life of the process, so repeat calls
+    within one job skip the buffering. Each call gets its own copy and is free to
+    modify it.
+    """
+    return _load_iho_regions_cached(buffer_km=buffer_km, n_jobs=n_jobs).copy()
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
