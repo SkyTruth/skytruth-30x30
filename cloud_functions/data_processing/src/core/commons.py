@@ -135,15 +135,12 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
 
 
 def load_iho_regions(buffer_km=None):
-
     logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
     ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
     water_bodies = gpd.read_file(ref.cache_path)
 
     if buffer_km is not None:
-        logger.info({
-            "message": f"buffering IHO water bodies by {buffer_km} km and clipping"
-        })
+        logger.info({"message": f"buffering IHO water bodies by {buffer_km} km and clipping"})
         water_bodies = process_buffered_iho(water_bodies, km=buffer_km)
 
     logger.info({"message": "stitching IHO regions to form Mediterranean"})
