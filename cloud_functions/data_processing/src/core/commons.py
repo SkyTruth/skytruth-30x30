@@ -14,6 +14,8 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
+import shapely
+from joblib import Parallel, delayed
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
@@ -27,6 +29,7 @@ from src.core.params import (
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
+    NEAR_SHORE_BUFFER_KM,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -70,7 +73,17 @@ def stitch_mediterannean(iho):
     return iho
 
 
-def process_buffered_iho(iho):
+def _buffer_one(pos, geom, km, src_crs):
+    """Buffer one geometry, tagged with its position so results can arrive unordered."""
+    return pos, buffer_km(geom, km=km, src_crs=src_crs)
+
+
+def _subtract_neighbors(idx, geom, neighbor_geoms):
+    """Subtract a buffered region's neighboring (unbuffered) regions from it."""
+    return idx, geom.difference(unary_union(neighbor_geoms))
+
+
+def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
     """
     buffers IHO regions and clips them to
     """
@@ -79,41 +92,61 @@ def process_buffered_iho(iho):
     # because if the IHO boundary gets updated in shared-datasets, they might get out
     # of sync unless we set this up with the monthly cron.
 
-    def _buffer_km(geom):
-        return buffer_km(geom, km=2, src_crs=iho.crs)
+    # Start the heaviest regions first; wall-clock cannot beat the longest single one.
+    heaviest_first = np.argsort(shapely.get_num_coordinates(iho.geometry.to_numpy()))[::-1]
+
+    # Results come back unordered, each tagged with its position, so the bar tracks
+    # completed work rather than stalling behind one slow region.
+    buffered = [None] * len(iho)
+    buffer_results = Parallel(n_jobs=n_jobs, backend="loky", return_as="generator_unordered")(
+        delayed(_buffer_one)(pos, iho.geometry.iloc[pos], km, iho.crs) for pos in heaviest_first
+    )
+
+    for pos, geom in tqdm(buffer_results, total=len(iho), desc="buffering"):
+        buffered[pos] = geom
 
     iho_buffer = iho.copy()
-    iho_buffer["geometry"] = iho_buffer["geometry"].progress_apply(_buffer_km)
+    iho_buffer["geometry"] = gpd.GeoSeries(buffered, index=iho_buffer.index, crs=iho.crs)
 
     if not all(iho_buffer.geometry.is_valid):
-        logger.warning("Invalid geometries in buffered IHO areas")
+        logger.warning({"message": "Invalid geometries in buffered IHO areas"})
 
     iho_sindex = iho.sindex
+    geometries = iho.geometry.to_numpy()
+    mrgids = iho["MRGID"].to_numpy()
 
-    for idx, row in tqdm(iho_buffer.iterrows(), total=len(iho_buffer)):
-        positions = iho_sindex.query(
-            row.geometry,
-            predicate="intersects",
-        )
+    jobs = []
+    for idx, geom in iho_buffer.geometry.items():
+        positions = iho_sindex.query(geom, predicate="intersects")
+        positions = positions[mrgids[positions] != iho_buffer.at[idx, "MRGID"]]
 
-        neighbors = iho.iloc[positions]
-        neighbors = neighbors[neighbors["MRGID"].ne(row["MRGID"])]
+        if positions.size:
+            jobs.append((idx, geom, list(geometries[positions])))
 
-        if not neighbors.empty:
-            neighboring_geometry = neighbors.geometry.union_all()
+    clipped = Parallel(n_jobs=n_jobs, backend="loky", return_as="generator_unordered")(
+        delayed(_subtract_neighbors)(idx, geom, neighbor_geoms)
+        for idx, geom, neighbor_geoms in jobs
+    )
 
-            iho_buffer.at[idx, "geometry"] = row.geometry.difference(neighboring_geometry)
+    for idx, geom in tqdm(clipped, total=len(jobs), desc="clipping"):
+        iho_buffer.at[idx, "geometry"] = geom
 
     return iho_buffer
 
 
 def load_iho_regions(buffer_km=None):
+
+    logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
     ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
     water_bodies = gpd.read_file(ref.cache_path)
 
     if buffer_km is not None:
+        logger.info({
+            "message": f"buffering IHO water bodies by {buffer_km} km and clipping"
+        })
         water_bodies = process_buffered_iho(water_bodies, km=buffer_km)
 
+    logger.info({"message": "stitching IHO regions to form Mediterranean"})
     water_bodies = stitch_mediterannean(water_bodies)
     water_bodies["location"] = water_bodies["MRGID"].astype(str)
 
