@@ -14,7 +14,6 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
-import shapely
 from joblib import Parallel, delayed
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
@@ -73,11 +72,6 @@ def stitch_mediterannean(iho):
     return iho
 
 
-def _buffer_one(pos, geom, km, src_crs):
-    """Buffer one geometry, tagged with its position so results can arrive unordered."""
-    return pos, buffer_km(geom, km=km, src_crs=src_crs)
-
-
 def _subtract_neighbors(idx, geom, neighbor_geoms):
     """Subtract a buffered region's neighboring (unbuffered) regions from it."""
     return idx, geom.difference(unary_union(neighbor_geoms))
@@ -85,28 +79,20 @@ def _subtract_neighbors(idx, geom, neighbor_geoms):
 
 def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
     """
-    buffers IHO regions and clips them to
+    buffers IHO regions and clips them to neighboring IHO bounds
     """
 
     # TODO: should we do this once and save to a file for reload? My instinct is no
     # because if the IHO boundary gets updated in shared-datasets, they might get out
-    # of sync unless we set this up with the monthly cron.
+    # of sync unless we set this up with the monthly cron. However, this takes ~8 minutes
+    # to run locally
 
-    # Start the heaviest regions first; wall-clock cannot beat the longest single one.
-    heaviest_first = np.argsort(shapely.get_num_coordinates(iho.geometry.to_numpy()))[::-1]
-
-    # Results come back unordered, each tagged with its position, so the bar tracks
-    # completed work rather than stalling behind one slow region.
-    buffered = [None] * len(iho)
-    buffer_results = Parallel(n_jobs=n_jobs, backend="loky", return_as="generator_unordered")(
-        delayed(_buffer_one)(pos, iho.geometry.iloc[pos], km, iho.crs) for pos in heaviest_first
-    )
-
-    for pos, geom in tqdm(buffer_results, total=len(iho), desc="buffering"):
-        buffered[pos] = geom
+    logger.info({"message": f"buffering IHO sea areas by {km} km"})
+    def _buffer_km(geom):
+        return buffer_km(geom, km=km, src_crs=iho.crs)
 
     iho_buffer = iho.copy()
-    iho_buffer["geometry"] = gpd.GeoSeries(buffered, index=iho_buffer.index, crs=iho.crs)
+    iho_buffer["geometry"] = iho_buffer["geometry"].progress_apply(_buffer_km)
 
     if not all(iho_buffer.geometry.is_valid):
         logger.warning({"message": "Invalid geometries in buffered IHO areas"})
@@ -115,6 +101,7 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
     geometries = iho.geometry.to_numpy()
     mrgids = iho["MRGID"].to_numpy()
 
+    logger.info({"message": "clipping bounds to neighboring IHO sea areas"})
     jobs = []
     for idx, geom in iho_buffer.geometry.items():
         positions = iho_sindex.query(geom, predicate="intersects")
@@ -134,14 +121,14 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
     return iho_buffer
 
 
-def load_iho_regions(buffer_km=None):
+def load_iho_regions(buffer_km=None, n_jobs=-1):
     logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
     ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
     water_bodies = gpd.read_file(ref.cache_path)
 
     if buffer_km is not None:
         logger.info({"message": f"buffering IHO water bodies by {buffer_km} km and clipping"})
-        water_bodies = process_buffered_iho(water_bodies, km=buffer_km)
+        water_bodies = process_buffered_iho(water_bodies, km=buffer_km, n_jobs=n_jobs)
 
     logger.info({"message": "stitching IHO regions to form Mediterranean"})
     water_bodies = stitch_mediterannean(water_bodies)
