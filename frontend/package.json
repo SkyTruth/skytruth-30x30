@@ -1,6 +1,6 @@
 {
   "name": "skytruth-30x30-frontend",
-  "version": "1.10.0",
+  "version": "1.11.",
   "private": true,
   "scripts": {
     "dev": "yarn types && next dev",
@@ -13,7 +13,7 @@
     "postinstall": "cd .. && husky install"
   },
   "engines": {
-    "node": "~18.17"
+    "node": "26.x"
   },
   "packageManager": "yarn@3.5.0",
   "dependencies": {
@@ -70,7 +70,7 @@
     "lodash-es": "^4.17.21",
     "lucide-react": "^0.274.0",
     "mapbox-gl": "3.1.2",
-    "next": "14.2.4",
+    "next": "14.2.35",
     "next-auth": "^4.24.7",
     "next-intl": "^3.15.0",
     "next-usequerystate": "1.9.2",
