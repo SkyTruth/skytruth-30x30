@@ -7,18 +7,15 @@ const nextConfig = {
   // ? https://nextjs.org/docs/advanced-features/output-file-tracing#automatically-copying-traced-files
   output: 'standalone',
   poweredByHeader: false,
-  experimental: {
-    // Next 14's file tracer resolves the `default` export condition, but Node >=20.19
-    // resolves `module-sync` instead, so these files are required at runtime yet never
-    // traced into the standalone bundle. Remove once on a Next version whose tracer
-    // understands `module-sync` Can potentially remove with upgrade to Next15.
-    outputFileTracingIncludes: {
-      '*': [
-        './node_modules/async-function/require.mjs',
-        './node_modules/async-generator-function/require.mjs',
-        './node_modules/generator-function/require.mjs',
-      ],
-    },
+  // Next's file tracer resolves the `default` export condition, but Node >=20.19
+  // resolves `module-sync` instead, so these files are required at runtime yet never
+  // traced into the standalone bundle.
+  outputFileTracingIncludes: {
+    '*': [
+      './node_modules/async-function/require.mjs',
+      './node_modules/async-generator-function/require.mjs',
+      './node_modules/generator-function/require.mjs',
+    ],
   },
   webpack(config) {
     config.module.rules.push({

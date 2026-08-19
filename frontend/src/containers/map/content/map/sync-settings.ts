@@ -56,10 +56,10 @@ export const useSyncMapLayerSettings = () => {
   );
 };
 
-// ? there is an issue where NextJS's useSearchParams will not return the update searchParams
-// ? updated via next-usequerystate, so we rely in next-usequerystate to retrieve those searchParams as well
-// ? this might be an issue with next-usequerystate, but for now we can make it work this way.
-// ! if you are using syncing a new state through next-usequerystate in the data-tool's map page, remember to register it here
+/* NextJS's useSearchParams does not return searchParams updated via nuqs, so we rebuild
+   them from the nuqs state here instead. If you are syncing a new state through nuqs in
+   the data-tool's map page, remember to register it here
+*/
 export const useMapSearchParams = (): URLSearchParams => {
   const [settings] = useSyncMapSettings();
   const [layers] = useSyncMapLayers();

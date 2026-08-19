@@ -42,6 +42,8 @@ To run with docker:
 
 docker-compose up --build
 
+note: If using docker you must use either the dev or prod endpoints for the cms API, calling a locally running version will not work as the SSR calls cannot access the same localhost the API is running on. If you want end-to-end local testing run the client with `yarn dev`
+
 Open the app at <http://localhost:3000>
 
 [30x30]: https://30x30.skytruth.org/
