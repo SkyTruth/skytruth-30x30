@@ -30,6 +30,7 @@ from src.core.params import (
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
     NEAR_SHORE_BUFFER_KM,
+    NEAR_SHORE_IHO_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -40,6 +41,7 @@ from src.utils.gcp import (
     duplicate_blob,
     read_dataframe,
     read_json_from_gcs,
+    read_parquet_from_gcs,
 )
 from src.utils.geo import buffer_km, compute_pixel_area_map_km2
 from src.utils.logger import Logger
@@ -78,6 +80,7 @@ def stitch_mediterannean(iho):
     iho = pd.concat((iho, medi), axis=0, ignore_index=True)
 
     return iho
+
 
 
 def _subtract_neighbors(idx, geom, neighbor_geoms):
@@ -136,16 +139,26 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
 
 
 @cache
-def _load_iho_regions_cached(buffer_km=None, n_jobs=-1):
-    """Memoized loader. The returned frame is shared by all callers — do not
-    mutate it. Call load_iho_regions() instead, which hands back a copy."""
-    logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
-    ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
-    water_bodies = gpd.read_file(ref.cache_path)
+def _load_iho_regions_cached(buffer=False):
+    """Memoized loader. The returned frame is shared by all callers"""
+    if not buffer:
+        logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
+        ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
+        water_bodies = gpd.read_file(ref.cache_path)
 
-    if buffer_km is not None:
-        logger.info({"message": f"buffering IHO water bodies by {buffer_km} km and clipping"})
-        water_bodies = process_buffered_iho(water_bodies, km=buffer_km, n_jobs=n_jobs)
+    else:
+
+        if not gcsfs.GCSFileSystem().exists(f"{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME}"):
+            raise FileNotFoundError(
+                f"gs://{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME} not found. Run METHOD "
+                "process_near_shore_iho to build the near-shore IHO layer before loading it."
+            )
+
+        logger.info({
+            "message": f"loading near-shore IHO from gs://{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME}"
+        })
+
+        water_bodies = read_parquet_from_gcs(BUCKET, NEAR_SHORE_IHO_FILE_NAME)
 
     logger.info({"message": "stitching IHO regions to form Mediterranean"})
     water_bodies = stitch_mediterannean(water_bodies)
@@ -154,14 +167,9 @@ def _load_iho_regions_cached(buffer_km=None, n_jobs=-1):
     return water_bodies
 
 
-def load_iho_regions(buffer_km=None, n_jobs=-1):
-    """Load IHO regions, buffered and clipped by ``buffer_km`` when given.
-
-    Memoized per (buffer_km, n_jobs) for the life of the process, so repeat calls
-    within one job skip the buffering. Each call gets its own copy and is free to
-    modify it.
-    """
-    return _load_iho_regions_cached(buffer_km=buffer_km, n_jobs=n_jobs).copy()
+def load_iho_regions(buffer=False):
+    """Load IHO regions, or the saved near-shore layer when ``buffer`` is True."""
+    return _load_iho_regions_cached(buffer=buffer).copy()
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):

@@ -12,6 +12,7 @@ from google.cloud import storage
 from shapely.geometry import box, mapping
 from shapely.strtree import STRtree
 from shapely.validation import make_valid
+from skytruth_shared_datasets import Catalog
 from tqdm.auto import tqdm
 
 from src.core.commons import (
@@ -20,6 +21,7 @@ from src.core.commons import (
     get_cover_areas,
     load_iho_regions,
     load_marine_regions,
+    process_buffered_iho,
     safe_union,
 )
 from src.core.land_cover_params import (
@@ -47,6 +49,7 @@ from src.core.params import (
     MANGROVES_ZIPFILE_NAME,
     MARINE_HABITAT_PARAMS,
     NEAR_SHORE_BUFFER_KM,
+    NEAR_SHORE_IHO_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
@@ -487,6 +490,39 @@ def download_marine_habitats(
         )
 
 
+def process_near_shore_iho(
+    near_shore_iho_file_name: str = NEAR_SHORE_IHO_FILE_NAME,
+    km: int = NEAR_SHORE_BUFFER_KM,
+    bucket: str = BUCKET,
+    n_jobs: int = -1,
+    verbose: bool = True,
+):
+    """Build the near-shore IHO layer once and save it for the pipeline to read.
+
+    Buffering and clipping the sea areas takes minutes and several jobs need the
+    result, so it happens here rather than inside ``load_iho_regions``. The sea
+    areas are read as published — ``load_iho_regions`` is not used, because it
+    stitches in the Mediterranean and casts MRGID to a string, and
+    ``process_buffered_iho`` needs neither.
+    """
+    if verbose:
+        logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
+
+    ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
+    water_bodies = gpd.read_file(ref.cache_path)
+
+    near_shore = process_buffered_iho(water_bodies, km=km, n_jobs=n_jobs)
+
+    if verbose:
+        logger.info({
+            "message": f"saving near-shore IHO to gs://{bucket}/{near_shore_iho_file_name}"
+        })
+
+    upload_gdf(bucket, near_shore, near_shore_iho_file_name, verbose=verbose)
+
+    return near_shore
+
+
 def process_mangroves(
     mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
     mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
@@ -512,7 +548,7 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions(buffer_km=NEAR_SHORE_BUFFER_KM)
+    iho = load_iho_regions(buffer=True)
 
     regions = gpd.GeoDataFrame(
         pd.concat(
