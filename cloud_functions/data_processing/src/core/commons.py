@@ -49,13 +49,11 @@ logger = Logger()
 SLACK_ALERTS_WEBHOOK = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
 MEDI_MRGID = [4280, 3315, 3351, 4279, 3322, 3324, 3346, 3369, 3386, 3314, 3363]
 
-# TODO: buffer the Arctic Ocean once buffer_km can round-trip a polar polygon.
-# It is the only IHO region touching a pole, and it is drawn with a top edge along
-# lat 90. Buffering makes it *enclose* the pole, and a pole-enclosing polygon has no
-# valid -180-180 ring, so the result comes back as a band reaching only 83.6N: it
-# drops 4.3M km2 (31%) of the region and no longer contains the unbuffered version.
-# Leaving it unbuffered costs nothing today — this buffer exists to catch mangroves
-# and saltmarshes that the IHO coastline misses, and neither occurs in the Arctic.
+# TODO: We currently do not buffer the Arctic Ocean or Southern Ocean because
+# of complexities in buffering in polar regions and regions that wrap around.
+# The current buffer exists to catch mangroves and saltmarshes that the IHO 
+# coastline misses, and neither occurs in the Arctic. If needed in the future
+# we will have to add complexity to the buffering method
 UNBUFFERED_MRGID = {1906, 1907}  # Arctic Ocean
 
 
