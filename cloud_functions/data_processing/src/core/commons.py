@@ -51,7 +51,7 @@ MEDI_MRGID = [4280, 3315, 3351, 4279, 3322, 3324, 3346, 3369, 3386, 3314, 3363]
 
 # TODO: We currently do not buffer the Arctic Ocean or Southern Ocean because
 # of complexities in buffering in polar regions and regions that wrap around.
-# The current buffer exists to catch mangroves and saltmarshes that the IHO 
+# The current buffer exists to catch mangroves and saltmarshes that the IHO
 # coastline misses, and neither occurs in the Arctic. If needed in the future
 # we will have to add complexity to the buffering method
 UNBUFFERED_MRGID = {1906, 1907}  # Arctic Ocean
