@@ -253,52 +253,51 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
     """
     Buffer a geometry in meters using an appropriate local projection.
 
+    Input must be EPSG:4326. Round-tripping through another CRS would mean two
+    extra passes over every coordinate, and ``shapely.ops.transform`` rebuilds
+    the geometry even when the transform is the identity — costly on the dense
+    ocean polygons this is used for. Reproject before calling instead.
+
     The returned geometry:
-      - is in src_crs;
+      - is in EPSG:4326;
       - is repaired when it is not already valid;
-      - uses -180–180 longitudes when src_crs is geographic;
+      - uses -180–180 longitudes;
       - is split at the antimeridian when necessary.
+
+    Geometry touching a pole is rejected rather than buffered: the buffer would
+    make it *enclose* the pole, and a pole-enclosing polygon has no valid
+    -180–180 ring. Exclude those upstream (see UNBUFFERED_MRGID in core.commons).
     """
     if geom is None or geom.is_empty:
         return geom
 
-    src_crs = CRS.from_user_input(src_crs)
-    geom = _ensure_valid(geom)
+    if CRS.from_user_input(src_crs) != WGS84:
+        raise ValueError(f"buffer_km expects EPSG:4326 geometry, got {src_crs}")
 
-    to_wgs84 = Transformer.from_crs(
-        src_crs,
-        WGS84,
-        always_xy=True,
-        force_over=True,
-    ).transform
-
-    geographic = _ensure_valid(transform(to_wgs84, geom))
+    geographic = _ensure_valid(geom)
 
     minx, miny, maxx, maxy = geographic.bounds
 
-    # Polar polygons should not be handled by longitude shifting.
-    if maxy >= 89.999:
-        metric_crs = CRS.from_epsg(3413)
-
-    elif miny <= -89.999:
-        metric_crs = CRS.from_epsg(3031)
-
-    else:
-        # Make an ordinary antimeridian-crossing polygon continuous
-        # before selecting its projection and buffering it.
-        if maxx - minx > 180:
-            geographic = _ensure_valid(
-                transform(
-                    _shift_negative_longitudes,
-                    geographic,
-                )
-            )
-
-        center = geographic.centroid
-
-        metric_crs = CRS.from_proj4(
-            f"+proj=aeqd +lat_0={center.y} +lon_0={center.x} +datum=WGS84 +units=m +no_defs"
+    if maxy >= 89.999 or miny <= -89.999:
+        raise NotImplementedError(
+            "buffer_km cannot buffer geometry that touches a pole; exclude it upstream"
         )
+
+    # Make an ordinary antimeridian-crossing polygon continuous
+    # before selecting its projection and buffering it.
+    if maxx - minx > 180:
+        geographic = _ensure_valid(
+            transform(
+                _shift_negative_longitudes,
+                geographic,
+            )
+        )
+
+    center = geographic.centroid
+
+    metric_crs = CRS.from_proj4(
+        f"+proj=aeqd +lat_0={center.y} +lon_0={center.x} +datum=WGS84 +units=m +no_defs"
+    )
 
     to_metric = Transformer.from_crs(
         WGS84,
@@ -314,13 +313,6 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
         force_over=True,
     ).transform
 
-    from_wgs84 = Transformer.from_crs(
-        WGS84,
-        src_crs,
-        always_xy=True,
-        force_over=True,
-    ).transform
-
     projected = _ensure_valid(transform(to_metric, geographic))
 
     buffered_projected = _ensure_valid(projected.buffer(km * 1_000))
@@ -329,8 +321,6 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
 
     # Restore conventional longitude coordinates. This splits crossing
     # polygons instead of shifting the complete final polygon by 360°.
-    buffered_wgs84 = _wrap_to_180(buffered_wgs84)
-
-    result = _ensure_valid(transform(from_wgs84, buffered_wgs84))
+    result = _wrap_to_180(buffered_wgs84)
 
     return result
