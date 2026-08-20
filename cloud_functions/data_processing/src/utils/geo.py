@@ -264,9 +264,7 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
       - uses -180–180 longitudes;
       - is split at the antimeridian when necessary.
 
-    Geometry touching a pole is rejected rather than buffered: the buffer would
-    make it *enclose* the pole, and a pole-enclosing polygon has no valid
-    -180–180 ring. Exclude those upstream (see UNBUFFERED_MRGID in core.commons).
+    Geometry touching a pole is rejected rather than buffered
     """
     if geom is None or geom.is_empty:
         return geom
