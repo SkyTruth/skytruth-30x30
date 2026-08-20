@@ -1,3 +1,5 @@
+import inspect
+
 import pandas as pd
 import pytest
 
@@ -73,13 +75,18 @@ def _run_generate(monkeypatch, mpatlas_country, mpatlas_global, combined_regions
         lambda *a, **kw: pd.DataFrame({"area_km2": [5_000_000.0]}),
     )
     # Neutralize the IHO sea-area contribution (reads GCS parquet); these tests
-    # exercise the country/region tabular logic only.
-    monkeypatch.setattr(
-        gen_tables,
-        "compute_iho_protection_level",
-        lambda *a, **kw: pd.DataFrame(
+    # exercise the country/region tabular logic only. Binding against the real
+    # signature ensures the call site stays compatible with it.
+    real_iho_signature = inspect.signature(gen_tables.compute_iho_protection_level)
+
+    def mock_compute_iho_protection_level(*args, **kwargs):
+        real_iho_signature.bind(*args, **kwargs)
+        return pd.DataFrame(
             columns=["location", "total_area", "area", "mpaa_protection_level", "percentage"]
-        ),
+        )
+
+    monkeypatch.setattr(
+        gen_tables, "compute_iho_protection_level", mock_compute_iho_protection_level
     )
 
     monkeypatch.setattr(

@@ -283,7 +283,6 @@ def generate_marine_protection_level_stats_table(
     mpa_file_name: str = MPATLAS_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     high_seas_params: dict = HIGH_SEAS_PARAMS,
-    tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
@@ -412,7 +411,6 @@ def generate_marine_protection_level_stats_table(
     iho_protection_level = compute_iho_protection_level(
         bucket=bucket,
         mpa_file_name=mpa_file_name,
-        tolerance=tolerance,
         verbose=verbose,
     )
 
