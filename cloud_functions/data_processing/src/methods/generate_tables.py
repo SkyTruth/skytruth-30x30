@@ -438,7 +438,7 @@ def generate_marine_protection_level_stats_table(
 
 def get_iho_fishing_protection_region_stats(sites_file_name, bucket=BUCKET, verbose=True):
     # Load the simplified IHO sea areas at the requested tolerance.
-    iho = load_iho_regions().rename(columns={"area": "total_area"})
+    iho = load_iho_regions(buffer=True).rename(columns={"area": "total_area"})
 
     # Load the current Protected Seas sites.
     ps_sites = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)

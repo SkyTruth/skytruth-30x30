@@ -67,6 +67,7 @@ from src.methods.static_processes import (
     process_eez_land_union,
     process_gadm_geoms,
     process_mangroves,
+    process_near_shore_iho,
     process_terrestrial_biome_raster,
 )
 from src.methods.subtract_geometries import (
@@ -368,6 +369,10 @@ def dispatch_publisher(
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)
             step_list = ["generate_terrestrial_biome_stats_country"]
+
+        case "process_near_shore_iho":
+            process_near_shore_iho(verbose=verbose)
+            step_list = ["process_mangroves"]
 
         case "process_mangroves":
             process_mangroves(verbose=verbose)

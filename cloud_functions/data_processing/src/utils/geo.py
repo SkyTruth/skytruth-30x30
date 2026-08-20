@@ -3,11 +3,18 @@ import math
 import numpy as np
 import pyproj
 import shapely
+from pyproj import CRS, Transformer
 from rasterio.transform import Affine
 from shapely import set_precision
+from shapely.affinity import translate
 from shapely.geometry import MultiPolygon, Polygon, box
 from shapely.ops import transform, unary_union
 from shapely.validation import make_valid
+from tqdm.auto import tqdm
+
+tqdm.pandas()
+
+WGS84 = CRS.from_epsg(4326)
 
 # WGS84 ellipsoid parameters. Raster pixel areas are computed on this same
 # ellipsoid as the vector areas in `get_area_km2` (EPSG:6933 is an equal-area
@@ -179,3 +186,139 @@ def robust_unary_union(geometries):
         scale = max((abs(coord) for geom in valid for coord in geom.bounds), default=1.0) or 1.0
         snapped = [set_precision(geom, scale * 1e-9) for geom in valid]
         return make_valid(unary_union(snapped))
+
+
+def _shift_negative_longitudes(x, y, z=None):
+    """Temporarily move negative longitudes into the 0–360 range."""
+    if np.isscalar(x):
+        shifted_x = x + 360 if x < 0 else x
+    else:
+        x = np.asarray(x)
+        shifted_x = np.where(x < 0, x + 360, x)
+
+    return (shifted_x, y, z) if z is not None else (shifted_x, y)
+
+
+def _wrap_to_180(geom):
+    """
+    Split an unwrapped geometry at antimeridians and return all polygon
+    parts using conventional -180–180 longitude coordinates.
+    """
+    if geom is None or geom.is_empty:
+        return geom
+
+    geom = shapely.make_valid(geom)
+    minx, _, maxx, _ = geom.bounds
+
+    first_strip = math.floor((minx + 180) / 360)
+    last_strip = math.floor((maxx + 180) / 360)
+
+    pieces = []
+
+    for strip_number in range(first_strip, last_strip + 1):
+        longitude_strip = box(
+            -180 + 360 * strip_number,
+            -90,
+            180 + 360 * strip_number,
+            90,
+        )
+
+        piece = geom.intersection(longitude_strip)
+
+        # Exclude intersections consisting only of lines or points.
+        if not piece.is_empty and piece.area > 0:
+            piece = translate(
+                piece,
+                xoff=-360 * strip_number,
+            )
+            pieces.append(piece)
+
+    if not pieces:
+        return geom
+
+    return _ensure_valid(shapely.union_all(pieces))
+
+
+def _ensure_valid(geom):
+    """Repair ``geom``, but only when it needs repairing.
+
+    ``make_valid`` rebuilds a geometry whether or not it is already valid, and on
+    dense polygons that rebuild costs far more than the ``is_valid`` check that
+    can rule it out.
+    """
+    return geom if geom.is_valid else shapely.make_valid(geom)
+
+
+def buffer_km(geom, km=2, src_crs="EPSG:4326"):
+    """
+    Buffer a geometry in meters using an appropriate local projection.
+
+    Input must be EPSG:4326. Round-tripping through another CRS would mean two
+    extra passes over every coordinate, and ``shapely.ops.transform`` rebuilds
+    the geometry even when the transform is the identity — costly on the dense
+    ocean polygons this is used for. Reproject before calling instead.
+
+    The returned geometry:
+      - is in EPSG:4326;
+      - is repaired when it is not already valid;
+      - uses -180–180 longitudes;
+      - is split at the antimeridian when necessary.
+
+    Geometry touching a pole is rejected rather than buffered
+    """
+    if geom is None or geom.is_empty:
+        return geom
+
+    if CRS.from_user_input(src_crs) != WGS84:
+        raise ValueError(f"buffer_km expects EPSG:4326 geometry, got {src_crs}")
+
+    geographic = _ensure_valid(geom)
+
+    minx, miny, maxx, maxy = geographic.bounds
+
+    if maxy >= 89.999 or miny <= -89.999:
+        raise NotImplementedError(
+            "buffer_km cannot buffer geometry that touches a pole; exclude it upstream"
+        )
+
+    # Make an ordinary antimeridian-crossing polygon continuous
+    # before selecting its projection and buffering it.
+    if maxx - minx > 180:
+        geographic = _ensure_valid(
+            transform(
+                _shift_negative_longitudes,
+                geographic,
+            )
+        )
+
+    center = geographic.centroid
+
+    metric_crs = CRS.from_proj4(
+        f"+proj=aeqd +lat_0={center.y} +lon_0={center.x} +datum=WGS84 +units=m +no_defs"
+    )
+
+    to_metric = Transformer.from_crs(
+        WGS84,
+        metric_crs,
+        always_xy=True,
+        force_over=True,
+    ).transform
+
+    metric_to_wgs84 = Transformer.from_crs(
+        metric_crs,
+        WGS84,
+        always_xy=True,
+        force_over=True,
+    ).transform
+
+    projected = _ensure_valid(transform(to_metric, geographic))
+
+    buffered_projected = _ensure_valid(projected.buffer(km * 1_000))
+
+    buffered_wgs84 = _ensure_valid(transform(metric_to_wgs84, buffered_projected))
+
+    # Restore conventional longitude coordinates. This splits crossing
+    # polygons instead of shifting the complete final polygon by 360°.
+    result = _wrap_to_180(buffered_wgs84)
+
+    return result
