@@ -6,9 +6,7 @@ import src.methods.generate_tables as generate_tables
 
 
 def _run_iho_fishing_stats(monkeypatch, iho, sites):
-    monkeypatch.setattr(
-        generate_tables, "load_iho_regions", lambda *args, **kwargs: iho.copy()
-    )
+    monkeypatch.setattr(generate_tables, "load_iho_regions", lambda *args, **kwargs: iho.copy())
     monkeypatch.setattr(
         generate_tables, "read_parquet_from_gcs", lambda *args, **kwargs: sites.copy()
     )
