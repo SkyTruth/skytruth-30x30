@@ -514,9 +514,9 @@ def process_near_shore_iho(
     near_shore = process_buffered_iho(water_bodies, km=km, n_jobs=n_jobs)
 
     if verbose:
-        logger.info({
-            "message": f"saving near-shore IHO to gs://{bucket}/{near_shore_iho_file_name}"
-        })
+        logger.info(
+            {"message": f"saving near-shore IHO to gs://{bucket}/{near_shore_iho_file_name}"}
+        )
 
     upload_gdf(bucket, near_shore, near_shore_iho_file_name, verbose=verbose)
 

@@ -82,7 +82,6 @@ def stitch_mediterannean(iho):
     return iho
 
 
-
 def _subtract_neighbors(idx, geom, neighbor_geoms):
     """Subtract a buffered region's neighboring (unbuffered) regions from it."""
     return idx, geom.difference(unary_union(neighbor_geoms))
@@ -147,16 +146,15 @@ def _load_iho_regions_cached(buffer=False):
         water_bodies = gpd.read_file(ref.cache_path)
 
     else:
-
         if not gcsfs.GCSFileSystem().exists(f"{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME}"):
             raise FileNotFoundError(
                 f"gs://{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME} not found. Run METHOD "
                 "process_near_shore_iho to build the near-shore IHO layer before loading it."
             )
 
-        logger.info({
-            "message": f"loading near-shore IHO from gs://{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME}"
-        })
+        logger.info(
+            {"message": f"loading near-shore IHO from gs://{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME}"}
+        )
 
         water_bodies = read_parquet_from_gcs(BUCKET, NEAR_SHORE_IHO_FILE_NAME)
 
