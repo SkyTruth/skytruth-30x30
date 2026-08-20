@@ -125,6 +125,35 @@ def download_mpatlas_global(
     duplicate_blob(bucket, current_filename, archive_filename, verbose=True)
 
 
+# MPAtlas API v4 property names -> internal (v2-era) names used by the pipeline
+MPATLAS_V4_FIELD_MAP = {
+    "zone_name": "name",
+    "site_designation": "designation",
+    "mpaguide_protection_level": "protection_mpaguide_level",
+    "assessment_establishment_stage": "establishment_stage",
+}
+
+
+def normalize_mpatlas_geojson(data: dict) -> dict:
+    """
+    Rename MPAtlas API v4 feature properties in place to the internal names
+    used throughout the pipeline.
+
+    v4's establishment_stage is site-level; the zone-effective value moved to
+    assessment_establishment_stage, which replaces it here. Properties absent
+    from a feature are left alone, so already-normalized data passes through
+    unchanged.
+    """
+    for feature in data.get("features", []):
+        properties = feature.get("properties") or {}
+        if "assessment_establishment_stage" in properties:
+            properties.pop("establishment_stage", None)
+        for v4_name, internal_name in MPATLAS_V4_FIELD_MAP.items():
+            if v4_name in properties:
+                properties[internal_name] = properties.pop(v4_name)
+    return data
+
+
 def download_mpatlas_zone(
     url: str = MPATLAS_URL,
     bucket: str = BUCKET,
