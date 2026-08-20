@@ -1,5 +1,6 @@
 import gc
 import glob
+import json
 import os
 import shutil
 import subprocess
@@ -195,7 +196,19 @@ def download_mpatlas_zone(
         bucket,
         verbose=verbose,
     )
-    duplicate_blob(bucket, archive_filename, filename, verbose=True)
+
+    # The archive keeps the raw v4 response; the working copy is normalized to
+    # the internal field names so downstream readers stay unchanged.
+    if verbose:
+        logger.info({"message": f"saving normalized MPAtlas Zone Assessment to {filename}"})
+    normalized = normalize_mpatlas_geojson(response.json())
+    save_file_bucket(
+        json.dumps(normalized).encode("utf-8"),
+        "application/json",
+        filename,
+        bucket,
+        verbose=verbose,
+    )
 
 
 def download_mpatlas(

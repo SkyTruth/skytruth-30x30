@@ -1,5 +1,8 @@
 import copy
+import json
+from unittest.mock import patch
 
+import src.methods.download_and_process as download
 from src.methods.download_and_process import normalize_mpatlas_geojson
 
 
@@ -55,3 +58,32 @@ def test_normalize_is_idempotent(mock_mpatlas_v4_geojson):
     once = normalize_mpatlas_geojson(copy.deepcopy(mock_mpatlas_v4_geojson))
     twice = normalize_mpatlas_geojson(copy.deepcopy(once))
     assert twice == once
+
+
+@patch("src.methods.download_and_process.save_file_bucket")
+@patch("src.methods.download_and_process.requests.get")
+def test_download_archives_raw_and_saves_normalized(
+    mock_get, mock_save, mock_mpatlas_v4_geojson
+):
+    raw_bytes = json.dumps(mock_mpatlas_v4_geojson).encode("utf-8")
+    mock_get.return_value.content = raw_bytes
+    mock_get.return_value.json.return_value = copy.deepcopy(mock_mpatlas_v4_geojson)
+
+    download.download_mpatlas_zone(
+        url="https://example.test/api/public/v4/zone/geojson",
+        bucket="mock-bucket",
+        filename="raw/mpatlas_zone_assessment.geojson",
+        archive_filename="archive/mpatlas_zone_assessment.geojson",
+        verbose=False,
+    )
+
+    assert mock_save.call_count == 2
+
+    archive_call, working_call = mock_save.call_args_list
+    assert archive_call.args[0] == raw_bytes
+    assert archive_call.args[2] == "archive/mpatlas_zone_assessment.geojson"
+
+    assert working_call.args[2] == "raw/mpatlas_zone_assessment.geojson"
+    saved = json.loads(working_call.args[0])
+    assert saved == normalize_mpatlas_geojson(copy.deepcopy(mock_mpatlas_v4_geojson))
+    assert saved["features"][0]["properties"]["name"] == "Cairns Section"
