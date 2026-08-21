@@ -11,7 +11,7 @@ from shapely.geometry import box
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import add_tolerance_suffix, extract_polygons
+from src.core.commons import add_tolerance_suffix, extract_polygons, load_iho_regions
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
@@ -20,7 +20,6 @@ from src.core.params import (
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_HABITAT_AREA_FILE_PATTERN,
     HABITAT_BY_LOCATION_FILE_PATTERN,
-    IHO_SEA_AREAS_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     UNEP_HABITATS,
@@ -52,7 +51,6 @@ def create_seamounts_subtable(
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
     eez_file_name: str = EEZ_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     verbose: bool = True,
@@ -96,8 +94,7 @@ def create_seamounts_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_parquet_from_gcs(bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose)
-    iho["location"] = iho["MRGID"].astype(str)
+    iho = load_iho_regions()
 
     if verbose:
         logger.info({"message": "spatially joining seamounts with eezs, IHO regions, and PAs"})
@@ -334,7 +331,6 @@ def create_mangroves_subtable(
     all_protected_areas,
     combined_regions,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
     tolerance: float = marine_tolerance,
@@ -377,10 +373,7 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_parquet_from_gcs(
-        bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose=verbose
-    )
-    iho["location"] = iho["MRGID"].astype(str)
+    iho = load_iho_regions()
 
     locations = gpd.GeoDataFrame(
         pd.concat(
@@ -429,7 +422,6 @@ def create_unep_habitats_subtable(
     combined_regions,
     unep_habitats: dict = UNEP_HABITATS,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
     tolerance: float = marine_tolerance,
@@ -472,10 +464,7 @@ def create_unep_habitats_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_parquet_from_gcs(
-        bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose=verbose
-    )
-    iho["location"] = iho["MRGID"].astype(str)
+    iho = load_iho_regions()
 
     locations = gpd.GeoDataFrame(
         pd.concat(
@@ -578,7 +567,6 @@ def create_climate_resilient_corals_subtable(
     marine_protected_areas: gpd.GeoDataFrame,
     combined_regions: dict,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
     terrestrial_protected_areas: gpd.GeoDataFrame | None = None,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
@@ -605,8 +593,7 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas for coral coverage"})
-    iho = read_parquet_from_gcs(bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose)
-    iho["location"] = iho["MRGID"].astype(str)
+    iho = load_iho_regions()
 
     if verbose:
         logger.info({"message": f"downloading coral raster from {coral_source_file}"})
@@ -831,7 +818,6 @@ def process_marine_habitats(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     bucket: str = BUCKET,
     tolerance: float = marine_tolerance,
     verbose: bool = True,
@@ -852,7 +838,6 @@ def process_marine_habitats(
         all_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
-        iho_file_name=iho_file_name,
         tolerance=tolerance,
         bucket=bucket,
         verbose=verbose,
@@ -863,7 +848,6 @@ def process_marine_habitats(
     seamounts_subtable = create_seamounts_subtable(
         marine_protected_areas,
         combined_regions,
-        iho_file_name=iho_file_name,
         tolerance=tolerance,
         bucket=bucket,
         verbose=verbose,
@@ -876,7 +860,6 @@ def process_marine_habitats(
         all_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
-        iho_file_name=iho_file_name,
         tolerance=tolerance,
         bucket=bucket,
         verbose=verbose,
@@ -892,7 +875,6 @@ def process_marine_habitats(
         marine_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
-        iho_file_name=iho_file_name,
         terrestrial_protected_areas=terrestrial_protected_areas,
         terrestrial_pa_file_name=terrestrial_pa_file_name,
         tolerance=tolerance,

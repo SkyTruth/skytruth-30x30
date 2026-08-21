@@ -1,3 +1,5 @@
+import ast
+
 import geopandas as gpd
 import pandas as pd
 import pytest
@@ -14,16 +16,19 @@ def _pa_gdf(rows):
     return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:6933")
 
 
-def _run_coverage(monkeypatch, iho, pas):
+def _run_coverage(monkeypatch, iho, pas, wdpa_global):
     monkeypatch.setattr(
         protection_coverage,
-        "read_parquet_from_gcs",
-        lambda **_: iho.copy(),
+        "load_iho_regions",
+        lambda: iho.copy(),
     )
     monkeypatch.setattr(
         protection_coverage,
         "read_json_df",
         lambda **_: pas.copy(),
+    )
+    monkeypatch.setattr(
+        protection_coverage, "load_wdpa_global", lambda *_, **__: wdpa_global.copy()
     )
     return protection_coverage.compute_iho_protection_coverage(
         bucket="bucket", tolerance=0.1, verbose=False
@@ -122,6 +127,21 @@ def _get_country_global_row(df, location, environment="marine"):
     return rows.iloc[0]
 
 
+def _global_value(wdpa_global, stat_type):
+    return float(wdpa_global.loc[wdpa_global["type"] == stat_type, "value"].iloc[0])
+
+
+def _global_area(wdpa_global, environment2):
+    """Global area the fixture implies: its protected area over the share of the globe it covers."""
+    protected_area = _global_value(wdpa_global, f"total_{environment2}_area_oecms_pas")
+    coverage = _global_value(wdpa_global, f"total_{environment2}_oecms_pas_coverage_percentage")
+    return protected_area * 100 / coverage
+
+
+def _country_stat(wdpa_country, key):
+    return ast.literal_eval(wdpa_country["statistics"].iloc[0])[key]
+
+
 def test_country_global_coverage_calculates_global_marine_area(
     monkeypatch, wdpa_country, wdpa_global, combined_regions
 ):
@@ -131,7 +151,7 @@ def test_country_global_coverage_calculates_global_marine_area(
     )
 
     row = _get_country_global_row(table, "GLOB")
-    assert row["total_area"] == pytest.approx(363_191_970.0)
+    assert row["total_area"] == pytest.approx(_global_area(wdpa_global, "ocean"))
 
 
 def test_country_global_coverage_calculates_global_terrestrial_area(
@@ -143,7 +163,7 @@ def test_country_global_coverage_calculates_global_terrestrial_area(
     )
 
     row = _get_country_global_row(table, "GLOB", environment="terrestrial")
-    assert row["total_area"] == pytest.approx(150_000_000.0)
+    assert row["total_area"] == pytest.approx(_global_area(wdpa_global, "land"))
 
 
 def test_country_global_coverage_sets_global_contribution(
@@ -155,7 +175,30 @@ def test_country_global_coverage_sets_global_contribution(
     )
 
     row = _get_country_global_row(table, "GLOB")
-    assert row["global_contribution"] == 10.0
+    assert row["global_contribution"] == _global_value(
+        wdpa_global, "total_ocean_oecms_pas_coverage_percentage"
+    )
+
+
+def test_country_global_coverage_measures_group_contribution_against_global_area(
+    monkeypatch, wdpa_country, wdpa_global, combined_regions
+):
+    """Compare a group's protected area to the global area, not to its own coverage."""
+    table, _ = _run_country_global_coverage(
+        monkeypatch, wdpa_country, wdpa_global, combined_regions
+    )
+
+    marine = _get_country_global_row(table, "BRA")
+    terrestrial = _get_country_global_row(table, "BRA", environment="terrestrial")
+
+    assert marine["global_contribution"] == pytest.approx(
+        100
+        * _country_stat(wdpa_country, "oecms_pa_marine_area")
+        / _global_area(wdpa_global, "ocean")
+    )
+    assert terrestrial["global_contribution"] == pytest.approx(
+        100 * _country_stat(wdpa_country, "oecms_pa_land_area") / _global_area(wdpa_global, "land")
+    )
 
 
 def test_country_global_coverage_calculates_unrounded_abnj_area(
@@ -167,15 +210,19 @@ def test_country_global_coverage_calculates_unrounded_abnj_area(
     )
 
     row = _get_country_global_row(table, "ABNJ")
-    assert row["total_area"] == pytest.approx(232_442_860.8)
+    assert row["total_area"] == pytest.approx(
+        _global_area(wdpa_global, "ocean")
+        * _global_value(wdpa_global, "global_ocean_percentage")
+        / 100
+    )
 
 
-def test_iho_coverage_returns_zero_when_spatial_index_has_no_candidates(monkeypatch):
+def test_iho_coverage_returns_zero_when_spatial_index_has_no_candidates(monkeypatch, wdpa_global):
     """Return zero coverage when no protected-area bounding boxes overlap a sea."""
     iho = _iho_gdf([{"MRGID": 10, "geometry": box(0, 0, 1000, 1000)}])
     pas = _pa_gdf([{"PA_DEF": 1, "geometry": box(5000, 5000, 6000, 6000)}])
 
-    result = _run_coverage(monkeypatch, iho, pas).iloc[0]
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
 
     assert result["location"] == "10"
     assert result["environment"] == "marine"
@@ -185,9 +232,10 @@ def test_iho_coverage_returns_zero_when_spatial_index_has_no_candidates(monkeypa
     assert result["pas"] == 0.0
     assert result["oecms"] == 0.0
     assert result["protected_areas_count"] == 0
+    assert result["global_contribution"] == 0.0
 
 
-def test_iho_coverage_discards_bbox_false_positive(monkeypatch):
+def test_iho_coverage_discards_bbox_false_positive(monkeypatch, wdpa_global):
     """Discard bounding-box candidates whose actual geometries do not intersect."""
     iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 1000, 1000)}])
     # The bounding boxes overlap in the 900-1000 corner, but the triangle itself
@@ -195,13 +243,13 @@ def test_iho_coverage_discards_bbox_false_positive(monkeypatch):
     false_positive = Polygon([(900, 2000), (2000, 900), (2000, 2000)])
     pas = _pa_gdf([{"PA_DEF": 1, "geometry": false_positive}])
 
-    result = _run_coverage(monkeypatch, iho, pas).iloc[0]
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
 
     assert result["protected_area"] == 0.0
     assert result["protected_areas_count"] == 0
 
 
-def test_iho_coverage_dissolves_overlapping_protected_areas(monkeypatch):
+def test_iho_coverage_dissolves_overlapping_protected_areas(monkeypatch, wdpa_global):
     """Dissolve overlapping protected areas to prevent double-counting."""
     iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
     pas = _pa_gdf(
@@ -211,7 +259,7 @@ def test_iho_coverage_dissolves_overlapping_protected_areas(monkeypatch):
         ]
     )
 
-    result = _run_coverage(monkeypatch, iho, pas).iloc[0]
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
 
     # The polygons overlap by 0.4 km², so their dissolved union is the 2 km² sea,
     # not the naive 2.4 km² sum.
@@ -223,7 +271,7 @@ def test_iho_coverage_dissolves_overlapping_protected_areas(monkeypatch):
     assert result["protected_areas_count"] == 2
 
 
-def test_iho_coverage_calculates_pa_and_oecm_shares(monkeypatch):
+def test_iho_coverage_calculates_pa_and_oecm_shares(monkeypatch, wdpa_global):
     """Calculate overall coverage and the PA/OECM shares of protected area."""
     iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
     pas = _pa_gdf(
@@ -233,7 +281,7 @@ def test_iho_coverage_calculates_pa_and_oecm_shares(monkeypatch):
         ]
     )
 
-    result = _run_coverage(monkeypatch, iho, pas).iloc[0]
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
 
     assert result["protected_area"] == 1.0
     assert result["coverage"] == 50.0
@@ -242,7 +290,7 @@ def test_iho_coverage_calculates_pa_and_oecm_shares(monkeypatch):
     assert result["protected_areas_count"] == 2
 
 
-def test_iho_coverage_keeps_results_independent_for_each_sea(monkeypatch):
+def test_iho_coverage_keeps_results_independent_for_each_sea(monkeypatch, wdpa_global):
     """Calculate each IHO sea independently and retain zero-coverage seas."""
     iho = _iho_gdf(
         [
@@ -252,8 +300,25 @@ def test_iho_coverage_keeps_results_independent_for_each_sea(monkeypatch):
     )
     pas = _pa_gdf([{"PA_DEF": 1, "geometry": box(0, 0, 500, 1000)}])
 
-    result = _run_coverage(monkeypatch, iho, pas).set_index("location")
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).set_index("location")
 
     assert set(result.index) == {"1", "2"}
     assert result.loc["1", "coverage"] == pytest.approx(50.0)
     assert result.loc["2", "coverage"] == 0.0
+
+
+def test_iho_coverage_measures_global_contribution_against_global_ocean_area(
+    monkeypatch, wdpa_global
+):
+    """Express a sea's protected area as a share of the whole ocean, not of the sea."""
+    # 2 million km² sea, half of it protected.
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2_000_000, 1_000_000)}])
+    pas = _pa_gdf([{"PA_DEF": 1, "geometry": box(0, 0, 1_000_000, 1_000_000)}])
+    protected_km2 = 1_000_000
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    assert result["coverage"] == 50.0
+    assert result["global_contribution"] == pytest.approx(
+        round(100 * protected_km2 / _global_area(wdpa_global, "ocean"), 2)
+    )

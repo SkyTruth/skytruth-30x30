@@ -22,6 +22,7 @@ from src.core.commons import (
     add_tolerance_suffix,
     download_and_duplicate_zipfile,
     get_cover_areas,
+    load_iho_regions,
     load_marine_regions,
     safe_union,
 )
@@ -47,8 +48,6 @@ from src.core.params import (
     GLOBAL_HABITAT_AREA_FILE_PATTERN,
     HABITAT_BY_LOCATION_FILE_PATTERN,
     HIGH_SEAS_PARAMS,
-    IHO_SEA_AREAS_FILE_NAME,
-    IHO_SEA_AREAS_PARAMS,
     MANGROVES_FILE_NAME,
     MARINE_HABITAT_PARAMS,
     MARINE_HABITAT_TOLERANCE,
@@ -67,7 +66,6 @@ from src.utils.gcp import (
     read_gzipped_gpkg_from_gcs,
     read_json_df,
     read_json_from_gcs,
-    read_parquet_from_gcs,
     read_zipped_gpkg_from_gcs,
     save_json_to_gcs,
     upload_dataframe,
@@ -453,57 +451,6 @@ def process_eez_land_union(
     upload_gdf(bucket, eez_land_union, out_fn)
 
 
-def stitch_mediterannean(iho):
-    iho = iho.copy()
-
-    medi_mrgid = [4280, 3315, 3351, 4279, 3322, 3324, 3346, 3369, 3386, 3314, 3363]
-    medi = iho[iho["MRGID"].isin(medi_mrgid)].dissolve().reset_index(drop=True)
-
-    # Recompute the geometry-derived fields from the dissolved polygon
-    bounds = medi.total_bounds  # (minx, miny, maxx, maxy) in the layer CRS (4326)
-    centroid = medi.to_crs(epsg=6933).geometry.centroid.to_crs(epsg=4326).iloc[0]
-
-    medi["NAME"] = "Mediterranean Region"
-    medi["ID"] = None
-    medi["MRGID"] = "MEDI"
-    medi["Longitude"] = centroid.x
-    medi["Latitude"] = centroid.y
-    medi["min_X"], medi["min_Y"], medi["max_X"], medi["max_Y"] = bounds
-    medi["area"] = medi.to_crs(epsg=6933).geometry.area.iloc[0] / 1e6
-
-    iho["MRGID"] = iho["MRGID"].astype(str)
-    iho = pd.concat((iho, medi), axis=0, ignore_index=True)
-
-    return iho
-
-
-def process_iho_sea_areas(
-    iho_params: dict = IHO_SEA_AREAS_PARAMS,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
-    tolerances: list | tuple = TOLERANCES,
-    bucket: str = BUCKET,
-    verbose: bool = True,
-):
-    if verbose:
-        logger.info({"message": f"loading IHO sea areas from {iho_params['zipfile_name']}"})
-
-    iho = load_marine_regions(iho_params, bucket)
-    iho = stitch_mediterannean(iho)
-    original_geometry = iho["geometry"].copy()
-
-    for tolerance in tolerances:
-        if verbose:
-            logger.info({"message": f"simplifying IHO sea areas with tolerance {tolerance}"})
-        iho_t = iho.copy()
-        iho_t["geometry"] = original_geometry.simplify(tolerance=tolerance)
-        iho_t = iho_t.pipe(clean_geometries)
-
-        out_fn = add_tolerance_suffix(iho_file_name, tolerance)
-        if verbose:
-            logger.info({"message": f"uploading IHO sea areas to {out_fn}"})
-        upload_gdf(bucket, iho_t, out_fn)
-
-
 def download_marine_habitats(
     habitats: str | list[str] | None = None,
     marine_habitat_params: dict = MARINE_HABITAT_PARAMS,
@@ -586,7 +533,6 @@ def _clip_and_union_habitat(
 def process_mangroves(
     mangroves_file_name: str = MANGROVES_FILE_NAME,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
     bucket: str = BUCKET,
@@ -607,8 +553,6 @@ def process_mangroves(
     gadm_eez_union_file_name : str
         GCS blob of the land/EEZ union, used together with the IHO sea areas as
         the set of locations to dissolve by.
-    iho_file_name : str
-        GCS blob of the processed IHO sea areas.
     by_location_file_pattern : str
         Template for the dissolved per-location blob name.
     global_area_file_pattern : str
@@ -644,10 +588,7 @@ def process_mangroves(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_parquet_from_gcs(
-        bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose=verbose
-    )
-    iho["location"] = iho["MRGID"].astype(str)
+    iho = load_iho_regions()
 
     regions = gpd.GeoDataFrame(
         pd.concat(
@@ -793,7 +734,6 @@ def process_marine_unep_habitats(
     habitats: str | list[str] | None = None,
     unep_habitats: dict = UNEP_HABITATS,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
     fallback_area_km2: float = UNEP_POINT_AREA_KM2,
@@ -823,8 +763,6 @@ def process_marine_unep_habitats(
     gadm_eez_union_file_name : str
         GCS blob of the land/EEZ union, used together with the IHO sea areas as
         the set of locations to dissolve by.
-    iho_file_name : str
-        GCS blob of the processed IHO sea areas.
     by_location_file_pattern : str
         Template for the dissolved per-location blob name.
     global_area_file_pattern : str
@@ -864,10 +802,7 @@ def process_marine_unep_habitats(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = read_parquet_from_gcs(
-        bucket, add_tolerance_suffix(iho_file_name, tolerance), verbose=verbose
-    )
-    iho["location"] = iho["MRGID"].astype(str)
+    iho = load_iho_regions()
 
     regions = gpd.GeoDataFrame(
         pd.concat(
