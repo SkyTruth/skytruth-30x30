@@ -55,7 +55,7 @@ EEZ_PARAMS_24NM = {
     "shapefile_name": "eez_24nm_v4.shp",
 }
 EEZ_PARAMS_12NM = {
-    "name": "World_12NM_v4_20231025",
+    "name": "World_12NM_v4_20231025.zip",
     "zipfile_name": "static/eezs_12nm.zip",
     "shapefile_name": "eez_12nm_v4.shp",
 }
