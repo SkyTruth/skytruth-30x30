@@ -168,8 +168,8 @@ def _union_tile_km2(
     tile_key_stride: int = 100_100,
 ) -> float:
     """Area of the union of overlapping geometries, computed by tile for faster processing.
-    
-    The geometries are split into tiles of size tile_size_deg, and the union is computed 
+
+    The geometries are split into tiles of size tile_size_deg, and the union is computed
     per tile. The tile areas are summed to get the total area.
     """
     if not geoms:
