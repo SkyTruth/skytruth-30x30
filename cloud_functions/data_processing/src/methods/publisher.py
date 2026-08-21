@@ -36,6 +36,7 @@ from src.core.params import (
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCES,
+    UNEP_HABITATS,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
@@ -67,6 +68,7 @@ from src.methods.static_processes import (
     process_eez_land_union,
     process_gadm_geoms,
     process_mangroves,
+    process_marine_unep_habitats,
     process_terrestrial_biome_raster,
 )
 from src.methods.subtract_geometries import (
@@ -360,10 +362,21 @@ def dispatch_publisher(
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
-            step_list = ["process_mangroves"]
+            step_list = ["process_mangroves", "process_marine_unep_habitats"]
 
         case "download_marine_habitats":
-            download_marine_habitats(habitats=data.get("HABITAT"), verbose=verbose)
+            habitat = data.get("HABITAT")
+            download_marine_habitats(habitats=habitat, verbose=verbose)
+
+            requested = [habitat] if isinstance(habitat, str) else habitat
+            unep_requested = [name for name in requested or [] if name in UNEP_HABITATS]
+
+            step_list = []
+            if requested is None or "mangroves" in requested:
+                step_list.append("process_mangroves")
+            if requested is None or unep_requested:
+                task_config["HABITAT"] = unep_requested or None
+                step_list.append("process_marine_unep_habitats")
 
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)
@@ -371,6 +384,20 @@ def dispatch_publisher(
 
         case "process_mangroves":
             process_mangroves(verbose=verbose)
+            step_list = ["generate_habitat_protection_table"]
+
+        case "process_marine_unep_habitats":
+            habitat = data.get("HABITAT")
+            habitat = [habitat] if isinstance(habitat, str) else list(habitat or UNEP_HABITATS)
+            current, remaining = habitat[0], habitat[1:]
+
+            process_marine_unep_habitats(habitats=current, verbose=verbose)
+
+            if remaining:
+                task_config["HABITAT"] = remaining
+                step_list = ["process_marine_unep_habitats"]
+            else:
+                step_list = ["generate_habitat_protection_table"]
 
         case "generate_terrestrial_biome_stats_country":
             generate_terrestrial_biome_stats_country(verbose=verbose)

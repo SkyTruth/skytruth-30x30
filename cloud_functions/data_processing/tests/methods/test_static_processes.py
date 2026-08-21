@@ -5,7 +5,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
-from shapely.geometry import Point
+from shapely.geometry import Point, box
 
 from src.methods import static_processes
 from src.methods.static_processes import (
@@ -790,17 +790,17 @@ def test_process_eez_land_union_no_fill_preserves_holes(
 FAKE_HABITAT_PARAMS = {
     "coldwatercorals": {
         "url": "https://example.test/corals.zip",
-        "zipfile_name": "habitats/corals.zip",
+        "file_name": "habitats/corals.zip",
         "archive_file_name": "archive/habitats/corals_v1.zip",
     },
     "saltmarshes": {
         "url": "https://example.test/saltmarshes.zip",
-        "zipfile_name": "habitats/saltmarshes.zip",
+        "file_name": "habitats/saltmarshes.zip",
         "archive_file_name": "archive/habitats/saltmarshes_v1.zip",
     },
     "seagrasses": {
         "url": "https://example.test/seagrasses.zip",
-        "zipfile_name": "habitats/seagrasses.zip",
+        "file_name": "habitats/seagrasses.zip",
         "archive_file_name": "archive/habitats/seagrasses_v1.zip",
     },
 }
@@ -893,3 +893,106 @@ def test_unknown_habitats_raise_before_downloading_anything(download_recorder, h
         download(habitats)
 
     assert download_recorder == [], "nothing should be downloaded when the request is invalid"
+
+
+# ---------------------------------------------------------------------------
+# Tests for process_mangroves
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mangrove_extent():
+    """The mangrove extent as read from the .gpkg.gz, geometry column only.
+
+    Global Mangrove Watch polygons never overlap each other.
+    """
+    return gpd.GeoDataFrame(
+        geometry=[
+            box(0.5, 0.5, 1.5, 1.5),  # wholly inside AAA
+            box(1.8, 0.5, 2.2, 1.5),  # straddles the AAA/BBB boundary
+            box(10.0, 10.0, 10.5, 10.5),  # only the IHO sea area holds this one
+        ],
+        crs="EPSG:4326",
+    )
+
+
+@pytest.fixture
+def mangrove_regions():
+    """The land/EEZ union and IHO sea areas process_mangroves dissolves by.
+
+    AAA and BBB are adjacent; the IHO sea area sits away from both.
+    """
+    gadm_eez_union = gpd.GeoDataFrame(
+        {"location": ["AAA", "BBB"], "geometry": [box(0, 0, 2, 2), box(2, 0, 4, 2)]},
+        crs="EPSG:4326",
+    )
+    iho = gpd.GeoDataFrame(
+        {"MRGID": [999], "location": ["999"], "geometry": [box(9, 9, 11, 11)]}, crs="EPSG:4326"
+    )
+    return gadm_eez_union, iho
+
+
+@pytest.fixture
+def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
+    """Wire process_mangroves up to in-memory inputs and record what it writes."""
+    gadm_eez_union, iho = mangrove_regions
+    uploads = []
+    saved_json = []
+
+    def _read_gpkg(bucket, blob_name, layer=None, columns=None, verbose=True):
+        return mangrove_extent.copy()
+
+    def _read_json_df(bucket, blob_name, verbose=True):
+        return gadm_eez_union.copy()
+
+    def _load_iho_regions():
+        return iho.copy()
+
+    def _save_json_to_gcs(bucket, data, blob_name, project=None, verbose=True):
+        saved_json.append({"bucket": bucket, "data": data, "blob_name": blob_name})
+
+    def _upload_gdf(bucket, df, destination_blob, project_id=None, verbose=True, timeout=600):
+        uploads.append({"bucket": bucket, "df": df, "destination_blob": destination_blob})
+
+    monkeypatch.setattr(static_processes, "read_gzipped_gpkg_from_gcs", _read_gpkg, raising=True)
+    monkeypatch.setattr(static_processes, "read_json_df", _read_json_df, raising=True)
+    monkeypatch.setattr(static_processes, "load_iho_regions", _load_iho_regions, raising=True)
+    monkeypatch.setattr(static_processes, "save_json_to_gcs", _save_json_to_gcs, raising=True)
+    monkeypatch.setattr(static_processes, "upload_gdf", _upload_gdf, raising=True)
+
+    return uploads, saved_json
+
+
+def test_process_mangroves_dissolves_by_location(mangrove_recorders):
+    """One row per location holding mangroves, IHO sea areas included."""
+    uploads, _ = mangrove_recorders
+
+    static_processes.process_mangroves(
+        mangroves_file_name="habitats/mangroves.gpkg.gz",
+        gadm_eez_union_file_name="GADM_eez_union.geojson",
+        by_location_file_pattern="static/{habitat}_by_location.parquet",
+        global_area_file_pattern="intermediates/global_{habitat}_area.json",
+        bucket="test-bucket",
+        project="test-project",
+        verbose=False,
+        n_jobs=1,
+    )
+
+    assert len(uploads) == 1
+    out = uploads[0]
+    assert out["destination_blob"] == "static/mangroves_by_location.parquet"
+
+    df = out["df"]
+    assert isinstance(df, gpd.GeoDataFrame)
+    assert set(df["location"]) == {"AAA", "BBB", "999"}
+    # The schema every habitat's by-location layer shares
+    assert list(df.columns) == [
+        "location",
+        "n_habitat_polygons",
+        "bbox",
+        "area_km2",
+        "geometry",
+        "habitat",
+    ]
+    assert set(df["habitat"]) == {"mangroves"}
+    assert len(df) == 3

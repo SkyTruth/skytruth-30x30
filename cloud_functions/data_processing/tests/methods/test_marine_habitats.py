@@ -1,10 +1,16 @@
+import geopandas as gpd
 import pandas as pd
 import pytest
+from shapely.geometry import Point, box
 
+from src.core.params import UNEP_POINT_AREA_KM2
 from src.methods.marine_habitats import (
     CLIMATE_RESILIENT_CORALS_HABITATS,
+    _protected_habitat_by_location,
     _rollup_corals_subtable,
 )
+from src.methods.static_processes import _buffer_unep_points
+from src.utils.geo import get_area_km2
 
 
 @pytest.fixture
@@ -171,3 +177,114 @@ def test_rollup_handles_empty_inputs(combined_regions):
     assert len(result) == expected_rows
     assert (result["total_area"] == 0).all()
     assert (result["protected_area"] == 0).all()
+
+
+def habitat_by_location(locations, geometries):
+    """Per-location dissolved habitat geometries as process_marine_unep_habitats writes them."""
+    return gpd.GeoDataFrame(
+        {
+            "location": locations,
+            "area_km2": [get_area_km2(geom) for geom in geometries],
+        },
+        geometry=geometries,
+        crs="EPSG:4326",
+    )
+
+
+def protected_areas(locations, geometries):
+    """A dissolved WDPA/OECM estate as load_marine_terrestrial_pa returns it."""
+    return gpd.GeoDataFrame(
+        {"location": locations, "wdpa_id": range(len(locations))},
+        geometry=geometries,
+        crs="EPSG:4326",
+    )
+
+
+@pytest.fixture
+def overlapping_locations():
+    """A country and an IHO sea area covering the same patch of habitat.
+
+    Every EEZ also sits inside an IHO sea area, so the same habitat is reported under
+    two locations.
+    """
+    patch = box(0, 0, 1, 1)
+    locations = gpd.GeoDataFrame(
+        {"location": ["AAA", "9999"]},
+        geometry=[box(0, 0, 2, 2), box(0, 0, 2, 2)],
+        crs="EPSG:4326",
+    )
+    habitat = habitat_by_location(["AAA", "9999"], [patch, patch])
+    return locations, habitat, get_area_km2(patch)
+
+
+def test_protected_area_deduplicates_overlapping_locations(overlapping_locations):
+    """GLOB must count a patch once even though two locations each report it."""
+    locations, habitat, patch_area = overlapping_locations
+    # A PA whose ISO3 matches neither location, so both take the spatial branch.
+    pas = protected_areas(["XXX"], [box(0, 0, 2, 2)])
+
+    by_location, global_protected = _protected_habitat_by_location(habitat, locations, pas)
+
+    # Each location legitimately reports the whole patch as protected...
+    assert set(by_location["location"]) == {"AAA", "9999"}
+    assert by_location["protected_habitat_area_km2"].tolist() == pytest.approx(
+        [patch_area, patch_area], rel=1e-6
+    )
+    # ...so summing would double it. The global figure counts it once.
+    assert by_location["protected_habitat_area_km2"].sum() == pytest.approx(
+        2 * patch_area, rel=1e-6
+    )
+    assert global_protected == pytest.approx(patch_area, rel=1e-6)
+
+
+def test_partially_protected_habitat(overlapping_locations):
+    """A PA covering half the patch protects half of it, globally and per location."""
+    locations, habitat, patch_area = overlapping_locations
+    pas = protected_areas(["XXX"], [box(0, 0, 0.5, 1)])
+
+    by_location, global_protected = _protected_habitat_by_location(habitat, locations, pas)
+
+    assert global_protected == pytest.approx(patch_area / 2, rel=1e-6)
+    assert by_location["total_habitat_area_km2"].tolist() == pytest.approx(
+        [patch_area, patch_area], rel=1e-6
+    )
+
+
+def test_habitat_with_no_protected_area(overlapping_locations):
+    """A habitat with no PA intersections reports zero."""
+    locations, habitat, patch_area = overlapping_locations
+    pas = protected_areas(["XXX"], [box(50, 50, 51, 51)])
+
+    by_location, global_protected = _protected_habitat_by_location(habitat, locations, pas)
+
+    assert (by_location["protected_habitat_area_km2"] == 0).all()
+    assert global_protected == 0.0
+
+
+def unep_points(geometries, reported_areas):
+    """A UNEP-WCMC point layer as process_marine_unep_habitats receives it."""
+    return gpd.GeoDataFrame({"REP_AREA_K": reported_areas}, geometry=geometries, crs="EPSG:4326")
+
+
+@pytest.mark.parametrize(
+    "unreported",
+    [0, "Not Reported"],
+    ids=["zero", "not_reported_string"],
+)
+def test_unreported_area_falls_back(unreported):
+    """Points with no reported area are buffered so that the total area
+    equals UNEP_POINT_AREA_KM2.
+    """
+    buffered = _buffer_unep_points(unep_points([Point(0, 0)], [unreported]))
+
+    assert get_area_km2(buffered.geometry.iloc[0]) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)
+
+
+def test_antimeridian_buffer_preserves_geometry_without_wrapping():
+    """A point on the dateline must be split across it are retain the same area."""
+    geometry = _buffer_unep_points(unep_points([Point(180, -48)], [0])).geometry.iloc[0]
+
+    assert get_area_km2(geometry) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)
+    assert geometry.geom_type == "MultiPolygon"
+    assert min(part.bounds[0] for part in geometry.geoms) < -179
+    assert max(part.bounds[2] for part in geometry.geoms) > 179
