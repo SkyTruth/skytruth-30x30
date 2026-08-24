@@ -6,7 +6,8 @@
       "Bash(git commit:*)"
     ],
     "deny": [
-      "Read(*.env)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
       "Bash(rm:*)",
       "Bash(curl:*)"
     ],
