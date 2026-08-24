@@ -63,8 +63,8 @@ def test_normalize_is_idempotent(mock_mpatlas_v4_geojson):
 def test_download_mpatlas_produces_internal_meta_schema(monkeypatch, mock_mpatlas_v4_geojson):
     """
     End-to-end over the zone processing: v4 API response in, mpa_meta.csv out.
-    The meta file must keep the internal (v2-era) column names and masked
-    protection levels so every downstream consumer is unaffected by v4.
+    The meta file must keep the internal (v2-era) column names so every
+    downstream consumer is unaffected by v4.
     """
     saved_blobs = {}
 
@@ -129,12 +129,11 @@ def test_download_mpatlas_produces_internal_meta_schema(monkeypatch, mock_mpatla
         "assessment_establishment_stage",
     } & set(meta.columns)
 
-    # Protection level masked to unknown unless the (zone-effective)
-    # establishment stage is actively managed or implemented
+    # Protection levels pass through as delivered by the API
     by_zone = meta.set_index("zone_id")
     assert by_zone.loc[4821, "protection_mpaguide_level"] == "high"
     assert by_zone.loc[4822, "protection_mpaguide_level"] == "full"
-    assert by_zone.loc[4823, "protection_mpaguide_level"] == "unknown"
+    assert by_zone.loc[4823, "protection_mpaguide_level"] == "full"
 
 
 @patch("src.methods.download_and_process.save_file_bucket")

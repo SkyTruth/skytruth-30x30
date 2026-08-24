@@ -62,7 +62,6 @@ from src.core.params import (
 from src.core.processors import (
     calculate_area,
     choose_pa_area,
-    mask_mpatlas_protection_level,
     match_old_pa_naming_convantion,
 )
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
@@ -293,9 +292,6 @@ def download_mpatlas(
     if verbose:
         logger.info({"message": "calculating MPA bounding box (bbox)"})
     mpa["bbox"] = mpa.geometry.apply(lambda g: g.bounds if g is not None else None)
-
-    # Set protection levels to unknown if establishment stage is not actively managed or implemented
-    mpa = mask_mpatlas_protection_level(mpa)
 
     # Upload metadata (no geometry)
     if verbose:
