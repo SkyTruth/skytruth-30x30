@@ -535,6 +535,7 @@ def test_generate_protected_areas_table_mpa_rows(
     mock_gadm = gpd.GeoDataFrame(
         {"location": ["AUS"], "geometry": [box(0, 0, 1, 1)]}, crs="EPSG:4326"
     )
+
     # filenames arrive with a tolerance suffix (e.g. eez_0.001.geojson)
     def mock_read_json_df(bucket, filename):
         return (mock_eez if filename.startswith("eez") else mock_gadm).copy()
