@@ -92,6 +92,13 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
     buffers IHO regions and clips them to neighboring IHO bounds
     """
 
+    invalid = ~iho.geometry.is_valid
+    if invalid.any():
+        names = ", ".join(iho.loc[invalid, "NAME"].astype(str))
+        logger.warning({"message": f"repairing invalid IHO geometries: {names}"})
+        iho = iho.copy()
+        iho["geometry"] = iho.geometry.make_valid()
+
     logger.info({"message": f"buffering IHO sea areas by {km} km"})
 
     def _buffer_km(geom):
@@ -110,8 +117,10 @@ def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
         buffered_rows, "geometry"
     ].progress_apply(_buffer_km)
 
-    if not all(iho_buffer.geometry.is_valid):
-        logger.warning({"message": "Invalid geometries in buffered IHO areas"})
+    invalid = ~iho_buffer.geometry.is_valid
+    if invalid.any():
+        names = ", ".join(iho_buffer.loc[invalid, "NAME"].astype(str))
+        raise ValueError(f"invalid geometries in buffered IHO areas: {names}")
 
     iho_sindex = iho.sindex
     geometries = iho.geometry.to_numpy()
