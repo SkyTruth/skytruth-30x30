@@ -45,9 +45,21 @@ MARINE_REGIONS_BODY = {
 
 EEZ_PARAMS = {
     "name": "World_EEZ_v12_20231025.zip",
-    "zipfile_name": "static/eezs.zip",
+    "zipfile_name": "static/eezs_200nm.zip",
     "shapefile_name": "eez_v12.shp",
 }
+
+EEZ_PARAMS_24NM = {
+    "name": "World_24NM_v4_20231025.zip",
+    "zipfile_name": "static/eezs_24nm.zip",
+    "shapefile_name": "eez_24nm_v4.shp",
+}
+EEZ_PARAMS_12NM = {
+    "name": "World_12NM_v4_20231025.zip",
+    "zipfile_name": "static/eezs_12nm.zip",
+    "shapefile_name": "eez_12nm_v4.shp",
+}
+
 EEZ_FILE_NAME = "static/eez_processed.geojson"
 EEZ_MULTIPLE_SOV_FILE_NAME = "static/eez_multi_sov_processed.geojson"
 

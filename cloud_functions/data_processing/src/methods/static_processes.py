@@ -39,6 +39,8 @@ from src.core.params import (
     EEZ_LAND_UNION_PARAMS,
     EEZ_MULTIPLE_SOV_FILE_NAME,
     EEZ_PARAMS,
+    EEZ_PARAMS_12NM,
+    EEZ_PARAMS_24NM,
     EEZS_TRANSLATED_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
     GADM_FILE_NAME,
@@ -189,10 +191,12 @@ def process_eez_geoms(
     """
     if verbose:
         logger.info({"message": f"loading eezs from {eez_params['zipfile_name']}"})
-
+    
     related_countries = read_json_from_gcs(bucket, related_countries_file_name, verbose=verbose)
 
     eez = load_marine_regions(eez_params, bucket)
+
+    eez = _build_bvt_eez(eez, verbose=verbose)
 
     eez[["parents", "sovs"]] = eez.apply(
         _pick_eez_parents, args=(related_countries,), axis=1, result_type="expand"
@@ -250,6 +254,40 @@ def process_eez_geoms(
         logger.info({"message": f"uploading eez with multi-sovereign file to {blob_name}"})
     upload_gdf(bucket, eez_multiple_sovs, blob_name)
 
+def _build_bvt_eez(
+    eez_200: gpd.GeoDataFrame,
+    eez_24nm_params: dict = EEZ_PARAMS_24NM,
+    eez_12nm_params: dict = EEZ_PARAMS_12NM,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    """DESCRIPTION"""
+
+    iso_code = "BVT"
+
+    #Standardize table format with prior method (load_marine_regions)
+    if verbose:
+        logger.info({"message": f"loading 24 nm eezs from {eez_24nm_params['zipfile_name']}"})
+    eez_24 = load_marine_regions(eez_24nm_params, bucket)
+
+    if verbose:
+        logger.info({"message": f"loading 12 nm eezs from {eez_12nm_params['zipfile_name']}"})  
+    eez_12 = load_marine_regions(eez_12nm_params, bucket)   
+
+    #Single out Bouvet Island (BVT)
+    bvt_24 = eez_24[eez_24["ISO_TER1"] == iso_code]
+    bvt_12 = eez_12[eez_12["ISO_TER1"] == iso_code]
+
+    #Subtract 12 from 24 here to get new geometry for BVT
+    bvt = bvt_24.geometry.iloc[0].union(bvt_12.geometry.iloc[0])
+
+    #Puts it back in the original 200NM eez, reindexes
+    bvt_row = bvt_24.copy()
+    bvt_row["geometry"] = [bvt]
+    bvt_row = bvt_row.reindex(columns=eez_200.columns)
+
+    #apends
+    return pd.concat([eez_200, bvt_row], ignore_index=True)
 
 def _pick_eez_parents(row, related_countries: dict) -> list:
     """
