@@ -191,13 +191,12 @@ def test_mpatlas_process():
     assert out.iloc[0]["protecti_1"] == "fully or highly"
     assert out.iloc[1]["protecti_1"] == "fully or highly"
     assert out.iloc[2]["protecti_1"] == "less or unknown"
-    assert out.iloc[3]["protecti_1"] == "less or unknown"
-    # Protection_mpaguide_level should be set to unknown if establishment stage is not actively
-    # managed or implemented
+    assert out.iloc[3]["protecti_1"] == "fully or highly"
+    # Protection levels pass through as delivered by the API
     assert out.iloc[0]["protection"] == "high"
     assert out.iloc[1]["protection"] == "full"
-    assert out.iloc[2]["protection"] == "unknown"
-    assert out.iloc[3]["protection"] == "unknown"
+    assert out.iloc[2]["protection"] == "low"
+    assert out.iloc[3]["protection"] == "high"
     assert set(out.columns) == expected
 
 
