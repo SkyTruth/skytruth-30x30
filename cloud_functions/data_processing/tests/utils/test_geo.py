@@ -23,6 +23,7 @@ WGS84_SURFACE_KM2 = 510_065_621
 _TO_6933 = pyproj.Transformer.from_crs("EPSG:3857", "EPSG:6933", always_xy=True).transform
 GEOD = pyproj.Geod(ellps="WGS84")
 
+
 def _pixel_area_6933_km2(minx, miny, maxx, maxy):
     """Independent equal-area (EPSG:6933) area of a 3857 pixel box, in km²."""
     return shp_transform(_TO_6933, box(minx, miny, maxx, maxy)).area / 1e6
@@ -140,6 +141,7 @@ def test_robust_unary_union_empty_input_returns_empty():
 
 
 # ---------- buffer_km ----------
+
 
 def _max_longitude(geom):
     """Largest absolute longitude anywhere in ``geom``."""
