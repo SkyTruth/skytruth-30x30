@@ -1,12 +1,13 @@
-"""Tests for get_cover_areas in src/core/commons.py."""
+"""Tests for get_cover_areas and process_buffered_iho in src/core/commons.py."""
 
+import geopandas as gpd
 import numpy as np
 import pytest
 import rasterio
 from rasterio.transform import Affine
-from shapely.geometry import box, mapping
+from shapely.geometry import Polygon, box, mapping
 
-from src.core.commons import get_cover_areas
+from src.core.commons import get_cover_areas, process_buffered_iho
 from src.utils.geo import compute_pixel_area_map_km2
 
 CLASS_MAP = {0: "class-a", 1: "class-b"}
@@ -77,3 +78,33 @@ def test_unmapped_pixel_value_falls_back_to_generic_class_name(tmp_path):
         res = get_cover_areas(src, [mapping(poly)], "X", "country", CLASS_MAP)
     assert "class_7" in res
     assert res["class_7"] == pytest.approx(res["total"])
+
+
+def _bowtie(x, y):
+    """A self-intersecting — and therefore invalid — polygon."""
+    return Polygon([(x, y), (x + 2, y + 2), (x + 2, y), (x, y + 2), (x, y)])
+
+
+def test_invalid_iho_geometries_are_repaired_not_dropped():
+    """Every IHO row is a location, and a dropped sea area would also stop its
+    neighbours being clipped against it, so invalid input must be repaired in
+    place. 1906 is in UNBUFFERED_MRGID: it is passed through, but still repaired."""
+    bowtie = _bowtie(0, 0)
+    arctic = _bowtie(10, 10)
+    assert not bowtie.is_valid and not arctic.is_valid
+
+    iho = gpd.GeoDataFrame(
+        {
+            "NAME": ["Bowtie Sea", "Neighbour Sea", "Arctic Ocean"],
+            "MRGID": [111, 222, 1906],
+            "geometry": [bowtie, box(2, 0, 4, 2), arctic],
+        },
+        crs="EPSG:4326",
+    )
+
+    result = process_buffered_iho(iho, km=1, n_jobs=1)
+
+    assert sorted(result["MRGID"]) == [111, 222, 1906]
+    assert result.geometry.is_valid.all()
+    # The caller's frame is left untouched by the repair.
+    assert not iho.geometry.is_valid.all()

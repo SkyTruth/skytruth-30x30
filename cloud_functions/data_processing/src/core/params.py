@@ -242,6 +242,8 @@ LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
 RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
+NEAR_SHORE_BUFFER_KM = 10
+NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
 
 # ------------------------------------------------------------
 #                     Conservation Builder
@@ -279,4 +281,5 @@ LONG_RUNNING_TASKS = [
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
     "generate_habitat_protection_table",
+    "process_mangroves",
 ]
