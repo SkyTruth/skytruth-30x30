@@ -1,6 +1,8 @@
 """Tests for src/utils/geo.py: per-pixel raster areas (compute_pixel_area_map_km2),
-robust geometry unioning (robust_unary_union), and metric buffering (buffer_km)."""
+robust geometry unioning (robust_unary_union), metric buffering (buffer_km), and
+pairwise feature/region intersection (intersect_features_with_regions)."""
 
+import geopandas as gpd
 import numpy as np
 import pyproj
 import pytest
@@ -15,6 +17,8 @@ from src.utils.geo import (
     _wrap_to_180,
     buffer_km,
     compute_pixel_area_map_km2,
+    get_area_km2,
+    intersect_features_with_regions,
     robust_unary_union,
 )
 
@@ -284,3 +288,171 @@ def test_shift_negative_longitudes_handles_scalars_and_arrays():
 
 def test_shift_negative_longitudes_preserves_z():
     assert _shift_negative_longitudes(-170.0, 5.0, 3.0) == (190.0, 5.0, 3.0)
+
+
+# ---------- intersect_features_with_regions ----------
+
+# Two side-by-side regions sharing the x=10 edge, well away from the poles so
+# the equal-area projection stays well behaved.
+REGION_A = box(0, 0, 10, 10)
+REGION_B = box(10, 0, 20, 10)
+
+
+def _regions(**cols):
+    return gpd.GeoDataFrame(
+        {"location": ["1", "2"], **cols},
+        geometry=[REGION_A, REGION_B],
+        crs="EPSG:4326",
+    )
+
+
+def _features(geometries, ids=None):
+    ids = ids if ids is not None else list(range(len(geometries)))
+    return gpd.GeoDataFrame({"wdpa_pid": ids}, geometry=geometries, crs="EPSG:4326")
+
+
+def test_intersect_feature_inside_one_region_returns_its_whole_area():
+    feature = box(1, 1, 2, 2)
+    result = intersect_features_with_regions(_features([feature]), _regions())
+
+    assert len(result) == 1
+    assert result.iloc[0]["location"] == "1"
+    assert result.iloc[0]["intersection_area_km2"] == pytest.approx(get_area_km2(feature), rel=1e-6)
+
+
+def test_intersect_straddling_feature_splits_across_regions():
+    feature = box(5, 1, 15, 2)  # half in REGION_A, half in REGION_B
+    result = intersect_features_with_regions(_features([feature]), _regions())
+
+    by_region = dict(zip(result["location"], result["intersection_area_km2"], strict=True))
+    assert sorted(by_region) == ["1", "2"]
+    assert by_region["1"] == pytest.approx(get_area_km2(box(5, 1, 10, 2)), rel=1e-6)
+    assert by_region["2"] == pytest.approx(get_area_km2(box(10, 1, 15, 2)), rel=1e-6)
+    assert result["intersection_area_km2"].sum() == pytest.approx(get_area_km2(feature), rel=1e-6)
+
+
+def test_intersect_excludes_feature_that_only_touches_a_region():
+    """Shares the x=0 edge with REGION_A, so it intersects but has no area
+    inside it. `keep_geom_type` must drop the resulting line."""
+    result = intersect_features_with_regions(_features([box(-5, 0, 0, 10)]), _regions())
+
+    assert result.empty
+
+
+def test_intersect_omits_features_and_regions_with_no_overlap():
+    inside_a = box(1, 1, 2, 2)
+    far_away = box(100, 50, 101, 51)
+    result = intersect_features_with_regions(
+        _features([inside_a, far_away], ids=["in", "out"]), _regions()
+    )
+
+    # Only the one real overlap: no row for the distant feature, none for REGION_B.
+    assert result["wdpa_pid"].tolist() == ["in"]
+
+
+def test_intersect_carries_through_columns_from_both_frames():
+    features = gpd.GeoDataFrame(
+        {"wdpaid": [555], "wdpa_pid": ["555A"], "data_source": ["protected-planet"]},
+        geometry=[box(1, 1, 2, 2)],
+        crs="EPSG:4326",
+    )
+    result = intersect_features_with_regions(features, _regions(NAME=["Sea A", "Sea B"]))
+
+    assert result.iloc[0][["wdpaid", "wdpa_pid", "data_source", "location", "NAME"]].tolist() == [
+        555,
+        "555A",
+        "protected-planet",
+        "1",
+        "Sea A",
+    ]
+
+
+def test_intersect_suffixes_columns_present_in_both_frames():
+    """`location` on both sides is a real possibility — PA rows carry an ISO3
+    `location` and IHO regions carry an MRGID one — so the collision must be
+    visible rather than silently resolved."""
+    features = gpd.GeoDataFrame({"location": ["FRA"]}, geometry=[box(1, 1, 2, 2)], crs="EPSG:4326")
+    result = intersect_features_with_regions(features, _regions())
+
+    assert result.iloc[0]["location_1"] == "FRA"
+    assert result.iloc[0]["location_2"] == "1"
+
+
+def test_intersect_repairs_invalid_feature_geometry():
+    bowtie = Polygon([(1, 1), (3, 3), (3, 1), (1, 3), (1, 1)])
+    assert not bowtie.is_valid
+
+    result = intersect_features_with_regions(_features([bowtie]), _regions())
+
+    assert len(result) == 1
+    assert result.iloc[0]["intersection_area_km2"] > 0
+
+
+def test_intersect_ignores_rows_with_missing_or_empty_geometry():
+    features = _features([box(1, 1, 2, 2), None, Polygon()], ids=["real", "null", "empty"])
+    result = intersect_features_with_regions(features, _regions())
+
+    assert result["wdpa_pid"].tolist() == ["real"]
+
+
+def test_intersect_locates_arealess_features_with_a_null_area():
+    """A point inside a region is in that region, so it is paired by containment
+    rather than dropped — unlike a polygon that merely touches a boundary."""
+    features = _features(
+        [box(1, 1, 2, 2), Point(3, 3), Point(15, 5), Point(50, 50)],
+        ids=["polygon", "point_a", "point_b", "point_outside"],
+    )
+    result = intersect_features_with_regions(features, _regions())
+
+    areas = dict(zip(result["wdpa_pid"], result["intersection_area_km2"], strict=True))
+    regions = dict(zip(result["wdpa_pid"], result["location"], strict=True))
+
+    assert areas["polygon"] > 0
+    assert np.isnan(areas["point_a"]) and regions["point_a"] == "1"
+    assert np.isnan(areas["point_b"]) and regions["point_b"] == "2"
+    assert "point_outside" not in areas
+
+
+def test_intersect_returns_a_geodataframe_when_mixing_geometry_types():
+    """`gpd.overlay` rejects a mixed frame outright, so the two paths are run
+    separately and stitched — the result must still be a projected GeoDataFrame."""
+    features = _features([box(1, 1, 2, 2), Point(3, 3)], ids=["polygon", "point"])
+    result = intersect_features_with_regions(features, _regions())
+
+    assert isinstance(result, gpd.GeoDataFrame)
+    assert result.crs == "EPSG:6933"
+    assert result["intersection_area_km2"].dtype == "float64"
+
+
+@pytest.mark.parametrize("empty_side", ["features", "regions"])
+def test_intersect_empty_input_returns_empty_frame(empty_side):
+    features = _features([box(1, 1, 2, 2)])
+    regions = _regions()
+    if empty_side == "features":
+        features = features.iloc[:0]
+    else:
+        regions = regions.iloc[:0]
+
+    result = intersect_features_with_regions(features, regions)
+
+    assert result.empty
+    assert "intersection_area_km2" in result.columns
+
+
+def test_intersect_rejects_frames_without_a_crs():
+    """Areas are only meaningful once reprojected, so naive geometry must not
+    silently produce square-degree numbers."""
+    features = _features([box(1, 1, 2, 2)]).set_crs(None, allow_override=True)
+
+    with pytest.raises(ValueError, match="naive geometries"):
+        intersect_features_with_regions(features, _regions())
+
+
+def test_intersect_honours_a_renamed_geometry_column():
+    features = _features([box(1, 1, 2, 2)]).rename_geometry("footprint")
+    regions = _regions().rename_geometry("shape")
+
+    result = intersect_features_with_regions(features, regions)
+
+    assert len(result) == 1
+    assert result.iloc[0]["intersection_area_km2"] > 0

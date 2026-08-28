@@ -1,6 +1,8 @@
 import math
 
+import geopandas as gpd
 import numpy as np
+import pandas as pd
 import pyproj
 import shapely
 from pyproj import CRS, Transformer
@@ -186,6 +188,33 @@ def robust_unary_union(geometries):
         scale = max((abs(coord) for geom in valid for coord in geom.bounds), default=1.0) or 1.0
         snapped = [set_precision(geom, scale * 1e-9) for geom in valid]
         return make_valid(unary_union(snapped))
+
+
+def intersect_features_with_regions(
+    features: gpd.GeoDataFrame,
+    regions: gpd.GeoDataFrame,
+) -> gpd.GeoDataFrame:
+    """Pair each feature with every region it overlaps, with the clipped area.
+
+    One row per overlap, holding both frames' columns plus
+    ``intersection_area_km2`` (EPSG:6933, as in ``get_area_km2``).
+    """
+    features = features.to_crs("EPSG:6933")
+    regions = regions.to_crs("EPSG:6933")
+
+    # Separate the polygonal features that can be clipped from the arealess ones.
+    polygonal = features.geometry.geom_type.isin(("Polygon", "MultiPolygon"))
+    clipped = gpd.overlay(features[polygonal], regions, how="intersection", keep_geom_type=True)
+    clipped = clipped.assign(intersection_area_km2=clipped.geometry.area / 1e6)
+    if polygonal.all():
+        return clipped
+
+    # Break out non-polygonal features (rare, but would break gpd.overlay) specifically
+    # to keep for the PA tables
+    located = features[~polygonal].sjoin(regions, predicate="intersects", lsuffix="1", rsuffix="2")
+    located = located.drop(columns="index_2").assign(intersection_area_km2=np.nan)
+
+    return pd.concat([clipped, located], ignore_index=True)
 
 
 def _shift_negative_longitudes(x, y, z=None):

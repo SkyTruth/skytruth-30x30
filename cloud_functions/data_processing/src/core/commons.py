@@ -23,6 +23,7 @@ from shapely.validation import make_valid
 from skytruth_shared_datasets import Catalog
 from tqdm.auto import tqdm
 
+from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -34,16 +35,22 @@ from src.core.params import (
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
+    WDPA_MARINE_FILE_NAME,
 )
 from src.core.processors import clean_geometries
 from src.utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
     read_dataframe,
+    read_json_df,
     read_json_from_gcs,
     read_parquet_from_gcs,
 )
-from src.utils.geo import buffer_km, compute_pixel_area_map_km2
+from src.utils.geo import (
+    buffer_km,
+    compute_pixel_area_map_km2,
+    intersect_features_with_regions,
+)
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -416,6 +423,47 @@ def read_mpatlas_from_gcs(
         gdf.set_crs(src.crs, inplace=True)
 
     return gdf
+
+
+def intersect_wdpa_with_iho(
+    bucket: str = BUCKET,
+    tolerance: float = marine_tolerance,
+) -> gpd.GeoDataFrame:
+    """
+    Intersects WDPA marine protected areas with IHO sea regions,
+    returning a GeoDataFrame with one row per (marine WDPA, IHO sea) overlap.
+    """
+    pa_file = add_tolerance_suffix(WDPA_MARINE_FILE_NAME, tolerance)
+    logger.info({"message": f"intersecting marine PAs from gs://{bucket}/{pa_file} with IHO seas"})
+
+    pas = read_json_df(bucket_name=bucket, filename=pa_file)
+    pas = pas[["WDPAID", "WDPA_PID", "PA_DEF", "geometry"]]
+
+    iho = load_iho_regions()[["MRGID", "location", "geometry"]]
+
+    return intersect_features_with_regions(pas, iho)
+
+
+def intersect_mpatlas_with_iho(
+    bucket: str = BUCKET,
+    mpa_file_name: str = MPATLAS_FILE_NAME,
+) -> gpd.GeoDataFrame:
+    """
+    Intersects MPAtlas zones with IHO sea regions, returning a GeoDataFrame with
+    one row per (MPAtlas zone, IHO sea) overlap. Every zone is included, not only
+    the fully/highly protected ones — filter on ``protection_mpaguide_level``
+    after the join.
+    """
+    logger.info(
+        {"message": f"intersecting MPAtlas zones from gs://{bucket}/{mpa_file_name} with IHO seas"}
+    )
+
+    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
+    mpa = mpa[["wdpa_id", "wdpa_pid", "zone_id", "protection_mpaguide_level", "geometry"]]
+
+    iho = load_iho_regions()[["MRGID", "location", "geometry"]]
+
+    return intersect_features_with_regions(mpa, iho)
 
 
 def download_file_with_progress(url: str, filename: str, verbose: bool = True):

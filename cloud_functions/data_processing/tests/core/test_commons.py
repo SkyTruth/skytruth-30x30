@@ -1,13 +1,20 @@
-"""Tests for get_cover_areas and process_buffered_iho in src/core/commons.py."""
+"""Tests for get_cover_areas, process_buffered_iho and the IHO spatial joins
+(intersect_wdpa_with_iho, intersect_mpatlas_with_iho) in src/core/commons.py."""
 
 import geopandas as gpd
 import numpy as np
 import pytest
 import rasterio
 from rasterio.transform import Affine
-from shapely.geometry import Polygon, box, mapping
+from shapely.geometry import Point, Polygon, box, mapping
 
-from src.core.commons import get_cover_areas, process_buffered_iho
+from src.core import commons
+from src.core.commons import (
+    get_cover_areas,
+    intersect_mpatlas_with_iho,
+    intersect_wdpa_with_iho,
+    process_buffered_iho,
+)
 from src.utils.geo import compute_pixel_area_map_km2
 
 CLASS_MAP = {0: "class-a", 1: "class-b"}
@@ -108,3 +115,198 @@ def test_invalid_iho_geometries_are_repaired_not_dropped():
     assert result.geometry.is_valid.all()
     # The caller's frame is left untouched by the repair.
     assert not iho.geometry.is_valid.all()
+
+
+# ---------- intersect_wdpa_with_iho / intersect_mpatlas_with_iho ----------
+
+# Two side-by-side seas sharing the x=10 edge.
+SEA_A = box(0, 0, 10, 10)
+SEA_B = box(10, 0, 20, 10)
+
+
+def _fake_iho():
+    return gpd.GeoDataFrame(
+        {"MRGID": ["1", "2"], "location": ["1", "2"], "NAME": ["Sea A", "Sea B"]},
+        geometry=[SEA_A, SEA_B],
+        crs="EPSG:4326",
+    )
+
+
+def _patch_iho(monkeypatch, calls=None):
+    def fake_load_iho_regions(buffer=False):
+        if calls is not None:
+            calls.append(buffer)
+        return _fake_iho()
+
+    monkeypatch.setattr(commons, "load_iho_regions", fake_load_iho_regions)
+
+
+def _patch_wdpa(monkeypatch, gdf, calls=None):
+    def fake_read_json_df(bucket_name, filename, **kwargs):
+        if calls is not None:
+            calls.append(filename)
+        return gdf
+
+    monkeypatch.setattr(commons, "read_json_df", fake_read_json_df)
+
+
+def _wdpa_frame(geometries, pids=None, pa_def=None, **extra):
+    n = len(geometries)
+    return gpd.GeoDataFrame(
+        {
+            "WDPAID": list(range(n)),
+            "WDPA_PID": pids if pids is not None else [str(i) for i in range(n)],
+            "PA_DEF": pa_def if pa_def is not None else [1] * n,
+            **extra,
+        },
+        geometry=geometries,
+        crs="EPSG:4326",
+    )
+
+
+def test_wdpa_iho_join_pairs_each_pa_with_every_sea_it_overlaps(monkeypatch):
+    _patch_iho(monkeypatch)
+    _patch_wdpa(
+        monkeypatch,
+        _wdpa_frame(
+            [box(1, 1, 2, 2), box(5, 1, 15, 2), box(100, 50, 101, 51)],
+            pids=["inside", "straddler", "elsewhere"],
+        ),
+    )
+
+    result = intersect_wdpa_with_iho(bucket="b", tolerance=0.0001)
+
+    pairs = sorted(zip(result["WDPA_PID"], result["location"], strict=True))
+    assert pairs == [("inside", "1"), ("straddler", "1"), ("straddler", "2")]
+    assert (result["intersection_area_km2"] > 0).all()
+
+
+def test_wdpa_iho_join_uses_the_marine_file_for_the_given_tolerance(monkeypatch):
+    _patch_iho(monkeypatch)
+    requested = []
+    _patch_wdpa(monkeypatch, _wdpa_frame([box(1, 1, 2, 2)]), calls=requested)
+
+    intersect_wdpa_with_iho(bucket="b", tolerance=0.0001)
+
+    assert requested == ["intermediates/protected_area_geoms/marine_wdpa_0.0001.geojson"]
+
+
+def test_wdpa_iho_join_uses_unbuffered_iho(monkeypatch):
+    """The near-shore buffered layer is for habitats; sea assignment must use
+    the true IHO boundaries."""
+    buffers = []
+    _patch_iho(monkeypatch, calls=buffers)
+    _patch_wdpa(monkeypatch, _wdpa_frame([box(1, 1, 2, 2)]))
+
+    intersect_wdpa_with_iho(bucket="b", tolerance=0.0001)
+
+    assert buffers == [False]
+
+
+def test_wdpa_iho_join_drops_source_columns_it_was_not_asked_for(monkeypatch):
+    """Carrying the full WDPA attribute set through the overlay would multiply
+    it by the sea pairs for no benefit."""
+    _patch_iho(monkeypatch)
+    _patch_wdpa(
+        monkeypatch,
+        _wdpa_frame([box(1, 1, 2, 2)], DESIG_ENG=["Marine Park"], ISO3=["FRA"]),
+    )
+
+    result = intersect_wdpa_with_iho(bucket="b", tolerance=0.0001)
+
+    assert "DESIG_ENG" not in result.columns
+    assert "ISO3" not in result.columns
+    # Nothing collided, so no _1/_2 suffixing either.
+    assert set(result.columns) == {
+        "WDPAID",
+        "WDPA_PID",
+        "PA_DEF",
+        "MRGID",
+        "location",
+        "geometry",
+        "intersection_area_km2",
+    }
+
+
+def test_wdpa_iho_join_keeps_oecms_for_the_caller_to_split(monkeypatch):
+    _patch_iho(monkeypatch)
+    _patch_wdpa(
+        monkeypatch,
+        _wdpa_frame([box(1, 1, 2, 2), box(3, 3, 4, 4)], pids=["pa", "oecm"], pa_def=[1, 0]),
+    )
+
+    result = intersect_wdpa_with_iho(bucket="b", tolerance=0.0001)
+
+    assert sorted(result["PA_DEF"]) == [0, 1]
+
+
+def test_wdpa_iho_join_keeps_point_pas_with_no_area(monkeypatch):
+    """A WDPA point stays a point when its reported area is zero. It is still in
+    a sea and belongs in the PA table, so it is assigned by containment with a
+    null area rather than dropped."""
+    _patch_iho(monkeypatch)
+    _patch_wdpa(
+        monkeypatch,
+        _wdpa_frame(
+            [box(1, 1, 2, 2), Point(3, 3), Point(50, 50), None],
+            pids=["polygon", "point_in_sea", "point_at_sea", "missing"],
+        ),
+    )
+
+    result = intersect_wdpa_with_iho(bucket="b", tolerance=0.0001)
+
+    areas = dict(zip(result["WDPA_PID"], result["intersection_area_km2"], strict=True))
+    assert areas["polygon"] > 0
+    assert np.isnan(areas["point_in_sea"])
+    # A point outside every sea, and a row with no geometry, cannot be located.
+    assert "point_at_sea" not in areas
+    assert "missing" not in areas
+
+
+def test_mpatlas_iho_join_keeps_point_zones_with_no_area(monkeypatch):
+    """MPAtlas ships a handful of point zones; they should still reach the PA
+    table, just without a measurable area."""
+    _patch_iho(monkeypatch)
+    mpa = gpd.GeoDataFrame(
+        {
+            "wdpa_id": [1, 2],
+            "wdpa_pid": ["1A", "2A"],
+            "zone_id": [10, 20],
+            "protection_mpaguide_level": ["full", "unknown"],
+        },
+        geometry=[box(1, 1, 2, 2), Point(3, 3)],
+        crs="EPSG:4326",
+    )
+    monkeypatch.setattr(commons, "read_mpatlas_from_gcs", lambda bucket, filename: mpa)
+
+    result = intersect_mpatlas_with_iho(bucket="b", mpa_file_name="raw/mpatlas.geojson")
+
+    areas = dict(zip(result["zone_id"], result["intersection_area_km2"], strict=True))
+    assert areas[10] > 0
+    assert np.isnan(areas[20])
+    # The point still gets its sea, so it can be shown under that location.
+    assert result.loc[result["zone_id"] == 20, "location"].tolist() == ["1"]
+
+
+def test_mpatlas_iho_join_pairs_zones_with_seas_without_filtering(monkeypatch):
+    """`compute_iho_protection_level` wants only full/high zones, but the join
+    stays unfiltered so the PA table can use the same result."""
+    _patch_iho(monkeypatch)
+    mpa = gpd.GeoDataFrame(
+        {
+            "wdpa_id": [1, 2],
+            "wdpa_pid": ["1A", "2A"],
+            "zone_id": [10, 20],
+            "protection_mpaguide_level": ["full", "less"],
+            "name": ["Zone A", "Zone B"],
+        },
+        geometry=[box(1, 1, 2, 2), box(11, 1, 12, 2)],
+        crs="EPSG:4326",
+    )
+    monkeypatch.setattr(commons, "read_mpatlas_from_gcs", lambda bucket, filename: mpa)
+
+    result = intersect_mpatlas_with_iho(bucket="b", mpa_file_name="raw/mpatlas.geojson")
+
+    assert sorted(zip(result["zone_id"], result["location"], strict=True)) == [(10, "1"), (20, "2")]
+    assert sorted(result["protection_mpaguide_level"]) == ["full", "less"]
+    assert "name" not in result.columns
