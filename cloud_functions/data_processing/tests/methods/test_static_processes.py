@@ -945,7 +945,7 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
     def _read_json_df(bucket, blob_name, verbose=True):
         return gadm_eez_union.copy()
 
-    def _load_iho_regions():
+    def _load_iho_regions(buffer=False):
         return iho.copy()
 
     def _save_json_to_gcs(bucket, data, blob_name, project=None, verbose=True):
