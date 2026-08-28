@@ -20,9 +20,9 @@ from src.core.params import (
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_HABITAT_AREA_FILE_PATTERN,
     HABITAT_BY_LOCATION_FILE_PATTERN,
+    HABITAT_PROCESSING_PARAMS,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
-    UNEP_HABITATS,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
@@ -327,9 +327,10 @@ def _protected_habitat_by_location(
     return protected_by_location, global_protected_area_km2
 
 
-def create_mangroves_subtable(
+def create_habitat_subtable(
     all_protected_areas,
     combined_regions,
+    habitats: dict = HABITAT_PROCESSING_PARAMS,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
@@ -337,101 +338,11 @@ def create_mangroves_subtable(
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
-    """Compute mangrove protection stats from the pre-dissolved per-location geometries.
+    """Compute protection stats for each habitat from its pre-dissolved geometries.
 
-    Uses the geometries written by process_mangroves. The Global Mangrove Watch
-    polygons do not overlap, so a location's stored area is already its dissolved area.
-    Locations overlap each other, though, so the GLOB row takes its protected area
-    from a deduplicated global geometry.
-    """
-    habitat = "mangroves"
-
-    def get_group_stats(df, loc, relations, global_mangrove_area, global_protected_area):
-        if loc == "GLOB":
-            return {
-                "location": loc,
-                "habitat": habitat,
-                "environment": "marine",
-                "protected_area": global_protected_area,
-                "total_area": global_mangrove_area,
-            }
-
-        df_group = df[df["location"].isin(relations[loc])]
-
-        return {
-            "location": loc,
-            "habitat": habitat,
-            "environment": "marine",
-            "protected_area": df_group["protected_habitat_area_km2"].sum(),
-            "total_area": df_group["total_habitat_area_km2"].sum(),
-        }
-
-    if verbose:
-        logger.info({"message": "loading eez/land union"})
-    gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
-    country_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
-
-    if verbose:
-        logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions(buffer=True)
-
-    locations = gpd.GeoDataFrame(
-        pd.concat(
-            [country_union[["location", "geometry"]], iho[["location", "geometry"]]],
-            ignore_index=True,
-        ),
-        geometry="geometry",
-        crs=country_union.crs,
-    )
-
-    if verbose:
-        logger.info({"message": "loading pre-processed mangroves"})
-    mangroves_by_location = read_parquet_from_gcs(
-        bucket, by_location_file_pattern.format(habitat=habitat), verbose=verbose
-    ).pipe(clean_geometries)
-    global_mangrove_area = read_json_from_gcs(
-        bucket, global_area_file_pattern.format(habitat=habitat)
-    )["global_area_km2"]
-
-    if verbose:
-        logger.info({"message": "getting protected mangrove area by country"})
-    protected_mangroves, global_protected_area = _protected_habitat_by_location(
-        mangroves_by_location, locations, all_protected_areas
-    )
-
-    combined_locations = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
-
-    mangrove_habitat = pd.DataFrame(
-        [
-            get_group_stats(
-                protected_mangroves,
-                loc,
-                combined_locations,
-                global_mangrove_area,
-                global_protected_area,
-            )
-            for loc in combined_locations
-        ]
-    )
-
-    return mangrove_habitat[mangrove_habitat["total_area"] > 0]
-
-
-def create_unep_habitats_subtable(
-    all_protected_areas,
-    combined_regions,
-    unep_habitats: dict = UNEP_HABITATS,
-    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
-    global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
-    tolerance: float = marine_tolerance,
-    bucket: str = BUCKET,
-    verbose: bool = True,
-):
-    """Compute protection stats for the UNEP-WCMC habitats from pre-dissolved geometries.
-
-    Uses per-location geometries written by process_marine_unep_habitats, and returns
-    a subtable with one row per habitat per location.
+    Uses the per-location geometries written by process_marine_habitat_geoms, and
+    returns a subtable with one row per habitat per location. Habitats include
+    mangroves, saltmarshes, seagrasses, and cold-water corals.
 
     Locations overlap each other, so the GLOB row takes both its total and its protected
     area from deduplicated global geometries (see _protected_habitat_by_location).
@@ -478,7 +389,7 @@ def create_unep_habitats_subtable(
     combined_locations = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
 
     subtables = []
-    for habitat in unep_habitats:
+    for habitat in habitats:
         if verbose:
             logger.info({"message": f"loading pre-processed {habitat}"})
         habitat_by_location = read_parquet_from_gcs(
@@ -833,8 +744,8 @@ def process_marine_habitats(
     )
 
     if verbose:
-        logger.info({"message": "getting UNEP-WCMC habitats subtable"})
-    unep_habitats_subtable = create_unep_habitats_subtable(
+        logger.info({"message": "getting habitat subtable"})
+    habitat_subtable = create_habitat_subtable(
         all_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
@@ -848,18 +759,6 @@ def process_marine_habitats(
     seamounts_subtable = create_seamounts_subtable(
         marine_protected_areas,
         combined_regions,
-        tolerance=tolerance,
-        bucket=bucket,
-        verbose=verbose,
-    )
-
-    if verbose:
-        logger.info({"message": "getting mangroves subtable"})
-
-    mangroves_subtable = create_mangroves_subtable(
-        all_protected_areas,
-        combined_regions,
-        gadm_eez_union_file_name=gadm_eez_union_file_name,
         tolerance=tolerance,
         bucket=bucket,
         verbose=verbose,
@@ -882,8 +781,6 @@ def process_marine_habitats(
         verbose=verbose,
     )
 
-    marine_habitats = pd.concat(
-        (unep_habitats_subtable, seamounts_subtable, mangroves_subtable, corals_subtable), axis=0
-    )
+    marine_habitats = pd.concat((habitat_subtable, seamounts_subtable, corals_subtable), axis=0)
 
     return marine_habitats

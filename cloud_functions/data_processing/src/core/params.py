@@ -173,32 +173,48 @@ MARINE_HABITAT_PARAMS = {
         "url": MANGROVES_URL,
         "file_name": MANGROVES_FILE_NAME,
         "archive_file_name": ARCHIVE_MANGROVES_FILE_NAME,
+        "needs_processing": True,
+        "source": "gpkg",
+        "overlaps": False,
     },
     "seamounts": {
         "url": SEAMOUNTS_URL,
         "file_name": SEAMOUNTS_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_SEAMOUNTS_FILE_NAME,
+        "needs_processing": False,
     },
     "coldwatercorals": {
         "url": COLD_WATER_CORALS_URL,
         "file_name": COLD_WATER_CORALS_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
     },
     "saltmarshes": {
         "url": SALTMARSHES_URL,
         "file_name": SALTMARSHES_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_SALTMARSHES_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
     },
     "seagrasses": {
         "url": SEAGRASSES_URL,
         "file_name": SEAGRASSES_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_SEAGRASSES_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
     },
 }
-UNEP_HABITATS = {
-    habitat: MARINE_HABITAT_PARAMS[habitat]
-    for habitat in ("coldwatercorals", "saltmarshes", "seagrasses")
+
+HABITAT_PROCESSING_PARAMS = {
+    habitat: params
+    for habitat, params in MARINE_HABITAT_PARAMS.items()
+    if params["needs_processing"]
 }
+
 UNEP_POINT_AREA_KM2 = 1.0
 MARINE_HABITAT_TOLERANCE = 0.0001
 HABITAT_BY_LOCATION_FILE_PATTERN = "static/{habitat}_by_location.parquet"
@@ -275,7 +291,6 @@ LONG_RUNNING_TASKS = [
     "generate_protected_areas_table",
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
-    "process_marine_unep_habitats",
+    "process_marine_habitat_geoms",
     "generate_habitat_protection_table",
-    "process_mangroves",
 ]

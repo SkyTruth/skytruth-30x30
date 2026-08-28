@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import src.methods.publisher as main
-from src.core.params import UNEP_HABITATS
+from src.core.params import HABITAT_PROCESSING_PARAMS
 from src.core.retry_params import ScheduleRetry
 
 
@@ -40,8 +40,7 @@ def patched_all(monkeypatch, call_log):
         "process_eez_land_union",
         "download_marine_habitats",
         "process_terrestrial_biome_raster",
-        "process_mangroves",
-        "process_marine_unep_habitats",
+        "process_marine_habitat_geoms",
         "generate_terrestrial_biome_stats_country",
         "download_mpatlas",
         "download_protected_seas",
@@ -98,7 +97,6 @@ def patched_all(monkeypatch, call_log):
         ("process_eez_land_union", "process_eez_land_union"),
         ("download_marine_habitats", "download_marine_habitats"),
         ("process_terrestrial_biomes", "process_terrestrial_biome_raster"),
-        ("process_mangroves", "process_mangroves"),
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
@@ -164,15 +162,15 @@ def _next_step_payloads(call_log):
 @pytest.mark.parametrize(
     ("habitat", "expected_steps", "expected_habitat"),
     [
-        (None, ["process_mangroves", "process_marine_unep_habitats"], None),
-        ("mangroves", ["process_mangroves"], None),
-        ("saltmarshes", ["process_marine_unep_habitats"], ["saltmarshes"]),
+        (None, ["process_marine_habitat_geoms"], None),
+        ("mangroves", ["process_marine_habitat_geoms"], ["mangroves"]),
+        ("saltmarshes", ["process_marine_habitat_geoms"], ["saltmarshes"]),
         (
             ["mangroves", "seagrasses"],
-            ["process_mangroves", "process_marine_unep_habitats"],
-            ["seagrasses"],
+            ["process_marine_habitat_geoms"],
+            ["mangroves", "seagrasses"],
         ),
-        (["seamounts", "saltmarshes"], ["process_marine_unep_habitats"], ["saltmarshes"]),
+        (["seamounts", "saltmarshes"], ["process_marine_habitat_geoms"], ["saltmarshes"]),
         ("seamounts", [], None),
     ],
     ids=["all", "mangroves", "one_unep", "mangroves_and_unep", "seamounts_and_unep", "seamounts"],
@@ -180,7 +178,7 @@ def _next_step_payloads(call_log):
 def test_download_marine_habitats_launches_the_step_that_processes_each_habitat(
     patched_all, habitat, expected_steps, expected_habitat
 ):
-    """Mangroves and the UNEP-WCMC habitats have processing steps; seamounts do not.
+    """Mangroves and the UNEP-WCMC habitats share a processing step; seamounts have none.
 
     An empty HABITAT downloads everything and forwards no HABITAT.
     """
@@ -191,58 +189,44 @@ def test_download_marine_habitats_launches_the_step_that_processes_each_habitat(
     payloads = _next_step_payloads(patched_all)
     assert [payload["METHOD"] for payload in payloads] == expected_steps
 
-    unep = [payload for payload in payloads if payload["METHOD"] == "process_marine_unep_habitats"]
-    if unep:
-        assert unep[0]["HABITAT"] == expected_habitat
-
-
-@pytest.mark.parametrize(
-    "habitat", [None, "mangroves", list(UNEP_HABITATS)], ids=["absent", "mangroves", "unep_list"]
-)
-def test_process_mangroves_triggers_table_generation(patched_all, habitat):
-    """After mangroves are processed, the habitat protection table generation step is triggered."""
-    payload = {"METHOD": "process_mangroves", "TRIGGER_NEXT": True}
-    if habitat is not None:
-        payload["HABITAT"] = habitat
-
-    main.run_from_payload(payload)
-
-    processed = [kwargs for name, _, kwargs in patched_all if name == "process_mangroves"]
-    assert len(processed) == 1
-    assert "habitats" not in processed[0]
-
-    payloads = _next_step_payloads(patched_all)
-    assert [step["METHOD"] for step in payloads] == ["generate_habitat_protection_table"]
+    if payloads:
+        assert payloads[0]["HABITAT"] == expected_habitat
 
 
 @pytest.mark.parametrize(
     ("habitat", "expected_processed", "expected_step", "expected_habitat"),
     [
-        (None, list(UNEP_HABITATS)[0], "process_marine_unep_habitats", list(UNEP_HABITATS)[1:]),
+        (
+            None,
+            list(HABITAT_PROCESSING_PARAMS)[0],
+            "process_marine_habitat_geoms",
+            list(HABITAT_PROCESSING_PARAMS)[1:],
+        ),
         (
             ["saltmarshes", "seagrasses"],
             "saltmarshes",
-            "process_marine_unep_habitats",
+            "process_marine_habitat_geoms",
             ["seagrasses"],
         ),
+        (["mangroves"], "mangroves", "generate_habitat_protection_table", None),
         (["seagrasses"], "seagrasses", "generate_habitat_protection_table", None),
         ("seagrasses", "seagrasses", "generate_habitat_protection_table", None),
     ],
-    ids=["all", "two_left", "last_one", "single_string"],
+    ids=["all", "two_left", "last_mangroves", "last_one", "single_string"],
 )
-def test_process_marine_unep_habitats_relays_one_habitat_at_a_time(
+def test_process_marine_habitat_geoms_relays_one_habitat_at_a_time(
     patched_all, habitat, expected_processed, expected_step, expected_habitat
 ):
     """Each task processes exactly one habitat and launches the next, so the
     table generation is saved for last using complete data."""
-    payload = {"METHOD": "process_marine_unep_habitats", "TRIGGER_NEXT": True}
+    payload = {"METHOD": "process_marine_habitat_geoms", "TRIGGER_NEXT": True}
     if habitat is not None:
         payload["HABITAT"] = habitat
 
     main.run_from_payload(payload)
 
     processed = [
-        kwargs for name, _, kwargs in patched_all if name == "process_marine_unep_habitats"
+        kwargs for name, _, kwargs in patched_all if name == "process_marine_habitat_geoms"
     ]
     assert len(processed) == 1
     assert processed[0]["habitats"] == expected_processed
@@ -253,10 +237,10 @@ def test_process_marine_unep_habitats_relays_one_habitat_at_a_time(
 
 
 def test_processing_every_habitat_covers_each_one_once(patched_all):
-    """Mangroves and each UNEP habitat are processed once,
-    and the table is generated by the tail of each."""
+    """Every dissolved habitat is processed once and runs in a chain,
+    ending with generate_habitat_protection_table."""
     launched = [{"METHOD": "download_marine_habitats", "HABITAT": None, "TRIGGER_NEXT": True}]
-    steps, unep_processed = [], []
+    steps, processed = [], []
 
     while launched:
         current = launched.pop(0)
@@ -265,17 +249,15 @@ def test_processing_every_habitat_covers_each_one_once(patched_all):
             continue
         del patched_all[:]
         main.run_from_payload(current)
-        unep_processed += [
+        processed += [
             kwargs["habitats"]
             for name, _, kwargs in patched_all
-            if name == "process_marine_unep_habitats"
+            if name == "process_marine_habitat_geoms"
         ]
         launched.extend(_next_step_payloads(patched_all))
 
-    assert unep_processed == list(UNEP_HABITATS)
-    assert steps.count("process_mangroves") == 1
-    # One from mangroves, one from the last UNEP habitat
-    assert steps.count("generate_habitat_protection_table") == 2
+    assert processed == list(HABITAT_PROCESSING_PARAMS)
+    assert steps.count("generate_habitat_protection_table") == 1
 
 
 # Tests for functions that directly call download_zip_to_gcs
