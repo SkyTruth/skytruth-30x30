@@ -56,7 +56,18 @@ def index(request):
         if environment not in ['marine', 'terrestrial']:
             raise ValueError("environment must be one of `marine` or `terrestrial`")
 
-        return (get_locations_stats(environment, db, geometry), 200, headers)
+        stats = ({**request.args, **request.get_json()}).get("stats", [])
+        if isinstance(stats, str):
+            stats = [s for s in stats.split(",") if s]
+
+        result = get_locations_stats(environment, db, geometry)
+
+        if "fully-highly-protected" in stats and environment == "marine":
+            result["fully_highly_protected"] = get_locations_stats(
+                environment, db, geometry, table_name="location_minus_fhp_mpa"
+            )
+
+        return (result, 200, headers)
 
     except InvalidGeometryError as e:
         logger.exception(str(e))
