@@ -412,7 +412,6 @@ def generate_marine_protection_level_stats_table(
     iho_protection_level = compute_iho_protection_level(
         bucket=bucket,
         mpa_file_name=mpa_file_name,
-        tolerance=tolerance,
         verbose=verbose,
     )
 

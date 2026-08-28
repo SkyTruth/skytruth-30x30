@@ -288,6 +288,29 @@ def test_mpatlas_iho_join_keeps_point_zones_with_no_area(monkeypatch):
     assert result.loc[result["zone_id"] == 20, "location"].tolist() == ["1"]
 
 
+def test_mpatlas_iho_join_can_narrow_to_fully_highly_protected_zones(monkeypatch):
+    """`compute_iho_protection_level` only wants full/high zones, and filtering
+    before the overlay is much cheaper than paying for all of them."""
+    _patch_iho(monkeypatch)
+    mpa = gpd.GeoDataFrame(
+        {
+            "wdpa_id": [1, 2, 3],
+            "wdpa_pid": ["1A", "2A", "3A"],
+            "zone_id": [10, 20, 30],
+            "protection_mpaguide_level": ["full", "high", "less"],
+        },
+        geometry=[box(1, 1, 2, 2), box(3, 3, 4, 4), box(5, 5, 6, 6)],
+        crs="EPSG:4326",
+    )
+    monkeypatch.setattr(commons, "read_mpatlas_from_gcs", lambda bucket, filename: mpa)
+
+    result = intersect_mpatlas_with_iho(
+        bucket="b", mpa_file_name="raw/mpatlas.geojson", fully_highly_only=True
+    )
+
+    assert sorted(result["zone_id"]) == [10, 20]
+
+
 def test_mpatlas_iho_join_pairs_zones_with_seas_without_filtering(monkeypatch):
     """`compute_iho_protection_level` wants only full/high zones, but the join
     stays unfiltered so the PA table can use the same result."""

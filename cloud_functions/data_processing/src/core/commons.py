@@ -447,12 +447,14 @@ def intersect_wdpa_with_iho(
 def intersect_mpatlas_with_iho(
     bucket: str = BUCKET,
     mpa_file_name: str = MPATLAS_FILE_NAME,
+    fully_highly_only: bool = False,
 ) -> gpd.GeoDataFrame:
     """
     Intersects MPAtlas zones with IHO sea regions, returning a GeoDataFrame with
-    one row per (MPAtlas zone, IHO sea) overlap. Every zone is included, not only
-    the fully/highly protected ones — filter on ``protection_mpaguide_level``
-    after the join.
+    one row per (MPAtlas zone, IHO sea) overlap. Every zone is included unless
+    ``fully_highly_only`` is set, which keeps only the fully and highly protected
+    ones — about a third of the zones, so a much cheaper overlay when that is all
+    the caller needs.
     """
     logger.info(
         {"message": f"intersecting MPAtlas zones from gs://{bucket}/{mpa_file_name} with IHO seas"}
@@ -460,6 +462,9 @@ def intersect_mpatlas_with_iho(
 
     mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
     mpa = mpa[["wdpa_id", "wdpa_pid", "zone_id", "protection_mpaguide_level", "geometry"]]
+
+    if fully_highly_only:
+        mpa = mpa[mpa["protection_mpaguide_level"].isin(("full", "high"))]
 
     iho = load_iho_regions()[["MRGID", "location", "geometry"]]
 
