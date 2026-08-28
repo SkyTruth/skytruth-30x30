@@ -1,6 +1,6 @@
 """Tests for src/utils/geo.py: per-pixel raster areas (compute_pixel_area_map_km2),
-antimeridian repair (split_at_antimeridian) and robust geometry unioning
-(robust_unary_union)."""
+antimeridian repair (split_at_antimeridian), robust geometry unioning
+(robust_unary_union), and metric buffering (buffer_km)."""
 
 import geopandas as gpd
 import numpy as np
@@ -8,10 +8,14 @@ import pyproj
 import pytest
 from rasterio.crs import CRS
 from rasterio.transform import Affine, from_bounds
-from shapely.geometry import Point, Polygon, box
+from shapely.geometry import MultiPolygon, Point, Polygon, box
 from shapely.ops import transform as shp_transform
 
 from src.utils.geo import (
+    _ensure_valid,
+    _shift_negative_longitudes,
+    _wrap_to_180,
+    buffer_km,
     compute_pixel_area_map_km2,
     get_area_km2,
     robust_unary_union,
@@ -21,6 +25,7 @@ from src.utils.geo import (
 # True WGS84 ellipsoid surface area; the graticule areas should integrate to it.
 WGS84_SURFACE_KM2 = 510_065_621
 _TO_6933 = pyproj.Transformer.from_crs("EPSG:3857", "EPSG:6933", always_xy=True).transform
+GEOD = pyproj.Geod(ellps="WGS84")
 
 
 def _pixel_area_6933_km2(minx, miny, maxx, maxy):
@@ -208,3 +213,149 @@ def test_robust_unary_union_handles_invalid_self_intersecting_input():
 def test_robust_unary_union_empty_input_returns_empty():
     result = robust_unary_union([])
     assert result.is_empty
+
+
+# ---------- buffer_km ----------
+
+
+def _max_longitude(geom):
+    """Largest absolute longitude anywhere in ``geom``."""
+    minx, _, maxx, _ = geom.bounds
+    return max(abs(minx), abs(maxx))
+
+
+def test_buffer_km_radius_is_geodesically_accurate():
+    """AEQD projection is centred on the geometry. Buffering a point
+    must put every vertex exactly ``km`` away on the ellipsoid."""
+    lon, lat, km = 12.0, -37.0, 100
+    result = buffer_km(Point(lon, lat), km=km)
+
+    xs, ys = result.exterior.coords.xy
+    distances = [GEOD.inv(lon, lat, x, y)[2] for x, y in zip(xs, ys, strict=True)]
+    assert min(distances) == pytest.approx(km * 1_000, rel=1e-3)
+    assert max(distances) == pytest.approx(km * 1_000, rel=1e-3)
+
+
+def test_buffer_km_contains_original_and_grows_with_distance():
+    sea = box(-5, -5, 5, 5)
+    small = buffer_km(sea, km=10)
+    large = buffer_km(sea, km=200)
+
+    assert small.contains(sea)
+    assert large.contains(small)
+
+
+def test_buffer_km_rejects_non_wgs84_input():
+    """Reprojecting internally would cost two extra passes over every coordinate,
+    so a non-4326 CRS is refused rather than silently handled."""
+    with pytest.raises(ValueError, match="EPSG:4326"):
+        buffer_km(box(0, 0, 1, 1), km=5, src_crs="EPSG:3857")
+
+
+@pytest.mark.parametrize(
+    "polar",
+    [box(-10, 89.9995, 10, 90), box(-10, -90, 10, -89.9995)],
+    ids=["north", "south"],
+)
+def test_buffer_km_rejects_pole_touching_geometry(polar):
+    with pytest.raises(NotImplementedError, match="pole"):
+        buffer_km(polar, km=5)
+
+
+@pytest.mark.parametrize("geom", [None, Polygon()], ids=["none", "empty"])
+def test_buffer_km_passes_through_none_and_empty(geom):
+    assert buffer_km(geom, km=5) is geom
+
+
+def test_buffer_km_repairs_invalid_input():
+    """``process_buffered_iho`` relies on the result being valid, so an invalid
+    input must come back repaired rather than propagating."""
+    bowtie = Polygon([(0, 0), (2, 2), (2, 0), (0, 2)])
+    assert not bowtie.is_valid
+
+    result = buffer_km(bowtie, km=10)
+    assert result.is_valid
+    assert result.area > 0
+
+
+def test_buffer_km_splits_antimeridian_crossing_geometry():
+    """A span wider than 180° is read as crossing the antimeridian: it is shifted
+    into 0–360 to be buffered continuously, then split back into -180–180 parts."""
+    # minx/maxx of -170/170 spans 340°, so this is the 20°-wide strip through 180°.
+    crossing = box(-170, -5, 170, 5)
+    result = buffer_km(crossing, km=50)
+
+    assert result.is_valid
+    assert isinstance(result, MultiPolygon)
+    assert len(result.geoms) == 2
+    assert _max_longitude(result) <= 180
+
+    # One part hugs each side of the antimeridian.
+    assert {geom.bounds[0] < -170 for geom in result.geoms} == {True, False}
+
+
+def test_buffer_km_keeps_ordinary_geometry_off_the_antimeridian():
+    """The >180° span check must not fire on a normal mid-ocean polygon."""
+    result = buffer_km(box(-20, -5, 20, 5), km=50)
+
+    assert isinstance(result, Polygon)
+    assert result.bounds[0] < -20 and result.bounds[2] > 20
+
+
+# ---------- _wrap_to_180 ----------
+
+
+def test_wrap_to_180_leaves_in_range_geometry_alone():
+    assert _wrap_to_180(box(0, 0, 10, 10)).area == pytest.approx(100)
+
+
+def test_wrap_to_180_splits_geometry_crossing_antimeridian():
+    """An unwrapped 170–190 strip becomes two parts, with total area preserved."""
+    result = _wrap_to_180(box(170, 0, 190, 10))
+
+    assert isinstance(result, MultiPolygon)
+    assert len(result.geoms) == 2
+    assert result.area == pytest.approx(200)
+    assert _max_longitude(result) <= 180
+
+
+def test_wrap_to_180_translates_fully_shifted_geometry():
+    """Wholly beyond 180 means no split, just a translation back into range."""
+    result = _wrap_to_180(box(200, 0, 210, 10))
+
+    assert result.bounds == pytest.approx((-160, 0, -150, 10))
+    assert result.area == pytest.approx(100)
+
+
+@pytest.mark.parametrize("geom", [None, Polygon()], ids=["none", "empty"])
+def test_wrap_to_180_passes_through_none_and_empty(geom):
+    assert _wrap_to_180(geom) is geom
+
+
+# ---------- _ensure_valid / _shift_negative_longitudes ----------
+
+
+def test_ensure_valid_returns_already_valid_geometry_untouched():
+    """The whole point of the is_valid check is to skip make_valid's rebuild,
+    so a valid geometry must come back as the same object."""
+    valid = box(0, 0, 1, 1)
+    assert _ensure_valid(valid) is valid
+
+
+def test_ensure_valid_repairs_invalid_geometry():
+    bowtie = Polygon([(0, 0), (2, 2), (2, 0), (0, 2)])
+    assert not bowtie.is_valid
+    assert _ensure_valid(bowtie).is_valid
+
+
+def test_shift_negative_longitudes_handles_scalars_and_arrays():
+    assert _shift_negative_longitudes(-170.0, 5.0) == (190.0, 5.0)
+    assert _shift_negative_longitudes(170.0, 5.0) == (170.0, 5.0)
+
+    shifted_x, y = _shift_negative_longitudes(np.array([-170.0, 170.0]), np.array([5.0, 5.0]))
+    assert np.allclose(shifted_x, [190.0, 170.0])
+    assert np.allclose(y, [5.0, 5.0])
+
+
+def test_shift_negative_longitudes_preserves_z():
+    assert _shift_negative_longitudes(-170.0, 5.0, 3.0) == (190.0, 5.0, 3.0)

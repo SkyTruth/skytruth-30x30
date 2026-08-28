@@ -265,7 +265,6 @@ def generate_marine_protection_level_stats_table(
     mpa_file_name: str = MPATLAS_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     high_seas_params: dict = HIGH_SEAS_PARAMS,
-    tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
@@ -394,7 +393,6 @@ def generate_marine_protection_level_stats_table(
     iho_protection_level = compute_iho_protection_level(
         bucket=bucket,
         mpa_file_name=mpa_file_name,
-        tolerance=tolerance,
         verbose=verbose,
     )
 
@@ -420,7 +418,7 @@ def generate_marine_protection_level_stats_table(
 
 def get_iho_fishing_protection_region_stats(sites_file_name, bucket=BUCKET, verbose=True):
     # Load the simplified IHO sea areas at the requested tolerance.
-    iho = load_iho_regions().rename(columns={"area": "total_area"})
+    iho = load_iho_regions(buffer=True).rename(columns={"area": "total_area"})
 
     # Load the current Protected Seas sites.
     ps_sites = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)

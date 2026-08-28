@@ -373,7 +373,7 @@ def create_mangroves_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions()
+    iho = load_iho_regions(buffer=True)
 
     locations = gpd.GeoDataFrame(
         pd.concat(
@@ -593,7 +593,7 @@ def create_climate_resilient_corals_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas for coral coverage"})
-    iho = load_iho_regions()
+    iho = load_iho_regions(buffer=True)
 
     if verbose:
         logger.info({"message": f"downloading coral raster from {coral_source_file}"})
