@@ -1,11 +1,12 @@
 import pandas as pd
+from shapely.ops import unary_union
 from shapely.validation import make_valid
 
 from src.core.commons import (
+    add_tolerance_suffix,
     compute_global_area,
     get_wdpa_global_value,
     intersect_mpatlas_with_iho,
-    intersect_wdpa_with_iho,
     load_iho_regions,
     load_regions,
     load_wdpa_global,
@@ -16,6 +17,7 @@ from src.core.params import (
     MPATLAS_FILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
+    WDPA_MARINE_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
@@ -23,7 +25,7 @@ from src.core.processors import (
     extract_column_dict_str,
     remove_columns,
 )
-from src.utils.gcp import read_dataframe
+from src.utils.gcp import read_dataframe, read_json_df
 from src.utils.geo import robust_unary_union
 from src.utils.logger import Logger
 
@@ -32,13 +34,20 @@ logger = Logger()
 
 def compute_iho_protection_coverage(
     bucket: str = BUCKET,
+    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
     tolerance: float = marine_tolerance,
     verbose: bool = True,
 ) -> pd.DataFrame:
+    pa_file = add_tolerance_suffix(marine_pa_file_name, tolerance)
+
     if verbose:
         logger.info({"message": "loading IHO sea areas from shared datasets"})
     iho = load_iho_regions()
+
+    if verbose:
+        logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
+    pas = read_json_df(bucket_name=bucket, filename=pa_file)
 
     if verbose:
         logger.info(
@@ -49,15 +58,13 @@ def compute_iho_protection_coverage(
     wdpa_global = load_wdpa_global(bucket, wdpa_global_level_file_name)
     global_marine_area = compute_global_area(wdpa_global, "marine")
 
-    pairs = intersect_wdpa_with_iho(bucket=bucket, tolerance=tolerance)
-    by_sea = dict(list(pairs.groupby("MRGID", sort=False)))
-
-    # The join validates its own inputs, but `total_area` below is measured off
-    # this frame: 4 of the 102 IHO geometries are invalid, and repairing the
-    # South Pacific Ocean moves its area by ~5,900 km².
     iho_proj = iho.to_crs(epsg=6933)
-    iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
+    pas_proj = pas.to_crs(epsg=6933)
 
+    iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
+    pas_proj["geometry"] = pas_proj.geometry.apply(make_valid)
+
+    sindex = pas_proj.sindex
     results = []
 
     empty_stats = {
@@ -76,16 +83,33 @@ def compute_iho_protection_coverage(
             "total_area": round(sea.geometry.area / 1e6, 2),
         }
 
-        clipped = by_sea.get(sea["MRGID"])
-        if clipped is None:
+        # Use the spatial index to cheaply narrow the full PA dataset to features
+        # whose bounding boxes overlap this sea's bounding box.
+        candidates = list(sindex.intersection(sea.geometry.bounds))
+        if not candidates:
             results.append({**base, **empty_stats})
             continue
 
-        # The pieces are already sea ∩ PA, so dissolving them gives sea ∩ union(PAs):
-        # shared portions of overlapping designations are counted only once.
-        protected_area = robust_unary_union(clipped.geometry).area / 1e6
-        pa_area = robust_unary_union(clipped[clipped["PA_DEF"] == 1].geometry).area / 1e6
-        oecm_area = robust_unary_union(clipped[clipped["PA_DEF"] == 0].geometry).area / 1e6
+        # Apply the exact geometry so that only the actual intersections
+        # contribute to the protected-area count and coverage calculations below.
+        actual = pas_proj.iloc[candidates]
+        actual = actual[actual.intersects(sea.geometry)]
+        if actual.empty:
+            results.append({**base, **empty_stats})
+            continue
+
+        pa = actual[actual["PA_DEF"] == 1]
+        oecm = actual[actual["PA_DEF"] == 0]
+
+        # Dissolve overlaps so shared portions of protected polygons are counted only once.
+        combined_union = unary_union(actual.geometry)
+        pa_union = unary_union(pa.geometry) if not pa.empty else None
+        oecm_union = unary_union(oecm.geometry) if not oecm.empty else None
+
+        # Clip each dissolved geometry to the sea and convert its area from m² to km².
+        protected_area = sea.geometry.intersection(combined_union).area / 1e6
+        pa_area = sea.geometry.intersection(pa_union).area / 1e6 if pa_union else 0.0
+        oecm_area = sea.geometry.intersection(oecm_union).area / 1e6 if oecm_union else 0.0
 
         # Calculate sea coverage and the PA/OECM shares of its protected area.
         coverage = (protected_area / base["total_area"]) * 100 if base["total_area"] else 0.0
@@ -101,7 +125,7 @@ def compute_iho_protection_coverage(
             {
                 **base,
                 "protected_area": round(protected_area, 2),
-                "protected_areas_count": len(clipped),
+                "protected_areas_count": len(actual),
                 "coverage": round(coverage, 2),
                 "pas": round(pas_pct, 2),
                 "oecms": round(oecms_pct, 2),

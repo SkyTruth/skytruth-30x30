@@ -6,7 +6,6 @@ import pytest
 from shapely.geometry import Polygon, box
 
 import src.methods.protection_coverage as protection_coverage
-from src.utils.geo import intersect_features_with_regions
 
 
 def _iho_gdf(rows):
@@ -24,13 +23,12 @@ def _run_coverage(monkeypatch, iho, pas, wdpa_global):
         lambda: iho.copy(),
     )
     monkeypatch.setattr(
-        protection_coverage, "load_wdpa_global", lambda *_, **__: wdpa_global.copy()
-    )
-    # Stand in for the GCS-backed join, running the real overlay over the fixtures.
-    monkeypatch.setattr(
         protection_coverage,
-        "intersect_wdpa_with_iho",
-        lambda **_: intersect_features_with_regions(pas.copy(), iho.copy()),
+        "read_json_df",
+        lambda **_: pas.copy(),
+    )
+    monkeypatch.setattr(
+        protection_coverage, "load_wdpa_global", lambda *_, **__: wdpa_global.copy()
     )
     return protection_coverage.compute_iho_protection_coverage(
         bucket="bucket", tolerance=0.1, verbose=False
@@ -219,7 +217,7 @@ def test_country_global_coverage_calculates_unrounded_abnj_area(
     )
 
 
-def test_iho_coverage_returns_zero_for_a_sea_with_no_protected_areas(monkeypatch, wdpa_global):
+def test_iho_coverage_returns_zero_when_spatial_index_has_no_candidates(monkeypatch, wdpa_global):
     """Return zero coverage when no protected-area bounding boxes overlap a sea."""
     iho = _iho_gdf([{"MRGID": 10, "geometry": box(0, 0, 1000, 1000)}])
     pas = _pa_gdf([{"PA_DEF": 1, "geometry": box(5000, 5000, 6000, 6000)}])
@@ -237,9 +235,7 @@ def test_iho_coverage_returns_zero_for_a_sea_with_no_protected_areas(monkeypatch
     assert result["global_contribution"] == 0.0
 
 
-def test_iho_coverage_ignores_a_pa_whose_bounds_overlap_but_geometry_does_not(
-    monkeypatch, wdpa_global
-):
+def test_iho_coverage_discards_bbox_false_positive(monkeypatch, wdpa_global):
     """Discard bounding-box candidates whose actual geometries do not intersect."""
     iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 1000, 1000)}])
     # The bounding boxes overlap in the 900-1000 corner, but the triangle itself
