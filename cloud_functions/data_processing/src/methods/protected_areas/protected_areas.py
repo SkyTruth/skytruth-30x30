@@ -226,7 +226,7 @@ def generate_protected_areas_table(
     mpa_pairs = intersect_mpatlas_with_iho(bucket=bucket)
 
     # Add IHO intersection area to MPAtlas and WDPA tables.
-    
+
     mpa_pairs["zone_id"] = mpa_pairs["zone_id"].astype(mpatlas["zone_id"].dtype)
     mpa_pairs = (
         mpa_pairs[["zone_id", "location", "intersection_area_km2"]]
