@@ -2,7 +2,12 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
-from src.core.commons import add_tolerance_suffix
+from src.core.commons import (
+    add_tolerance_suffix,
+    intersect_mpatlas_with_iho,
+    intersect_wdpa_with_iho,
+)
+from src.core.land_cover_params import terrestrial_tolerance
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
@@ -218,6 +223,25 @@ def generate_protected_areas_table(
         logger.info({"message": "loading PA metadata"})
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
+    mpa_pairs = intersect_mpatlas_with_iho(bucket=bucket)
+
+    # Add IHO intersection area to MPAtlas and WDPA tables.
+    
+    mpa_pairs["zone_id"] = mpa_pairs["zone_id"].astype(mpatlas["zone_id"].dtype)
+    mpa_pairs = (
+        mpa_pairs[["zone_id", "location", "intersection_area_km2"]]
+        .merge(mpatlas.drop(columns=["country", "calculated_area_km2"]), on="zone_id", how="inner")
+        .rename(columns={"location": "country", "intersection_area_km2": "calculated_area_km2"})
+    )
+    mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
+
+    wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket, tolerance=terrestrial_tolerance)
+    wdpa_pairs = (
+        wdpa_pairs[["WDPA_PID", "location", "intersection_area_km2"]]
+        .merge(wdpa.drop(columns=["ISO3", "calculated_area_km2"]), on="WDPA_PID", how="inner")
+        .rename(columns={"location": "ISO3", "intersection_area_km2": "calculated_area_km2"})
+    )
+    wdpa = pd.concat([wdpa, wdpa_pairs], axis=0, ignore_index=True)
 
     eez_file_name = add_tolerance_suffix(eez_file_name, tolerance)
     gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
