@@ -276,7 +276,6 @@ LONG_RUNNING_TASKS = [
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
     "process_marine_unep_habitats",
-    "process_mangroves",
     "generate_habitat_protection_table",
     "process_mangroves",
 ]

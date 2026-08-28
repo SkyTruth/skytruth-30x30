@@ -77,9 +77,9 @@ from src.utils.gcp import (
     upload_gdf,
 )
 from src.utils.geo import (
+    buffer_km,
     get_area_km2,
     robust_unary_union,
-    split_at_antimeridian,
     tile_geometry,
 )
 from src.utils.logger import Logger
@@ -752,14 +752,12 @@ def _buffer_unep_points(
     buffered["geometry"] = buffered.geometry.buffer(np.sqrt(area_km2 / np.pi) * 1000)
     buffered = buffered.to_crs(points.crs)
 
-    # Split buffer polygons that wrap the antimeridian
-    longitudes = points.geometry.x
     wrapped = buffered.geometry.bounds.eval("maxx - minx") > 180
     if wrapped.any():
         buffered.loc[wrapped, "geometry"] = [
-            split_at_antimeridian(geom, reference_lon)
-            for geom, reference_lon in zip(
-                buffered.geometry[wrapped], longitudes[wrapped], strict=True
+            buffer_km(point, km=radius_km)
+            for point, radius_km in zip(
+                points.geometry[wrapped], np.sqrt(area_km2[wrapped] / np.pi), strict=True
             )
         ]
 
@@ -839,7 +837,7 @@ def process_marine_unep_habitats(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions()
+    iho = load_iho_regions(buffer=True)
 
     regions = gpd.GeoDataFrame(
         pd.concat(

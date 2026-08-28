@@ -464,7 +464,7 @@ def create_unep_habitats_subtable(
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions()
+    iho = load_iho_regions(buffer=True)
 
     locations = gpd.GeoDataFrame(
         pd.concat(
