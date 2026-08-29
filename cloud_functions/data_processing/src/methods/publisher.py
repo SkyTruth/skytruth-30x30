@@ -26,9 +26,9 @@ from src.core.params import (
     GADM_FILE_NAME,
     GADM_URL,
     GADM_ZIPFILE_NAME,
+    HABITAT_PROCESSING_PARAMS,
     HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
-    IHO_SEA_AREAS_PARAMS,
     LONG_RUNNING_TASKS,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
@@ -37,7 +37,6 @@ from src.core.params import (
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCES,
-    UNEP_HABITATS,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
@@ -68,9 +67,8 @@ from src.methods.static_processes import (
     process_eez_geoms,
     process_eez_land_union,
     process_gadm_geoms,
-    process_iho_sea_areas,
-    process_mangroves,
-    process_marine_unep_habitats,
+    process_marine_habitat_geoms,
+    process_near_shore_iho,
     process_terrestrial_biome_raster,
 )
 from src.methods.subtract_geometries import (
@@ -344,19 +342,6 @@ def dispatch_publisher(
             )
             step_list = ["process_eez_land_union"]
 
-        case "download_iho_sea_areas":
-            download_zip_to_gcs(
-                url=MARINE_REGIONS_URL,
-                bucket_name=BUCKET,
-                blob_name=IHO_SEA_AREAS_PARAMS["zipfile_name"],
-                data=MARINE_REGIONS_BODY,
-                params=IHO_SEA_AREAS_PARAMS,
-                headers=MARINE_REGIONS_HEADERS,
-                chunk_size=CHUNK_SIZE,
-                verbose=verbose,
-            )
-            step_list = ["process_iho_sea_areas"]
-
         case "process_gadm":
             process_gadm_geoms(verbose=verbose)
             step_list = ["generate_locations_table"]
@@ -377,44 +362,40 @@ def dispatch_publisher(
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
-            step_list = ["process_mangroves", "process_marine_unep_habitats"]
-
-        case "process_iho_sea_areas":
-            process_iho_sea_areas(verbose=verbose)
-            step_list = ["process_mangroves", "process_marine_unep_habitats"]
+            step_list = ["process_marine_habitat_geoms"]
 
         case "download_marine_habitats":
             habitat = data.get("HABITAT")
             download_marine_habitats(habitats=habitat, verbose=verbose)
 
             requested = [habitat] if isinstance(habitat, str) else habitat
-            unep_requested = [name for name in requested or [] if name in UNEP_HABITATS]
+            geom_requested = [name for name in requested or [] if name in HABITAT_PROCESSING_PARAMS]
 
             step_list = []
-            if requested is None or "mangroves" in requested:
-                step_list.append("process_mangroves")
-            if requested is None or unep_requested:
-                task_config["HABITAT"] = unep_requested or None
-                step_list.append("process_marine_unep_habitats")
+            if requested is None or geom_requested:
+                task_config["HABITAT"] = geom_requested or None
+                step_list.append("process_marine_habitat_geoms")
 
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)
             step_list = ["generate_terrestrial_biome_stats_country"]
 
-        case "process_mangroves":
-            process_mangroves(verbose=verbose)
-            step_list = ["generate_habitat_protection_table"]
+        case "process_near_shore_iho":
+            process_near_shore_iho(verbose=verbose)
+            step_list = ["process_marine_habitat_geoms"]
 
-        case "process_marine_unep_habitats":
+        case "process_marine_habitat_geoms":
             habitat = data.get("HABITAT")
-            habitat = [habitat] if isinstance(habitat, str) else list(habitat or UNEP_HABITATS)
+            if isinstance(habitat, str):
+                habitat = [habitat]
+            habitat = list(habitat or HABITAT_PROCESSING_PARAMS)
             current, remaining = habitat[0], habitat[1:]
 
-            process_marine_unep_habitats(habitats=current, verbose=verbose)
+            process_marine_habitat_geoms(habitats=current, verbose=verbose)
 
             if remaining:
                 task_config["HABITAT"] = remaining
-                step_list = ["process_marine_unep_habitats"]
+                step_list = ["process_marine_habitat_geoms"]
             else:
                 step_list = ["generate_habitat_protection_table"]
 
@@ -499,6 +480,10 @@ def dispatch_publisher(
                             "update_terrestrial_protected_areas_tileset",
                         ]
                     )
+
+        # ------------------------------------
+        #   Conservation Builder table updates
+        # ------------------------------------
 
         case "generate_gadm_minus_pa":
             generate_total_area_minus_pa(

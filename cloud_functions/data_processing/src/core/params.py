@@ -63,13 +63,6 @@ EEZ_LAND_UNION_PARAMS = {
     "shapefile_name": "EEZ_land_union_v4_202410.shp",
 }
 
-IHO_SEA_AREAS_PARAMS = {
-    "name": "World_Seas_IHO_v3.zip",
-    "zipfile_name": "static/iho_sea_areas.zip",
-    "shapefile_name": "World_Seas_IHO_v3.shp",
-}
-IHO_SEA_AREAS_FILE_NAME = "static/iho_sea_areas_processed.parquet"
-
 EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 
 MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"
@@ -98,7 +91,7 @@ LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
 #                    MPATLAS
 # ------------------------------------------------------------
 
-MPATLAS_URL = "https://guide.mpatlas.org/api/v2/zone/geojson"
+MPATLAS_URL = "https://guide.mpatlas.org/api/public/v4/zone/geojson"
 MPATLAS_FILE_NAME = "raw/mpatlas_zone_assessment.geojson"
 MPATLAS_META_FILE_NAME = "intermediates/mpa_meta.csv"
 ARCHIVE_MPATLAS_FILE_NAME = f"archive/raw/mpatlas_zone_assessment_{today_formatted}.geojson"
@@ -180,32 +173,48 @@ MARINE_HABITAT_PARAMS = {
         "url": MANGROVES_URL,
         "file_name": MANGROVES_FILE_NAME,
         "archive_file_name": ARCHIVE_MANGROVES_FILE_NAME,
+        "needs_processing": True,
+        "source": "gpkg",
+        "overlaps": False,
     },
     "seamounts": {
         "url": SEAMOUNTS_URL,
         "file_name": SEAMOUNTS_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_SEAMOUNTS_FILE_NAME,
+        "needs_processing": False,
     },
     "coldwatercorals": {
         "url": COLD_WATER_CORALS_URL,
         "file_name": COLD_WATER_CORALS_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
     },
     "saltmarshes": {
         "url": SALTMARSHES_URL,
         "file_name": SALTMARSHES_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_SALTMARSHES_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
     },
     "seagrasses": {
         "url": SEAGRASSES_URL,
         "file_name": SEAGRASSES_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_SEAGRASSES_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
     },
 }
-UNEP_HABITATS = {
-    habitat: MARINE_HABITAT_PARAMS[habitat]
-    for habitat in ("coldwatercorals", "saltmarshes", "seagrasses")
+
+HABITAT_PROCESSING_PARAMS = {
+    habitat: params
+    for habitat, params in MARINE_HABITAT_PARAMS.items()
+    if params["needs_processing"]
 }
+
 UNEP_POINT_AREA_KM2 = 1.0
 MARINE_HABITAT_TOLERANCE = 0.0001
 HABITAT_BY_LOCATION_FILE_PATTERN = "static/{habitat}_by_location.parquet"
@@ -244,6 +253,8 @@ LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
 RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
+NEAR_SHORE_BUFFER_KM = 10
+NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
 
 # ------------------------------------------------------------
 #                     Conservation Builder
@@ -280,7 +291,6 @@ LONG_RUNNING_TASKS = [
     "generate_protected_areas_table",
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
-    "process_marine_unep_habitats",
-    "process_mangroves",
+    "process_marine_habitat_geoms",
     "generate_habitat_protection_table",
 ]

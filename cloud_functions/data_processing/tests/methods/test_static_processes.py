@@ -896,7 +896,7 @@ def test_unknown_habitats_raise_before_downloading_anything(download_recorder, h
 
 
 # ---------------------------------------------------------------------------
-# Tests for process_mangroves
+# Tests for process_marine_habitat_geoms
 # ---------------------------------------------------------------------------
 
 
@@ -918,7 +918,7 @@ def mangrove_extent():
 
 @pytest.fixture
 def mangrove_regions():
-    """The land/EEZ union and IHO sea areas process_mangroves dissolves by.
+    """The land/EEZ union and IHO sea areas process_marine_habitat_geoms dissolves by.
 
     AAA and BBB are adjacent; the IHO sea area sits away from both.
     """
@@ -926,13 +926,15 @@ def mangrove_regions():
         {"location": ["AAA", "BBB"], "geometry": [box(0, 0, 2, 2), box(2, 0, 4, 2)]},
         crs="EPSG:4326",
     )
-    iho = gpd.GeoDataFrame({"MRGID": [999], "geometry": [box(9, 9, 11, 11)]}, crs="EPSG:4326")
+    iho = gpd.GeoDataFrame(
+        {"MRGID": [999], "location": ["999"], "geometry": [box(9, 9, 11, 11)]}, crs="EPSG:4326"
+    )
     return gadm_eez_union, iho
 
 
 @pytest.fixture
 def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
-    """Wire process_mangroves up to in-memory inputs and record what it writes."""
+    """Wire process_marine_habitat_geoms up to in-memory inputs and record what it writes."""
     gadm_eez_union, iho = mangrove_regions
     uploads = []
     saved_json = []
@@ -943,7 +945,7 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
     def _read_json_df(bucket, blob_name, verbose=True):
         return gadm_eez_union.copy()
 
-    def _read_parquet(bucket, blob_name, verbose=True):
+    def _load_iho_regions(buffer=False):
         return iho.copy()
 
     def _save_json_to_gcs(bucket, data, blob_name, project=None, verbose=True):
@@ -954,21 +956,20 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
 
     monkeypatch.setattr(static_processes, "read_gzipped_gpkg_from_gcs", _read_gpkg, raising=True)
     monkeypatch.setattr(static_processes, "read_json_df", _read_json_df, raising=True)
-    monkeypatch.setattr(static_processes, "read_parquet_from_gcs", _read_parquet, raising=True)
+    monkeypatch.setattr(static_processes, "load_iho_regions", _load_iho_regions, raising=True)
     monkeypatch.setattr(static_processes, "save_json_to_gcs", _save_json_to_gcs, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", _upload_gdf, raising=True)
 
     return uploads, saved_json
 
 
-def test_process_mangroves_dissolves_by_location(mangrove_recorders):
+def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_recorders):
     """One row per location holding mangroves, IHO sea areas included."""
     uploads, _ = mangrove_recorders
 
-    static_processes.process_mangroves(
-        mangroves_file_name="habitats/mangroves.gpkg.gz",
+    static_processes.process_marine_habitat_geoms(
+        habitats="mangroves",
         gadm_eez_union_file_name="GADM_eez_union.geojson",
-        iho_file_name="static/iho.parquet",
         by_location_file_pattern="static/{habitat}_by_location.parquet",
         global_area_file_pattern="intermediates/global_{habitat}_area.json",
         bucket="test-bucket",

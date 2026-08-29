@@ -5,6 +5,7 @@ import tempfile
 import time
 import traceback
 import zipfile
+from functools import cache
 from io import BytesIO
 
 import fiona
@@ -14,10 +15,12 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
+from joblib import Parallel, delayed
 from rasterio.mask import mask
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
 from shapely.ops import unary_union
 from shapely.validation import make_valid
+from skytruth_shared_datasets import Catalog
 from tqdm.auto import tqdm
 
 from src.core.params import (
@@ -26,6 +29,8 @@ from src.core.params import (
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
+    NEAR_SHORE_BUFFER_KM,
+    NEAR_SHORE_IHO_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -36,13 +41,142 @@ from src.utils.gcp import (
     duplicate_blob,
     read_dataframe,
     read_json_from_gcs,
+    read_parquet_from_gcs,
 )
-from src.utils.geo import compute_pixel_area_map_km2
+from src.utils.geo import buffer_km, compute_pixel_area_map_km2
 from src.utils.logger import Logger
 
 logger = Logger()
 
 SLACK_ALERTS_WEBHOOK = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
+MEDI_MRGID = [4280, 3315, 3351, 4279, 3322, 3324, 3346, 3369, 3386, 3314, 3363]
+
+# TODO: We currently do not buffer the Arctic Ocean or Southern Ocean because
+# of complexities in buffering in polar regions and regions that wrap around.
+# The current buffer exists to catch mangroves and saltmarshes that the IHO
+# coastline misses, and neither occurs in the Arctic. If needed in the future
+# we will have to add complexity to the buffering method
+UNBUFFERED_MRGID = {1906, 1907}  # Arctic Ocean
+
+
+def stitch_mediterannean(iho):
+    iho = iho.copy()
+
+    medi = iho[iho["MRGID"].isin(MEDI_MRGID)].dissolve().reset_index(drop=True)
+
+    # Recompute the geometry-derived fields from the dissolved polygon
+    bounds = medi.total_bounds  # (minx, miny, maxx, maxy) in the layer CRS (4326)
+    centroid = medi.to_crs(epsg=6933).geometry.centroid.to_crs(epsg=4326).iloc[0]
+
+    medi["NAME"] = "Mediterranean Region"
+    medi["ID"] = None
+    medi["MRGID"] = "MEDI"
+    medi["Longitude"] = centroid.x
+    medi["Latitude"] = centroid.y
+    medi["min_X"], medi["min_Y"], medi["max_X"], medi["max_Y"] = bounds
+    medi["area"] = medi.to_crs(epsg=6933).geometry.area.iloc[0] / 1e6
+
+    iho["MRGID"] = iho["MRGID"].astype(str)
+    iho = pd.concat((iho, medi), axis=0, ignore_index=True)
+
+    return iho
+
+
+def _subtract_neighbors(idx, geom, neighbor_geoms):
+    """Subtract a buffered region's neighboring (unbuffered) regions from it."""
+    return idx, geom.difference(unary_union(neighbor_geoms))
+
+
+def process_buffered_iho(iho, km=NEAR_SHORE_BUFFER_KM, n_jobs=-1):
+    """
+    buffers IHO regions and clips them to neighboring IHO bounds
+    """
+
+    invalid = ~iho.geometry.is_valid
+    if invalid.any():
+        names = ", ".join(iho.loc[invalid, "NAME"].astype(str))
+        logger.warning({"message": f"repairing invalid IHO geometries: {names}"})
+        iho = iho.copy()
+        iho["geometry"] = iho.geometry.make_valid()
+
+    logger.info({"message": f"buffering IHO sea areas by {km} km"})
+
+    def _buffer_km(geom):
+        return buffer_km(geom, km=km, src_crs=iho.crs)
+
+    # See UNBUFFERED_MRGID: these are passed through untouched, so they are neither
+    # buffered nor clipped against their neighbours.
+    buffered_rows = ~iho["MRGID"].isin(UNBUFFERED_MRGID)
+
+    if not buffered_rows.all():
+        skipped = iho.loc[~buffered_rows, "NAME"].tolist()
+        logger.info({"message": f"leaving IHO sea areas unbuffered: {', '.join(skipped)}"})
+
+    iho_buffer = iho.copy()
+    iho_buffer.loc[buffered_rows, "geometry"] = iho_buffer.loc[
+        buffered_rows, "geometry"
+    ].progress_apply(_buffer_km)
+
+    invalid = ~iho_buffer.geometry.is_valid
+    if invalid.any():
+        names = ", ".join(iho_buffer.loc[invalid, "NAME"].astype(str))
+        raise ValueError(f"invalid geometries in buffered IHO areas: {names}")
+
+    iho_sindex = iho.sindex
+    geometries = iho.geometry.to_numpy()
+    mrgids = iho["MRGID"].to_numpy()
+
+    logger.info({"message": "clipping bounds to neighboring IHO sea areas"})
+    jobs = []
+    for idx, geom in iho_buffer.loc[buffered_rows].geometry.items():
+        positions = iho_sindex.query(geom, predicate="intersects")
+        positions = positions[mrgids[positions] != iho_buffer.at[idx, "MRGID"]]
+
+        if positions.size:
+            jobs.append((idx, geom, list(geometries[positions])))
+
+    clipped = Parallel(n_jobs=n_jobs, backend="loky", return_as="generator_unordered")(
+        delayed(_subtract_neighbors)(idx, geom, neighbor_geoms)
+        for idx, geom, neighbor_geoms in jobs
+    )
+
+    for idx, geom in tqdm(clipped, total=len(jobs), desc="clipping"):
+        iho_buffer.at[idx, "geometry"] = geom
+
+    return iho_buffer
+
+
+@cache
+def _load_iho_regions_cached(buffer=False):
+    """Memoized loader. The returned frame is shared by all callers"""
+    if not buffer:
+        logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
+        ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
+        water_bodies = gpd.read_file(ref.cache_path)
+
+    else:
+        if not gcsfs.GCSFileSystem().exists(f"{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME}"):
+            raise FileNotFoundError(
+                f"gs://{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME} not found. Run METHOD "
+                "process_near_shore_iho to build the near-shore IHO layer before loading it."
+            )
+
+        logger.info(
+            {"message": f"loading near-shore IHO from gs://{BUCKET}/{NEAR_SHORE_IHO_FILE_NAME}"}
+        )
+
+        water_bodies = read_parquet_from_gcs(BUCKET, NEAR_SHORE_IHO_FILE_NAME)
+
+    logger.info({"message": "stitching IHO regions to form Mediterranean"})
+    water_bodies = stitch_mediterannean(water_bodies)
+    water_bodies["location"] = water_bodies["MRGID"].astype(str)
+
+    return water_bodies
+
+
+def load_iho_regions(buffer=False):
+    """Load IHO regions, or the saved near-shore layer when ``buffer`` is True."""
+    return _load_iho_regions_cached(buffer=buffer).copy()
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
@@ -226,6 +360,25 @@ def load_wdpa_global(
     wdpa_global["value"] = wdpa_global["value"].astype(float)
 
     return wdpa_global
+
+
+def get_wdpa_global_value(wdpa_global: pd.DataFrame, stat_name: str) -> float:
+    return float(wdpa_global[wdpa_global["type"] == stat_name].iloc[0]["value"])
+
+
+def compute_global_area(wdpa_global: pd.DataFrame, environment: str) -> float:
+    """
+    Total global area in km² for an environment ("marine" or "terrestrial").
+
+    Protected Planet only publishes the protected area and the percentage of the
+    globe it covers, so the total is back-calculated from those two values.
+    """
+    wdpa_env = "ocean" if environment == "marine" else "land"
+
+    protected_area = get_wdpa_global_value(wdpa_global, f"total_{wdpa_env}_area_oecms_pas")
+    coverage = get_wdpa_global_value(wdpa_global, f"total_{wdpa_env}_oecms_pas_coverage_percentage")
+
+    return protected_area / (coverage / 100) if coverage else None
 
 
 def read_mpatlas_from_gcs(

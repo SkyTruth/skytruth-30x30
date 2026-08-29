@@ -5,6 +5,9 @@ from shapely.validation import make_valid
 
 from src.core.commons import (
     add_tolerance_suffix,
+    compute_global_area,
+    get_wdpa_global_value,
+    load_iho_regions,
     load_regions,
     load_wdpa_global,
     read_mpatlas_from_gcs,
@@ -12,7 +15,6 @@ from src.core.commons import (
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
-    IHO_SEA_AREAS_FILE_NAME,
     MPATLAS_FILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -24,7 +26,7 @@ from src.core.processors import (
     extract_column_dict_str,
     remove_columns,
 )
-from src.utils.gcp import read_dataframe, read_json_df, read_parquet_from_gcs
+from src.utils.gcp import read_dataframe, read_json_df
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -32,21 +34,29 @@ logger = Logger()
 
 def compute_iho_protection_coverage(
     bucket: str = BUCKET,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
     tolerance: float = marine_tolerance,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    iho_file = add_tolerance_suffix(iho_file_name, tolerance)
     pa_file = add_tolerance_suffix(marine_pa_file_name, tolerance)
 
     if verbose:
-        logger.info({"message": f"loading IHO sea areas from gs://{bucket}/{iho_file}"})
-    iho = read_parquet_from_gcs(bucket_name=bucket, filename=iho_file)
+        logger.info({"message": "loading IHO sea areas from shared datasets"})
+    iho = load_iho_regions()
 
     if verbose:
         logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
     pas = read_json_df(bucket_name=bucket, filename=pa_file)
+
+    if verbose:
+        logger.info(
+            {
+                "message": f"loading Protected Planet Global-level data gs://{bucket}/{wdpa_global_level_file_name}"
+            }
+        )
+    wdpa_global = load_wdpa_global(bucket, wdpa_global_level_file_name)
+    global_marine_area = compute_global_area(wdpa_global, "marine")
 
     iho_proj = iho.to_crs(epsg=6933)
     pas_proj = pas.to_crs(epsg=6933)
@@ -56,6 +66,15 @@ def compute_iho_protection_coverage(
 
     sindex = pas_proj.sindex
     results = []
+
+    empty_stats = {
+        "protected_area": 0.0,
+        "coverage": 0.0,
+        "pas": 0.0,
+        "oecms": 0.0,
+        "protected_areas_count": 0,
+        "global_contribution": 0.0,
+    }
 
     for _, sea in iho_proj.iterrows():
         base = {
@@ -68,16 +87,7 @@ def compute_iho_protection_coverage(
         # whose bounding boxes overlap this sea's bounding box.
         candidates = list(sindex.intersection(sea.geometry.bounds))
         if not candidates:
-            results.append(
-                {
-                    **base,
-                    "protected_area": 0.0,
-                    "coverage": 0.0,
-                    "pas": 0.0,
-                    "oecms": 0.0,
-                    "protected_areas_count": 0,
-                }
-            )
+            results.append({**base, **empty_stats})
             continue
 
         # Apply the exact geometry so that only the actual intersections
@@ -85,16 +95,7 @@ def compute_iho_protection_coverage(
         actual = pas_proj.iloc[candidates]
         actual = actual[actual.intersects(sea.geometry)]
         if actual.empty:
-            results.append(
-                {
-                    **base,
-                    "protected_area": 0.0,
-                    "coverage": 0.0,
-                    "pas": 0.0,
-                    "oecms": 0.0,
-                    "protected_areas_count": 0,
-                }
-            )
+            results.append({**base, **empty_stats})
             continue
 
         pa = actual[actual["PA_DEF"] == 1]
@@ -115,6 +116,11 @@ def compute_iho_protection_coverage(
         pas_pct = (pa_area / protected_area) * 100 if protected_area else 0.0
         oecms_pct = (oecm_area / protected_area) * 100 if protected_area else 0.0
 
+        # Share of the whole ocean that this sea's protected area accounts for.
+        global_contribution = (
+            (protected_area / global_marine_area) * 100 if global_marine_area else None
+        )
+
         results.append(
             {
                 **base,
@@ -123,6 +129,9 @@ def compute_iho_protection_coverage(
                 "coverage": round(coverage, 2),
                 "pas": round(pas_pct, 2),
                 "oecms": round(oecms_pct, 2),
+                "global_contribution": round(global_contribution, 2)
+                if global_contribution is not None
+                else None,
             }
         )
 
@@ -131,16 +140,12 @@ def compute_iho_protection_coverage(
 
 def compute_iho_protection_level(
     bucket: str = BUCKET,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     mpa_file_name: str = MPATLAS_FILE_NAME,
-    tolerance: float = marine_tolerance,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    iho_file = add_tolerance_suffix(iho_file_name, tolerance)
-
     if verbose:
-        logger.info({"message": f"loading IHO sea areas from gs://{bucket}/{iho_file}"})
-    iho = read_parquet_from_gcs(bucket_name=bucket, filename=iho_file)
+        logger.info({"message": "loading IHO sea areas from shared datasets"})
+    iho = load_iho_regions()
 
     if verbose:
         logger.info({"message": f"loading MPAtlas data from gs://{bucket}/{mpa_file_name}"})
@@ -221,7 +226,7 @@ def compute_country_global_coverage(
         )
         return wdpa_cl
 
-    def get_group_stats(df, loc, relations, percent_type):
+    def get_group_stats(df, loc, relations, percent_type, global_area):
         """
         Computes summary stats for a group of related locations.
         """
@@ -248,8 +253,6 @@ def compute_country_global_coverage(
                     * df_group["oecm_count"].sum()
                     / (df_group["pas_count"] + df_group["oecm_count"]).sum()
                 )
-            global_area = total_protected_area / (coverage / 100) if coverage > 0 else None
-
             return {
                 "location": loc,
                 "environment": df_group.iloc[0]["environment"] if not df_group.empty else None,
@@ -266,38 +269,40 @@ def compute_country_global_coverage(
         else:
             return None
 
-    def group_by_region(wdpa_cl, combined_regions):
+    def group_by_region(wdpa_cl, combined_regions, global_area):
         reg = pd.DataFrame(
             stat
             for loc in combined_regions
-            if (stat := get_group_stats(wdpa_cl, loc, combined_regions, percent_type)) is not None
+            if (stat := get_group_stats(wdpa_cl, loc, combined_regions, percent_type, global_area))
+            is not None
         )
         reg = reg[reg["protected_area"] > 0]
 
         return reg
 
     def add_global_stats(df, global_stats, environment):
-        def get_value(df, col):
-            return float(df[df["type"] == col].iloc[0]["value"])
-
         df = df.copy()
 
         environment2 = "ocean" if environment == "marine" else "land"
-        oecms_pas = get_value(global_stats, f"total_{environment2}_area_oecms_pas")
-        oecms = get_value(global_stats, f"total_{environment2}_area_oecms")
+        oecms_pas = get_wdpa_global_value(global_stats, f"total_{environment2}_area_oecms_pas")
+        oecms = get_wdpa_global_value(global_stats, f"total_{environment2}_area_oecms")
         pas = oecms_pas - oecms
-        coverage = get_value(global_stats, f"total_{environment2}_oecms_pas_coverage_percentage")
+        coverage = get_wdpa_global_value(
+            global_stats, f"total_{environment2}_oecms_pas_coverage_percentage"
+        )
 
         global_dict = {
             "location": "GLOB",
             "environment": environment,
-            "protected_area": get_value(global_stats, f"total_{environment2}_area_oecms_pas"),
-            "protected_areas_count": get_value(global_stats, f"total_{environment}_oecms_pas"),
+            "protected_area": oecms_pas,
+            "protected_areas_count": get_wdpa_global_value(
+                global_stats, f"total_{environment}_oecms_pas"
+            ),
             "coverage": coverage,
             "pas": 100 * pas / oecms_pas,
             "oecms": 100 * oecms / oecms_pas,
             "global_contribution": coverage,
-            "total_area": oecms_pas / (coverage / 100),
+            "total_area": compute_global_area(global_stats, environment),
         }
 
         df = pd.concat((df, pd.DataFrame([global_dict])), axis=0, ignore_index=True)
@@ -305,16 +310,16 @@ def compute_country_global_coverage(
         if environment == "terrestrial":
             return df
         else:
-            total_area = get_value(global_stats, "high_seas_pa_coverage_area")
-            global_ocean_area = oecms_pas / (coverage / 100)
-            oecms = get_value(wdpa_global, "total_ocean_area_oecms") - get_value(
-                wdpa_global, "national_waters_oecms_coverage_area"
-            )
-            oecms_pas = get_value(wdpa_global, "total_ocean_area_oecms_pas") - get_value(
-                wdpa_global, "national_waters_oecms_pas_coverage_area"
-            )
+            total_area = get_wdpa_global_value(global_stats, "high_seas_pa_coverage_area")
+            global_ocean_area = compute_global_area(global_stats, environment)
+            oecms = get_wdpa_global_value(
+                global_stats, "total_ocean_area_oecms"
+            ) - get_wdpa_global_value(global_stats, "national_waters_oecms_coverage_area")
+            oecms_pas = get_wdpa_global_value(
+                global_stats, "total_ocean_area_oecms_pas"
+            ) - get_wdpa_global_value(global_stats, "national_waters_oecms_pas_coverage_area")
             pas = oecms_pas - oecms
-            coverage = get_value(global_stats, "high_seas_pa_coverage_percentage")
+            coverage = get_wdpa_global_value(global_stats, "high_seas_pa_coverage_percentage")
             high_seas_dict = {
                 "location": "ABNJ",
                 "environment": environment,
@@ -325,7 +330,7 @@ def compute_country_global_coverage(
                 "oecms": 100 * oecms / oecms_pas,
                 "global_contribution": 100 * total_area / global_ocean_area,
                 "total_area": global_ocean_area
-                * get_value(wdpa_global, "global_ocean_percentage")
+                * get_wdpa_global_value(global_stats, "global_ocean_percentage")
                 / 100,
             }
 
@@ -348,6 +353,8 @@ def compute_country_global_coverage(
             }
         )
     wdpa_global = load_wdpa_global(bucket, wdpa_global_level_file_name)
+    global_marine_area = compute_global_area(wdpa_global, "marine")
+    global_terrestrial_area = compute_global_area(wdpa_global, "terrestrial")
 
     if verbose:
         logger.info({"message": "loading country and region groupings"})
@@ -363,8 +370,8 @@ def compute_country_global_coverage(
     if verbose:
         logger.info({"message": "Grouping by sovereign country and region"})
 
-    reg_t = group_by_region(wdpa_cl_t, combined_regions)
-    reg_m = group_by_region(wdpa_cl_m, combined_regions)
+    reg_t = group_by_region(wdpa_cl_t, combined_regions, global_terrestrial_area)
+    reg_m = group_by_region(wdpa_cl_m, combined_regions, global_marine_area)
 
     table = pd.concat((reg_t, reg_m), axis=0)
     table = table[table["total_area"] > 0]

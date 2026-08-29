@@ -6,6 +6,7 @@ from google.cloud import storage
 
 from src.core.commons import (
     add_tolerance_suffix,
+    load_iho_regions,
     load_marine_regions,
     load_mpatlas_country,
     load_mpatlas_global,
@@ -19,7 +20,6 @@ from src.core.params import (
     GADM_EEZ_UNION_FILE_NAME,
     HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
-    IHO_SEA_AREAS_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
@@ -226,7 +226,11 @@ def generate_protection_coverage_stats_table(
 
     if verbose:
         logger.info({"message": "computing IHO sea area protection coverage stats"})
-    iho_coverage = compute_iho_protection_coverage(bucket=bucket, verbose=verbose)
+    iho_coverage = compute_iho_protection_coverage(
+        bucket=bucket,
+        wdpa_global_level_file_name=wdpa_global_level_file_name,
+        verbose=verbose,
+    )
 
     protection_coverage_table = pd.concat(
         (country_global_coverage, iho_coverage), axis=0, ignore_index=True
@@ -261,7 +265,6 @@ def generate_marine_protection_level_stats_table(
     mpa_file_name: str = MPATLAS_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     high_seas_params: dict = HIGH_SEAS_PARAMS,
-    tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
@@ -390,7 +393,6 @@ def generate_marine_protection_level_stats_table(
     iho_protection_level = compute_iho_protection_level(
         bucket=bucket,
         mpa_file_name=mpa_file_name,
-        tolerance=tolerance,
         verbose=verbose,
     )
 
@@ -414,14 +416,9 @@ def generate_marine_protection_level_stats_table(
     return protection_level_table.to_dict(orient="records")
 
 
-def get_iho_fishing_protection_region_stats(
-    iho_file_name, sites_file_name, tolerance, bucket=BUCKET, verbose=True
-):
+def get_iho_fishing_protection_region_stats(sites_file_name, bucket=BUCKET, verbose=True):
     # Load the simplified IHO sea areas at the requested tolerance.
-    iho = read_parquet_from_gcs(
-        bucket_name=bucket,
-        filename=add_tolerance_suffix(iho_file_name, tolerance),
-    ).rename(columns={"area": "total_area"})
+    iho = load_iho_regions(buffer=True).rename(columns={"area": "total_area"})
 
     # Load the current Protected Seas sites.
     ps_sites = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
@@ -456,7 +453,6 @@ def generate_fishing_protection_table(
     project: str = PROJECT,
     protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
     fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     verbose: bool = True,
 ):
@@ -595,7 +591,7 @@ def generate_fishing_protection_table(
         (
             fishing_protection_table,
             get_iho_fishing_protection_region_stats(
-                iho_file_name, sites_file_name, marine_tolerance, bucket=bucket, verbose=verbose
+                sites_file_name, bucket=bucket, verbose=verbose
             ),
         ),
         axis=0,
