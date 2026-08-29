@@ -492,6 +492,14 @@ def extract_column_dict_str(
     return df
 
 
+def filter_protected_planet(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    """Drop the sites that Protected Planet leaves out of its coverage statistics: 
+    proposed sites and sites with no reported designation status, following the criteria at
+    https://www.protectedplanet.net/en/resources/calculating-protected-area-coverage
+    """
+    return df[~df["STATUS"].isin(["Proposed", "Not Reported"])].reset_index(drop=True)
+
+
 def fp_location(df: pd.DataFrame) -> pd.DataFrame:
     """
     Parse Protected Seas location information to separate into territories
