@@ -493,11 +493,16 @@ def extract_column_dict_str(
 
 
 def filter_protected_planet(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """Drop the sites that Protected Planet leaves out of its coverage statistics: 
-    proposed sites and sites with no reported designation status, following the criteria at
+    """
+    Drop the sites that Protected Planet leaves out of its coverage statistics:
+    proposed sites, sites with no reported designation status, and sites submitted as
+    points with no reported area, following the criteria at
     https://www.protectedplanet.net/en/resources/calculating-protected-area-coverage
     """
-    return df[~df["STATUS"].isin(["Proposed", "Not Reported"])].reset_index(drop=True)
+    keep = ~df["STATUS"].isin(["Proposed", "Not Reported"])
+    # Points already buffered, so drop any remaining points with no reported area
+    keep &= ~df.geometry.geom_type.isin(["Point", "MultiPoint"])
+    return df[keep].reset_index(drop=True)
 
 
 def fp_location(df: pd.DataFrame) -> pd.DataFrame:
@@ -555,17 +560,6 @@ def remove_non_designated_m(df: pd.DataFrame) -> pd.DataFrame:
     Keep rows where 'designated_date' is not null.
     """
     return df[df["designated_date"].notnull()]
-
-
-def remove_non_designated_p(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Keep rows where 'STATUS' == 'Designated'.
-
-    Returns
-    -------
-    pd.DataFrame
-    """
-    return df[df["STATUS"] == "Designated"]
 
 
 def rename_habitats(df: pd.DataFrame) -> pd.DataFrame:
