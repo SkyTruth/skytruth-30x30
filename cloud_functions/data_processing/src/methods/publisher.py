@@ -386,9 +386,9 @@ def dispatch_publisher(
 
         case "process_marine_habitat_geoms":
             habitat = data.get("HABITAT")
-            habitat = (
-                [habitat] if isinstance(habitat, str) else list(habitat or HABITAT_PROCESSING_PARAMS)
-            )
+            if isinstance(habitat, str):
+                habitat = [habitat]
+            habitat = list(habitat or HABITAT_PROCESSING_PARAMS)
             current, remaining = habitat[0], habitat[1:]
 
             process_marine_habitat_geoms(habitats=current, verbose=verbose)
