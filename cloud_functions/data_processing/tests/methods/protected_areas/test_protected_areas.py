@@ -630,6 +630,31 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     assert expected_changed_parent in changed
 
 
+def empty_iho_areas():
+    """No IHO seas, so no PA gains a sea row."""
+    return pd.DataFrame({"location": pd.Series(dtype=str), "area": pd.Series(dtype=float)})
+
+
+def empty_wdpa_pairs():
+    return pd.DataFrame(
+        {
+            "WDPA_PID": pd.Series(dtype=str),
+            "location": pd.Series(dtype=str),
+            "intersection_area_km2": pd.Series(dtype=float),
+        }
+    )
+
+
+def empty_mpa_pairs():
+    return pd.DataFrame(
+        {
+            "zone_id": pd.Series(dtype=str),
+            "location": pd.Series(dtype=str),
+            "intersection_area_km2": pd.Series(dtype=float),
+        }
+    )
+
+
 # ---------- generate_protected_areas_table ----------
 
 
@@ -732,3 +757,108 @@ def test_parent_child_relations_stay_within_a_location(run_table):
             checked += 1
 
     assert checked > 0, "no parent/child relations were built, so nothing was verified"
+
+
+@pytest.fixture
+def mock_mpatlas_meta_df():
+    """intermediates/mpa_meta.csv shape (internal names, post-v4-normalization)."""
+    return pd.DataFrame(
+        {
+            "name": ["Cairns Section", "Shared Waters Zone", "Pending Zone"],
+            "calculated_area_km2": [10.0, 20.0, 5.0],
+            "designated_date": ["1981-01", "1990", None],
+            "wdpa_id": [555624, 100001, 100002],
+            "wdpa_pid": ["555624_1", "100001_A", "100002_A"],
+            "zone_id": [4821, 4822, 4823],
+            "designation": ["Marine Park", "Marine Reserve", "Sanctuary"],
+            "establishment_stage": ["implemented", "actively managed", "designated"],
+            "country": ["AUS", "AUS,NZL", "MEX"],
+            "protection_mpaguide_level": ["high", "full", "unknown"],
+            "bbox": ["(0.0, 0.0, 1.0, 1.0)"] * 3,
+        }
+    )
+
+
+@pytest.fixture
+def mock_wdpa_meta_df():
+    return pd.DataFrame(
+        {
+            "NAME": ["GBR WDPA"],
+            "calculated_area_km2": [50.0],
+            "STATUS": ["Designated"],
+            "PA_DEF": [1],
+            "STATUS_YR": [1981],
+            "WDPAID": [555624],
+            "WDPA_PID": ["555624_1"],
+            "DESIG_TYPE": ["National"],
+            "ISO3": ["AUS"],
+            "IUCN_CAT": ["II"],
+            "MARINE": [1],
+            "bbox": ["(0.0, 0.0, 1.0, 1.0)"],
+        }
+    )
+
+
+def test_generate_protected_areas_table_mpa_rows(
+    monkeypatch, mock_mpatlas_meta_df, mock_wdpa_meta_df
+):
+    meta_reads = {
+        "mpa_meta.csv": mock_mpatlas_meta_df,
+        "wdpa_meta.csv": mock_wdpa_meta_df,
+    }
+    monkeypatch.setattr(
+        pa_module, "read_dataframe", lambda bucket, filename: meta_reads[filename].copy()
+    )
+
+    # eez lookup requires ABNJ and CHN entries to exist
+    mock_eez = pd.DataFrame(
+        {
+            "location": ["AUS", "NZL", "MEX", "ABNJ", "CHN"],
+            "AREA_KM2": [1000.0] * 5,
+        }
+    )
+    mock_gadm = gpd.GeoDataFrame(
+        {"location": ["AUS"], "geometry": [box(0, 0, 1, 1)]}, crs="EPSG:4326"
+    )
+
+    # filenames arrive with a tolerance suffix (e.g. eez_0.001.geojson)
+    def mock_read_json_df(bucket, filename):
+        return (mock_eez if filename.startswith("eez") else mock_gadm).copy()
+
+    monkeypatch.setattr(pa_module, "read_json_df", mock_read_json_df)
+
+    # Sea rows are covered below; keep them out of the field-mapping assertions.
+    monkeypatch.setattr(pa_module, "load_iho_regions", lambda: empty_iho_areas())
+    monkeypatch.setattr(pa_module, "intersect_wdpa_with_iho", lambda **_: empty_wdpa_pairs())
+    monkeypatch.setattr(pa_module, "intersect_mpatlas_with_iho", lambda **_: empty_mpa_pairs())
+
+    result = pa_module.generate_protected_areas_table(
+        wdpa_file_name="wdpa_meta.csv",
+        mpatlas_file_name="mpa_meta.csv",
+        eez_file_name="eez.geojson",
+        gadm_file_name="gadm.geojson",
+        verbose=False,
+    )
+
+    mpa_rows = result[result["data_source"] == "mpatlas"]
+
+    row = mpa_rows[mpa_rows["zone_id"] == 4821].iloc[0]
+    assert row["name"] == "Cairns Section"
+    assert row["wdpaid"] == 555624
+    assert row["wdpa_p_id"] == "555624_1"
+    assert row["designation"] == "Marine Park"
+    assert row["mpaa_establishment_stage"] == "implemented"
+    assert row["mpaa_protection_level"] == "high"
+    assert row["year"] == 1981
+    assert row["location"] == "AUS"
+    assert row["environment"] == "marine"
+    assert row["protection_status"] == "pa"
+
+    # multi-country zone becomes one row per country
+    assert set(mpa_rows[mpa_rows["zone_id"] == 4822]["location"]) == {"AUS", "NZL"}
+    assert (
+        mpa_rows[mpa_rows["zone_id"] == 4822]["mpaa_establishment_stage"] == "actively-managed"
+    ).all()
+
+    # zones without a designated date are excluded
+    assert 4823 not in set(mpa_rows["zone_id"])

@@ -91,7 +91,7 @@ LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
 #                    MPATLAS
 # ------------------------------------------------------------
 
-MPATLAS_URL = "https://guide.mpatlas.org/api/v2/zone/geojson"
+MPATLAS_URL = "https://guide.mpatlas.org/api/public/v4/zone/geojson"
 MPATLAS_FILE_NAME = "raw/mpatlas_zone_assessment.geojson"
 MPATLAS_META_FILE_NAME = "intermediates/mpa_meta.csv"
 ARCHIVE_MPATLAS_FILE_NAME = f"archive/raw/mpatlas_zone_assessment_{today_formatted}.geojson"

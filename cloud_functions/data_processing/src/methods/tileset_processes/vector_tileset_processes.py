@@ -34,7 +34,7 @@ from src.core.params import (
     RELATED_COUNTRIES_FILE_NAME,
     TOLERANCES,
 )
-from src.core.processors import add_translations, mask_mpatlas_protection_level
+from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
@@ -47,7 +47,6 @@ logger = Logger()
 
 
 def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
-    gdf = mask_mpatlas_protection_level(gdf)
     gdf = gdf.rename(
         columns={
             "designation": "designatio",

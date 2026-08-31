@@ -190,6 +190,12 @@ def generate_location_minus_fhp_mpa(
     if verbose:
         logger.info({"message": "Subtracting fully/highly protected areas from location areas..."})
 
+    # A zone may span multiple countries (e.g. "AUS,NZL"); one row per country
+    # so its geometry is subtracted from every location it belongs to
+    mpa_fhp["country"] = mpa_fhp["country"].astype(str).str.split(r"[;:,]")
+    mpa_fhp = mpa_fhp.explode("country")
+    mpa_fhp["country"] = mpa_fhp["country"].str.strip()
+
     # Difference the mpa_fhp from location; where location["location"] == mpa_fhp["country"]
     mpa_by_country = mpa_fhp.dissolve(by="country")["geometry"]
 
