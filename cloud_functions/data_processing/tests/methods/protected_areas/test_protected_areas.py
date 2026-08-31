@@ -22,6 +22,31 @@ def _rows(result, data_source, location):
     return result[(result["data_source"] == data_source) & (result["location"] == location)]
 
 
+def empty_iho_areas():
+    """No IHO seas, so no PA gains a sea row."""
+    return pd.DataFrame({"location": pd.Series(dtype=str), "area": pd.Series(dtype=float)})
+
+
+def empty_wdpa_pairs():
+    return pd.DataFrame(
+        {
+            "WDPA_PID": pd.Series(dtype=str),
+            "location": pd.Series(dtype=str),
+            "intersection_area_km2": pd.Series(dtype=float),
+        }
+    )
+
+
+def empty_mpa_pairs():
+    return pd.DataFrame(
+        {
+            "zone_id": pd.Series(dtype=str),
+            "location": pd.Series(dtype=str),
+            "intersection_area_km2": pd.Series(dtype=float),
+        }
+    )
+
+
 @pytest.fixture
 def base_entry():
     """Baseline protected area entry for current_db."""
@@ -240,6 +265,46 @@ def reference_areas():
     )
     iho = pd.DataFrame({"location": [SEA_A, SEA_B], "area": [SEA_AREA_KM2] * 2})
     return eez, gadm, iho
+
+
+@pytest.fixture
+def mock_mpatlas_meta_df():
+    """intermediates/mpa_meta.csv shape (internal names, post-v4-normalization)."""
+    return pd.DataFrame(
+        {
+            "name": ["Cairns Section", "Shared Waters Zone", "Pending Zone"],
+            "calculated_area_km2": [10.0, 20.0, 5.0],
+            "designated_date": ["1981-01", "1990", None],
+            "wdpa_id": [555624, 100001, 100002],
+            "wdpa_pid": ["555624_1", "100001_A", "100002_A"],
+            "zone_id": [4821, 4822, 4823],
+            "designation": ["Marine Park", "Marine Reserve", "Sanctuary"],
+            "establishment_stage": ["implemented", "actively managed", "designated"],
+            "country": ["AUS", "AUS,NZL", "MEX"],
+            "protection_mpaguide_level": ["high", "full", "unknown"],
+            "bbox": ["(0.0, 0.0, 1.0, 1.0)"] * 3,
+        }
+    )
+
+
+@pytest.fixture
+def mock_wdpa_meta_df():
+    return pd.DataFrame(
+        {
+            "NAME": ["GBR WDPA"],
+            "calculated_area_km2": [50.0],
+            "STATUS": ["Designated"],
+            "PA_DEF": [1],
+            "STATUS_YR": [1981],
+            "WDPAID": [555624],
+            "WDPA_PID": ["555624_1"],
+            "DESIG_TYPE": ["National"],
+            "ISO3": ["AUS"],
+            "IUCN_CAT": ["II"],
+            "MARINE": [1],
+            "bbox": ["(0.0, 0.0, 1.0, 1.0)"],
+        }
+    )
 
 
 @pytest.fixture
@@ -630,31 +695,6 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     assert expected_changed_parent in changed
 
 
-def empty_iho_areas():
-    """No IHO seas, so no PA gains a sea row."""
-    return pd.DataFrame({"location": pd.Series(dtype=str), "area": pd.Series(dtype=float)})
-
-
-def empty_wdpa_pairs():
-    return pd.DataFrame(
-        {
-            "WDPA_PID": pd.Series(dtype=str),
-            "location": pd.Series(dtype=str),
-            "intersection_area_km2": pd.Series(dtype=float),
-        }
-    )
-
-
-def empty_mpa_pairs():
-    return pd.DataFrame(
-        {
-            "zone_id": pd.Series(dtype=str),
-            "location": pd.Series(dtype=str),
-            "intersection_area_km2": pd.Series(dtype=float),
-        }
-    )
-
-
 # ---------- generate_protected_areas_table ----------
 
 
@@ -757,46 +797,6 @@ def test_parent_child_relations_stay_within_a_location(run_table):
             checked += 1
 
     assert checked > 0, "no parent/child relations were built, so nothing was verified"
-
-
-@pytest.fixture
-def mock_mpatlas_meta_df():
-    """intermediates/mpa_meta.csv shape (internal names, post-v4-normalization)."""
-    return pd.DataFrame(
-        {
-            "name": ["Cairns Section", "Shared Waters Zone", "Pending Zone"],
-            "calculated_area_km2": [10.0, 20.0, 5.0],
-            "designated_date": ["1981-01", "1990", None],
-            "wdpa_id": [555624, 100001, 100002],
-            "wdpa_pid": ["555624_1", "100001_A", "100002_A"],
-            "zone_id": [4821, 4822, 4823],
-            "designation": ["Marine Park", "Marine Reserve", "Sanctuary"],
-            "establishment_stage": ["implemented", "actively managed", "designated"],
-            "country": ["AUS", "AUS,NZL", "MEX"],
-            "protection_mpaguide_level": ["high", "full", "unknown"],
-            "bbox": ["(0.0, 0.0, 1.0, 1.0)"] * 3,
-        }
-    )
-
-
-@pytest.fixture
-def mock_wdpa_meta_df():
-    return pd.DataFrame(
-        {
-            "NAME": ["GBR WDPA"],
-            "calculated_area_km2": [50.0],
-            "STATUS": ["Designated"],
-            "PA_DEF": [1],
-            "STATUS_YR": [1981],
-            "WDPAID": [555624],
-            "WDPA_PID": ["555624_1"],
-            "DESIG_TYPE": ["National"],
-            "ISO3": ["AUS"],
-            "IUCN_CAT": ["II"],
-            "MARINE": [1],
-            "bbox": ["(0.0, 0.0, 1.0, 1.0)"],
-        }
-    )
 
 
 def test_generate_protected_areas_table_mpa_rows(

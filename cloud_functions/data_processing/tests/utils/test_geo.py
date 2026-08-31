@@ -33,6 +33,31 @@ def _pixel_area_6933_km2(minx, miny, maxx, maxy):
     return shp_transform(_TO_6933, box(minx, miny, maxx, maxy)).area / 1e6
 
 
+# Two side-by-side regions sharing the x=10 edge, well away from the poles so
+# the equal-area projection stays well behaved.
+REGION_A = box(0, 0, 10, 10)
+REGION_B = box(10, 0, 20, 10)
+
+
+def _max_longitude(geom):
+    """Largest absolute longitude anywhere in ``geom``."""
+    minx, _, maxx, _ = geom.bounds
+    return max(abs(minx), abs(maxx))
+
+
+def _regions(**cols):
+    return gpd.GeoDataFrame(
+        {"location": ["1", "2"], **cols},
+        geometry=[REGION_A, REGION_B],
+        crs="EPSG:4326",
+    )
+
+
+def _features(geometries, ids=None):
+    ids = ids if ids is not None else list(range(len(geometries)))
+    return gpd.GeoDataFrame({"wdpa_pid": ids}, geometry=geometries, crs="EPSG:4326")
+
+
 # ---------- geographic CRS ----------
 
 
@@ -145,12 +170,6 @@ def test_robust_unary_union_empty_input_returns_empty():
 
 
 # ---------- buffer_km ----------
-
-
-def _max_longitude(geom):
-    """Largest absolute longitude anywhere in ``geom``."""
-    minx, _, maxx, _ = geom.bounds
-    return max(abs(minx), abs(maxx))
 
 
 def test_buffer_km_radius_is_geodesically_accurate():
@@ -291,24 +310,6 @@ def test_shift_negative_longitudes_preserves_z():
 
 
 # ---------- intersect_features_with_regions ----------
-
-# Two side-by-side regions sharing the x=10 edge, well away from the poles so
-# the equal-area projection stays well behaved.
-REGION_A = box(0, 0, 10, 10)
-REGION_B = box(10, 0, 20, 10)
-
-
-def _regions(**cols):
-    return gpd.GeoDataFrame(
-        {"location": ["1", "2"], **cols},
-        geometry=[REGION_A, REGION_B],
-        crs="EPSG:4326",
-    )
-
-
-def _features(geometries, ids=None):
-    ids = ids if ids is not None else list(range(len(geometries)))
-    return gpd.GeoDataFrame({"wdpa_pid": ids}, geometry=geometries, crs="EPSG:4326")
 
 
 def test_intersect_feature_inside_one_region_returns_its_whole_area():
