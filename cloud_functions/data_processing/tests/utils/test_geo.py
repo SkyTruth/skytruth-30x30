@@ -395,9 +395,10 @@ def test_intersect_ignores_rows_with_missing_or_empty_geometry():
     assert result["wdpa_pid"].tolist() == ["real"]
 
 
-def test_intersect_locates_arealess_features_with_a_null_area():
+def test_intersect_locates_arealess_features_with_zero_area():
     """A point inside a region is in that region, so it is paired by containment
-    rather than dropped — unlike a polygon that merely touches a boundary."""
+    rather than dropped — unlike a polygon that merely touches a boundary. Its area
+    is 0, which `keep_geom_type` makes unambiguous: no polygon pair can reach 0."""
     features = _features(
         [box(1, 1, 2, 2), Point(3, 3), Point(15, 5), Point(50, 50)],
         ids=["polygon", "point_a", "point_b", "point_outside"],
@@ -408,8 +409,8 @@ def test_intersect_locates_arealess_features_with_a_null_area():
     regions = dict(zip(result["wdpa_pid"], result["location"], strict=True))
 
     assert areas["polygon"] > 0
-    assert np.isnan(areas["point_a"]) and regions["point_a"] == "1"
-    assert np.isnan(areas["point_b"]) and regions["point_b"] == "2"
+    assert areas["point_a"] == 0.0 and regions["point_a"] == "1"
+    assert areas["point_b"] == 0.0 and regions["point_b"] == "2"
     assert "point_outside" not in areas
 
 

@@ -212,7 +212,7 @@ def intersect_features_with_regions(
     # Break out non-polygonal features (rare, but would break gpd.overlay) specifically
     # to keep for the PA tables
     located = features[~polygonal].sjoin(regions, predicate="intersects", lsuffix="1", rsuffix="2")
-    located = located.drop(columns="index_2").assign(intersection_area_km2=np.nan)
+    located = located.drop(columns="index_2").assign(intersection_area_km2=0.0)
 
     return pd.concat([clipped, located], ignore_index=True)
 

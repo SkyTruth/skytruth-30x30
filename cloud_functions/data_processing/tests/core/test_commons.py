@@ -243,7 +243,7 @@ def test_wdpa_iho_join_keeps_oecms_for_the_caller_to_split(monkeypatch):
 def test_wdpa_iho_join_keeps_point_pas_with_no_area(monkeypatch):
     """A WDPA point stays a point when its reported area is zero. It is still in
     a sea and belongs in the PA table, so it is assigned by containment with a
-    null area rather than dropped."""
+    zero area rather than dropped."""
     _patch_iho(monkeypatch)
     _patch_wdpa(
         monkeypatch,
@@ -257,7 +257,7 @@ def test_wdpa_iho_join_keeps_point_pas_with_no_area(monkeypatch):
 
     areas = dict(zip(result["WDPA_PID"], result["intersection_area_km2"], strict=True))
     assert areas["polygon"] > 0
-    assert np.isnan(areas["point_in_sea"])
+    assert areas["point_in_sea"] == 0.0
     # A point outside every sea, and a row with no geometry, cannot be located.
     assert "point_at_sea" not in areas
     assert "missing" not in areas
@@ -283,7 +283,7 @@ def test_mpatlas_iho_join_keeps_point_zones_with_no_area(monkeypatch):
 
     areas = dict(zip(result["zone_id"], result["intersection_area_km2"], strict=True))
     assert areas[10] > 0
-    assert np.isnan(areas[20])
+    assert areas[20] == 0.0
     # The point still gets its sea, so it can be shown under that location.
     assert result.loc[result["zone_id"] == 20, "location"].tolist() == ["1"]
 
