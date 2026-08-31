@@ -255,9 +255,6 @@ def generate_protected_areas_table(
     gadm = read_json_df(BUCKET, gadm_file_name)
     gadm = calculate_area(gadm, output_area_column="AREA_KM2")
 
-    # A PA's coverage is measured against whichever location it belongs to, so the
-    # IHO seas need to sit alongside the EEZs — without them every IHO row has no
-    # denominator, gets a null coverage, and is dropped below.
     iho_areas = load_iho_regions().rename(columns={"area": "AREA_KM2"})
     marine_areas = pd.concat([eez, iho_areas[["location", "AREA_KM2"]]], ignore_index=True)
     terrestrial_areas = gadm
