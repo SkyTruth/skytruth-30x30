@@ -236,7 +236,7 @@ def intersect_features_with_regions(
     paired_features = feature_geoms[feature_idx]
     paired_regions = region_geoms[region_idx]
 
-    # Flag pairs where the feature is wholly inside the region, 
+    # Flag pairs where the feature is wholly inside the region,
     # so we can skip clipping the fully contained features.
     clipped = paired_features.copy()
     straddling = np.flatnonzero(~shapely.contains(paired_regions, paired_features))
