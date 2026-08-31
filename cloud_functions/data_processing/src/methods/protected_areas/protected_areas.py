@@ -6,6 +6,7 @@ from src.core.commons import (
     add_tolerance_suffix,
     intersect_mpatlas_with_iho,
     intersect_wdpa_with_iho,
+    load_iho_regions,
 )
 from src.core.land_cover_params import terrestrial_tolerance
 from src.core.params import (
@@ -254,6 +255,13 @@ def generate_protected_areas_table(
     gadm = read_json_df(BUCKET, gadm_file_name)
     gadm = calculate_area(gadm, output_area_column="AREA_KM2")
 
+    # A PA's coverage is measured against whichever location it belongs to, so the
+    # IHO seas need to sit alongside the EEZs — without them every IHO row has no
+    # denominator, gets a null coverage, and is dropped below.
+    iho_areas = load_iho_regions().rename(columns={"area": "AREA_KM2"})
+    marine_areas = pd.concat([eez, iho_areas[["location", "AREA_KM2"]]], ignore_index=True)
+    terrestrial_areas = gadm
+
     if verbose:
         logger.info({"message": "processing WDPAs"})
     wdpa_pa = process_wdpa(wdpa)
@@ -265,7 +273,7 @@ def generate_protected_areas_table(
     pas = pd.concat((wdpa_pa[mpa_pa.columns], mpa_pa), axis=0)
     pas["area"] = pd.to_numeric(pas["area"], errors="coerce")
     pas["wdpa_p_id"] = pas["wdpa_p_id"].replace("", None)
-    pas = add_percent_coverage(pas, eez, gadm)
+    pas = add_percent_coverage(pas, marine_areas, terrestrial_areas)
     pas = pas.sort_values(["wdpaid", "wdpa_p_id", "zone_id"])
 
     # TODO: Currently this will not add  BVT (marine) because
