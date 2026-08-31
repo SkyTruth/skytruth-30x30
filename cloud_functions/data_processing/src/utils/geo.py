@@ -18,6 +18,9 @@ tqdm.pandas()
 
 WGS84 = CRS.from_epsg(4326)
 
+# Geometry types that carry area, and so can be clipped to a region.
+POLYGONAL_GEOM_TYPES = ("Polygon", "MultiPolygon")
+
 # WGS84 ellipsoid parameters. Raster pixel areas are computed on this same
 # ellipsoid as the vector areas in `get_area_km2` (EPSG:6933 is an equal-area
 # projection on WGS84), so the raster and vector area methods share one basis.
@@ -197,24 +200,68 @@ def intersect_features_with_regions(
     """Pair each feature with every region it overlaps, with the clipped area.
 
     One row per overlap, holding both frames' columns plus
-    ``intersection_area_km2`` (EPSG:6933, as in ``get_area_km2``).
+    ``intersection_area_km2`` (EPSG:6933, as in ``get_area_km2``). A column name
+    used by both frames arrives suffixed ``_1`` (feature) and ``_2`` (region).
+
+    A feature wholly inside a region is not clipped at all — the intersection is
+    the feature itself. That matters for speed: regions here are whole seas
+    carrying millions of vertices, and every real clip walks all of them, so
+    checking containment against a prepared region first and only clipping the
+    few boundary-straddling features is an order of magnitude cheaper than
+    clipping everything.
+
+    Any real overlap is kept, however small. Only features merely adjacent to a
+    region are excluded, since that intersection has no area. Arealess geometry —
+    WDPA and MPAtlas both carry points — is kept when it falls inside a region,
+    with an area of 0.
     """
     features = features.to_crs("EPSG:6933")
     regions = regions.to_crs("EPSG:6933")
 
-    # Separate the polygonal features that can be clipped from the arealess ones.
-    polygonal = features.geometry.geom_type.isin(("Polygon", "MultiPolygon"))
-    clipped = gpd.overlay(features[polygonal], regions, how="intersection", keep_geom_type=True)
-    clipped = clipped.assign(intersection_area_km2=clipped.geometry.area / 1e6)
-    if polygonal.all():
-        return clipped
+    def repaired(geoms):
+        """Repair only what needs it — ``make_valid`` rebuilds a geometry whether
+        or not it is already valid, and these regions are dense."""
+        invalid = ~shapely.is_valid(geoms)
+        if invalid.any():
+            geoms = geoms.copy()
+            geoms[invalid] = shapely.make_valid(geoms[invalid])
+        return geoms
 
-    # Break out non-polygonal features (rare, but would break gpd.overlay) specifically
-    # to keep for the PA tables
-    located = features[~polygonal].sjoin(regions, predicate="intersects", lsuffix="1", rsuffix="2")
-    located = located.drop(columns="index_2").assign(intersection_area_km2=0.0)
+    feature_geoms = repaired(features.geometry.to_numpy())
+    region_geoms = repaired(regions.geometry.to_numpy())
 
-    return pd.concat([clipped, located], ignore_index=True)
+    # feature, region pairs that intersect
+    shapely.prepare(region_geoms)
+    feature_idx, region_idx = regions.sindex.query(feature_geoms, predicate="intersects")
+    paired_features = feature_geoms[feature_idx]
+    paired_regions = region_geoms[region_idx]
+
+    # Flag pairs where the feature is wholly inside the region, 
+    # so we can skip clipping the fully contained features.
+    clipped = paired_features.copy()
+    straddling = np.flatnonzero(~shapely.contains(paired_regions, paired_features))
+    clipped[straddling] = shapely.intersection(
+        paired_regions[straddling], paired_features[straddling]
+    )
+
+    areas = shapely.area(clipped) / 1e6
+
+    # Drop pairs with no overlap area (i.e. adjacent features) unless the feature is an arealess
+    # geometry like a point.
+    polygonal = features.geometry.geom_type.isin(POLYGONAL_GEOM_TYPES).to_numpy()
+    keep = np.flatnonzero((areas > 0) | ~polygonal[feature_idx])
+
+    left = features.drop(columns=features.geometry.name).iloc[feature_idx[keep]]
+    right = regions.drop(columns=regions.geometry.name).iloc[region_idx[keep]]
+    shared = set(left.columns) & set(right.columns)
+    left = left.rename(columns={col: f"{col}_1" for col in shared}).reset_index(drop=True)
+    right = right.rename(columns={col: f"{col}_2" for col in shared}).reset_index(drop=True)
+
+    return gpd.GeoDataFrame(
+        pd.concat([left, right], axis=1).assign(intersection_area_km2=areas[keep]),
+        geometry=clipped[keep],
+        crs=features.crs,
+    )
 
 
 def _shift_negative_longitudes(x, y, z=None):
