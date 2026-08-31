@@ -434,14 +434,19 @@ def intersect_wdpa_with_iho(
     returning a GeoDataFrame with one row per (marine WDPA, IHO sea) overlap.
     """
     pa_file = add_tolerance_suffix(WDPA_MARINE_FILE_NAME, tolerance)
-    logger.info({"message": f"intersecting marine PAs from gs://{bucket}/{pa_file} with IHO seas"})
+    logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
 
     pas = read_json_df(bucket_name=bucket, filename=pa_file)
     pas = pas[["WDPAID", "WDPA_PID", "PA_DEF", "geometry"]]
 
     iho = load_iho_regions()[["MRGID", "location", "geometry"]]
 
-    return intersect_features_with_regions(pas, iho)
+    # The overlay is silent and runs for minutes, so bracket it.
+    logger.info({"message": f"overlaying {len(pas)} marine PAs with {len(iho)} IHO sea areas"})
+    pairs = intersect_features_with_regions(pas, iho)
+    logger.info({"message": f"found {len(pairs)} marine PA / IHO sea overlaps"})
+
+    return pairs
 
 
 def intersect_mpatlas_with_iho(
@@ -456,9 +461,7 @@ def intersect_mpatlas_with_iho(
     ones — about a third of the zones, so a much cheaper overlay when that is all
     the caller needs.
     """
-    logger.info(
-        {"message": f"intersecting MPAtlas zones from gs://{bucket}/{mpa_file_name} with IHO seas"}
-    )
+    logger.info({"message": f"loading MPAtlas zones from gs://{bucket}/{mpa_file_name}"})
 
     mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
     mpa = mpa[["wdpa_id", "wdpa_pid", "zone_id", "protection_mpaguide_level", "geometry"]]
@@ -468,7 +471,12 @@ def intersect_mpatlas_with_iho(
 
     iho = load_iho_regions()[["MRGID", "location", "geometry"]]
 
-    return intersect_features_with_regions(mpa, iho)
+    # The overlay is silent and runs for minutes, so bracket it.
+    logger.info({"message": f"overlaying {len(mpa)} MPAtlas zones with {len(iho)} IHO sea areas"})
+    pairs = intersect_features_with_regions(mpa, iho)
+    logger.info({"message": f"found {len(pairs)} MPAtlas zone / IHO sea overlaps"})
+
+    return pairs
 
 
 def download_file_with_progress(url: str, filename: str, verbose: bool = True):
