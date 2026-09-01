@@ -1,4 +1,4 @@
-FROM node:18.17-bullseye-slim
+FROM node:26-bookworm-slim
 
 RUN apt-get update -y && \
     apt-get upgrade -y && \
@@ -20,7 +20,9 @@ WORKDIR /app
 
 COPY . .
 
-RUN yarn install --immutable
+# Node images no longer ship yarn, and corepack was removed from Node in 25.x,
+# so invoke the yarn release vendored in .yarn/releases directly.
+RUN node .yarn/releases/yarn-3.6.3.cjs install --immutable
 
 ENV PATH /app/node_modules/.bin:$PATH
 RUN chown -R node:node /app
