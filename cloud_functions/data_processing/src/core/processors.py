@@ -495,13 +495,19 @@ def extract_column_dict_str(
 def filter_protected_planet(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Drop the sites that Protected Planet leaves out of its coverage statistics:
-    proposed sites, sites with no reported designation status, and sites submitted as
-    points with no reported area, following the criteria at
+    proposed sites, sites with no reported designation status, sites submitted as
+    points with no reported area, and MAB Biosphere Reserves that are not OECMs,
+    following the criteria at
     https://www.protectedplanet.net/en/resources/calculating-protected-area-coverage
+
+    The sites dropped here are still published in the protected area table and the
+    map tilesets, so this filter only applies to the statistics.
     """
     keep = ~df["STATUS"].isin(["Proposed", "Not Reported"])
     # Points already buffered, so drop any remaining points with no reported area
     keep &= ~df.geometry.geom_type.isin(["Point", "MultiPoint"])
+    # Drop MAB Biosphere Reserves that are not OECMs
+    keep &= (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve") | (df["PA_DEF"] == 0)
     return df[keep].reset_index(drop=True)
 
 

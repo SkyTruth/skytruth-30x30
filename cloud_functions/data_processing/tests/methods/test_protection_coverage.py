@@ -13,9 +13,11 @@ def _iho_gdf(rows):
 
 
 def _pa_gdf(rows):
-    """Build a marine PA frame, defaulting rows to a status the coverage filter keeps."""
+    """Build a marine PA frame, defaulting rows to values the coverage filter keeps."""
     return gpd.GeoDataFrame(
-        [{"STATUS": "Designated", **row} for row in rows], geometry="geometry", crs="EPSG:6933"
+        [{"STATUS": "Designated", "DESIG_ENG": "Marine Protected Area", **row} for row in rows],
+        geometry="geometry",
+        crs="EPSG:6933",
     )
 
 
@@ -432,3 +434,49 @@ def test_iho_coverage_keeps_points_already_buffered_into_polygons(monkeypatch, w
     # The function rounds to two decimals, and buffer() approximates the circle.
     assert result["protected_area"] == round(buffered_point.area / 1e6, 2)
     assert result["protected_area"] > 0
+
+
+def test_iho_coverage_excludes_biosphere_reserves_that_are_not_oecms(monkeypatch, wdpa_global):
+    """Exclude MAB reserves recorded as protected areas, as Protected Planet does.
+
+    Their buffer and transition zones are not themselves protected, so counting the
+    whole reserve would overstate coverage. They stay in the PA table and tilesets.
+    """
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf(
+        [
+            {"PA_DEF": 1, "geometry": box(0, 0, 500, 1000)},
+            {
+                "PA_DEF": 1,
+                "DESIG_ENG": "UNESCO-MAB Biosphere Reserve",
+                "geometry": box(1000, 0, 1500, 1000),
+            },
+        ]
+    )
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    # Only the 0.5 km² non-MAB site may reach the area, coverage and count.
+    assert result["protected_area"] == 0.5
+    assert result["coverage"] == 25.0
+    assert result["protected_areas_count"] == 1
+
+
+def test_iho_coverage_keeps_biosphere_reserves_recorded_as_oecms(monkeypatch, wdpa_global):
+    """Keep MAB reserves that are also OECMs, which Protected Planet does count."""
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf(
+        [
+            {
+                "PA_DEF": 0,
+                "DESIG_ENG": "UNESCO-MAB Biosphere Reserve",
+                "geometry": box(0, 0, 1000, 1000),
+            }
+        ]
+    )
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    assert result["protected_area"] == 1.0
+    assert result["coverage"] == 50.0
+    assert result["protected_areas_count"] == 1

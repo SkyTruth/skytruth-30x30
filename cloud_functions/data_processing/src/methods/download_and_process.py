@@ -503,7 +503,7 @@ def download_and_process_protected_planet_pas(
             """
 
             # Get buffer area - do not buffer if MAB reserve as reported
-            # area can be unreliable
+            # area can be unreliable. Those points are dropped in simplify_chunk.
             rep_area = row.REP_AREA if row["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve" else 0
 
             g = row.geometry
@@ -529,6 +529,14 @@ def download_and_process_protected_planet_pas(
                 chunk = choose_pa_area(chunk)
                 crs = chunk.crs
                 chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
+
+                # Drop MAB points, which have no usable area, and invalid geometries
+                chunk = chunk.loc[
+                    ~(
+                        chunk["DESIG_ENG"].eq("UNESCO-MAB Biosphere Reserve")
+                        & chunk.geometry.geom_type.isin(["Point", "MultiPoint"])
+                    )
+                ]
                 chunk = chunk.loc[chunk.geometry.is_valid]
                 chunk.geometry = chunk.geometry.simplify(
                     tolerance=tolerance, preserve_topology=True
@@ -691,12 +699,6 @@ def download_and_process_protected_planet_pas(
             verbose=verbose,
             alert_message="Failed to save WDPA metadata",
         )
-
-        # Remove non-OECM MAB reserves (matching Protected Planet's methods)
-        df = df[
-            (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve")
-            | (df["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") & (df["PA_DEF"] == 0)
-        ]
 
         # Save terrestrial PAs
         ter_out_fn = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
