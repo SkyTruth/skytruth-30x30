@@ -283,5 +283,5 @@ LONG_RUNNING_TASKS = [
     "generate_habitat_protection_table",
     "process_mangroves",
     "download_protected_seas",
-    "generate_protection_coverage_stats_table"
+    "generate_protection_coverage_stats_table",
 ]
