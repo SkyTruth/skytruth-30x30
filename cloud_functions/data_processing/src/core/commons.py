@@ -425,12 +425,8 @@ def read_mpatlas_from_gcs(
 
 
 def _iho_sea_membership(features: gpd.GeoDataFrame, id_col: str) -> pd.DataFrame:
-    """One row per (feature, IHO sea) pair, for every sea the feature reaches into.
-
-    Membership only — a PA belongs to each sea it overlaps and keeps its own full
-    area there, the same way it already does for each country it spans. Clipping
-    to the sea would be a different question: the IHO boundaries run offshore of
-    the coastline, and roughly half a coastal PA's area is land.
+    """
+    Returns a DataFrame with one row per (feature, IHO sea) pair the feature overlaps,
     """
     iho = load_iho_regions()[["location", "geometry"]]
     iho["geometry"] = iho.geometry.make_valid()

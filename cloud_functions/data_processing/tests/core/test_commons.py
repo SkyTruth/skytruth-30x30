@@ -215,8 +215,8 @@ def test_wdpa_iho_join_returns_only_the_membership_columns(monkeypatch):
 
 
 def test_wdpa_iho_join_keeps_point_pas(monkeypatch):
-    """A point has no area to clip but is still in the sea it falls inside, and
-    it carries its own area from the metadata like any other PA."""
+    """A point falls inside a sea just as a polygon does, so it is a member like
+    any other PA and carries its own area from the metadata."""
     _patch_iho(monkeypatch)
     _patch_wdpa(
         monkeypatch,

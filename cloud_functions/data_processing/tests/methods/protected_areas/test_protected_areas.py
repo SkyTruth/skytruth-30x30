@@ -28,23 +28,11 @@ def empty_iho_areas():
 
 
 def empty_wdpa_pairs():
-    return pd.DataFrame(
-        {
-            "WDPA_PID": pd.Series(dtype=str),
-            "location": pd.Series(dtype=str),
-            "intersection_area_km2": pd.Series(dtype=float),
-        }
-    )
+    return pd.DataFrame({"WDPA_PID": pd.Series(dtype=str), "location": pd.Series(dtype=str)})
 
 
 def empty_mpa_pairs():
-    return pd.DataFrame(
-        {
-            "zone_id": pd.Series(dtype=str),
-            "location": pd.Series(dtype=str),
-            "intersection_area_km2": pd.Series(dtype=float),
-        }
-    )
+    return pd.DataFrame({"zone_id": pd.Series(dtype=str), "location": pd.Series(dtype=str)})
 
 
 @pytest.fixture
