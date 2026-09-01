@@ -292,5 +292,7 @@ LONG_RUNNING_TASKS = [
     "update_climate_resilient_coral_tileset",
     "process_marine_habitat_geoms",
     "generate_habitat_protection_table",
-    "generate_protection_coverage_stats_table"
+    "generate_protection_coverage_stats_table",
+    "process_mangroves",
+    "download_protected_seas",
 ]
