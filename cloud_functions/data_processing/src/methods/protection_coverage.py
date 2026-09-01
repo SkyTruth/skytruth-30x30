@@ -1,3 +1,4 @@
+import geopandas as gpd
 import pandas as pd
 from shapely.ops import unary_union
 from shapely.validation import make_valid
@@ -26,7 +27,6 @@ from src.core.processors import (
     remove_columns,
 )
 from src.utils.gcp import read_dataframe, read_json_df
-from src.utils.geo import intersect_features_with_regions, robust_unary_union
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -150,22 +150,24 @@ def compute_iho_protection_level(
     if verbose:
         logger.info({"message": f"loading MPAtlas data from gs://{bucket}/{mpa_file_name}"})
     mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
-    mpa = mpa[mpa["protection_mpaguide_level"].isin(("full", "high"))]
-    mpa = mpa[["zone_id", "geometry"]]
 
-    seas = iho[["MRGID", "geometry"]].copy()
-    seas["geometry"] = seas.geometry.make_valid()
-    fully_highly = intersect_features_with_regions(mpa, seas)
-
+    fully_highly = mpa[mpa["protection_mpaguide_level"].isin(["full", "high"])]
+    fully_highly = fully_highly[fully_highly.geometry.notna()].copy().to_crs(epsg=6933)
     iho_proj = iho[iho.geometry.notna()].copy().to_crs(epsg=6933)
+
+    fully_highly["geometry"] = fully_highly.geometry.apply(make_valid)
     iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
 
+    if verbose:
+        logger.info({"message": "overlaying fully/highly protected MPAs with IHO sea areas"})
+    joined = gpd.overlay(fully_highly, iho_proj, how="intersection")
+
     results = []
-    for mrgid, group in fully_highly.groupby("MRGID"):
+    for mrgid, group in joined.groupby("MRGID"):
         iho_geom = iho_proj.loc[iho_proj["MRGID"] == mrgid, "geometry"].iloc[0]
         total_area = iho_geom.area / 1e6
-
-        area = robust_unary_union(group.geometry).area / 1e6
+        protected_union = group.geometry.unary_union
+        area = iho_geom.intersection(protected_union).area / 1e6
         results.append(
             {
                 "location": str(mrgid),
