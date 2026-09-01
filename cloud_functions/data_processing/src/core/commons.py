@@ -49,7 +49,6 @@ from src.utils.gcp import (
 from src.utils.geo import (
     buffer_km,
     compute_pixel_area_map_km2,
-    intersect_features_with_regions,
 )
 from src.utils.logger import Logger
 
@@ -425,58 +424,47 @@ def read_mpatlas_from_gcs(
     return gdf
 
 
+def _iho_sea_membership(features: gpd.GeoDataFrame, id_col: str) -> pd.DataFrame:
+    """One row per (feature, IHO sea) pair, for every sea the feature reaches into.
+
+    Membership only — a PA belongs to each sea it overlaps and keeps its own full
+    area there, the same way it already does for each country it spans. Clipping
+    to the sea would be a different question: the IHO boundaries run offshore of
+    the coastline, and roughly half a coastal PA's area is land.
+    """
+    iho = load_iho_regions()[["location", "geometry"]]
+    iho["geometry"] = iho.geometry.make_valid()
+
+    logger.info({"message": f"matching {len(features)} features to {len(iho)} IHO sea areas"})
+    pairs = features.sjoin(iho, predicate="intersects")
+    logger.info({"message": f"found {len(pairs)} feature / IHO sea overlaps"})
+
+    return pd.DataFrame(pairs[[id_col, "location"]])
+
+
 def intersect_wdpa_with_iho(
     bucket: str = BUCKET,
     tolerance: float = marine_tolerance,
-) -> gpd.GeoDataFrame:
-    """
-    Intersects WDPA marine protected areas with IHO sea regions,
-    returning a GeoDataFrame with one row per (marine WDPA, IHO sea) overlap.
-    """
+) -> pd.DataFrame:
+    """One row per (marine PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID."""
     pa_file = add_tolerance_suffix(WDPA_MARINE_FILE_NAME, tolerance)
     logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
 
-    pas = read_json_df(bucket_name=bucket, filename=pa_file)
-    pas = pas[["WDPAID", "WDPA_PID", "PA_DEF", "geometry"]]
+    pas = read_json_df(bucket_name=bucket, filename=pa_file)[["WDPA_PID", "geometry"]]
 
-    iho = load_iho_regions()[["MRGID", "location", "geometry"]]
-
-    # The overlay is silent and runs for minutes, so bracket it.
-    logger.info({"message": f"overlaying {len(pas)} marine PAs with {len(iho)} IHO sea areas"})
-    pairs = intersect_features_with_regions(pas, iho)
-    logger.info({"message": f"found {len(pairs)} marine PA / IHO sea overlaps"})
-
-    return pairs
+    return _iho_sea_membership(pas, "WDPA_PID")
 
 
 def intersect_mpatlas_with_iho(
     bucket: str = BUCKET,
     mpa_file_name: str = MPATLAS_FILE_NAME,
-    fully_highly_only: bool = False,
-) -> gpd.GeoDataFrame:
-    """
-    Intersects MPAtlas zones with IHO sea regions, returning a GeoDataFrame with
-    one row per (MPAtlas zone, IHO sea) overlap. Every zone is included unless
-    ``fully_highly_only`` is set, which keeps only the fully and highly protected
-    ones — about a third of the zones, so a much cheaper overlay when that is all
-    the caller needs.
-    """
+) -> pd.DataFrame:
+    """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id."""
     logger.info({"message": f"loading MPAtlas zones from gs://{bucket}/{mpa_file_name}"})
 
-    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
-    mpa = mpa[["wdpa_id", "wdpa_pid", "zone_id", "protection_mpaguide_level", "geometry"]]
+    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)[["zone_id", "geometry"]]
 
-    if fully_highly_only:
-        mpa = mpa[mpa["protection_mpaguide_level"].isin(("full", "high"))]
-
-    iho = load_iho_regions()[["MRGID", "location", "geometry"]]
-
-    # The overlay is silent and runs for minutes, so bracket it.
-    logger.info({"message": f"overlaying {len(mpa)} MPAtlas zones with {len(iho)} IHO sea areas"})
-    pairs = intersect_features_with_regions(mpa, iho)
-    logger.info({"message": f"found {len(pairs)} MPAtlas zone / IHO sea overlaps"})
-
-    return pairs
+    return _iho_sea_membership(mpa, "zone_id")
 
 
 def download_file_with_progress(url: str, filename: str, verbose: bool = True):

@@ -226,21 +226,15 @@ def generate_protected_areas_table(
     wdpa = read_dataframe(bucket, wdpa_file_name)
     mpa_pairs = intersect_mpatlas_with_iho(bucket=bucket)
 
-    # Add IHO intersection area to MPAtlas and WDPA tables.
-
     mpa_pairs["zone_id"] = mpa_pairs["zone_id"].astype(mpatlas["zone_id"].dtype)
-    mpa_pairs = (
-        mpa_pairs[["zone_id", "location", "intersection_area_km2"]]
-        .merge(mpatlas.drop(columns=["country", "calculated_area_km2"]), on="zone_id", how="inner")
-        .rename(columns={"location": "country", "intersection_area_km2": "calculated_area_km2"})
-    )
+    mpa_pairs = mpa_pairs.merge(
+        mpatlas.drop(columns=["country"]), on="zone_id", how="inner"
+    ).rename(columns={"location": "country"})
     mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
 
     wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket, tolerance=terrestrial_tolerance)
-    wdpa_pairs = (
-        wdpa_pairs[["WDPA_PID", "location", "intersection_area_km2"]]
-        .merge(wdpa.drop(columns=["ISO3", "calculated_area_km2"]), on="WDPA_PID", how="inner")
-        .rename(columns={"location": "ISO3", "intersection_area_km2": "calculated_area_km2"})
+    wdpa_pairs = wdpa_pairs.merge(wdpa.drop(columns=["ISO3"]), on="WDPA_PID", how="inner").rename(
+        columns={"location": "ISO3"}
     )
     wdpa = pd.concat([wdpa, wdpa_pairs], axis=0, ignore_index=True)
 

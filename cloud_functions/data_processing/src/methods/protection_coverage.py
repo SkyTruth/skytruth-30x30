@@ -6,10 +6,10 @@ from src.core.commons import (
     add_tolerance_suffix,
     compute_global_area,
     get_wdpa_global_value,
-    intersect_mpatlas_with_iho,
     load_iho_regions,
     load_regions,
     load_wdpa_global,
+    read_mpatlas_from_gcs,
 )
 from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
@@ -26,7 +26,7 @@ from src.core.processors import (
     remove_columns,
 )
 from src.utils.gcp import read_dataframe, read_json_df
-from src.utils.geo import robust_unary_union
+from src.utils.geo import intersect_features_with_regions, robust_unary_union
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -147,9 +147,15 @@ def compute_iho_protection_level(
         logger.info({"message": "loading IHO sea areas from shared datasets"})
     iho = load_iho_regions()
 
-    fully_highly = intersect_mpatlas_with_iho(
-        bucket=bucket, mpa_file_name=mpa_file_name, fully_highly_only=True
-    )
+    if verbose:
+        logger.info({"message": f"loading MPAtlas data from gs://{bucket}/{mpa_file_name}"})
+    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
+    mpa = mpa[mpa["protection_mpaguide_level"].isin(("full", "high"))]
+    mpa = mpa[["zone_id", "geometry"]]
+
+    seas = iho[["MRGID", "geometry"]].copy()
+    seas["geometry"] = seas.geometry.make_valid()
+    fully_highly = intersect_features_with_regions(mpa, seas)
 
     iho_proj = iho[iho.geometry.notna()].copy().to_crs(epsg=6933)
     iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)

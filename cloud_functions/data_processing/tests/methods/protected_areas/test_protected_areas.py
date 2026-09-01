@@ -3,7 +3,7 @@ from copy import deepcopy
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import Point, box
+from shapely.geometry import box
 
 import src.methods.protected_areas.protected_areas as pa_module
 from src.methods.protected_areas.protected_areas import make_pa_updates
@@ -216,21 +216,15 @@ def mpa_meta():
 
 @pytest.fixture
 def wdpa_pairs():
-    """What intersect_wdpa_with_iho returns: one row per (PA, sea) overlap.
+    """What intersect_wdpa_with_iho returns: one row per (PA, sea) pair.
 
-    The straddler lands in both seas; the point PA is located in one with area 0.
+    The straddler reaches into both seas; the point PA falls inside one.
     """
-    return gpd.GeoDataFrame(
+    return pd.DataFrame(
         {
-            "WDPAID": [100, 100, 200],
             "WDPA_PID": ["100A", "100A", "200A"],
-            "PA_DEF": [1, 1, 0],
-            "MRGID": [SEA_A, SEA_B, SEA_A],
             "location": [SEA_A, SEA_B, SEA_A],
-            "intersection_area_km2": [600.0, 300.0, 0.0],
-        },
-        geometry=[box(1, 1, 2, 2), box(11, 1, 12, 2), Point(3, 3)],
-        crs="EPSG:6933",
+        }
     )
 
 
@@ -238,19 +232,7 @@ def wdpa_pairs():
 def mpa_pairs():
     """What intersect_mpatlas_with_iho returns. zone_id is a string, as it is in
     the join (it comes from the GeoJSON's top-level id)."""
-    return gpd.GeoDataFrame(
-        {
-            "wdpa_id": [100],
-            "wdpa_pid": ["100A"],
-            "zone_id": ["10"],
-            "protection_mpaguide_level": ["full"],
-            "MRGID": [SEA_A],
-            "location": [SEA_A],
-            "intersection_area_km2": [700.0],
-        },
-        geometry=[box(1, 1, 2, 2)],
-        crs="EPSG:6933",
-    )
+    return pd.DataFrame({"zone_id": ["10"], "location": [SEA_A]})
 
 
 @pytest.fixture
@@ -708,12 +690,13 @@ def test_marine_pa_gets_a_row_per_sea_it_overlaps(run_table):
     assert pp_locations == [SEA_B, SEA_A, "FRA"]  # 3324, 4279, FRA
 
 
-def test_sea_rows_carry_the_clipped_area_not_the_full_pa_area(run_table):
+def test_sea_rows_carry_the_pas_own_area(run_table):
+    """A PA counts its whole area in every sea it reaches, exactly as it does in
+    every country it spans — so a straddler is not divided between the two."""
     result = run_table()
 
-    assert _rows(result, pa_module.PROTECTED_PLANET, SEA_A)["area"].iloc[0] == 600.0
-    assert _rows(result, pa_module.PROTECTED_PLANET, SEA_B)["area"].iloc[0] == 300.0
-    # The country row keeps the PA's own area.
+    assert _rows(result, pa_module.PROTECTED_PLANET, SEA_A)["area"].iloc[0] == 900.0
+    assert _rows(result, pa_module.PROTECTED_PLANET, SEA_B)["area"].iloc[0] == 900.0
     assert _rows(result, pa_module.PROTECTED_PLANET, "FRA")["area"].iloc[0] == 900.0
 
 
@@ -725,9 +708,9 @@ def test_sea_rows_survive_the_null_coverage_filter(run_table):
     sea_rows = result[result["location"].isin([SEA_A, SEA_B])]
     assert not sea_rows.empty
     assert sea_rows["coverage"].notna().all()
-    # 600 km² of a 1,000,000 km² sea.
+    # 900 km² of a 1,000,000 km² sea.
     assert _rows(result, pa_module.PROTECTED_PLANET, SEA_A)["coverage"].iloc[0] == pytest.approx(
-        0.06
+        0.09
     )
 
 
@@ -738,7 +721,7 @@ def test_mpatlas_zone_gets_its_sea_row_despite_the_zone_id_dtype_gap(run_table):
 
     mpa_sea = _rows(result, pa_module.MPATLAS, SEA_A)
     assert len(mpa_sea) == 1
-    assert mpa_sea["area"].iloc[0] == 700.0
+    assert mpa_sea["area"].iloc[0] == 800.0
 
 
 def test_terrestrial_pa_gets_no_sea_rows(run_table):
@@ -759,8 +742,8 @@ def test_country_rows_are_left_intact(run_table):
 
 
 def test_point_pa_keeps_its_sea_row_with_zero_area(run_table):
-    """A point has no area to clip, but it is still in the sea, and zero is how
-    the rest of the pipeline records a PA with no measurable area."""
+    """A point PA carries the 0 area its metadata already gives it, the same
+    value its country row carries."""
     result = run_table()
 
     point_sea = result[(result["wdpa_p_id"] == "200A") & (result["location"] == SEA_A)]
