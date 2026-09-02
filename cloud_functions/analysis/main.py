@@ -58,7 +58,7 @@ def index(request):
 
         stats = ({**request.args, **request.get_json()}).get("stats", [])
         if isinstance(stats, str):
-            stats = [s for s in stats.split(",") if s]
+            stats = [stat for stat in stats.split(",") if stat]
 
         result = get_locations_stats(environment, db, geometry)
 
