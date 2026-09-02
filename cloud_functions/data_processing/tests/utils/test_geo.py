@@ -29,6 +29,12 @@ def _pixel_area_6933_km2(minx, miny, maxx, maxy):
     return shp_transform(_TO_6933, box(minx, miny, maxx, maxy)).area / 1e6
 
 
+def _max_longitude(geom):
+    """Largest absolute longitude anywhere in ``geom``."""
+    minx, _, maxx, _ = geom.bounds
+    return max(abs(minx), abs(maxx))
+
+
 # ---------- geographic CRS ----------
 
 
@@ -141,12 +147,6 @@ def test_robust_unary_union_empty_input_returns_empty():
 
 
 # ---------- buffer_km ----------
-
-
-def _max_longitude(geom):
-    """Largest absolute longitude anywhere in ``geom``."""
-    minx, _, maxx, _ = geom.bounds
-    return max(abs(minx), abs(maxx))
 
 
 def test_buffer_km_radius_is_geodesically_accurate():

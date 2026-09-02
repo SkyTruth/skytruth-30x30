@@ -98,18 +98,20 @@ def add_oecm_status(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame) -> pd.DataFrame:
+def add_percent_coverage(
+    df: pd.DataFrame, marine_areas: pd.DataFrame, terrestrial_areas: pd.DataFrame
+) -> pd.DataFrame:
     """
-    Calculate percent coverage of protected areas relative to total area
-    from EEZ (marine) or GADM (terrestrial) reference datasets.
+    Calculate percent coverage of protected areas relative to the total area of
+    the location they sit in.
 
     This function adds a new column ``coverage`` to the input DataFrame,
     computed as:
 
     - For rows where ``environment == "marine"``:
-      ``coverage = (area / eez_area) * 100``
+      ``coverage = (area / marine_area) * 100``
     - For rows where ``environment == "terrestrial"``:
-      ``coverage = (area / gadm_area) * 100``
+      ``coverage = (area / terrestrial_area) * 100``
 
     The coverage is rounded to two decimal places and capped at 100.
     If either the numerator or denominator is missing/invalid, the
@@ -120,14 +122,15 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
     df : pandas.DataFrame
         Input DataFrame. Must contain the columns:
         - ``environment`` : str, either "marine" or "terrestrial".
-        - ``location`` : key to join with ``eez``/``gadm`` reference data.
+        - ``location`` : key to join with the reference data.
         - ``area`` : float, the protected area size (in km²).
-    eez : pandas.DataFrame
-        Marine reference DataFrame with columns:
+    marine_areas : pandas.DataFrame
+        Marine reference DataFrame — EEZs, and any other marine location a PA can
+        belong to, such as IHO sea areas. Columns:
         - ``location`` : unique identifier for the marine region.
         - ``AREA_KM2`` : total marine area (in km²).
-    gadm : pandas.DataFrame
-        Terrestrial reference DataFrame with columns:
+    terrestrial_areas : pandas.DataFrame
+        Terrestrial reference DataFrame (GADM) with columns:
         - ``location`` : unique identifier for the terrestrial region.
         - ``AREA_KM2`` : total terrestrial area (in km²).
 
@@ -138,20 +141,22 @@ def add_percent_coverage(df: pd.DataFrame, eez: pd.DataFrame, gadm: pd.DataFrame
         - ``coverage`` : float, percent coverage of area relative to
           the reference dataset, rounded to 2 decimals and capped at 100.
     """
-    print("making eez and gadm lookup tables")
+    print("making marine and terrestrial lookup tables")
 
     # build fast lookup dicts for area by location
-    eez_lookup = dict(zip(eez["location"], eez["AREA_KM2"], strict=False))
-    eez_lookup["ATA"] = eez_lookup["ABNJ"]
-    eez_lookup["HKG"] = eez_lookup["CHN"]
+    marine_lookup = dict(zip(marine_areas["location"], marine_areas["AREA_KM2"], strict=False))
+    marine_lookup["ATA"] = marine_lookup["ABNJ"]
+    marine_lookup["HKG"] = marine_lookup["CHN"]
 
-    gadm_lookup = dict(zip(gadm["location"], gadm["AREA_KM2"], strict=False))
+    terrestrial_lookup = dict(
+        zip(terrestrial_areas["location"], terrestrial_areas["AREA_KM2"], strict=False)
+    )
 
     def _calc_coverage(x):
         if x["environment"] == "marine":
-            denom = eez_lookup.get(x["location"])
+            denom = marine_lookup.get(x["location"])
         elif x["environment"] == "terrestrial":
-            denom = gadm_lookup.get(x["location"])
+            denom = terrestrial_lookup.get(x["location"])
         else:
             return None
 
