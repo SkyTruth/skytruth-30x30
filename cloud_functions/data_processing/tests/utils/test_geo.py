@@ -16,9 +16,9 @@ from src.utils.geo import (
     _wrap_to_180,
     buffer_km,
     compute_pixel_area_map_km2,
+    fast_union_area_km2,
     get_area_km2,
     robust_unary_union,
-    fast_union_area_km2,
 )
 
 # True WGS84 ellipsoid surface area; the graticule areas should integrate to it.
@@ -308,7 +308,9 @@ def test_fast_union_area_km2_deduplicates_overlap_across_a_tile_edge():
     """A shape against a tile boundary is clipped into both tiles, not counted twice."""
     edge = box(4.0, 0.0, 6.0, 1.0)
 
-    assert fast_union_area_km2([edge, edge], n_jobs=1) == pytest.approx(get_area_km2(edge), rel=1e-9)
+    assert fast_union_area_km2([edge, edge], n_jobs=1) == pytest.approx(
+        get_area_km2(edge), rel=1e-9
+    )
 
 
 def test_fast_union_area_km2_of_nothing_is_zero():
