@@ -370,7 +370,7 @@ def download_and_process_protected_planet_pas(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     meta_file_name: str = WDPA_META_FILE_NAME,
     archive_wdpa_file_name: str = ARCHIVE_RAW_WDPA_FILE_NAME,
-    tolerances: float = TOLERANCES,
+    tolerances: list | tuple = TOLERANCES,
     verbose: bool = True,
     bucket: str = BUCKET,
     project_id: str = PROJECT,
@@ -678,12 +678,11 @@ def download_and_process_protected_planet_pas(
                 alert_message="Failed to match WDPA format - possible change to data format",
             )
 
-            # Save metadata
-            if verbose:
-                logger.info({"message": f"saving wdpa metadata to {meta_file_name}"})
-
+            # Save metadata once (no need to repeat for each tolerance as geometry is dropped)
             if tolerance == tolerances[0]:
-                # Save metadata only one time
+                if verbose:
+                    logger.info({"message": f"saving wdpa metadata to {meta_file_name}"})
+
                 retry_and_alert(
                     upload_dataframe,
                     bucket,
