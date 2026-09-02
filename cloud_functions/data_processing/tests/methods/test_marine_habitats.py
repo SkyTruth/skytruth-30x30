@@ -6,7 +6,7 @@ from shapely.geometry import Point, box
 from src.core.params import UNEP_POINT_AREA_KM2
 from src.methods.marine_habitats import (
     CLIMATE_RESILIENT_CORALS_HABITATS,
-    _protected_habitat_by_location,
+    _protected_habitat_all_locations,
     _rollup_corals_subtable,
 )
 from src.methods.static_processes import _buffer_unep_points
@@ -223,7 +223,7 @@ def test_protected_area_deduplicates_overlapping_locations(overlapping_locations
     # A PA whose ISO3 matches neither location, so both take the spatial branch.
     pas = protected_areas(["XXX"], [box(0, 0, 2, 2)])
 
-    by_location, global_protected = _protected_habitat_by_location(habitat, locations, pas)
+    by_location, global_protected = _protected_habitat_all_locations(habitat, locations, pas)
 
     # Each location legitimately reports the whole patch as protected...
     assert set(by_location["location"]) == {"AAA", "9999"}
@@ -242,7 +242,7 @@ def test_partially_protected_habitat(overlapping_locations):
     locations, habitat, patch_area = overlapping_locations
     pas = protected_areas(["XXX"], [box(0, 0, 0.5, 1)])
 
-    by_location, global_protected = _protected_habitat_by_location(habitat, locations, pas)
+    by_location, global_protected = _protected_habitat_all_locations(habitat, locations, pas)
 
     assert global_protected == pytest.approx(patch_area / 2, rel=1e-6)
     assert by_location["total_habitat_area_km2"].tolist() == pytest.approx(
@@ -255,7 +255,7 @@ def test_habitat_with_no_protected_area(overlapping_locations):
     locations, habitat, patch_area = overlapping_locations
     pas = protected_areas(["XXX"], [box(50, 50, 51, 51)])
 
-    by_location, global_protected = _protected_habitat_by_location(habitat, locations, pas)
+    by_location, global_protected = _protected_habitat_all_locations(habitat, locations, pas)
 
     assert (by_location["protected_habitat_area_km2"] == 0).all()
     assert global_protected == 0.0
