@@ -36,7 +36,6 @@ from src.core.params import (
     PROTECTION_LEVEL_FILE_NAME,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
-    TOLERANCES,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -81,7 +80,6 @@ def generate_protected_areas_diff_table(
     pa_file_name: str = WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
-    tolerance: float = TOLERANCES[0],
     verbose: bool = True,
 ):
     def clean_for_json(obj):
@@ -108,7 +106,6 @@ def generate_protected_areas_diff_table(
         mpatlas_file_name=mpatlas_file_name,
         bucket=bucket,
         verbose=verbose,
-        tolerance=tolerance,
     )
 
     # Get the current database
