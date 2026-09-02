@@ -9,7 +9,6 @@ from google.protobuf import timestamp_pb2
 
 from src.core import map_params
 from src.core.commons import send_slack_alert
-from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
@@ -203,16 +202,12 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
             "METHOD": "download_protected_seas",
             **task_config,
         },
+        {
+            "METHOD": "download_protected_planet_pas",
+            **task_config,
+            "TOLERANCES": TOLERANCES,
+        },
     ]
-
-    for tolerance in TOLERANCES:
-        jobs.append(
-            {
-                "METHOD": "download_protected_planet_pas",
-                **task_config,
-                "TOLERANCE": tolerance,
-            }
-        )
 
     for job in jobs:
         if long_running_task_list and job["METHOD"] in long_running_task_list:
@@ -405,17 +400,15 @@ def dispatch_publisher(
         case "download_protected_planet_pas":
             download_and_process_protected_planet_pas(
                 verbose=verbose,
-                tolerance=tolerance,
+                tolerances=TOLERANCES,
                 batch_size=1000,
             )
-            if tolerance == terrestrial_tolerance:
-                step_list = [
-                    "generate_protected_areas_table",
-                    "generate_terrestrial_biome_stats",
-                    "generate_eez_minus_mpa",
-                ]
-            if tolerance == marine_tolerance:
-                step_list = ["download_protected_planet_country"]
+            step_list = [
+                "generate_protected_areas_table",
+                "generate_terrestrial_biome_stats",
+                "generate_eez_minus_mpa",
+                "download_protected_planet_country",
+            ]
 
         # ------------------
         #   Table updates
