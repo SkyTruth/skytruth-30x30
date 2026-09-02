@@ -78,8 +78,8 @@ from src.utils.gcp import (
 from src.utils.geo import (
     buffer_km,
     get_area_km2,
-    robust_unary_union,
     tile_geometry,
+    union_area_km2,
 )
 from src.utils.logger import Logger
 
@@ -600,7 +600,7 @@ def _buffer_unep_points(
     """
     points = points.explode(index_parts=False).reset_index(drop=True)
 
-    reported_area_km2 = pd.to_numeric(points.get("REP_AREA_K"), errors="coerce")
+    reported_area_km2 = pd.to_numeric(points["REP_AREA_K"], errors="coerce")
     area_km2 = reported_area_km2.where(reported_area_km2 > 0, fallback_area_km2)
 
     # Buffer points
@@ -781,7 +781,7 @@ def process_marine_habitat_geoms(
         if len(geometry) == 0:
             global_area_km2 = 0.0
         elif params["overlaps"]:
-            global_area_km2 = get_area_km2(robust_unary_union(geometry.geometry.values))
+            global_area_km2 = union_area_km2(list(geometry.geometry.values), n_jobs)
         else:
             global_area_km2 = float(geometry.geometry.to_crs("EPSG:6933").area.sum() / 1e6)
 

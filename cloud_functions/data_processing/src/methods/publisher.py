@@ -30,6 +30,7 @@ from src.core.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
     LONG_RUNNING_TASKS,
+    MARINE_HABITAT_PARAMS,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
@@ -365,16 +366,20 @@ def dispatch_publisher(
             step_list = ["process_marine_habitat_geoms"]
 
         case "download_marine_habitats":
-            habitat = data.get("HABITAT")
-            download_marine_habitats(habitats=habitat, verbose=verbose)
+            requested = data.get("HABITAT") or list(MARINE_HABITAT_PARAMS)
+            outstanding = [requested] if isinstance(requested, str) else list(requested)
 
-            requested = [habitat] if isinstance(habitat, str) else habitat
-            geom_requested = [name for name in requested or [] if name in HABITAT_PROCESSING_PARAMS]
+            for index, habitat in enumerate(outstanding):
+                task_config["HABITAT"] = outstanding[index:]
+                download_marine_habitats(habitats=habitat, verbose=verbose)
 
+            geom_requested = [name for name in outstanding if name in HABITAT_PROCESSING_PARAMS]
+
+            task_config.pop("HABITAT", None)
             step_list = []
-            if requested is None or geom_requested:
-                task_config["HABITAT"] = geom_requested or None
-                step_list.append("process_marine_habitat_geoms")
+            if geom_requested:
+                task_config["HABITAT"] = geom_requested
+                step_list = ["process_marine_habitat_geoms"]
 
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)
@@ -385,11 +390,11 @@ def dispatch_publisher(
             step_list = ["process_marine_habitat_geoms"]
 
         case "process_marine_habitat_geoms":
-            habitat = data.get("HABITAT")
-            if isinstance(habitat, str):
-                habitat = [habitat]
-            habitat = list(habitat or HABITAT_PROCESSING_PARAMS)
-            current, remaining = habitat[0], habitat[1:]
+            requested = data.get("HABITAT") or list(HABITAT_PROCESSING_PARAMS)
+            outstanding = [requested] if isinstance(requested, str) else list(requested)
+            current, remaining = outstanding[0], outstanding[1:]
+
+            task_config["HABITAT"] = outstanding
 
             process_marine_habitat_geoms(habitats=current, verbose=verbose)
 
@@ -397,6 +402,7 @@ def dispatch_publisher(
                 task_config["HABITAT"] = remaining
                 step_list = ["process_marine_habitat_geoms"]
             else:
+                task_config.pop("HABITAT", None)
                 step_list = ["generate_habitat_protection_table"]
 
         case "generate_terrestrial_biome_stats_country":
@@ -752,7 +758,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
                 verbose=verbose,
                 delay_seconds=delay_seconds,
             )
-            return f"Retrying in {e.delay_seconds} seconds", 202
+            return f"Retrying in {delay_seconds} seconds", 202
         else:
             logger.error(
                 {
