@@ -33,7 +33,7 @@ from src.utils.gcp import (
     read_json_from_gcs,
     read_parquet_from_gcs,
 )
-from src.utils.geo import get_area_km2, robust_unary_union, union_area_km2
+from src.utils.geo import get_area_km2, robust_unary_union, fast_union_area_km2
 from src.utils.logger import Logger
 
 # Climate-resilient corals raster: 1 = climate-resilient corals, 0 = other corals.
@@ -252,7 +252,7 @@ def _protected_habitat_all_locations(
         rows, columns=["location", "total_habitat_area_km2", "protected_habitat_area_km2"]
     )
 
-    global_protected_area_km2 = union_area_km2(global_protected_geoms, n_jobs)
+    global_protected_area_km2 = fast_union_area_km2(global_protected_geoms, n_jobs)
 
     return protected_by_location, global_protected_area_km2
 

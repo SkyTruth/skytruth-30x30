@@ -79,7 +79,7 @@ from src.utils.geo import (
     buffer_km,
     get_area_km2,
     tile_geometry,
-    union_area_km2,
+    fast_union_area_km2,
 )
 from src.utils.logger import Logger
 
@@ -781,7 +781,7 @@ def process_marine_habitat_geoms(
         if len(geometry) == 0:
             global_area_km2 = 0.0
         elif params["overlaps"]:
-            global_area_km2 = union_area_km2(list(geometry.geometry.values), n_jobs)
+            global_area_km2 = fast_union_area_km2(list(geometry.geometry.values), n_jobs)
         else:
             global_area_km2 = float(geometry.geometry.to_crs("EPSG:6933").area.sum() / 1e6)
 

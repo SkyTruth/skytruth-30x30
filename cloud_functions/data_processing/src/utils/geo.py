@@ -329,7 +329,7 @@ def buffer_km(geom, km=2, src_crs="EPSG:4326"):
     return result
 
 
-def union_area_km2(
+def fast_union_area_km2(
     geoms: list,
     n_jobs: int = -1,
     tile_size_deg: float = 5.0,

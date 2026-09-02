@@ -1,5 +1,5 @@
 """Tests for src/utils/geo.py: per-pixel raster areas (compute_pixel_area_map_km2),
-robust geometry unioning (robust_unary_union, union_area_km2), and metric buffering
+robust geometry unioning (robust_unary_union, fast_union_area_km2), and metric buffering
 (buffer_km)."""
 
 import numpy as np
@@ -18,7 +18,7 @@ from src.utils.geo import (
     compute_pixel_area_map_km2,
     get_area_km2,
     robust_unary_union,
-    union_area_km2,
+    fast_union_area_km2,
 )
 
 # True WGS84 ellipsoid surface area; the graticule areas should integrate to it.
@@ -289,7 +289,7 @@ def test_shift_negative_longitudes_preserves_z():
     assert _shift_negative_longitudes(-170.0, 5.0, 3.0) == (190.0, 5.0, 3.0)
 
 
-def test_union_area_km2_matches_a_single_global_union():
+def test_fast_union_area_km2_matches_a_single_global_union():
     """Tiling is only an optimisation, so it must agree with unioning the whole layer."""
     rng = np.random.default_rng(0)
     points = [
@@ -298,18 +298,18 @@ def test_union_area_km2_matches_a_single_global_union():
     ]
     overlapping = [point.buffer(3.0) for point in points]
 
-    tiled = union_area_km2(overlapping, n_jobs=1)
+    tiled = fast_union_area_km2(overlapping, n_jobs=1)
     whole = get_area_km2(robust_unary_union(overlapping))
 
     assert tiled == pytest.approx(whole, rel=1e-6)
 
 
-def test_union_area_km2_deduplicates_overlap_across_a_tile_edge():
+def test_fast_union_area_km2_deduplicates_overlap_across_a_tile_edge():
     """A shape against a tile boundary is clipped into both tiles, not counted twice."""
     edge = box(4.0, 0.0, 6.0, 1.0)
 
-    assert union_area_km2([edge, edge], n_jobs=1) == pytest.approx(get_area_km2(edge), rel=1e-9)
+    assert fast_union_area_km2([edge, edge], n_jobs=1) == pytest.approx(get_area_km2(edge), rel=1e-9)
 
 
-def test_union_area_km2_of_nothing_is_zero():
-    assert union_area_km2([], n_jobs=1) == 0.0
+def test_fast_union_area_km2_of_nothing_is_zero():
+    assert fast_union_area_km2([], n_jobs=1) == 0.0
