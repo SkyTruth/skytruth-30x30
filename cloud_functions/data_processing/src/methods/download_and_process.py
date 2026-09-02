@@ -734,6 +734,11 @@ def download_and_process_protected_planet_pas(
             df = pd.DataFrame()
             del df
 
+    # Held until now because every tolerance pass re-reads the unpacked parquets
+    if verbose:
+        logger.info({"message": f"deleting {pa_dir}"})
+    remove_file_or_folder(pa_dir, verbose=verbose)
+
 
 def download_protected_planet_global(
     current_filename: str,
