@@ -151,6 +151,23 @@ def test_protected_planet_pas_receives_every_tolerance(patched_all):
     assert "tolerance" not in kwargs
 
 
+def test_protected_planet_pas_ignores_payload_tolerance(patched_all):
+    """A payload TOLERANCE must not narrow the PA job to one tolerance.
+
+    task_config stamps TOLERANCE into every payload, and the CB methods still
+    honour it, so the guarantee that matters here is that this method does not:
+    producing a partial dataset would let the shared step_list fire on it.
+    """
+    resp = main.run_from_payload(
+        {"METHOD": "download_protected_planet_pas", "TOLERANCE": 0.5},
+    )
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert tuple(kwargs["tolerances"]) == tuple(main.TOLERANCES)
+    assert 0.5 not in tuple(kwargs["tolerances"])
+
+
 @pytest.mark.parametrize(
     "habitat",
     ["coldwatercorals", ["coldwatercorals", "saltmarshes", "seagrasses"]],
@@ -389,9 +406,7 @@ def enqueued_jobs(monkeypatch, call_log):
     )
 
     def _run():
-        main.monthly_job_publisher(
-            {"PROJECT": "p"}, long_running_task_list=main.LONG_RUNNING_TASKS, verbose=False
-        )
+        main.run_from_payload({"METHOD": "publisher"}, verbose=False)
         return {
             route: [args[0] for name, args, _ in call_log if name == route]
             for route in ("create_task", "long_running_tasks")
@@ -408,10 +423,11 @@ def test_monthly_publisher_enqueues_one_pa_job(enqueued_jobs):
     pa_jobs = [job for job in all_jobs if job["METHOD"] == "download_protected_planet_pas"]
 
     assert len(pa_jobs) == 1
-    # Tolerance is a pipeline invariant now, not a per-task parameter
-    assert "TOLERANCE" not in pa_jobs[0]
-    assert "TOLERANCES" not in pa_jobs[0]
     assert len(all_jobs) == 3
+    # task_config stamps TOLERANCE into every payload; the PA method ignores it
+    # (see test_protected_planet_pas_ignores_payload_tolerance). What must not
+    # come back is a per-job tolerance fan-out.
+    assert "TOLERANCES" not in pa_jobs[0]
 
 
 def test_monthly_publisher_routes_long_running_jobs_to_the_job_runner(enqueued_jobs):
