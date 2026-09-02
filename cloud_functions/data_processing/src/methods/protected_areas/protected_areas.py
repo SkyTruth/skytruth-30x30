@@ -246,11 +246,12 @@ def generate_protected_areas_table(
 
     if verbose:
         logger.info({"message": f"loading gadm from {gadm_file_name}"})
-terrestrial_areas = read_json_df(BUCKET, gadm_file_name)
-terrestrial_areas = calculate_area(gadm, output_area_column="AREA_KM2")
+    terrestrial_areas = read_json_df(BUCKET, gadm_file_name)
+    terrestrial_areas = calculate_area(terrestrial_areas, output_area_column="AREA_KM2")
 
     iho_areas = load_iho_regions().rename(columns={"area": "AREA_KM2"})
     marine_areas = pd.concat([eez, iho_areas[["location", "AREA_KM2"]]], ignore_index=True)
+
     if verbose:
         logger.info({"message": "processing WDPAs"})
     wdpa_pa = process_wdpa(wdpa)
