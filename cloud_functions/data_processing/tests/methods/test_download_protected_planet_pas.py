@@ -1,13 +1,3 @@
-"""Tests for the single-download / multi-tolerance PA job.
-
-`download_and_process_protected_planet_pas` used to be invoked once per
-tolerance, which meant two full WDPA downloads a month and two independent
-downstream chains that could interleave. It now downloads once and loops the
-tolerances internally, so these tests pin the properties that made that safe:
-the unpacked parquets survive every pass, are deleted only at the end, and the
-tolerance-independent metadata is written exactly once.
-"""
-
 import os
 import shutil
 

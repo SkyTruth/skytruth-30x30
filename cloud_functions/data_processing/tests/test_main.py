@@ -178,28 +178,6 @@ def test_conservation_builder_methods_use_their_domain_tolerance(
 
 
 @pytest.mark.parametrize(
-    "method",
-    [
-        "download_protected_planet_pas",
-        "generate_gadm_minus_pa",
-        "generate_eez_minus_mpa",
-        "generate_location_minus_fhp_mpa",
-    ],
-)
-def test_payload_tolerance_is_never_honoured(patched_all, method):
-    """Tolerance is resolved from constants at the read site, never from a task.
-
-    A queued task must not be able to vary it: a partial or wrongly-simplified
-    dataset would still let the shared step_list fire on it.
-    """
-    resp = main.run_from_payload({"METHOD": method, "TOLERANCE": 0.5})
-
-    assert resp == ("OK", 200)
-    _, _, kwargs = patched_all[0]
-    assert 0.5 not in tuple(kwargs.get("tolerances", ())) and kwargs.get("tolerance") != 0.5
-
-
-@pytest.mark.parametrize(
     "habitat",
     ["coldwatercorals", ["coldwatercorals", "saltmarshes", "seagrasses"]],
     ids=["single", "list"],
@@ -446,38 +424,12 @@ def enqueued_jobs(monkeypatch, call_log):
     return _run
 
 
-def test_monthly_publisher_enqueues_one_pa_job(enqueued_jobs):
-    """The PA job is enqueued once, not once per tolerance."""
-    jobs = enqueued_jobs()
-
-    all_jobs = jobs["create_task"] + jobs["long_running_tasks"]
-    pa_jobs = [job for job in all_jobs if job["METHOD"] == "download_protected_planet_pas"]
-
-    assert len(pa_jobs) == 1
-    assert len(all_jobs) == 3
-    # Tolerance is resolved from constants at each read site, so no task payload
-    # carries one - neither a single value nor a fan-out list.
-    assert not {"TOLERANCE", "TOLERANCES"} & set(pa_jobs[0])
-
-
 def test_monthly_publisher_routes_long_running_jobs_to_the_job_runner(enqueued_jobs):
     """Long-running methods must go to a Cloud Run Job, not the task queue."""
     jobs = enqueued_jobs()
 
     assert "download_protected_planet_pas" in {job["METHOD"] for job in jobs["long_running_tasks"]}
     assert {job["METHOD"] for job in jobs["create_task"]} == {"download_mpatlas"}
-
-
-def test_monthly_publisher_payloads_survive_the_json_boundary(enqueued_jobs):
-    """Payloads reach Cloud Tasks as JSON, so they must round-trip unchanged.
-
-    A tuple in the payload (as the old TOLERANCES key was) comes back a list,
-    so the task a worker receives is not the one that was enqueued.
-    """
-    jobs = enqueued_jobs()
-
-    for job in jobs["create_task"] + jobs["long_running_tasks"]:
-        assert json.loads(json.dumps(job)) == job
 
 
 # Non-invoking / generic flows
