@@ -407,6 +407,7 @@ def dispatch_publisher(
                 "generate_protected_areas_table",
                 "generate_terrestrial_biome_stats",
                 "generate_eez_minus_mpa",
+                "generate_gadm_minus_pa",
                 "download_protected_planet_country",
             ]
 
