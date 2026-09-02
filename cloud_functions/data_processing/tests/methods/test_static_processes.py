@@ -525,6 +525,7 @@ def test_process_eez_geoms_happy_path(
     monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
     monkeypatch.setattr(static_processes, "TOLERANCES", [0.1, 0.3], raising=True)
+    monkeypatch.setattr(static_processes, "MARINE_TOLERANCE", 0.7, raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
     monkeypatch.setattr(
         static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True
@@ -553,7 +554,7 @@ def test_process_eez_geoms_happy_path(
 
     # The last call is multi-sovereign
     last_call = calls[-1]
-    assert last_call["destination_blob"] == f"eez_multi_{static_processes.TOLERANCES[-1]}.geojson"
+    assert last_call["destination_blob"] == f"eez_multi_{static_processes.MARINE_TOLERANCE}.geojson"
 
     # Basic structure of uploaded frames
     for c in calls:

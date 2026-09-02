@@ -238,14 +238,16 @@ def process_eez_geoms(
             {
                 "message": (
                     f"simplifying eez with mulit-sovereign geometries "
-                    f"with tolerance {TOLERANCES[1]}"
+                    f"with tolerance {MARINE_TOLERANCE}"
                 )
             }
         )
-    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
+    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(
+        tolerance=MARINE_TOLERANCE
+    )
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
-    blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, TOLERANCES[1])
+    blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, MARINE_TOLERANCE)
     if verbose:
         logger.info({"message": f"uploading eez with multi-sovereign file to {blob_name}"})
     upload_gdf(bucket, eez_multiple_sovs, blob_name)

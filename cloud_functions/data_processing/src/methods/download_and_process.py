@@ -457,9 +457,7 @@ def download_and_process_protected_planet_pas(
         except Exception as e:
             logger.warning({"message": f"Warning: could not delete {path}: {e}"})
 
-    def process_protected_area_geoms(
-        pa_dir, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
-    ):
+    def process_protected_area_geoms(pa_dir, tolerance, batch_size=1000, n_jobs=-1, verbose=True):
         def stream_parquet_chunks(paths, batch_size=1000):
             """
             Lazily stream GeoDataFrame chunks from one or more Parquet files.
@@ -518,7 +516,7 @@ def download_and_process_protected_planet_pas(
                 return buffed.geometry.iloc[0]
             return g
 
-        def simplify_chunk(chunk, tolerance=TOLERANCES[0]):
+        def simplify_chunk(chunk, tolerance):
             """
             Simplify and buffer geometries in a GeoDataFrame chunk.
             """
@@ -544,9 +542,7 @@ def download_and_process_protected_planet_pas(
                 del chunk
                 gc.collect()
 
-        def process_all_files(
-            paths, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
-        ):
+        def process_all_files(paths, tolerance, batch_size=1000, n_jobs=-1, verbose=True):
             """
             Process multiple Parquet files in parallel, simplifying geometries
             in streamed chunks while managing memory and logging progress.

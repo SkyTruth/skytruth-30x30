@@ -22,6 +22,7 @@ from src.core.map_params import (
     TERRESTRIAL_REGIONS_TILESET_FILE,
     TERRESTRIAL_REGIONS_TILESET_ID,
     TERRESTRIAL_REGIONS_TILESET_NAME,
+    WDPA_TOLERANCE,
 )
 from src.core.params import (
     BUCKET,
@@ -32,7 +33,6 @@ from src.core.params import (
     MPATLAS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
-    TOLERANCES,
 )
 from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
@@ -79,7 +79,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     ]
 
     # simplify geometry to match same simplification of Protected Areas
-    gdf["geometry"] = gdf["geometry"].simplify(TOLERANCES[0])
+    gdf["geometry"] = gdf["geometry"].simplify(WDPA_TOLERANCE)
     gdf["geometry"] = gdf["geometry"].make_valid()
 
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
