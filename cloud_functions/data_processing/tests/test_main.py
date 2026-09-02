@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -44,6 +45,7 @@ def patched_all(monkeypatch, call_log):
         "download_mpatlas",
         "download_protected_seas",
         "download_protected_planet",
+        "download_and_process_protected_planet_pas",
         "generate_protected_areas_diff_table",
         "generate_terrestrial_biome_stats_pa",
         "generate_habitat_protection_table",
@@ -100,6 +102,10 @@ def patched_all(monkeypatch, call_log):
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
+        (
+            "download_protected_planet_pas",
+            "download_and_process_protected_planet_pas",
+        ),
         ("generate_protected_areas_table", "generate_protected_areas_diff_table"),
         ("generate_protection_coverage_stats_table", "generate_protection_coverage_stats_table"),
         (
@@ -129,6 +135,20 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     assert "verbose" in kwargs
     if method == "update_locations":
         assert kwargs["request"] == {"METHOD": "update_locations"}
+
+
+def test_protected_planet_pas_receives_every_tolerance(patched_all):
+    """The PA job simplifies at every tolerance in one invocation.
+
+    It used to be dispatched once per tolerance, which meant two full WDPA
+    downloads and two downstream chains that could interleave.
+    """
+    resp = main.run_from_payload({"METHOD": "download_protected_planet_pas"})
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert tuple(kwargs["tolerances"]) == tuple(main.TOLERANCES)
+    assert "tolerance" not in kwargs
 
 
 @pytest.mark.parametrize(
@@ -353,6 +373,65 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
 
     # Verbose propagated from module
     assert recorder["verbose"] is True
+
+
+# Monthly fan-out
+@pytest.fixture
+def enqueued_jobs(monkeypatch, call_log):
+    """Patch only the two enqueue routes, leaving LONG_RUNNING_TASKS real.
+
+    `patched_all` blanks LONG_RUNNING_TASKS, which is exactly what these tests
+    need to exercise, so they patch narrowly instead.
+    """
+    monkeypatch.setattr(main, "create_task", make_recorder(call_log, "create_task"), raising=True)
+    monkeypatch.setattr(
+        main, "long_running_tasks", make_recorder(call_log, "long_running_tasks"), raising=True
+    )
+
+    def _run():
+        main.monthly_job_publisher(
+            {"PROJECT": "p"}, long_running_task_list=main.LONG_RUNNING_TASKS, verbose=False
+        )
+        return {
+            route: [args[0] for name, args, _ in call_log if name == route]
+            for route in ("create_task", "long_running_tasks")
+        }
+
+    return _run
+
+
+def test_monthly_publisher_enqueues_one_pa_job(enqueued_jobs):
+    """The PA job is enqueued once, not once per tolerance."""
+    jobs = enqueued_jobs()
+
+    all_jobs = jobs["create_task"] + jobs["long_running_tasks"]
+    pa_jobs = [job for job in all_jobs if job["METHOD"] == "download_protected_planet_pas"]
+
+    assert len(pa_jobs) == 1
+    # Tolerance is a pipeline invariant now, not a per-task parameter
+    assert "TOLERANCE" not in pa_jobs[0]
+    assert "TOLERANCES" not in pa_jobs[0]
+    assert len(all_jobs) == 3
+
+
+def test_monthly_publisher_routes_long_running_jobs_to_the_job_runner(enqueued_jobs):
+    """Long-running methods must go to a Cloud Run Job, not the task queue."""
+    jobs = enqueued_jobs()
+
+    assert "download_protected_planet_pas" in {job["METHOD"] for job in jobs["long_running_tasks"]}
+    assert {job["METHOD"] for job in jobs["create_task"]} == {"download_mpatlas"}
+
+
+def test_monthly_publisher_payloads_survive_the_json_boundary(enqueued_jobs):
+    """Payloads reach Cloud Tasks as JSON, so they must round-trip unchanged.
+
+    A tuple in the payload (as the old TOLERANCES key was) comes back a list,
+    so the task a worker receives is not the one that was enqueued.
+    """
+    jobs = enqueued_jobs()
+
+    for job in jobs["create_task"] + jobs["long_running_tasks"]:
+        assert json.loads(json.dumps(job)) == job
 
 
 # Non-invoking / generic flows
