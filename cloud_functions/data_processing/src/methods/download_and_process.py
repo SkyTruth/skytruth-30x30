@@ -661,13 +661,13 @@ def download_and_process_protected_planet_pas(
         logger.info({"message": "processing and simplifying protected area geometries"})
 
     for tolerance in tolerances:
-        if verbose:
-            logger.info({"message": f"processing with tolerance {tolerance}"})
-        df = process_protected_area_geoms(
-            pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
-        )
-
         try:
+            if verbose:
+                logger.info({"message": f"processing with tolerance {tolerance}"})
+            df = process_protected_area_geoms(
+                pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
+            )
+
             if verbose:
                 logger.info({"message": "Renaming variables to match old format"})
             # On failure, alert in case naming convention has changed
@@ -727,12 +727,11 @@ def download_and_process_protected_planet_pas(
                 alert_message="Failed to upload marine PAs",
             )
             duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
-        except RetryFailed:
-            raise
         finally:
-            # Clean up memory
             df = pd.DataFrame()
-            del df
+            gc.collect()
+            pyarrow.default_memory_pool().release_unused()
+            show_container_mem(f"After tolerance {tolerance}")
 
     # Held until now because every tolerance pass re-reads the unpacked parquets
     if verbose:
