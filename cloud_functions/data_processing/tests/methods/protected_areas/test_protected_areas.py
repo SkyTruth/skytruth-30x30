@@ -1,9 +1,38 @@
 from copy import deepcopy
 
+import geopandas as gpd
 import pandas as pd
 import pytest
+from shapely.geometry import box
 
+import src.methods.protected_areas.protected_areas as pa_module
 from src.methods.protected_areas.protected_areas import make_pa_updates
+
+# Two side-by-side seas sharing the x=10 edge, plus their areas for the denominator.
+SEA_A, SEA_B = "4279", "3324"
+SEA_AREA_KM2 = 1_000_000.0
+
+
+def make_df(entries):
+    """Helper to create a DataFrame from a list of dict entries."""
+    return pd.DataFrame(entries)
+
+
+def _rows(result, data_source, location):
+    return result[(result["data_source"] == data_source) & (result["location"] == location)]
+
+
+def empty_iho_areas():
+    """No IHO seas, so no PA gains a sea row."""
+    return pd.DataFrame({"location": pd.Series(dtype=str), "area": pd.Series(dtype=float)})
+
+
+def empty_wdpa_pairs():
+    return pd.DataFrame({"WDPA_PID": pd.Series(dtype=str), "location": pd.Series(dtype=str)})
+
+
+def empty_mpa_pairs():
+    return pd.DataFrame({"zone_id": pd.Series(dtype=str), "location": pd.Series(dtype=str)})
 
 
 @pytest.fixture
@@ -100,9 +129,181 @@ def child():
     }
 
 
-def make_df(entries):
-    """Helper to create a DataFrame from a list of dict entries."""
-    return pd.DataFrame(entries)
+@pytest.fixture
+def wdpa_meta():
+    """Raw wdpa_meta.csv rows: two marine PAs and one terrestrial."""
+    return pd.DataFrame(
+        [
+            {
+                "WDPAID": 100,
+                "WDPA_PID": "100A",
+                "NAME": "Straddling Reserve",
+                "calculated_area_km2": 900.0,
+                "STATUS": "Designated",
+                "PA_DEF": 1,
+                "STATUS_YR": 2001,
+                "DESIG_TYPE": "National",
+                "ISO3": "FRA",
+                "IUCN_CAT": "II",
+                "MARINE": 1,
+                "bbox": "[0, 0, 1, 1]",
+            },
+            {
+                "WDPAID": 200,
+                "WDPA_PID": "200A",
+                "NAME": "Point Reserve",
+                "calculated_area_km2": 0.0,
+                "STATUS": "Designated",
+                "PA_DEF": 0,
+                "STATUS_YR": 2002,
+                "DESIG_TYPE": "National",
+                "ISO3": "ESP",
+                "IUCN_CAT": "IV",
+                "MARINE": 2,
+                "bbox": "[0, 0, 1, 1]",
+            },
+            {
+                "WDPAID": 300,
+                "WDPA_PID": "300A",
+                "NAME": "Inland Park",
+                "calculated_area_km2": 500.0,
+                "STATUS": "Designated",
+                "PA_DEF": 1,
+                "STATUS_YR": 2003,
+                "DESIG_TYPE": "National",
+                "ISO3": "FRA",
+                "IUCN_CAT": "II",
+                "MARINE": 0,
+                "bbox": "[0, 0, 1, 1]",
+            },
+        ]
+    )
+
+
+@pytest.fixture
+def mpa_meta():
+    """Raw mpa_meta.csv rows. zone_id is an int here, as it is in the real CSV."""
+    return pd.DataFrame(
+        [
+            {
+                "name": "MPAtlas Zone",
+                "calculated_area_km2": 800.0,
+                "designated_date": "2010-01-01",
+                "wdpa_id": 100,
+                "wdpa_pid": "100A",
+                "zone_id": 10,
+                "designation": "Marine Reserve",
+                "establishment_stage": "implemented",
+                "country": "FRA",
+                "protection_mpaguide_level": "full",
+                "bbox": "[0, 0, 1, 1]",
+            },
+        ]
+    )
+
+
+@pytest.fixture
+def wdpa_pairs():
+    """What intersect_wdpa_with_iho returns: one row per (PA, sea) pair.
+
+    The straddler reaches into both seas; the point PA falls inside one.
+    """
+    return pd.DataFrame(
+        {
+            "WDPA_PID": ["100A", "100A", "200A"],
+            "location": [SEA_A, SEA_B, SEA_A],
+        }
+    )
+
+
+@pytest.fixture
+def mpa_pairs():
+    """What intersect_mpatlas_with_iho returns. zone_id is a string, as it is in
+    the join (it comes from the GeoJSON's top-level id)."""
+    return pd.DataFrame({"zone_id": ["10"], "location": [SEA_A]})
+
+
+@pytest.fixture
+def reference_areas():
+    """EEZ, GADM and IHO reference frames, all far larger than the PAs so no
+    coverage saturates at the 100% cap."""
+    eez = pd.DataFrame({"location": ["FRA", "ESP", "ABNJ", "CHN"], "AREA_KM2": [1e6] * 4})
+    gadm = gpd.GeoDataFrame(
+        {"location": ["FRA"]},
+        geometry=[box(0, 0, 10, 10)],
+        crs="EPSG:6933",
+    )
+    iho = pd.DataFrame({"location": [SEA_A, SEA_B], "area": [SEA_AREA_KM2] * 2})
+    return eez, gadm, iho
+
+
+@pytest.fixture
+def mock_mpatlas_meta_df():
+    """intermediates/mpa_meta.csv shape (internal names, post-v4-normalization)."""
+    return pd.DataFrame(
+        {
+            "name": ["Cairns Section", "Shared Waters Zone", "Pending Zone"],
+            "calculated_area_km2": [10.0, 20.0, 5.0],
+            "designated_date": ["1981-01", "1990", None],
+            "wdpa_id": [555624, 100001, 100002],
+            "wdpa_pid": ["555624_1", "100001_A", "100002_A"],
+            "zone_id": [4821, 4822, 4823],
+            "designation": ["Marine Park", "Marine Reserve", "Sanctuary"],
+            "establishment_stage": ["implemented", "actively managed", "designated"],
+            "country": ["AUS", "AUS,NZL", "MEX"],
+            "protection_mpaguide_level": ["high", "full", "unknown"],
+            "bbox": ["(0.0, 0.0, 1.0, 1.0)"] * 3,
+        }
+    )
+
+
+@pytest.fixture
+def mock_wdpa_meta_df():
+    return pd.DataFrame(
+        {
+            "NAME": ["GBR WDPA"],
+            "calculated_area_km2": [50.0],
+            "STATUS": ["Designated"],
+            "PA_DEF": [1],
+            "STATUS_YR": [1981],
+            "WDPAID": [555624],
+            "WDPA_PID": ["555624_1"],
+            "DESIG_TYPE": ["National"],
+            "ISO3": ["AUS"],
+            "IUCN_CAT": ["II"],
+            "MARINE": [1],
+            "bbox": ["(0.0, 0.0, 1.0, 1.0)"],
+        }
+    )
+
+
+@pytest.fixture
+def run_table(monkeypatch, wdpa_meta, mpa_meta, wdpa_pairs, mpa_pairs, reference_areas):
+    """Run generate_protected_areas_table with every GCS read stubbed out."""
+    eez, gadm, iho = reference_areas
+
+    def fake_read_dataframe(bucket, filename, **kwargs):
+        return mpa_meta.copy() if "mpa" in filename else wdpa_meta.copy()
+
+    def fake_read_json_df(bucket, filename, **kwargs):
+        return eez.copy() if "eez" in filename else gadm.copy()
+
+    monkeypatch.setattr(pa_module, "read_dataframe", fake_read_dataframe)
+    monkeypatch.setattr(pa_module, "read_json_df", fake_read_json_df)
+    monkeypatch.setattr(pa_module, "load_iho_regions", lambda: iho.copy())
+    monkeypatch.setattr(pa_module, "intersect_wdpa_with_iho", lambda **_: wdpa_pairs.copy())
+    monkeypatch.setattr(pa_module, "intersect_mpatlas_with_iho", lambda **_: mpa_pairs.copy())
+    # GADM areas are normally derived from geometry; keep it explicit instead.
+    monkeypatch.setattr(
+        pa_module,
+        "calculate_area",
+        lambda df, output_area_column="AREA_KM2": df.assign(**{output_area_column: 1e6}),
+    )
+
+    return lambda: pa_module.generate_protected_areas_table(verbose=False)
+
+
+# ---------- make_pa_updates ----------
 
 
 def test_detect_new_entry(base_entry):
@@ -464,59 +665,114 @@ def test_pas_with_changed_deleted_new(base_entry, child, parent):
     assert expected_changed_parent in changed
 
 
-# ---------------------------------------------------------------------------
-# generate_protected_areas_table — MPAtlas meta -> Strapi-facing PA rows
-# ---------------------------------------------------------------------------
+# ---------- generate_protected_areas_table ----------
 
 
-@pytest.fixture
-def mock_mpatlas_meta_df():
-    """intermediates/mpa_meta.csv shape (internal names, post-v4-normalization)."""
-    return pd.DataFrame(
-        {
-            "name": ["Cairns Section", "Shared Waters Zone", "Pending Zone"],
-            "calculated_area_km2": [10.0, 20.0, 5.0],
-            "designated_date": ["1981-01", "1990", None],
-            "wdpa_id": [555624, 100001, 100002],
-            "wdpa_pid": ["555624_1", "100001_A", "100002_A"],
-            "zone_id": [4821, 4822, 4823],
-            "designation": ["Marine Park", "Marine Reserve", "Sanctuary"],
-            "establishment_stage": ["implemented", "actively managed", "designated"],
-            "country": ["AUS", "AUS,NZL", "MEX"],
-            "protection_mpaguide_level": ["high", "full", "unknown"],
-            "bbox": ["(0.0, 0.0, 1.0, 1.0)"] * 3,
-        }
+def test_marine_pa_gets_a_row_per_sea_it_overlaps(run_table):
+    result = run_table()
+
+    straddler = result[result["wdpa_p_id"] == "100A"]
+    pp_locations = sorted(
+        straddler[straddler["data_source"] == pa_module.PROTECTED_PLANET]["location"]
+    )
+    assert pp_locations == [SEA_B, SEA_A, "FRA"]  # 3324, 4279, FRA
+
+
+def test_sea_rows_carry_the_pas_own_area(run_table):
+    """A PA counts its whole area in every sea it reaches, exactly as it does in
+    every country it spans — so a straddler is not divided between the two."""
+    result = run_table()
+
+    assert _rows(result, pa_module.PROTECTED_PLANET, SEA_A)["area"].iloc[0] == 900.0
+    assert _rows(result, pa_module.PROTECTED_PLANET, SEA_B)["area"].iloc[0] == 900.0
+    assert _rows(result, pa_module.PROTECTED_PLANET, "FRA")["area"].iloc[0] == 900.0
+
+
+def test_sea_rows_survive_the_null_coverage_filter(run_table):
+    """Without the IHO areas in the coverage denominator every sea row gets a
+    null coverage and is dropped, silently."""
+    result = run_table()
+
+    sea_rows = result[result["location"].isin([SEA_A, SEA_B])]
+    assert not sea_rows.empty
+    assert sea_rows["coverage"].notna().all()
+    # 900 km² of a 1,000,000 km² sea.
+    assert _rows(result, pa_module.PROTECTED_PLANET, SEA_A)["coverage"].iloc[0] == pytest.approx(
+        0.09
     )
 
 
-@pytest.fixture
-def mock_wdpa_meta_df():
-    return pd.DataFrame(
-        {
-            "NAME": ["GBR WDPA"],
-            "calculated_area_km2": [50.0],
-            "STATUS": ["Designated"],
-            "PA_DEF": [1],
-            "STATUS_YR": [1981],
-            "WDPAID": [555624],
-            "WDPA_PID": ["555624_1"],
-            "DESIG_TYPE": ["National"],
-            "ISO3": ["AUS"],
-            "IUCN_CAT": ["II"],
-            "MARINE": [1],
-            "bbox": ["(0.0, 0.0, 1.0, 1.0)"],
-        }
-    )
+def test_mpatlas_zone_gets_its_sea_row_despite_the_zone_id_dtype_gap(run_table):
+    """The join returns zone_id as a string while the metadata holds an int;
+    merging across dtypes matches nothing and raises nothing."""
+    result = run_table()
+
+    mpa_sea = _rows(result, pa_module.MPATLAS, SEA_A)
+    assert len(mpa_sea) == 1
+    assert mpa_sea["area"].iloc[0] == 800.0
+
+
+def test_terrestrial_pa_gets_no_sea_rows(run_table):
+    result = run_table()
+
+    inland = result[result["wdpa_p_id"] == "300A"]
+    assert inland["location"].tolist() == ["FRA"]
+    assert inland["environment"].tolist() == ["terrestrial"]
+
+
+def test_country_rows_are_left_intact(run_table):
+    """The sea rows are additions, so every original country row must still be
+    present — an earlier version silently collapsed them into duplicates."""
+    result = run_table()
+
+    countries = result[result["location"].isin(["FRA", "ESP"])]
+    assert sorted(countries["wdpa_p_id"].dropna().unique()) == ["100A", "200A", "300A"]
+
+
+def test_point_pa_keeps_its_sea_row_with_zero_area(run_table):
+    """A point PA carries the 0 area its metadata already gives it, the same
+    value its country row carries."""
+    result = run_table()
+
+    point_sea = result[(result["wdpa_p_id"] == "200A") & (result["location"] == SEA_A)]
+    assert len(point_sea) == 1
+    assert point_sea["area"].iloc[0] == 0.0
+    assert point_sea["coverage"].iloc[0] == 0.0
+
+
+def test_sea_rows_are_marine_and_keep_their_source_attributes(run_table):
+    result = run_table()
+
+    sea_row = _rows(result, pa_module.PROTECTED_PLANET, SEA_A).iloc[0]
+    assert sea_row["environment"] == "marine"
+    assert sea_row["name"] == "Straddling Reserve"
+    assert sea_row["year"] == 2001
+    assert sea_row["protection_status"] == "pa"
+
+
+def test_parent_child_relations_stay_within_a_location(run_table):
+    """Parent/child groups by location, so a sea's rows form their own family
+    rather than linking back to the country row."""
+    result = run_table()
+
+    def relations(row):
+        """A row with no parent/children holds NaN rather than None, and NaN is
+        truthy, so match on the dict rather than on truthiness."""
+        children = row["children"] if isinstance(row["children"], list) else []
+        return [r for r in (row["parent"], *children) if isinstance(r, dict)]
+
+    checked = 0
+    for _, row in result.iterrows():
+        for relation in relations(row):
+            assert relation["location"] == row["location"]
+            checked += 1
+
+    assert checked > 0, "no parent/child relations were built, so nothing was verified"
 
 
 def test_generate_protected_areas_table_mpa_rows(
     monkeypatch, mock_mpatlas_meta_df, mock_wdpa_meta_df
 ):
-    import geopandas as gpd
-    from shapely.geometry import box
-
-    import src.methods.protected_areas.protected_areas as pa_module
-
     meta_reads = {
         "mpa_meta.csv": mock_mpatlas_meta_df,
         "wdpa_meta.csv": mock_wdpa_meta_df,
@@ -541,6 +797,11 @@ def test_generate_protected_areas_table_mpa_rows(
         return (mock_eez if filename.startswith("eez") else mock_gadm).copy()
 
     monkeypatch.setattr(pa_module, "read_json_df", mock_read_json_df)
+
+    # Sea rows are covered below; keep them out of the field-mapping assertions.
+    monkeypatch.setattr(pa_module, "load_iho_regions", lambda: empty_iho_areas())
+    monkeypatch.setattr(pa_module, "intersect_wdpa_with_iho", lambda **_: empty_wdpa_pairs())
+    monkeypatch.setattr(pa_module, "intersect_mpatlas_with_iho", lambda **_: empty_mpa_pairs())
 
     result = pa_module.generate_protected_areas_table(
         wdpa_file_name="wdpa_meta.csv",
