@@ -174,6 +174,7 @@ MARINE_HABITAT_PARAMS = {
         "archive_file_name": ARCHIVE_MANGROVES_FILE_NAME,
         "needs_processing": True,
         "source": "gpkg",
+        # Data comes from raster extent converted to vector, so there are no overlaps
         "overlaps": False,
     },
     "seamounts": {
