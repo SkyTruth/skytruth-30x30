@@ -249,6 +249,8 @@ NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parq
 #                     Conservation Builder
 # ------------------------------------------------------------
 
+CONSERVATION_BUILDER_TOLERANCE = 0.001
+
 CONSERVATION_BUILDER_MARINE_DATA = "conservation_builder/eez_minus_mpa.parquet"
 CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA = (
     "conservation_builder/location_minus_fhp_mpa.parquet"

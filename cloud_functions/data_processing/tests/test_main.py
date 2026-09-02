@@ -53,6 +53,8 @@ def patched_all(monkeypatch, call_log):
         "generate_marine_protection_level_stats_table",
         "generate_fishing_protection_table",
         "upload_locations",
+        "generate_total_area_minus_pa",
+        "generate_location_minus_fhp_mpa",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -151,21 +153,44 @@ def test_protected_planet_pas_receives_every_tolerance(patched_all):
     assert "tolerance" not in kwargs
 
 
-def test_protected_planet_pas_ignores_payload_tolerance(patched_all):
-    """A payload TOLERANCE must not narrow the PA job to one tolerance.
+@pytest.mark.parametrize(
+    "method",
+    ["generate_gadm_minus_pa", "generate_eez_minus_mpa", "generate_location_minus_fhp_mpa"],
+)
+def test_conservation_builder_methods_use_the_cb_tolerance(patched_all, method):
+    """All three subtraction jobs build at CONSERVATION_BUILDER_TOLERANCE.
 
-    task_config stamps TOLERANCE into every payload, and the CB methods still
-    honour it, so the guarantee that matters here is that this method does not:
-    producing a partial dataset would let the shared step_list fire on it.
+    They used to read it from the payload, which meant the value was whatever
+    TOLERANCES[0] happened to be and both marine layers silently ran at the
+    terrestrial tolerance.
     """
-    resp = main.run_from_payload(
-        {"METHOD": "download_protected_planet_pas", "TOLERANCE": 0.5},
-    )
+    resp = main.run_from_payload({"METHOD": method})
 
     assert resp == ("OK", 200)
     _, _, kwargs = patched_all[0]
-    assert tuple(kwargs["tolerances"]) == tuple(main.TOLERANCES)
-    assert 0.5 not in tuple(kwargs["tolerances"])
+    assert kwargs["tolerance"] == main.CONSERVATION_BUILDER_TOLERANCE
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "download_protected_planet_pas",
+        "generate_gadm_minus_pa",
+        "generate_eez_minus_mpa",
+        "generate_location_minus_fhp_mpa",
+    ],
+)
+def test_payload_tolerance_is_never_honoured(patched_all, method):
+    """Tolerance is resolved from constants at the read site, never from a task.
+
+    A queued task must not be able to vary it: a partial or wrongly-simplified
+    dataset would still let the shared step_list fire on it.
+    """
+    resp = main.run_from_payload({"METHOD": method, "TOLERANCE": 0.5})
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert 0.5 not in tuple(kwargs.get("tolerances", ())) and kwargs.get("tolerance") != 0.5
 
 
 @pytest.mark.parametrize(
@@ -424,10 +449,9 @@ def test_monthly_publisher_enqueues_one_pa_job(enqueued_jobs):
 
     assert len(pa_jobs) == 1
     assert len(all_jobs) == 3
-    # task_config stamps TOLERANCE into every payload; the PA method ignores it
-    # (see test_protected_planet_pas_ignores_payload_tolerance). What must not
-    # come back is a per-job tolerance fan-out.
-    assert "TOLERANCES" not in pa_jobs[0]
+    # Tolerance is resolved from constants at each read site, so no task payload
+    # carries one - neither a single value nor a fan-out list.
+    assert not {"TOLERANCE", "TOLERANCES"} & set(pa_jobs[0])
 
 
 def test_monthly_publisher_routes_long_running_jobs_to_the_job_runner(enqueued_jobs):

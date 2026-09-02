@@ -18,6 +18,7 @@ from src.core.params import (
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+    CONSERVATION_BUILDER_TOLERANCE,
     EEZ_FILE_NAME,
     EEZ_LAND_UNION_PARAMS,
     EEZ_PARAMS,
@@ -265,7 +266,6 @@ def dispatch_publisher(
     data,
     trigger_next=False,
     env="staging",
-    tolerance=TOLERANCES[0],
     verbose=True,
 ):
     # By default, do not continue onto the next step
@@ -462,7 +462,7 @@ def dispatch_publisher(
                 pa_file=WDPA_TERRESTRIAL_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-                tolerance=tolerance,
+                tolerance=CONSERVATION_BUILDER_TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_gadm_minus_pa"]
@@ -473,7 +473,7 @@ def dispatch_publisher(
                 pa_file=WDPA_MARINE_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
-                tolerance=tolerance,
+                tolerance=CONSERVATION_BUILDER_TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_eez_minus_mpa"]
@@ -484,7 +484,7 @@ def dispatch_publisher(
                 loc_file=EEZ_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
-                tolerance=tolerance,
+                tolerance=CONSERVATION_BUILDER_TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_location_minus_fhp_mpa"]
@@ -626,7 +626,6 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
     webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
     method = data.get("METHOD", "dry_run")
     trigger_next = data.get("TRIGGER_NEXT", False)
-    tolerance = data.get("TOLERANCE", TOLERANCES[0])
     max_retries = data.get("MAX_RETRIES", DEFAULT_RETRY_CONFIG["max_retries"])
     attempt = data.get("attempt", 1)
 
@@ -637,7 +636,6 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
         "JOB_NAME": data.get("JOB_NAME", ""),
         "TARGET_URL": data.get("TARGET_URL", ""),
         "INVOKER_SA": data.get("INVOKER_SA", ""),
-        "TOLERANCE": tolerance,
         "TRIGGER_NEXT": trigger_next,
         "MAX_RETRIES": max_retries,
         "attempt": attempt,
@@ -668,7 +666,6 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
             data,
             trigger_next=trigger_next,
             env=env,
-            tolerance=tolerance,
             verbose=verbose,
         )
 
