@@ -8,12 +8,12 @@ from src.core.commons import (
     intersect_wdpa_with_iho,
     load_iho_regions,
 )
-from src.core.land_cover_params import terrestrial_tolerance
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
     MPATLAS_META_FILE_NAME,
+    TERRESTRIAL_TOLERANCE,
     TOLERANCES,
     WDPA_META_FILE_NAME,
 )
@@ -232,7 +232,7 @@ def generate_protected_areas_table(
     ).rename(columns={"location": "country"})
     mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
 
-    wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket, tolerance=terrestrial_tolerance)
+    wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket, tolerance=TERRESTRIAL_TOLERANCE)
     wdpa_pairs = wdpa_pairs.merge(wdpa.drop(columns=["ISO3"]), on="WDPA_PID", how="inner").rename(
         columns={"location": "ISO3"}
     )

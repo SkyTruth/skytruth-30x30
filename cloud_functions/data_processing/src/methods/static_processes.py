@@ -27,9 +27,7 @@ from src.core.commons import (
 from src.core.land_cover_params import (
     BIOME_RASTER_PATH,
     LAND_COVER_CLASSES,
-    marine_tolerance,
     reclass_function,
-    terrestrial_tolerance,
 )
 from src.core.params import (
     BUCKET,
@@ -48,11 +46,13 @@ from src.core.params import (
     MANGROVES_BY_LOCATION_FILE_NAME,
     MANGROVES_ZIPFILE_NAME,
     MARINE_HABITAT_PARAMS,
+    MARINE_TOLERANCE,
     NEAR_SHORE_BUFFER_KM,
     NEAR_SHORE_IHO_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
+    TERRESTRIAL_TOLERANCE,
     TOLERANCES,
 )
 from src.core.processors import add_translations, clean_geometries
@@ -386,7 +386,7 @@ def process_eez_land_union(
     eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerance: float = MARINE_TOLERANCE,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -756,7 +756,7 @@ def generate_terrestrial_biome_stats_country(
     gadm_file_name: str = GADM_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
-    tolerance: float = terrestrial_tolerance,
+    tolerance: float = TERRESTRIAL_TOLERANCE,
     verbose: bool = True,
 ):
     gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)

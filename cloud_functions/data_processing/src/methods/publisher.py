@@ -18,7 +18,6 @@ from src.core.params import (
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-    CONSERVATION_BUILDER_TOLERANCE,
     EEZ_FILE_NAME,
     EEZ_LAND_UNION_PARAMS,
     EEZ_PARAMS,
@@ -32,9 +31,11 @@ from src.core.params import (
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
+    MARINE_TOLERANCE,
     MPATLAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
+    TERRESTRIAL_TOLERANCE,
     TOLERANCES,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
@@ -462,7 +463,7 @@ def dispatch_publisher(
                 pa_file=WDPA_TERRESTRIAL_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-                tolerance=CONSERVATION_BUILDER_TOLERANCE,
+                tolerance=TERRESTRIAL_TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_gadm_minus_pa"]
@@ -473,7 +474,7 @@ def dispatch_publisher(
                 pa_file=WDPA_MARINE_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
-                tolerance=CONSERVATION_BUILDER_TOLERANCE,
+                tolerance=MARINE_TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_eez_minus_mpa"]
@@ -484,7 +485,7 @@ def dispatch_publisher(
                 loc_file=EEZ_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
-                tolerance=CONSERVATION_BUILDER_TOLERANCE,
+                tolerance=MARINE_TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_location_minus_fhp_mpa"]

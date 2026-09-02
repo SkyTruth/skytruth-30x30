@@ -12,9 +12,9 @@ from src.core.commons import (
     load_wdpa_global,
     read_mpatlas_from_gcs,
 )
-from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
+    MARINE_TOLERANCE,
     MPATLAS_FILE_NAME,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -36,7 +36,7 @@ def compute_iho_protection_coverage(
     bucket: str = BUCKET,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerance: float = MARINE_TOLERANCE,
     verbose: bool = True,
 ) -> pd.DataFrame:
     pa_file = add_tolerance_suffix(marine_pa_file_name, tolerance)

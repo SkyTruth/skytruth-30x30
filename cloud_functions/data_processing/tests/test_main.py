@@ -154,21 +154,27 @@ def test_protected_planet_pas_receives_every_tolerance(patched_all):
 
 
 @pytest.mark.parametrize(
-    "method",
-    ["generate_gadm_minus_pa", "generate_eez_minus_mpa", "generate_location_minus_fhp_mpa"],
+    "method, expected_tolerance",
+    [
+        ("generate_gadm_minus_pa", "TERRESTRIAL_TOLERANCE"),
+        ("generate_eez_minus_mpa", "MARINE_TOLERANCE"),
+        ("generate_location_minus_fhp_mpa", "MARINE_TOLERANCE"),
+    ],
 )
-def test_conservation_builder_methods_use_the_cb_tolerance(patched_all, method):
-    """All three subtraction jobs build at CONSERVATION_BUILDER_TOLERANCE.
+def test_conservation_builder_methods_use_their_domain_tolerance(
+    patched_all, method, expected_tolerance
+):
+    """Each subtraction job builds at the tolerance for its own environment.
 
-    They used to read it from the payload, which meant the value was whatever
-    TOLERANCES[0] happened to be and both marine layers silently ran at the
-    terrestrial tolerance.
+    All three used to read it from the payload, which meant the value was
+    whatever TOLERANCES[0] happened to be - so both marine layers silently ran
+    at the terrestrial tolerance.
     """
     resp = main.run_from_payload({"METHOD": method})
 
     assert resp == ("OK", 200)
     _, _, kwargs = patched_all[0]
-    assert kwargs["tolerance"] == main.CONSERVATION_BUILDER_TOLERANCE
+    assert kwargs["tolerance"] == getattr(main, expected_tolerance)
 
 
 @pytest.mark.parametrize(

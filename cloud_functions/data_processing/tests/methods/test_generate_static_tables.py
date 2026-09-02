@@ -204,8 +204,8 @@ def test_generate_locations_table_happy(
     calls, upload_mock = upload_recorder
 
     # Fix tolerances so the code resolves eez/gadm filenames deterministically
-    monkeypatch.setattr(gen_static_tbl, "marine_tolerance", 0.1, raising=True)
-    monkeypatch.setattr(gen_static_tbl, "terrestrial_tolerance", 0.2, raising=True)
+    monkeypatch.setattr(gen_static_tbl, "MARINE_TOLERANCE", 0.1, raising=True)
+    monkeypatch.setattr(gen_static_tbl, "TERRESTRIAL_TOLERANCE", 0.2, raising=True)
 
     # The filenames the function will compute internally
     eez_suffix = gen_static_tbl.EEZ_FILE_NAME.replace(".geojson", "_0.1.geojson")
@@ -298,8 +298,8 @@ def test_generate_locations_table_read_failure(
 ):
     calls, upload_mock = upload_recorder
 
-    monkeypatch.setattr(gen_static_tbl, "marine_tolerance", 0.1, raising=True)
-    monkeypatch.setattr(gen_static_tbl, "terrestrial_tolerance", 0.2, raising=True)
+    monkeypatch.setattr(gen_static_tbl, "MARINE_TOLERANCE", 0.1, raising=True)
+    monkeypatch.setattr(gen_static_tbl, "TERRESTRIAL_TOLERANCE", 0.2, raising=True)
 
     eez_suffix = gen_static_tbl.EEZ_FILE_NAME.replace(".geojson", "_0.1.geojson")
 
