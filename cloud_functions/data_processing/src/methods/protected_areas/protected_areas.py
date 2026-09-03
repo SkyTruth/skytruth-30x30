@@ -4,8 +4,6 @@ from tqdm.auto import tqdm
 
 from src.core.commons import (
     add_tolerance_suffix,
-    intersect_mpatlas_with_iho,
-    intersect_wdpa_with_iho,
     load_iho_regions,
 )
 from src.core.params import (
@@ -13,8 +11,10 @@ from src.core.params import (
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
     MARINE_TOLERANCE,
+    MPATLAS_IHO_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     TERRESTRIAL_TOLERANCE,
+    WDPA_IHO_FILE_NAME,
     WDPA_META_FILE_NAME,
 )
 from src.core.processors import (
@@ -42,6 +42,7 @@ from src.methods.protected_areas.pa_processors import (
 from src.utils.gcp import (
     read_dataframe,
     read_json_df,
+    read_parquet_from_gcs,
 )
 from src.utils.logger import Logger
 
@@ -56,6 +57,8 @@ def generate_protected_areas_table(
     mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
     eez_file_name: str = EEZ_FILE_NAME,
     gadm_file_name: str = GADM_FILE_NAME,
+    wdpa_iho_file_name: str = WDPA_IHO_FILE_NAME,
+    mpatlas_iho_file_name: str = MPATLAS_IHO_FILE_NAME,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -223,9 +226,11 @@ def generate_protected_areas_table(
         logger.info({"message": "loading PA metadata"})
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
-    # Only the pairing is wanted here; the rest of each zone's attributes come
-    # from the metadata below, and carrying them twice would collide on merge.
-    mpa_pairs = intersect_mpatlas_with_iho(bucket=bucket)[["zone_id", "location"]]
+
+    # Load the MPA and WDPA pairs with IHO sea areas. 
+    mpa_pairs = read_parquet_from_gcs(bucket, mpatlas_iho_file_name, verbose=verbose)[
+        ["zone_id", "location"]
+    ]
 
     mpa_pairs["zone_id"] = mpa_pairs["zone_id"].astype(mpatlas["zone_id"].dtype)
     mpa_pairs = mpa_pairs.merge(
@@ -233,12 +238,16 @@ def generate_protected_areas_table(
     ).rename(columns={"location": "country"})
     mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
 
-    wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket)[["WDPA_PID", "location"]]
+    wdpa_pairs = read_parquet_from_gcs(
+        bucket, add_tolerance_suffix(wdpa_iho_file_name, MARINE_TOLERANCE), verbose=verbose
+    )
+    wdpa_pairs = wdpa_pairs.loc[wdpa_pairs["environment"] == "marine", ["WDPA_PID", "location"]]
     wdpa_pairs = wdpa_pairs.merge(wdpa.drop(columns=["ISO3"]), on="WDPA_PID", how="inner").rename(
         columns={"location": "ISO3"}
     )
     wdpa = pd.concat([wdpa, wdpa_pairs], axis=0, ignore_index=True)
 
+    # Load the marine and terrestrial boundaries to calculate percent coverage of PAs
     eez_file_name = add_tolerance_suffix(eez_file_name, MARINE_TOLERANCE)
     gadm_file_name = add_tolerance_suffix(gadm_file_name, TERRESTRIAL_TOLERANCE)
     if verbose:

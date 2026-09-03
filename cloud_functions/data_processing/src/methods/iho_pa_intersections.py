@@ -60,11 +60,12 @@ def generate_iho_pa_intersections(
         )
 
     def save(pairs, file_name):
-        file_name = add_tolerance_suffix(file_name, tolerance)
         if verbose:
             logger.info({"message": f"saving {len(pairs)} pair(s) to gs://{bucket}/{file_name}"})
         upload_gdf(bucket_name=bucket, gdf=pairs, destination_blob_name=file_name, verbose=verbose)
 
-    save(wdpa_pairs(buffer=False), WDPA_IHO_FILE_NAME)
-    save(wdpa_pairs(buffer=True), WDPA_NEAR_SHORE_IHO_FILE_NAME)
+    # The WDPA names take a tolerance because the PAs they were built from were
+    # simplified to it. MPAtlas is read as published, so its name does not.
+    save(wdpa_pairs(buffer=False), add_tolerance_suffix(WDPA_IHO_FILE_NAME, tolerance))
+    save(wdpa_pairs(buffer=True), add_tolerance_suffix(WDPA_NEAR_SHORE_IHO_FILE_NAME, tolerance))
     save(intersect_mpatlas_with_iho(bucket=bucket, with_geometry=True), MPATLAS_IHO_FILE_NAME)
