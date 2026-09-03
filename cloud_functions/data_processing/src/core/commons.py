@@ -522,26 +522,43 @@ def intersect_with_iho(
 def intersect_wdpa_with_iho(
     bucket: str = BUCKET,
     tolerance: float = MARINE_TOLERANCE,
+    pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    buffer: bool = False,
+    with_geometry: bool = False,
 ) -> pd.DataFrame:
-    """One row per (marine PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID."""
-    pa_file = add_tolerance_suffix(WDPA_MARINE_FILE_NAME, tolerance)
-    logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
+    """One row per (PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID.
 
-    pas = read_json_df(bucket_name=bucket, filename=pa_file)[["WDPA_PID", "geometry"]]
+    Pass ``pa_file_name`` to read the terrestrial PAs instead of the marine
+    ones, and ``buffer`` to join against the near-shore seas. ``PA_DEF`` and
+    ``WDPAID`` ride along so consumers can split PAs from OECMs and roll parcels
+    up to their parent without re-reading the protected areas file.
+    """
+    pa_file = add_tolerance_suffix(pa_file_name, tolerance)
+    logger.info({"message": f"loading PAs from gs://{bucket}/{pa_file}"})
 
-    return intersect_with_iho(pas, ["WDPA_PID"], with_geometry=False)
+    keep_cols = ["WDPA_PID", "WDPAID", "PA_DEF"]
+    pas = read_json_df(bucket_name=bucket, filename=pa_file)[[*keep_cols, "geometry"]]
+
+    return intersect_with_iho(pas, keep_cols, buffer=buffer, with_geometry=with_geometry)
 
 
 def intersect_mpatlas_with_iho(
     bucket: str = BUCKET,
     mpa_file_name: str = MPATLAS_FILE_NAME,
+    buffer: bool = False,
+    with_geometry: bool = False,
 ) -> pd.DataFrame:
-    """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id."""
+    """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id.
+
+    ``protection_mpaguide_level`` rides along because both consumers filter to
+    the fully and highly protected zones.
+    """
     logger.info({"message": f"loading MPAtlas zones from gs://{bucket}/{mpa_file_name}"})
 
-    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)[["zone_id", "geometry"]]
+    keep_cols = ["zone_id", "protection_mpaguide_level"]
+    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)[[*keep_cols, "geometry"]]
 
-    return intersect_with_iho(mpa, ["zone_id"], with_geometry=False)
+    return intersect_with_iho(mpa, keep_cols, buffer=buffer, with_geometry=with_geometry)
 
 
 def download_file_with_progress(url: str, filename: str, verbose: bool = True):

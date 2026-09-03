@@ -154,9 +154,14 @@ def _patch_wdpa(monkeypatch, gdf, calls=None):
 
 def _wdpa_frame(geometries, pids=None, **extra):
     n = len(geometries)
+    pids = pids if pids is not None else [str(i) for i in range(n)]
     return gpd.GeoDataFrame(
         {
-            "WDPA_PID": pids if pids is not None else [str(i) for i in range(n)],
+            "WDPA_PID": pids,
+            # Carried through the join so consumers can roll parcels up to their
+            # parent and split PAs from OECMs without re-reading the PA file.
+            "WDPAID": [pid.split("_")[0] for pid in pids],
+            "PA_DEF": [1] * n,
             **extra,
         },
         geometry=geometries,
@@ -202,9 +207,10 @@ def test_wdpa_iho_join_uses_unbuffered_iho(monkeypatch):
     assert buffers == [False]
 
 
-def test_wdpa_iho_join_returns_only_the_membership_columns(monkeypatch):
-    """Callers merge the rest back on themselves, and the PA keeps its own area,
-    so nothing else needs to be carried through the join."""
+def test_wdpa_iho_join_carries_only_the_columns_consumers_need(monkeypatch):
+    """PA_DEF and WDPAID travel with the pair so the coverage stats and habitat
+    rollups need not re-read the PA file. Everything else is left behind for
+    callers to merge back on themselves."""
     _patch_iho(monkeypatch)
     _patch_wdpa(
         monkeypatch,
@@ -213,7 +219,7 @@ def test_wdpa_iho_join_returns_only_the_membership_columns(monkeypatch):
 
     result = intersect_wdpa_with_iho(bucket="b", tolerance=0.0001)
 
-    assert list(result.columns) == ["WDPA_PID", "location"]
+    assert list(result.columns) == ["WDPA_PID", "WDPAID", "PA_DEF", "location"]
 
 
 def test_wdpa_iho_join_keeps_point_pas(monkeypatch):
@@ -256,7 +262,7 @@ def test_mpatlas_iho_join_pairs_zones_with_the_seas_they_overlap(monkeypatch):
 
     result = intersect_mpatlas_with_iho(bucket="b", mpa_file_name="raw/mpatlas.geojson")
 
-    assert list(result.columns) == ["zone_id", "location"]
+    assert list(result.columns) == ["zone_id", "protection_mpaguide_level", "location"]
     # every zone regardless of protection level, and the point zone too
     assert sorted(zip(result["zone_id"], result["location"], strict=True)) == [
         (10, "1"),

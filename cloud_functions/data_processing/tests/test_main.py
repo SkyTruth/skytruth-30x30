@@ -45,6 +45,7 @@ def patched_all(monkeypatch, call_log):
         "download_protected_seas",
         "download_protected_planet",
         "download_and_process_protected_planet_pas",
+        "generate_iho_pa_intersections",
         "generate_protected_areas_diff_table",
         "generate_terrestrial_biome_stats_pa",
         "generate_habitat_protection_table",

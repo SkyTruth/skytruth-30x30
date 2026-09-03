@@ -247,6 +247,14 @@ REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 NEAR_SHORE_BUFFER_KM = 10
 NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
 
+# IHO/PA intersections
+IHO_INTERSECTIONS_DIR = "intermediates/iho_pa_intersections"
+WDPA_IHO_FILE_NAME = f"{IHO_INTERSECTIONS_DIR}/wdpa_iho.parquet"
+WDPA_NEAR_SHORE_IHO_FILE_NAME = (
+    f"{IHO_INTERSECTIONS_DIR}/wdpa_iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
+)
+MPATLAS_IHO_FILE_NAME = f"{IHO_INTERSECTIONS_DIR}/mpatlas_iho.parquet"
+
 # ------------------------------------------------------------
 #                     Conservation Builder
 # ------------------------------------------------------------

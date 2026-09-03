@@ -223,7 +223,9 @@ def generate_protected_areas_table(
         logger.info({"message": "loading PA metadata"})
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
-    mpa_pairs = intersect_mpatlas_with_iho(bucket=bucket)
+    # Only the pairing is wanted here; the rest of each zone's attributes come
+    # from the metadata below, and carrying them twice would collide on merge.
+    mpa_pairs = intersect_mpatlas_with_iho(bucket=bucket)[["zone_id", "location"]]
 
     mpa_pairs["zone_id"] = mpa_pairs["zone_id"].astype(mpatlas["zone_id"].dtype)
     mpa_pairs = mpa_pairs.merge(
@@ -231,7 +233,7 @@ def generate_protected_areas_table(
     ).rename(columns={"location": "country"})
     mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
 
-    wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket)
+    wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket)[["WDPA_PID", "location"]]
     wdpa_pairs = wdpa_pairs.merge(wdpa.drop(columns=["ISO3"]), on="WDPA_PID", how="inner").rename(
         columns={"location": "ISO3"}
     )
