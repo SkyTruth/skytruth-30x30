@@ -227,7 +227,7 @@ def generate_protected_areas_table(
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
 
-    # Load the MPA and WDPA pairs with IHO sea areas. 
+    # Load the MPA and WDPA pairs with IHO sea areas.
     mpa_pairs = read_parquet_from_gcs(bucket, mpatlas_iho_file_name, verbose=verbose)[
         ["zone_id", "location"]
     ]
