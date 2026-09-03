@@ -176,6 +176,7 @@ def _load_iho_regions_cached(buffer=False):
     logger.info({"message": "stitching IHO regions to form Mediterranean"})
     water_bodies = stitch_mediterannean(water_bodies)
     water_bodies["location"] = water_bodies["MRGID"].astype(str)
+    water_bodies["geometry"] = water_bodies["geometry"].make_valid()
 
     return water_bodies
 
@@ -424,18 +425,96 @@ def read_mpatlas_from_gcs(
     return gdf
 
 
-def _iho_sea_membership(features: gpd.GeoDataFrame, id_col: str) -> pd.DataFrame:
-    """
-    Returns a DataFrame with one row per (feature, IHO sea) pair the feature overlaps,
-    """
-    iho = load_iho_regions()[["location", "geometry"]]
-    iho["geometry"] = iho.geometry.make_valid()
+def _polygonal_parts(geom):
+    """The polygonal content of an intersection result, or None if it has none.
 
+    An intersection is whatever GEOS returns: the overlapping polygon, a line or
+    point where the two geometries only touch, or a GeometryCollection of both
+    when a multipart feature does each at once. Only polygonal content has area
+    to contribute, and it has to survive that mixed case rather than being
+    thrown out with the dangling bits.
+    """
+    if geom is None or geom.is_empty:
+        return None
+
+    if isinstance(geom, (Polygon, MultiPolygon)):
+        return geom
+
+    if isinstance(geom, GeometryCollection):
+        parts = [
+            part
+            for part in geom.geoms
+            if isinstance(part, (Polygon, MultiPolygon)) and not part.is_empty
+        ]
+
+        return unary_union(parts) if parts else None
+
+    # A line or point intersection: the two geometries touch but do not overlap.
+    return None
+
+
+def intersect_with_iho(
+    features: gpd.GeoDataFrame,
+    keep_cols: list[str],
+    buffer: bool = False,
+    with_geometry: bool = True,
+) -> gpd.GeoDataFrame | pd.DataFrame:
+    """One row per (feature, IHO sea area) pair the feature intersects.
+
+    Parameters
+    ----------
+    features : gpd.GeoDataFrame
+        Features to assign to sea areas — protected areas, MPAtlas zones, etc.
+        Must be in the IHO CRS (EPSG:4326).
+    keep_cols : list[str]
+        Column(s) of ``features`` to carry through onto the pairs. Everything
+        else is dropped; callers either merge their own attributes back on or
+        ask for them here.
+    buffer : bool
+        Join against the near-shore buffered sea areas rather than the
+        published IHO boundaries. See ``load_iho_regions``.
+    with_geometry : bool
+        Also return each pair's intersection: the feature clipped to that one
+        sea. Pairs with no polygonal intersection — a PA that only touches a
+        sea boundary, a point PA — contribute no area and are dropped, so these
+        pairs are a subset of the ``with_geometry=False`` membership pairs.
+
+    Returns
+    -------
+    gpd.GeoDataFrame | pd.DataFrame
+        ``[*keep_cols, "location"]``, plus ``geometry`` when ``with_geometry``.
+    """
+
+    # load IHO sea areas, optionally buffered to catch near-shore features
+    iho = load_iho_regions(buffer=buffer)[["location", "geometry"]].reset_index(drop=True)
+
+    # keep relevant columns and make geometries valid
+    features = features[[*keep_cols, "geometry"]].copy()
+    features["geometry"] = features.geometry.make_valid()
+
+    # match features to IHO sea areas by intersection, dropping any that don't intersect
     logger.info({"message": f"matching {len(features)} features to {len(iho)} IHO sea areas"})
-    pairs = features.sjoin(iho, predicate="intersects")
+    pairs = features.sjoin(iho, predicate="intersects").reset_index(drop=True)
     logger.info({"message": f"found {len(pairs)} feature / IHO sea overlaps"})
 
-    return pd.DataFrame(pairs[[id_col, "location"]])
+    # If clipped geometry is not needed, skip computing the intersections.
+    if not with_geometry:
+        return pd.DataFrame(pairs[[*keep_cols, "location"]])
+
+    # Clip each feature to the IHO sea area it intersects, reducing each result
+    # to its polygonal content.
+    seas = gpd.GeoSeries(iho.geometry.loc[pairs["index_right"]].to_numpy(), crs=iho.crs)
+    cut = pairs.geometry.intersection(seas, align=False).apply(_polygonal_parts)
+
+    # Drop pairs left with no geometry: a PA that only touches a sea boundary,
+    # or a point PA, has no area to contribute to it.
+    pairs = pairs.set_geometry(cut)
+    polygonal = pairs.geometry.notna()
+    logger.info(
+        {"message": f"dropping {int((~polygonal).sum())} pair(s) with no polygonal intersection"}
+    )
+
+    return pairs[polygonal][[*keep_cols, "location", "geometry"]].reset_index(drop=True)
 
 
 def intersect_wdpa_with_iho(
@@ -448,7 +527,7 @@ def intersect_wdpa_with_iho(
 
     pas = read_json_df(bucket_name=bucket, filename=pa_file)[["WDPA_PID", "geometry"]]
 
-    return _iho_sea_membership(pas, "WDPA_PID")
+    return intersect_with_iho(pas, ["WDPA_PID"], with_geometry=False)
 
 
 def intersect_mpatlas_with_iho(
@@ -460,7 +539,7 @@ def intersect_mpatlas_with_iho(
 
     mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)[["zone_id", "geometry"]]
 
-    return _iho_sea_membership(mpa, "zone_id")
+    return intersect_with_iho(mpa, ["zone_id"], with_geometry=False)
 
 
 def download_file_with_progress(url: str, filename: str, verbose: bool = True):

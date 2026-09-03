@@ -1,18 +1,20 @@
 """Tests for get_cover_areas, process_buffered_iho and the IHO spatial joins
-(intersect_wdpa_with_iho, intersect_mpatlas_with_iho) in src/core/commons.py."""
+(intersect_with_iho and the intersect_wdpa_with_iho / intersect_mpatlas_with_iho
+wrappers) in src/core/commons.py."""
 
 import geopandas as gpd
 import numpy as np
 import pytest
 import rasterio
 from rasterio.transform import Affine
-from shapely.geometry import Point, Polygon, box, mapping
+from shapely.geometry import MultiPolygon, Point, Polygon, box, mapping
 
 from src.core import commons
 from src.core.commons import (
     get_cover_areas,
     intersect_mpatlas_with_iho,
     intersect_wdpa_with_iho,
+    intersect_with_iho,
     process_buffered_iho,
 )
 from src.utils.geo import compute_pixel_area_map_km2
@@ -261,3 +263,96 @@ def test_mpatlas_iho_join_pairs_zones_with_the_seas_they_overlap(monkeypatch):
         (20, "2"),
         (30, "1"),
     ]
+
+
+# ---------- intersect_with_iho(with_geometry=True) ----------
+
+
+def test_geometry_join_cuts_a_straddling_feature_into_one_piece_per_sea(monkeypatch):
+    """The point of keeping geometry: each pair carries the feature clipped to
+    its own sea, so the pieces can be unioned or differenced per sea without
+    reaching back for the sea boundaries."""
+    _patch_iho(monkeypatch)
+
+    result = intersect_with_iho(
+        _wdpa_frame([box(5, 1, 15, 2)], pids=["straddler"]), ["WDPA_PID"], with_geometry=True
+    )
+
+    pieces = dict(zip(result["location"], result.geometry, strict=True))
+    assert pieces["1"].equals(box(5, 1, 10, 2))
+    assert pieces["2"].equals(box(10, 1, 15, 2))
+
+
+def test_geometry_join_leaves_a_contained_feature_whole(monkeypatch):
+    _patch_iho(monkeypatch)
+
+    result = intersect_with_iho(
+        _wdpa_frame([box(1, 1, 2, 2)], pids=["inside"]), ["WDPA_PID"], with_geometry=True
+    )
+
+    assert result.geometry.iloc[0].equals(box(1, 1, 2, 2))
+
+
+def test_geometry_join_drops_a_feature_that_only_touches_a_sea(monkeypatch):
+    """A shared boundary satisfies `intersects` and so is a membership pair, but
+    the intersection is a line with no area to contribute."""
+    _patch_iho(monkeypatch)
+    features = _wdpa_frame([box(-5, 0, 0, 10)], pids=["adjacent"])
+
+    assert intersect_with_iho(features, ["WDPA_PID"], with_geometry=False)["WDPA_PID"].tolist() == [
+        "adjacent"
+    ]
+    assert intersect_with_iho(features, ["WDPA_PID"], with_geometry=True).empty
+
+
+def test_geometry_join_drops_point_features(monkeypatch):
+    """Points are members of a sea but have no area; the membership pairs keep
+    them so PA counts are unaffected, the geometry pairs cannot."""
+    _patch_iho(monkeypatch)
+    features = _wdpa_frame([box(1, 1, 2, 2), Point(3, 3)], pids=["polygon", "point"])
+
+    result = intersect_with_iho(features, ["WDPA_PID"], with_geometry=True)
+
+    assert result["WDPA_PID"].tolist() == ["polygon"]
+
+
+def test_geometry_join_keeps_the_polygonal_part_of_a_mixed_intersection(monkeypatch):
+    """A feature that both overlaps a sea and touches its boundary intersects to
+    a GeometryCollection of polygon + line. Dropping the whole row would lose a
+    real overlap, so only the dangling line is discarded."""
+    _patch_iho(monkeypatch)
+    # box(5, 5, 15, 15) overlaps Sea A in area; box(10, 0, 12, 2) meets it only
+    # along the x=10 edge the two seas share.
+    straddler = MultiPolygon([box(5, 5, 15, 15), box(10, 0, 12, 2)])
+
+    result = intersect_with_iho(
+        _wdpa_frame([straddler], pids=["mixed"]), ["WDPA_PID"], with_geometry=True
+    )
+
+    sea_a = result[result["location"] == "1"]
+    assert sea_a.geometry.iloc[0].equals(box(5, 5, 10, 10))
+
+
+def test_geometry_join_carries_the_requested_columns_through(monkeypatch):
+    """The artifact has to be self-contained — consumers split by PA_DEF and roll
+    up to WDPAID without re-reading the PA file."""
+    _patch_iho(monkeypatch)
+
+    result = intersect_with_iho(
+        _wdpa_frame([box(1, 1, 2, 2)], WDPAID=["555"], PA_DEF=[1], DESIG_ENG=["Marine Park"]),
+        ["WDPA_PID", "WDPAID", "PA_DEF"],
+        with_geometry=True,
+    )
+
+    assert list(result.columns) == ["WDPA_PID", "WDPAID", "PA_DEF", "location", "geometry"]
+
+
+def test_geometry_join_can_use_the_buffered_seas(monkeypatch):
+    """Habitat callers join against the near-shore layer; everything else uses
+    the true boundaries."""
+    buffers = []
+    _patch_iho(monkeypatch, calls=buffers)
+
+    intersect_with_iho(_wdpa_frame([box(1, 1, 2, 2)]), ["WDPA_PID"], buffer=True)
+
+    assert buffers == [True]
