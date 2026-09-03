@@ -2,7 +2,13 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
-from src.core.commons import add_tolerance_suffix
+from src.core.commons import (
+    add_tolerance_suffix,
+    intersect_mpatlas_with_iho,
+    intersect_wdpa_with_iho,
+    load_iho_regions,
+)
+from src.core.land_cover_params import terrestrial_tolerance
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
@@ -218,6 +224,19 @@ def generate_protected_areas_table(
         logger.info({"message": "loading PA metadata"})
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
+    mpa_pairs = intersect_mpatlas_with_iho(bucket=bucket)
+
+    mpa_pairs["zone_id"] = mpa_pairs["zone_id"].astype(mpatlas["zone_id"].dtype)
+    mpa_pairs = mpa_pairs.merge(
+        mpatlas.drop(columns=["country"]), on="zone_id", how="inner"
+    ).rename(columns={"location": "country"})
+    mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
+
+    wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket, tolerance=terrestrial_tolerance)
+    wdpa_pairs = wdpa_pairs.merge(wdpa.drop(columns=["ISO3"]), on="WDPA_PID", how="inner").rename(
+        columns={"location": "ISO3"}
+    )
+    wdpa = pd.concat([wdpa, wdpa_pairs], axis=0, ignore_index=True)
 
     eez_file_name = add_tolerance_suffix(eez_file_name, tolerance)
     gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
@@ -227,8 +246,11 @@ def generate_protected_areas_table(
 
     if verbose:
         logger.info({"message": f"loading gadm from {gadm_file_name}"})
-    gadm = read_json_df(BUCKET, gadm_file_name)
-    gadm = calculate_area(gadm, output_area_column="AREA_KM2")
+    terrestrial_areas = read_json_df(BUCKET, gadm_file_name)
+    terrestrial_areas = calculate_area(terrestrial_areas, output_area_column="AREA_KM2")
+
+    iho_areas = load_iho_regions().rename(columns={"area": "AREA_KM2"})
+    marine_areas = pd.concat([eez, iho_areas[["location", "AREA_KM2"]]], ignore_index=True)
 
     if verbose:
         logger.info({"message": "processing WDPAs"})
@@ -241,7 +263,7 @@ def generate_protected_areas_table(
     pas = pd.concat((wdpa_pa[mpa_pa.columns], mpa_pa), axis=0)
     pas["area"] = pd.to_numeric(pas["area"], errors="coerce")
     pas["wdpa_p_id"] = pas["wdpa_p_id"].replace("", None)
-    pas = add_percent_coverage(pas, eez, gadm)
+    pas = add_percent_coverage(pas, marine_areas, terrestrial_areas)
     pas = pas.sort_values(["wdpaid", "wdpa_p_id", "zone_id"])
 
     # TODO: Currently this will not add  BVT (marine) because
