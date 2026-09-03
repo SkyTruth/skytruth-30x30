@@ -212,16 +212,6 @@ def load_marine_regions(params: dict, bucket: str = BUCKET):
     return gdf
 
 
-def extract_polygons(geom):
-    if isinstance(geom, (Polygon, MultiPolygon)):
-        return geom
-    elif isinstance(geom, GeometryCollection):
-        polys = [g for g in geom.geoms if isinstance(g, (Polygon, MultiPolygon))]
-        return MultiPolygon(polys) if polys else None
-    else:
-        return None
-
-
 def load_regions(
     bucket: str = BUCKET,
     related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
@@ -475,9 +465,11 @@ def intersect_with_iho(
         published IHO boundaries. See ``load_iho_regions``.
     with_geometry : bool
         Also return each pair's intersection: the feature clipped to that one
-        sea. Pairs with no polygonal intersection — a PA that only touches a
-        sea boundary, a point PA — contribute no area and are dropped, so these
-        pairs are a subset of the ``with_geometry=False`` membership pairs.
+        sea. A point feature has no area to clip, so it keeps its membership
+        with a null geometry; an areal feature with no polygonal intersection
+        merely touched the sea boundary and that pair is dropped as a clipping
+        artifact. Callers measuring area filter on ``geometry.notna()``, though
+        ``union_all``, ``difference`` and ``dissolve`` all ignore nulls.
 
     Returns
     -------
@@ -501,20 +493,30 @@ def intersect_with_iho(
     if not with_geometry:
         return pd.DataFrame(pairs[[*keep_cols, "location"]])
 
+    # Identify the point PAs so they are not dropped when they have no polygonal
+    # intersection with the sea. Taken before clipping replaces the geometry.
+    point_feature = pairs.geom_type.isin(("Point", "MultiPoint"))
+
     # Clip each feature to the IHO sea area it intersects, reducing each result
     # to its polygonal content.
     seas = gpd.GeoSeries(iho.geometry.loc[pairs["index_right"]].to_numpy(), crs=iho.crs)
     cut = pairs.geometry.intersection(seas, align=False).apply(_polygonal_parts)
-
-    # Drop pairs left with no geometry: a PA that only touches a sea boundary,
-    # or a point PA, has no area to contribute to it.
     pairs = pairs.set_geometry(cut)
-    polygonal = pairs.geometry.notna()
+
+    # Keep pairs that have a polygonal intersection or are point features
+    # (which have no area to intersect).
+    keep = pairs.geometry.notna() | point_feature
+
     logger.info(
-        {"message": f"dropping {int((~polygonal).sum())} pair(s) with no polygonal intersection"}
+        {
+            "message": (
+                f"dropping {int((~keep).sum())} pair(s) touching a sea without overlapping it, "
+                f"keeping {int(point_feature.sum())} point pair(s) with no geometry"
+            )
+        }
     )
 
-    return pairs[polygonal][[*keep_cols, "location", "geometry"]].reset_index(drop=True)
+    return pairs[keep][[*keep_cols, "location", "geometry"]].reset_index(drop=True)
 
 
 def intersect_wdpa_with_iho(

@@ -293,27 +293,56 @@ def test_geometry_join_leaves_a_contained_feature_whole(monkeypatch):
     assert result.geometry.iloc[0].equals(box(1, 1, 2, 2))
 
 
-def test_geometry_join_drops_a_feature_that_only_touches_a_sea(monkeypatch):
-    """A shared boundary satisfies `intersects` and so is a membership pair, but
-    the intersection is a line with no area to contribute."""
+def test_geometry_join_drops_an_areal_feature_that_only_touches_a_sea(monkeypatch):
+    """A shared boundary satisfies `intersects`, but a PA abutting a sea does not
+    lie in it — the line intersection is an artifact of clipping, not a member."""
     _patch_iho(monkeypatch)
     features = _wdpa_frame([box(-5, 0, 0, 10)], pids=["adjacent"])
 
-    assert intersect_with_iho(features, ["WDPA_PID"], with_geometry=False)["WDPA_PID"].tolist() == [
-        "adjacent"
-    ]
     assert intersect_with_iho(features, ["WDPA_PID"], with_geometry=True).empty
 
 
-def test_geometry_join_drops_point_features(monkeypatch):
-    """Points are members of a sea but have no area; the membership pairs keep
-    them so PA counts are unaffected, the geometry pairs cannot."""
+def test_geometry_join_drops_an_areal_feature_touching_a_sea_at_a_corner(monkeypatch):
+    """Cornering a sea intersects to a Point rather than a line, and is the same
+    kind of artifact: what makes a pair real is the feature having area here,
+    not the shape the intersection happens to take."""
+    _patch_iho(monkeypatch)
+    features = _wdpa_frame([box(-5, -5, 0, 0)], pids=["corner"])
+
+    assert intersect_with_iho(features, ["WDPA_PID"], with_geometry=True).empty
+
+
+def test_geometry_join_keeps_point_features_with_no_geometry(monkeypatch):
+    """A point PA has no area to clip, so a null result is expected rather than
+    an artifact: it sits in the sea and the protected areas table attributes it
+    there like any other member."""
     _patch_iho(monkeypatch)
     features = _wdpa_frame([box(1, 1, 2, 2), Point(3, 3)], pids=["polygon", "point"])
 
     result = intersect_with_iho(features, ["WDPA_PID"], with_geometry=True)
 
-    assert result["WDPA_PID"].tolist() == ["polygon"]
+    assert result["WDPA_PID"].tolist() == ["polygon", "point"]
+    assert result.geometry.notna().tolist() == [True, False]
+
+
+def test_geometry_join_keeps_every_membership_pair_except_boundary_touches(monkeypatch):
+    """Asking for geometry may only shed the touch artifacts. Anything with area,
+    and every point member, has to survive or the pairs would understate which
+    seas a PA belongs to."""
+    _patch_iho(monkeypatch)
+    features = _wdpa_frame(
+        [box(1, 1, 2, 2), box(5, 1, 15, 2), box(-5, 0, 0, 10), Point(3, 3)],
+        pids=["inside", "straddler", "adjacent", "point"],
+    )
+
+    members = intersect_with_iho(features, ["WDPA_PID"], with_geometry=False)
+    geoms = intersect_with_iho(features, ["WDPA_PID"], with_geometry=True)
+
+    dropped = sorted(
+        set(zip(members["WDPA_PID"], members["location"], strict=True))
+        - set(zip(geoms["WDPA_PID"], geoms["location"], strict=True))
+    )
+    assert dropped == [("adjacent", "1")]
 
 
 def test_geometry_join_keeps_the_polygonal_part_of_a_mixed_intersection(monkeypatch):
