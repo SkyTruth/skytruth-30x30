@@ -60,7 +60,8 @@ def index(request):
         if isinstance(stats, str):
             stats = [stat for stat in stats.split(",") if stat]
 
-        result = get_locations_stats(environment, db, geometry)
+        table_name = 'gadm_minus_pa_v2' if environment == 'terrestrial' else 'eez_minus_mpa_v2'
+        result = get_locations_stats(environment, db, geometry, table_name)
 
         if "fully-highly-protected" in stats and environment == "marine":
             result["fully_highly_protected"] = get_locations_stats(
