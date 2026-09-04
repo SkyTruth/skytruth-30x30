@@ -223,13 +223,12 @@ def compute_class_areas_by_location(
 
     iterable = tqdm(locations) if verbose else locations
     try:
-        results = Parallel(n_jobs=n_jobs, backend="loky")(
+        # Process in parallel with threads to share memory across workers
+        results = Parallel(n_jobs=n_jobs, backend="threading")(
             delayed(_job)(location) for location in iterable
         )
     except Exception as exc:
-        # Joblib's loky pool can die hard (OOM-killed worker, segfault in a C
-        # extension) and the exception that bubbles up is generic; log loudly so
-        # the failure isn't silent at the call site.
+        # Log error message if the parallel pool fails
         logger.error(
             {
                 "message": "compute_class_areas_by_location parallel pool failed",

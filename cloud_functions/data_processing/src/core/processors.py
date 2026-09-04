@@ -577,7 +577,6 @@ def rename_habitats(df: pd.DataFrame) -> pd.DataFrame:
     naming_conventions = {
         "coldwatercorals": "cold-water corals",
         "saltmarshes": "saltmarshes",
-        "warmwatercorals": "warm-water corals",
         "seagrasses": "seagrasses",
         "mangroves": "mangroves",
         "seamounts": "seamounts",
