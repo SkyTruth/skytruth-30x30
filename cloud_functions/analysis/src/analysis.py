@@ -85,13 +85,13 @@ def serialize_response(
 def get_locations_stats(
     environment: str,
     db: sqlalchemy.engine.base.Engine,
-    geojson: JSON
+    geojson: JSON,
+    table_name: str,
 ) -> dict:
     geometry = get_geojson(geojson)
     try:
         with db.connect() as conn:
             validate_geometry_topology(conn, geometry)
-            table_name = 'gadm_minus_pa_v2' if environment == 'terrestrial' else 'eez_minus_mpa_v2'
             stmt = sqlalchemy.text(
                 f"""
                 WITH
