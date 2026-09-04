@@ -23,10 +23,10 @@ from shapely.validation import make_valid
 from skytruth_shared_datasets import Catalog
 from tqdm.auto import tqdm
 
-from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
+    MARINE_TOLERANCE,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
@@ -440,7 +440,7 @@ def _iho_sea_membership(features: gpd.GeoDataFrame, id_col: str) -> pd.DataFrame
 
 def intersect_wdpa_with_iho(
     bucket: str = BUCKET,
-    tolerance: float = marine_tolerance,
+    tolerance: float = MARINE_TOLERANCE,
 ) -> pd.DataFrame:
     """One row per (marine PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID."""
     pa_file = add_tolerance_suffix(WDPA_MARINE_FILE_NAME, tolerance)

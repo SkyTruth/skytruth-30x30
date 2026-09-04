@@ -44,6 +44,7 @@ def patched_all(monkeypatch, call_log):
         "download_mpatlas",
         "download_protected_seas",
         "download_protected_planet",
+        "download_and_process_protected_planet_pas",
         "generate_protected_areas_diff_table",
         "generate_terrestrial_biome_stats_pa",
         "generate_habitat_protection_table",
@@ -51,6 +52,8 @@ def patched_all(monkeypatch, call_log):
         "generate_marine_protection_level_stats_table",
         "generate_fishing_protection_table",
         "upload_locations",
+        "generate_total_area_minus_pa",
+        "generate_location_minus_fhp_mpa",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -100,6 +103,10 @@ def patched_all(monkeypatch, call_log):
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
+        (
+            "download_protected_planet_pas",
+            "download_and_process_protected_planet_pas",
+        ),
         ("generate_protected_areas_table", "generate_protected_areas_diff_table"),
         ("generate_protection_coverage_stats_table", "generate_protection_coverage_stats_table"),
         (
@@ -129,6 +136,44 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     assert "verbose" in kwargs
     if method == "update_locations":
         assert kwargs["request"] == {"METHOD": "update_locations"}
+
+
+def test_protected_planet_pas_receives_every_tolerance(patched_all):
+    """The PA job simplifies at every tolerance in one invocation.
+
+    It used to be dispatched once per tolerance, which meant two full WDPA
+    downloads and two downstream chains that could interleave.
+    """
+    resp = main.run_from_payload({"METHOD": "download_protected_planet_pas"})
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert tuple(kwargs["tolerances"]) == tuple(main.TOLERANCES)
+    assert "tolerance" not in kwargs
+
+
+@pytest.mark.parametrize(
+    "method, expected_tolerance",
+    [
+        ("generate_gadm_minus_pa", "TERRESTRIAL_TOLERANCE"),
+        ("generate_eez_minus_mpa", "MARINE_TOLERANCE"),
+        ("generate_location_minus_fhp_mpa", "MARINE_TOLERANCE"),
+    ],
+)
+def test_conservation_builder_methods_use_their_domain_tolerance(
+    patched_all, method, expected_tolerance
+):
+    """Each subtraction job builds at the tolerance for its own environment.
+
+    All three used to read it from the payload, which meant the value was
+    whatever TOLERANCES[0] happened to be - so both marine layers silently ran
+    at the terrestrial tolerance.
+    """
+    resp = main.run_from_payload({"METHOD": method})
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert kwargs["tolerance"] == getattr(main, expected_tolerance)
 
 
 @pytest.mark.parametrize(
@@ -353,6 +398,37 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
 
     # Verbose propagated from module
     assert recorder["verbose"] is True
+
+
+# Monthly fan-out
+@pytest.fixture
+def enqueued_jobs(monkeypatch, call_log):
+    """Patch only the two enqueue routes, leaving LONG_RUNNING_TASKS real.
+
+    `patched_all` blanks LONG_RUNNING_TASKS, which is exactly what these tests
+    need to exercise, so they patch narrowly instead.
+    """
+    monkeypatch.setattr(main, "create_task", make_recorder(call_log, "create_task"), raising=True)
+    monkeypatch.setattr(
+        main, "long_running_tasks", make_recorder(call_log, "long_running_tasks"), raising=True
+    )
+
+    def _run():
+        main.run_from_payload({"METHOD": "publisher"}, verbose=False)
+        return {
+            route: [args[0] for name, args, _ in call_log if name == route]
+            for route in ("create_task", "long_running_tasks")
+        }
+
+    return _run
+
+
+def test_monthly_publisher_routes_long_running_jobs_to_the_job_runner(enqueued_jobs):
+    """Long-running methods must go to a Cloud Run Job, not the task queue."""
+    jobs = enqueued_jobs()
+
+    assert "download_protected_planet_pas" in {job["METHOD"] for job in jobs["long_running_tasks"]}
+    assert {job["METHOD"] for job in jobs["create_task"]} == {"download_mpatlas"}
 
 
 # Non-invoking / generic flows

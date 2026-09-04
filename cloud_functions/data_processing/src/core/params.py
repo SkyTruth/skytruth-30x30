@@ -238,6 +238,8 @@ PROTECTION_LEVEL_FILE_NAME = f"tables/protection_level_{today_formatted}.csv"
 
 CHUNK_SIZE = 8192
 TOLERANCES = (0.001, 0.0001)
+TERRESTRIAL_TOLERANCE = 0.001
+MARINE_TOLERANCE = 0.0001
 LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
 RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"

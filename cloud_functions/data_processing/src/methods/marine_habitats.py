@@ -12,7 +12,6 @@ from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import add_tolerance_suffix, load_iho_regions
-from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     CLIMATE_RES_CORAL_SOURCE_FILE,
@@ -21,6 +20,7 @@ from src.core.params import (
     GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITATS_ZIP_FILE_NAME,
     MANGROVES_BY_LOCATION_FILE_NAME,
+    MARINE_TOLERANCE,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -156,7 +156,7 @@ def create_mangroves_subtable(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
     global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerance: float = MARINE_TOLERANCE,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -392,7 +392,7 @@ def create_climate_resilient_corals_subtable(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerance: float = MARINE_TOLERANCE,
     bucket: str = BUCKET,
     n_jobs: int = -1,
     verbose: bool = True,
@@ -596,7 +596,7 @@ def process_marine_habitats(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
-    tolerance: float = marine_tolerance,
+    tolerance: float = MARINE_TOLERANCE,
     verbose: bool = True,
 ):
     if verbose:
@@ -650,7 +650,7 @@ def process_marine_habitats(
         marine_protected_areas,
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
-        tolerance=marine_tolerance,
+        tolerance=MARINE_TOLERANCE,
         bucket=bucket,
         verbose=verbose,
     )

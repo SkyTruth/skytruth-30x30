@@ -370,7 +370,7 @@ def download_and_process_protected_planet_pas(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     meta_file_name: str = WDPA_META_FILE_NAME,
     archive_wdpa_file_name: str = ARCHIVE_RAW_WDPA_FILE_NAME,
-    tolerance: float = TOLERANCES[0],
+    tolerances: list | tuple = TOLERANCES,
     verbose: bool = True,
     bucket: str = BUCKET,
     project_id: str = PROJECT,
@@ -457,9 +457,7 @@ def download_and_process_protected_planet_pas(
         except Exception as e:
             logger.warning({"message": f"Warning: could not delete {path}: {e}"})
 
-    def process_protected_area_geoms(
-        pa_dir, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
-    ):
+    def process_protected_area_geoms(pa_dir, tolerance, batch_size=1000, n_jobs=-1, verbose=True):
         def stream_parquet_chunks(paths, batch_size=1000):
             """
             Lazily stream GeoDataFrame chunks from one or more Parquet files.
@@ -518,7 +516,7 @@ def download_and_process_protected_planet_pas(
                 return buffed.geometry.iloc[0]
             return g
 
-        def simplify_chunk(chunk, tolerance=TOLERANCES[0]):
+        def simplify_chunk(chunk, tolerance):
             """
             Simplify and buffer geometries in a GeoDataFrame chunk.
             """
@@ -544,9 +542,7 @@ def download_and_process_protected_planet_pas(
                 del chunk
                 gc.collect()
 
-        def process_all_files(
-            paths, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
-        ):
+        def process_all_files(paths, tolerance, batch_size=1000, n_jobs=-1, verbose=True):
             """
             Process multiple Parquet files in parallel, simplifying geometries
             in streamed chunks while managing memory and logging progress.
@@ -659,78 +655,83 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         logger.info({"message": "processing and simplifying protected area geometries"})
-    df = process_protected_area_geoms(
-        pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
-    )
 
+    for tolerance in tolerances:
+        try:
+            if verbose:
+                logger.info({"message": f"processing with tolerance {tolerance}"})
+            df = process_protected_area_geoms(
+                pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
+            )
+
+            if verbose:
+                logger.info({"message": "Renaming variables to match old format"})
+            # On failure, alert in case naming convention has changed
+            df = retry_and_alert(
+                match_old_pa_naming_convantion,
+                df,
+                max_retries=0,
+                alert_message="Failed to match WDPA format - possible change to data format",
+            )
+
+            # Save metadata once (no need to repeat for each tolerance as geometry is dropped)
+            if tolerance == tolerances[0]:
+                if verbose:
+                    logger.info({"message": f"saving wdpa metadata to {meta_file_name}"})
+
+                retry_and_alert(
+                    upload_dataframe,
+                    bucket,
+                    df.drop(columns="geometry"),
+                    meta_file_name,
+                    project_id=project_id,
+                    verbose=verbose,
+                    alert_message="Failed to save WDPA metadata",
+                )
+
+            # Remove non-OECM MAB reserves (matching Protected Planet's methods)
+            df = df[
+                (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve")
+                | (df["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") & (df["PA_DEF"] == 0)
+            ]
+
+            # Save terrestrial PAs
+            ter_out_fn = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
+            if verbose:
+                logger.info({"message": f"saving and duplicating terrestrial PAs to {ter_out_fn}"})
+
+            retry_and_alert(
+                upload_gdf,
+                bucket,
+                df[df["MARINE"].eq("0")],
+                ter_out_fn,
+                alert_message="Failed to upload terrestrial PAs",
+            )
+            duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
+
+            # Save marine PAs
+            mar_out_fn = add_tolerance_suffix(marine_pa_file_name, tolerance)
+            if verbose:
+                logger.info({"message": f"saving and duplicating marine PAs to {mar_out_fn}"})
+
+            retry_and_alert(
+                upload_gdf,
+                bucket,
+                df[df["MARINE"].isin(["1", "2"])],
+                mar_out_fn,
+                alert_message="Failed to upload marine PAs",
+            )
+            duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
+        finally:
+            df = pd.DataFrame()
+            gc.collect()
+            pyarrow.default_memory_pool().release_unused()
+            show_container_mem(f"After tolerance {tolerance}")
+
+    # Held until now because every tolerance pass re-reads the unpacked parquets
     if verbose:
         logger.info({"message": f"deleting {pa_dir}"})
     remove_file_or_folder(pa_dir, verbose=verbose)
-
-    try:
-        if verbose:
-            logger.info({"message": "Renaming variables to match old format"})
-        # On failure, alert in case naming convention has changed
-        df = retry_and_alert(
-            match_old_pa_naming_convantion,
-            df,
-            max_retries=0,
-            alert_message="Failed to match WDPA format - possible change to data format",
-        )
-
-        # Save metadata
-        if verbose:
-            logger.info({"message": f"saving wdpa metadata to {meta_file_name}"})
-
-        retry_and_alert(
-            upload_dataframe,
-            bucket,
-            df.drop(columns="geometry"),
-            meta_file_name,
-            project_id=project_id,
-            verbose=verbose,
-            alert_message="Failed to save WDPA metadata",
-        )
-
-        # Remove non-OECM MAB reserves (matching Protected Planet's methods)
-        df = df[
-            (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve")
-            | (df["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") & (df["PA_DEF"] == 0)
-        ]
-
-        # Save terrestrial PAs
-        ter_out_fn = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
-        if verbose:
-            logger.info({"message": f"saving and duplicating terrestrial PAs to {ter_out_fn}"})
-
-        retry_and_alert(
-            upload_gdf,
-            bucket,
-            df[df["MARINE"].eq("0")],
-            ter_out_fn,
-            alert_message="Failed to upload terrestrial PAs",
-        )
-        duplicate_blob(bucket, ter_out_fn, f"archive/{ter_out_fn}", verbose=verbose)
-
-        # Save marine PAs
-        mar_out_fn = add_tolerance_suffix(marine_pa_file_name, tolerance)
-        if verbose:
-            logger.info({"message": f"saving and duplicating marine PAs to {mar_out_fn}"})
-
-        retry_and_alert(
-            upload_gdf,
-            bucket,
-            df[df["MARINE"].isin(["1", "2"])],
-            mar_out_fn,
-            alert_message="Failed to upload marine PAs",
-        )
-        duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
-    except RetryFailed:
-        raise
-
-    # Clean up memory
-    df = pd.DataFrame()
-    del df
 
 
 def download_protected_planet_global(
