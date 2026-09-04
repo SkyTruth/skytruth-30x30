@@ -272,19 +272,30 @@ def unep_points(geometries, reported_areas):
     ids=["zero", "not_reported_string"],
 )
 def test_unreported_area_falls_back(unreported):
-    """Points with no reported area are buffered so that the total area
-    equals UNEP_POINT_AREA_KM2.
+    """A point with no reported area falls back to UNEP_POINT_AREA_KM2.
+
+    A source layer mixes reported and unreported records, so both are buffered in one
+    call here; the fallback has to apply per record rather than to the whole frame.
     """
-    buffered = _buffer_unep_points(unep_points([Point(0, 0)], [unreported]))
+    reported_km2 = 250.0
+    buffered = _buffer_unep_points(
+        unep_points([Point(0, 0), Point(30, 10)], [unreported, reported_km2])
+    )
 
     assert get_area_km2(buffered.geometry.iloc[0]) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)
+    assert get_area_km2(buffered.geometry.iloc[1]) == pytest.approx(reported_km2, rel=0.01)
 
 
 def test_antimeridian_buffer_preserves_geometry_without_wrapping():
-    """A point on the dateline must be split across it are retain the same area."""
-    geometry = _buffer_unep_points(unep_points([Point(180, -48)], [0])).geometry.iloc[0]
+    """A point on the dateline is split across it and keeps its area."""
+    buffered = _buffer_unep_points(unep_points([Point(180, -48), Point(0, -48)], [0, 0]))
+    dateline, ordinary = buffered.geometry.iloc[0], buffered.geometry.iloc[1]
 
-    assert get_area_km2(geometry) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)
-    assert geometry.geom_type == "MultiPolygon"
-    assert min(part.bounds[0] for part in geometry.geoms) < -179
-    assert max(part.bounds[2] for part in geometry.geoms) > 179
+    assert get_area_km2(dateline) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)
+    assert dateline.geom_type == "MultiPolygon"
+    assert min(part.bounds[0] for part in dateline.geoms) < -179
+    assert max(part.bounds[2] for part in dateline.geoms) > 179
+
+    # The point away from the dateline is left on the ordinary buffering path.
+    assert ordinary.geom_type == "Polygon"
+    assert get_area_km2(ordinary) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)

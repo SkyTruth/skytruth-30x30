@@ -24,6 +24,7 @@ from src.core.processors import (
     add_constants,
     add_pas_oecm,
     extract_column_dict_str,
+    filter_protected_planet,
     remove_columns,
 )
 from src.utils.gcp import read_dataframe, read_json_df
@@ -47,7 +48,7 @@ def compute_iho_protection_coverage(
 
     if verbose:
         logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
-    pas = read_json_df(bucket_name=bucket, filename=pa_file)
+    pas = read_json_df(bucket_name=bucket, filename=pa_file).pipe(filter_protected_planet)
 
     if verbose:
         logger.info(

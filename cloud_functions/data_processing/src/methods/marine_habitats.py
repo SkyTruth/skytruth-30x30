@@ -24,7 +24,7 @@ from src.core.params import (
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
-from src.core.processors import clean_geometries
+from src.core.processors import clean_geometries, filter_protected_planet
 from src.core.raster_pa_stats import compute_class_areas_by_location, compute_location_class_areas
 from src.utils.gcp import (
     download_file_from_gcs,
@@ -451,7 +451,9 @@ def create_climate_resilient_corals_subtable(
         logger.info({"message": "combining marine + terrestrial PAs (full WDPA/OECM estate)"})
     if terrestrial_protected_areas is None:
         terrestrial_pa_file_name = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
-        terrestrial_raw = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose)
+        terrestrial_raw = read_json_df(bucket, terrestrial_pa_file_name, verbose=verbose).pipe(
+            filter_protected_planet
+        )
         terrestrial_raw = terrestrial_raw[terrestrial_raw.intersects(coral_extent)]
         terrestrial_protected_areas = (
             dissolve_multipolygons(terrestrial_raw[["ISO3", "WDPAID", "geometry"]])
@@ -610,8 +612,10 @@ def _load_and_dissolve_pas(
     bucket: str,
     verbose: bool,
 ) -> gpd.GeoDataFrame:
-    """Read one WDPA/OECM geojson and dissolve its multi-part records into one row per PA."""
-    pas = read_json_df(bucket, pa_file_name, verbose=verbose)
+    """Read one WDPA/OECM geojson and dissolve its multi-part records into one row per PA,
+    filtered by status according to Protected Planet methods.
+    """
+    pas = read_json_df(bucket, pa_file_name, verbose=verbose).pipe(filter_protected_planet)
     return (
         dissolve_multipolygons(pas[["ISO3", "WDPAID", "geometry"]])
         .rename(columns={"ISO3": "location", "WDPAID": "wdpa_id"})

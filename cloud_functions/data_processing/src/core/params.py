@@ -134,7 +134,6 @@ ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_globa
 WDPA_PA_FILE_NAME = "intermediates/pa_updates/WDPA_PA_changes.pkl"
 ARCHIVE_WDPA_PA_FILE_NAME = f"archive/pa_updates/WDPA_{today_formatted}_PA_changes.pkl"
 WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_download"
-WDPA_MPA_FILE_NAME = "raw/WDPA_marine_protected_areas.geojson"
 WDPA_TERRESTRIAL_FILE_NAME = "intermediates/protected_area_geoms/terrestrial_wdpa.geojson"
 WDPA_MARINE_FILE_NAME = "intermediates/protected_area_geoms/marine_wdpa.geojson"
 WDPA_META_FILE_NAME = "intermediates/wdpa_meta.csv"
@@ -294,6 +293,7 @@ LONG_RUNNING_TASKS = [
     "update_climate_resilient_coral_tileset",
     "process_marine_habitat_geoms",
     "generate_habitat_protection_table",
+    "generate_protection_coverage_stats_table",
     "process_mangroves",
     "download_protected_seas",
     "generate_protection_coverage_stats_table",
