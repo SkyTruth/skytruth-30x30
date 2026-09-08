@@ -1,17 +1,21 @@
 import concurrent.futures
 import datetime
+import fnmatch
 import gc
 import threading
+import zipfile
 from collections.abc import Callable
 from pathlib import Path
 
+import fsspec
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import rasterio
+import shapely
 from google.cloud import storage
-from shapely.geometry import box, mapping
-from shapely.strtree import STRtree
-from shapely.validation import make_valid
+from joblib import Parallel, delayed
+from shapely.geometry import mapping
 from skytruth_shared_datasets import Catalog
 from tqdm.auto import tqdm
 
@@ -43,23 +47,26 @@ from src.core.params import (
     GADM_EEZ_UNION_FILE_NAME,
     GADM_FILE_NAME,
     GADM_ZIPFILE_NAME,
-    GLOBAL_MANGROVE_AREA_FILE_NAME,
+    GLOBAL_HABITAT_AREA_FILE_PATTERN,
+    HABITAT_BY_LOCATION_FILE_PATTERN,
+    HABITAT_PROCESSING_PARAMS,
     HIGH_SEAS_PARAMS,
-    MANGROVES_BY_LOCATION_FILE_NAME,
-    MANGROVES_ZIPFILE_NAME,
     MARINE_HABITAT_PARAMS,
+    MARINE_HABITAT_TOLERANCE,
     NEAR_SHORE_BUFFER_KM,
     NEAR_SHORE_IHO_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
     TOLERANCES,
+    UNEP_POINT_AREA_KM2,
 )
 from src.core.processors import add_translations, clean_geometries
 from src.utils.gcp import (
     download_file_from_gcs,
     load_zipped_shapefile_from_gcs,
     read_dataframe,
+    read_gzipped_gpkg_from_gcs,
     read_json_df,
     read_json_from_gcs,
     read_zipped_gpkg_from_gcs,
@@ -68,7 +75,12 @@ from src.utils.gcp import (
     upload_file_to_gcs,
     upload_gdf,
 )
-from src.utils.geo import tile_geometry
+from src.utils.geo import (
+    buffer_km,
+    get_area_km2,
+    tile_geometry,
+    fast_union_area_km2,
+)
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -459,7 +471,7 @@ def download_marine_habitats(
         Habitat key(s) from marine_habitat_params to download. None
         downloads all of them.
     marine_habitat_params : dict
-        Habitat key -> {"url", "zipfile_name", "archive_file_name"} config.
+        Habitat key -> {"url", "file_name", "archive_file_name"} config.
     bucket : str
         Name of the GCS bucket where all files will be uploaded.
     chunk_size : int, optional
@@ -483,11 +495,42 @@ def download_marine_habitats(
         download_and_duplicate_zipfile(
             download["url"],
             bucket,
-            download["zipfile_name"],
+            download["file_name"],
             download["archive_file_name"],
             chunk_size=chunk_size,
             verbose=verbose,
         )
+
+
+def _clip_and_union_habitat(
+    location: str,
+    parts: np.ndarray,
+    location_geom,
+    batch_size: int,
+) -> dict | None:
+    """Clip a location's habitat parts to its boundary and dissolve them into one geometry.
+
+    Returns one row of the shared by-location schema, or None when the location holds
+    no habitat.
+    """
+    clipped = shapely.intersection(parts, location_geom)
+    clipped = clipped[~shapely.is_missing(clipped) & ~shapely.is_empty(clipped)]
+    if len(clipped) == 0:
+        return None
+
+    habitat_geom = safe_union(
+        gpd.GeoSeries(clipped), batch_size=batch_size, simplify_tolerance=None
+    )
+    if habitat_geom is None or habitat_geom.is_empty:
+        return None
+
+    return {
+        "location": location,
+        "n_habitat_polygons": int(len(clipped)),
+        "bbox": location_geom.bounds,
+        "area_km2": get_area_km2(habitat_geom),
+        "geometry": habitat_geom,
+    }
 
 
 def process_near_shore_iho(
@@ -523,28 +566,181 @@ def process_near_shore_iho(
     return near_shore
 
 
-def process_mangroves(
-    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
-    mangroves_zipfile_name: str = MANGROVES_ZIPFILE_NAME,
-    gadm_eez_union_file_name: dict = GADM_EEZ_UNION_FILE_NAME,
-    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
+def _find_unep_layer_paths(bucket: str, zipfile_name: str) -> tuple[str, str]:
+    """
+    Locate the point and polygon shapefiles inside a UNEP-WCMC download.
+    """
+    with (
+        fsspec.open(f"gs://{bucket}/{zipfile_name}", mode="rb") as remote_zip,
+        zipfile.ZipFile(remote_zip) as zf,
+    ):
+        names = zf.namelist()
+
+    def match_layer(pattern: str) -> str:
+        matches = [name for name in names if fnmatch.fnmatch(name, pattern)]
+        if len(matches) != 1:
+            raise ValueError(
+                f"expected exactly one layer matching {pattern} in {zipfile_name}, "
+                f"found {len(matches)}: {matches}"
+            )
+        return matches[0]
+
+    return match_layer("*/01_Data/*_Pt_*.shp"), match_layer("*/01_Data/*_Py_*.shp")
+
+
+def _buffer_unep_points(
+    points: gpd.GeoDataFrame,
+    fallback_area_km2: float = UNEP_POINT_AREA_KM2,
+) -> gpd.GeoDataFrame:
+    """Convert a UNEP-WCMC point layer into polygons by buffering each point.
+
+    Where a reported area is recorded, the radius is derived (r = sqrt(area/pi));
+    where it is not, the point is buffered so that the area equals
+    fallback_area_km2 (default 1 km²).
+    """
+    points = points.explode(index_parts=False).reset_index(drop=True)
+
+    reported_area_km2 = pd.to_numeric(points["REP_AREA_K"], errors="coerce")
+    area_km2 = reported_area_km2.where(reported_area_km2 > 0, fallback_area_km2)
+
+    # Buffer points
+    buffered = points.to_crs("EPSG:6933")
+    buffered["geometry"] = buffered.geometry.buffer(np.sqrt(area_km2 / np.pi) * 1000)
+    buffered = buffered.to_crs(points.crs)
+
+    wrapped = buffered.geometry.bounds.eval("maxx - minx") > 180
+    if wrapped.any():
+        buffered.loc[wrapped, "geometry"] = [
+            buffer_km(point, km=radius_km)
+            for point, radius_km in zip(
+                points.geometry[wrapped], np.sqrt(area_km2[wrapped] / np.pi), strict=True
+            )
+        ]
+
+    buffered["rep_area_km2"] = reported_area_km2
+    return buffered
+
+
+def _load_habitat_geometry(
+    habitat: str,
+    params: dict,
+    bucket: str,
+    fallback_area_km2: float,
+    verbose: bool,
+) -> gpd.GeoDataFrame:
+    """Read one habitat's source and return a single frame ready to dissolve.
+
+    * gpkg: a single gzipped GeoPackage of polygons (Global Mangrove Watch).
+    * wcmc: a UNEP-WCMC zip holding a point and a polygon shapefile. The points are
+      buffered into polygons (see _buffer_unep_points) and merged with the polygon
+      layer.
+    """
+    file_name = params["file_name"]
+
+    if params["source"] == "gpkg":
+        if verbose:
+            logger.info({"message": f"loading {habitat} from {file_name}"})
+        return read_gzipped_gpkg_from_gcs(bucket, file_name, columns=[], verbose=verbose)
+
+    if verbose:
+        logger.info({"message": f"locating {habitat} layers in {file_name}"})
+    point_layer, polygon_layer = _find_unep_layer_paths(bucket, file_name)
+
+    if verbose:
+        logger.info({"message": f"loading {habitat} point layer {point_layer}"})
+    points = load_zipped_shapefile_from_gcs(file_name, bucket, internal_shapefile_path=point_layer)
+
+    if verbose:
+        logger.info({"message": f"buffering {len(points)} {habitat} point records"})
+    buffered_points = _buffer_unep_points(points, fallback_area_km2=fallback_area_km2)
+
+    if verbose:
+        logger.info({"message": f"loading {habitat} polygon layer {polygon_layer}"})
+    polygons = load_zipped_shapefile_from_gcs(
+        file_name, bucket, internal_shapefile_path=polygon_layer
+    ).pipe(clean_geometries)
+    polygons["rep_area_km2"] = pd.to_numeric(polygons.get("REP_AREA_K"), errors="coerce")
+
+    columns = ["rep_area_km2", "geometry"]
+    buffered_points["source"] = "point"
+    polygons["source"] = "polygon"
+    merged = gpd.GeoDataFrame(
+        pd.concat(
+            [buffered_points[["source", *columns]], polygons[["source", *columns]]],
+            ignore_index=True,
+        ),
+        geometry="geometry",
+        crs=polygons.crs,
+    ).pipe(clean_geometries)
+
+    del points, buffered_points, polygons
+    gc.collect()
+
+    return merged
+
+
+def process_marine_habitat_geoms(
+    habitats: str | list[str] | None = None,
+    habitat_params: dict = HABITAT_PROCESSING_PARAMS,
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
+    global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
+    fallback_area_km2: float = UNEP_POINT_AREA_KM2,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
-    tolerance=0.001,
-    batch_size=3000,
-):
-    tqdm.pandas()
+    tolerance: float = marine_tolerance,
+    simplify_tolerance: float = MARINE_HABITAT_TOLERANCE,
+    batch_size: int = 3000,
+    n_jobs: int = -1,
+) -> None:
+    """Turn downloaded habitat sources into per-location geometries and a global area.
+    Each location's habitat is clipped to its boundary before being dissolved.
 
-    if verbose:
-        logger.info({"message": "loading mangroves"})
-    mangrove = load_zipped_shapefile_from_gcs(mangroves_zipfile_name, bucket).pipe(clean_geometries)
-    mangrove["index"] = range(len(mangrove))
+    Parameters:
+    ----------
+    habitats : str | list[str] | None
+        Habitat key(s) from habitat_params to process. None processes all of them.
+    habitat_params : dict
+        Habitat key -> {"file_name", "source", "overlaps", ...} config.
+    gadm_eez_union_file_name : str
+        GCS blob of the land/EEZ union, used with the near-shore IHO sea areas as the
+        set of locations to dissolve by.
+    by_location_file_pattern : str
+        Template for the dissolved per-location blob name.
+    global_area_file_pattern : str
+        Template for the global area JSON blob name.
+    fallback_area_km2 : float
+        Area assigned to UNEP-WCMC points with no reported area.
+    bucket : str
+        GCS bucket to read from and write to.
+    project : str
+        GCP project used for uploads.
+    verbose : bool
+        If True, logs progress.
+    tolerance : float
+        Which simplification of the location boundaries to read (file suffix only).
+    simplify_tolerance : float
+        Simplification applied to the habitat geometry before dissolving.
+    batch_size : int
+        Batch size passed to safe_union.
+    n_jobs : int
+        Worker count for the per-location clip and dissolve. -1 uses every core.
+    """
+    if habitats is None:
+        habitats = list(habitat_params.keys())
+    elif isinstance(habitats, str):
+        habitats = [habitats]
+
+    unknown = set(habitats) - set(habitat_params.keys())
+    if unknown:
+        raise ValueError(f"unknown marine habitat(s): {sorted(unknown, key=repr)}")
 
     if verbose:
         logger.info({"message": "loading eezs/gadm union"})
-    gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
-    gadm_eez_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
+    gadm_eez_union = read_json_df(
+        bucket, add_tolerance_suffix(gadm_eez_union_file_name, tolerance), verbose=verbose
+    )
 
     if verbose:
         logger.info({"message": "loading IHO sea areas"})
@@ -558,70 +754,88 @@ def process_mangroves(
         geometry="geometry",
         crs=gadm_eez_union.crs,
     )
+    location_geoms = (
+        regions.dropna(subset=["location"])
+        .drop_duplicates(subset=["location"])
+        .set_index("location")
+        .geometry.sort_index()
+    )
 
-    if verbose:
-        logger.info({"message": "re-projecting mangroves for global area calculation"})
-    mangrove_reproj = mangrove.to_crs("EPSG:6933").pipe(clean_geometries)
+    for habitat in habitats:
+        params = habitat_params[habitat]
+        geometry = _load_habitat_geometry(habitat, params, bucket, fallback_area_km2, verbose)
 
-    if verbose:
-        logger.info(
-            {
-                "message": f"saving global mangrove area to gs://{bucket}/{global_mangrove_area_file_name}"
-            }
+        if geometry.crs is not None and geometry.crs != regions.crs:
+            geometry = geometry.to_crs(regions.crs)
+
+        if verbose:
+            logger.info({"message": f"exploding, simplifying and validating {habitat} geometry"})
+        geometry = geometry.explode(index_parts=False, ignore_index=True)
+        geometry["geometry"] = shapely.make_valid(
+            shapely.simplify(geometry.geometry.values, simplify_tolerance)
         )
-    mangrove_reproj["area_km2"] = mangrove_reproj.geometry.area / 1e6
-    global_mangrove_area = mangrove_reproj["area_km2"].sum()
+        geometry = geometry[~geometry.geometry.is_empty & geometry.geometry.notna()]
 
-    save_json_to_gcs(
-        bucket,
-        {"global_area_km2": global_mangrove_area},
-        global_mangrove_area_file_name,
-        project,
-        verbose,
-    )
+        if verbose:
+            logger.info({"message": f"computing global {habitat} area"})
+        if len(geometry) == 0:
+            global_area_km2 = 0.0
+        elif params["overlaps"]:
+            global_area_km2 = fast_union_area_km2(list(geometry.geometry.values), n_jobs)
+        else:
+            global_area_km2 = float(geometry.geometry.to_crs("EPSG:6933").area.sum() / 1e6)
 
-    if verbose:
-        logger.info({"message": "generating mangrove polygons by country and IHO region"})
-    mangroves_by_location = []
-    for cnt in tqdm(list(sorted(set(regions["location"].dropna())))):
-        country_geom = regions[regions["location"] == cnt].iloc[0].geometry
+        save_json_to_gcs(
+            bucket,
+            {"global_area_km2": global_area_km2},
+            global_area_file_pattern.format(habitat=habitat),
+            project,
+            verbose,
+        )
 
-        # clip mangroves to country bounding box
-        xmin, ymin, xmax, ymax = country_geom.bounds
-        mangroves_clipped = mangrove[mangrove.intersects(box(xmin, ymin, xmax, ymax))]
+        if verbose:
+            logger.info({"message": f"dissolving {habitat} by location"})
+        geometry_sindex = geometry.sindex
 
-        # Build STRtree index
-        mangrove_geoms = list(mangroves_clipped.geometry)
-        tree = STRtree(mangrove_geoms)
+        jobs = []
+        for location, location_geom in location_geoms.items():
+            if location_geom is None or location_geom.is_empty:
+                continue
+            indices = geometry_sindex.query(location_geom, predicate="intersects")
+            if len(indices) == 0:
+                continue
+            jobs.append((location, geometry.geometry.values[indices], location_geom))
 
-        indices = tree.query(country_geom, predicate="intersects")
-        location_mangroves = mangroves_clipped.iloc[indices].copy()
-        location_mangroves["geometry"] = location_mangroves.geometry.apply(make_valid)
-        if len(location_mangroves) > 0:
-            mangrove_geom = safe_union(
-                location_mangroves, batch_size=batch_size, simplify_tolerance=tolerance
-            )
-            mangroves_by_location.append(
-                {
-                    "location": cnt,
-                    "n_mangrove_polygons": len(location_mangroves),
-                    "bbox": country_geom.bounds,
-                    "mangrove_area_km2": location_mangroves.to_crs("EPSG:6933").area.sum() / 1e6,
-                    "geometry": mangrove_geom,
-                }
-            )
+        results = Parallel(n_jobs=n_jobs, backend="loky")(
+            delayed(_clip_and_union_habitat)(location, parts, location_geom, batch_size)
+            for location, parts, location_geom in tqdm(jobs)
+        )
 
-    mangroves_by_location = gpd.GeoDataFrame(
-        mangroves_by_location, geometry="geometry", crs="EPSG:4326"
-    )
-    upload_gdf(
-        bucket,
-        mangroves_by_location,
-        mangroves_by_location_file_name,
-        project_id=project,
-        verbose=True,
-        timeout=600,
-    )
+        habitat_by_location = gpd.GeoDataFrame(
+            [{**result, "habitat": habitat} for result in results if result is not None],
+            columns=[
+                "location",
+                "n_habitat_polygons",
+                "bbox",
+                "area_km2",
+                "geometry",
+                "habitat",
+            ],
+            geometry="geometry",
+            crs="EPSG:4326",
+        )
+
+        upload_gdf(
+            bucket,
+            habitat_by_location,
+            by_location_file_pattern.format(habitat=habitat),
+            project_id=project,
+            verbose=verbose,
+            timeout=600,
+        )
+
+        del geometry, habitat_by_location
+        gc.collect()
 
 
 def process_terrestrial_biome_raster(

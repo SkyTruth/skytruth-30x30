@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 import src.methods.publisher as main
+from src.core.params import HABITAT_PROCESSING_PARAMS, MARINE_HABITAT_PARAMS
 from src.core.retry_params import ScheduleRetry
 
 
@@ -39,7 +40,7 @@ def patched_all(monkeypatch, call_log):
         "process_eez_land_union",
         "download_marine_habitats",
         "process_terrestrial_biome_raster",
-        "process_mangroves",
+        "process_marine_habitat_geoms",
         "generate_terrestrial_biome_stats_country",
         "download_mpatlas",
         "download_protected_seas",
@@ -94,9 +95,7 @@ def patched_all(monkeypatch, call_log):
         ("process_gadm", "process_gadm_geoms"),
         ("process_eezs", "process_eez_geoms"),
         ("process_eez_land_union", "process_eez_land_union"),
-        ("download_marine_habitats", "download_marine_habitats"),
         ("process_terrestrial_biomes", "process_terrestrial_biome_raster"),
-        ("process_mangroves", "process_mangroves"),
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
@@ -131,18 +130,37 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
         assert kwargs["request"] == {"METHOD": "update_locations"}
 
 
+def _next_step_payloads(call_log):
+    """The payloads of every downstream task the dispatch enqueued."""
+    return [args[0] for name, args, _ in call_log if name == "create_task"]
+
+
+def _fetched_habitats(call_log):
+    """The habitats the download step fetched, in the order it fetched them."""
+    return [
+        kwargs["habitats"] for name, _, kwargs in call_log if name == "download_marine_habitats"
+    ]
+
+
 @pytest.mark.parametrize(
     "habitat",
     ["coldwatercorals", ["coldwatercorals", "saltmarshes", "seagrasses"]],
     ids=["single", "list"],
 )
 def test_download_marine_habitats_forwards_habitat_selection(patched_all, habitat):
-    """HABITAT selects which source zips to fetch, one name or a list of them."""
+    """HABITAT selects which source zips to fetch, one name or a list of them.
+
+    They are fetched one at a time so the step can record which ones already landed.
+    """
     resp = main.run_from_payload({"METHOD": "download_marine_habitats", "HABITAT": habitat})
 
     assert resp == ("OK", 200)
-    _, _, kwargs = patched_all[0]
-    assert kwargs["habitats"] == habitat
+    assert _fetched_habitats(patched_all) == ([habitat] if isinstance(habitat, str) else habitat)
+    assert all(
+        kwargs.keys() == {"habitats", "verbose"}
+        for name, _, kwargs in patched_all
+        if name == "download_marine_habitats"
+    )
 
 
 def test_download_marine_habitats_without_habitat_downloads_everything(patched_all):
@@ -150,8 +168,188 @@ def test_download_marine_habitats_without_habitat_downloads_everything(patched_a
     resp = main.run_from_payload({"METHOD": "download_marine_habitats"})
 
     assert resp == ("OK", 200)
-    _, _, kwargs = patched_all[0]
-    assert kwargs["habitats"] is None
+    assert _fetched_habitats(patched_all) == list(MARINE_HABITAT_PARAMS)
+
+
+@pytest.mark.parametrize(
+    ("habitat", "expected_steps", "expected_habitat"),
+    [
+        (None, ["process_marine_habitat_geoms"], list(HABITAT_PROCESSING_PARAMS)),
+        ("mangroves", ["process_marine_habitat_geoms"], ["mangroves"]),
+        ("saltmarshes", ["process_marine_habitat_geoms"], ["saltmarshes"]),
+        (
+            ["mangroves", "seagrasses"],
+            ["process_marine_habitat_geoms"],
+            ["mangroves", "seagrasses"],
+        ),
+        (["seamounts", "saltmarshes"], ["process_marine_habitat_geoms"], ["saltmarshes"]),
+        ("seamounts", [], None),
+    ],
+    ids=["all", "mangroves", "one_unep", "mangroves_and_unep", "seamounts_and_unep", "seamounts"],
+)
+def test_download_marine_habitats_launches_the_step_that_processes_each_habitat(
+    patched_all, habitat, expected_steps, expected_habitat
+):
+    """Mangroves and the UNEP-WCMC habitats share a processing step; seamounts have none.
+
+    An empty HABITAT downloads everything and forwards every processable habitat.
+    """
+    main.run_from_payload(
+        {"METHOD": "download_marine_habitats", "HABITAT": habitat, "TRIGGER_NEXT": True}
+    )
+
+    payloads = _next_step_payloads(patched_all)
+
+    assert [payload["METHOD"] for payload in payloads] == expected_steps
+
+    if payloads:
+        assert payloads[0]["HABITAT"] == expected_habitat
+
+
+@pytest.mark.parametrize(
+    ("habitat", "expected_processed", "expected_step", "expected_habitat"),
+    [
+        (
+            None,
+            list(HABITAT_PROCESSING_PARAMS)[0],
+            "process_marine_habitat_geoms",
+            list(HABITAT_PROCESSING_PARAMS)[1:],
+        ),
+        (
+            ["saltmarshes", "seagrasses"],
+            "saltmarshes",
+            "process_marine_habitat_geoms",
+            ["seagrasses"],
+        ),
+        (["mangroves"], "mangroves", "generate_habitat_protection_table", None),
+        (["seagrasses"], "seagrasses", "generate_habitat_protection_table", None),
+        ("seagrasses", "seagrasses", "generate_habitat_protection_table", None),
+    ],
+    ids=["all", "two_left", "last_mangroves", "last_one", "single_string"],
+)
+def test_process_marine_habitat_geoms_relays_one_habitat_at_a_time(
+    patched_all, habitat, expected_processed, expected_step, expected_habitat
+):
+    """Each task processes exactly one habitat and launches the next, so the
+    table generation is saved for last using complete data."""
+    payload = {"METHOD": "process_marine_habitat_geoms", "TRIGGER_NEXT": True}
+    if habitat is not None:
+        payload["HABITAT"] = habitat
+
+    main.run_from_payload(payload)
+
+    processed = [
+        kwargs for name, _, kwargs in patched_all if name == "process_marine_habitat_geoms"
+    ]
+    assert len(processed) == 1
+    assert processed[0]["habitats"] == expected_processed
+
+    payloads = _next_step_payloads(patched_all)
+    assert [step["METHOD"] for step in payloads] == [expected_step]
+    assert payloads[0].get("HABITAT") == expected_habitat
+
+
+def _retry_payloads(call_log):
+    """The payloads of retry tasks, which the retry handler enqueues by keyword."""
+    return [
+        kwargs["payload"]
+        for name, _, kwargs in call_log
+        if name == "create_task" and "payload" in kwargs
+    ]
+
+
+@pytest.fixture
+def failing_habitat_step(patched_all, monkeypatch):
+    """Make both habitat steps fail, so the retry payload can be inspected."""
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("habitat step failed")
+
+    monkeypatch.setattr(main, "download_marine_habitats", boom, raising=True)
+    monkeypatch.setattr(main, "process_marine_habitat_geoms", boom, raising=True)
+    monkeypatch.setattr(main, "send_slack_alert", lambda *args, **kwargs: None, raising=True)
+    return patched_all
+
+
+@pytest.mark.parametrize("method", ["download_marine_habitats", "process_marine_habitat_geoms"])
+def test_failed_habitat_step_retries_only_the_outstanding_habitats(failing_habitat_step, method):
+    """A retry must not restart habitats that already finished.
+
+    The retry payload is rebuilt from task_config, so the habitats still to run have to
+    be recorded there before the work starts rather than after it succeeds.
+    """
+    resp = main.run_from_payload(
+        {"METHOD": method, "HABITAT": ["saltmarshes", "seagrasses"], "MAX_RETRIES": 3}
+    )
+
+    assert resp[1] == 202
+    retries = _retry_payloads(failing_habitat_step)
+    assert len(retries) == 1
+    assert retries[0]["METHOD"] == method
+    assert retries[0]["HABITAT"] == ["saltmarshes", "seagrasses"]
+    assert retries[0]["attempt"] == 2
+
+
+def test_failed_habitat_step_names_the_habitats_even_when_none_were_requested(
+    failing_habitat_step,
+):
+    """A run started without HABITAT still retries against an explicit list, so the
+    resume point never depends on re-deriving the default."""
+    main.run_from_payload({"METHOD": "process_marine_habitat_geoms", "MAX_RETRIES": 3})
+
+    assert _retry_payloads(failing_habitat_step)[0]["HABITAT"] == list(HABITAT_PROCESSING_PARAMS)
+
+
+def test_failed_download_retries_only_the_habitats_that_never_landed(patched_all, monkeypatch):
+    """A download failing part-way through must not re-fetch archives already in GCS.
+
+    All the habitats are fetched within one task, so the outstanding list has to shrink as
+    each one lands rather than only once the whole set has.
+    """
+    fetched = []
+
+    def fail_on_seagrasses(habitats, **kwargs):
+        if habitats == "seagrasses":
+            raise RuntimeError("download failed")
+        fetched.append(habitats)
+
+    monkeypatch.setattr(main, "download_marine_habitats", fail_on_seagrasses, raising=True)
+    monkeypatch.setattr(main, "send_slack_alert", lambda *args, **kwargs: None, raising=True)
+
+    main.run_from_payload(
+        {
+            "METHOD": "download_marine_habitats",
+            "HABITAT": ["coldwatercorals", "saltmarshes", "seagrasses"],
+            "MAX_RETRIES": 3,
+        }
+    )
+
+    assert fetched == ["coldwatercorals", "saltmarshes"]
+    assert _retry_payloads(patched_all)[0]["HABITAT"] == ["seagrasses"]
+
+
+def test_processing_every_habitat_covers_each_one_once(patched_all):
+    """Every dissolved habitat is processed once and runs in a chain,
+    ending with generate_habitat_protection_table."""
+    launched = [{"METHOD": "download_marine_habitats", "HABITAT": None, "TRIGGER_NEXT": True}]
+    steps, processed = [], []
+
+    while launched:
+        current = launched.pop(0)
+        steps.append(current["METHOD"])
+        if current["METHOD"] == "generate_habitat_protection_table":
+            continue
+        del patched_all[:]
+        main.run_from_payload(current)
+        processed += [
+            kwargs["habitats"]
+            for name, _, kwargs in patched_all
+            if name == "process_marine_habitat_geoms"
+        ]
+        launched.extend(_next_step_payloads(patched_all))
+
+    assert processed == list(HABITAT_PROCESSING_PARAMS)
+    assert steps.count("generate_habitat_protection_table") == 1
 
 
 # Tests for functions that directly call download_zip_to_gcs

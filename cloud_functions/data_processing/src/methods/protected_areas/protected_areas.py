@@ -28,7 +28,6 @@ from src.core.processors import (
     country_wrapping,
     remove_columns,
     remove_non_designated_m,
-    remove_non_designated_p,
     update_mpaa_establishment_stage,
 )
 from src.methods.protected_areas.pa_processors import (
@@ -136,7 +135,6 @@ def generate_protected_areas_table(
             wdpa[cols]
             .rename(columns=wdpa_dict)
             .pipe(country_wrapping)
-            .pipe(remove_non_designated_p)
             .pipe(add_environment)
             .pipe(add_oecm_status)
             .pipe(

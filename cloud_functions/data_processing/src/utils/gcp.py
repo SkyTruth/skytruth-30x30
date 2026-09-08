@@ -1,5 +1,6 @@
 import contextlib
 import gc
+import gzip
 import json
 import os
 import pickle
@@ -577,6 +578,79 @@ def read_zipped_gpkg_from_gcs(
                 response.append(gpd.read_file(gpkg_files[0], layer=layer))
 
             return response
+
+
+def read_gzipped_gpkg_from_gcs(
+    bucket: str,
+    blob_name: str,
+    layer: str | None = None,
+    columns: list[str] | None = None,
+    chunk_size: int = 1024 * 1024,
+    verbose: bool = True,
+) -> gpd.GeoDataFrame:
+    """
+    Streams a gzipped GeoPackage (.gpkg.gz) from GCS and reads it into a GeoDataFrame.
+
+    Parameters:
+    ----------
+    bucket : str
+        Name of the GCS bucket holding the file.
+    blob_name : str
+        Path to the .gpkg.gz object in the bucket.
+    layer : str, optional
+        Layer to read. Defaults to the first layer in the GeoPackage.
+    columns : list[str], optional
+        Attribute columns to read. Defaults to every column. The geometry is
+        always read.
+    chunk_size : int
+        Size in bytes of each decompressed chunk written to disk.
+    verbose : bool
+        If True, logs progress and shows a download progress bar.
+
+    Returns:
+    -------
+    gpd.GeoDataFrame
+    """
+    gcs_path = f"gs://{bucket}/{blob_name}"
+
+    if verbose:
+        logger.info({"message": f"downloading {gcs_path}"})
+
+    with fsspec.open(gcs_path, mode="rb") as remote_file, tempfile.TemporaryDirectory() as tmpdir:
+        gpkg_path = os.path.join(tmpdir, "data.gpkg")
+
+        # The progress bar tracks compressed bytes pulled from GCS, which is the
+        # only total we know up front.
+        total_size = getattr(remote_file, "size", None)
+        with (
+            gzip.GzipFile(fileobj=remote_file, mode="rb") as gzip_stream,
+            open(gpkg_path, "wb") as local_gpkg,
+            tqdm(
+                total=total_size,
+                unit="B",
+                unit_scale=True,
+                desc="Downloading gpkg",
+                disable=not verbose,
+            ) as pbar,
+        ):
+            compressed_read = 0
+            while chunk := gzip_stream.read(chunk_size):
+                local_gpkg.write(chunk)
+                with contextlib.suppress(OSError, ValueError):
+                    position = remote_file.tell()
+                    pbar.update(max(position - compressed_read, 0))
+                    compressed_read = position
+
+        read_kwargs = {}
+        if layer is not None:
+            read_kwargs["layer"] = layer
+        if columns is not None:
+            read_kwargs["columns"] = columns
+
+        if verbose:
+            logger.info({"message": f"reading {blob_name}"})
+
+        return gpd.read_file(gpkg_path, **read_kwargs)
 
 
 def read_dataframe(
