@@ -12,9 +12,8 @@ from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
-    MARINE_TOLERANCE,
     MPATLAS_META_FILE_NAME,
-    TERRESTRIAL_TOLERANCE,
+    TOLERANCE,
     WDPA_META_FILE_NAME,
 )
 from src.core.processors import (
@@ -237,8 +236,8 @@ def generate_protected_areas_table(
     )
     wdpa = pd.concat([wdpa, wdpa_pairs], axis=0, ignore_index=True)
 
-    eez_file_name = add_tolerance_suffix(eez_file_name, MARINE_TOLERANCE)
-    gadm_file_name = add_tolerance_suffix(gadm_file_name, TERRESTRIAL_TOLERANCE)
+    eez_file_name = add_tolerance_suffix(eez_file_name, TOLERANCE)
+    gadm_file_name = add_tolerance_suffix(gadm_file_name, TOLERANCE)
     if verbose:
         logger.info({"message": f"loading eez from {eez_file_name}"})
     eez = read_json_df(BUCKET, eez_file_name)

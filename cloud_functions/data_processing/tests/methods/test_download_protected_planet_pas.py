@@ -9,9 +9,9 @@ from shapely.geometry import Point
 from src.methods import download_and_process
 from src.methods.download_and_process import download_and_process_protected_planet_pas
 
-# Deliberately not the production values - distinct, coarse tolerances make the
-# filename suffixes unambiguous and the simplification effect measurable.
-TEST_TOLERANCES = (0.5, 0.001)
+# Deliberately not the production value - a coarse tolerance makes the filename
+# suffix unambiguous and the simplification effect measurable.
+TEST_TOLERANCE = 0.5
 
 # download_and_process_protected_planet_pas hardcodes tmp_dir = "/tmp", so the
 # parquet fixtures have to live where it will look for them.
@@ -119,13 +119,13 @@ def pa_job_recorder(monkeypatch):
     return calls
 
 
-def _run_job(tolerances=TEST_TOLERANCES):
+def _run_job(tolerance=TEST_TOLERANCE):
     download_and_process_protected_planet_pas(
         terrestrial_pa_file_name="pas/terrestrial.geojson",
         marine_pa_file_name="pas/marine.geojson",
         meta_file_name="pas/meta.csv",
         archive_wdpa_file_name="archive/wdpa.zip",
-        tolerances=tolerances,
+        tolerance=tolerance,
         bucket="test-bucket",
         batch_size=2,
         n_jobs=1,
@@ -133,8 +133,8 @@ def _run_job(tolerances=TEST_TOLERANCES):
     )
 
 
-def test_one_download_produces_every_tolerance(mock_wdpa_parquet, pa_job_recorder):
-    """A single download yields a terrestrial and marine file per tolerance."""
+def test_one_download_produces_both_environment_files(mock_wdpa_parquet, pa_job_recorder):
+    """A single download yields one terrestrial and one marine file."""
     _run_job()
 
     assert len(pa_job_recorder["downloads"]) == 1
@@ -142,35 +142,27 @@ def test_one_download_produces_every_tolerance(mock_wdpa_parquet, pa_job_recorde
     assert {call["blob"] for call in pa_job_recorder["gdf"]} == {
         "pas/terrestrial_0.5.geojson",
         "pas/marine_0.5.geojson",
-        "pas/terrestrial_0.001.geojson",
-        "pas/marine_0.001.geojson",
     }
 
 
-def test_later_tolerances_still_see_the_unpacked_parquets(mock_wdpa_parquet, pa_job_recorder):
-    """The last tolerance pass must not read an emptied pa_dir.
-
-    This is the regression the loop introduced: pa_dir used to be deleted right
-    after the single simplify pass, which would starve every pass after the
-    first.
-    """
+def test_outputs_are_populated_from_the_unpacked_parquets(mock_wdpa_parquet, pa_job_recorder):
+    """pa_dir must still be readable when the simplify pass runs."""
     _run_job()
 
     by_blob = {call["blob"]: call["gdf"] for call in pa_job_recorder["gdf"]}
-    last = by_blob["pas/terrestrial_0.001.geojson"]
+    terrestrial = by_blob["pas/terrestrial_0.5.geojson"]
 
-    assert not last.empty
-    assert set(last["ISO3"]) == {"USA"}
+    assert not terrestrial.empty
+    assert set(terrestrial["ISO3"]) == {"USA"}
 
 
-def test_pa_dir_is_removed_once_all_tolerances_are_done(mock_wdpa_parquet, pa_job_recorder):
+def test_pa_dir_is_removed_when_done(mock_wdpa_parquet, pa_job_recorder):
     _run_job()
 
     assert not os.path.exists(PA_DIR)
 
 
 def test_metadata_is_uploaded_exactly_once(mock_wdpa_parquet, pa_job_recorder):
-    """Metadata is tolerance-independent, so it is written on the first pass only."""
     _run_job()
 
     assert len(pa_job_recorder["dataframe"]) == 1
@@ -182,16 +174,19 @@ def test_metadata_is_uploaded_exactly_once(mock_wdpa_parquet, pa_job_recorder):
     assert len(meta["df"]) == len(mock_wdpa_parquet)
 
 
-def test_coarser_tolerance_simplifies_more(mock_wdpa_parquet, pa_job_recorder):
-    """Each pass really does simplify at its own tolerance."""
+def test_geometries_are_simplified_at_the_given_tolerance(mock_wdpa_parquet, pa_job_recorder):
+    """The tolerance argument reaches the simplify step."""
     _run_job()
 
     by_blob = {call["blob"]: call["gdf"] for call in pa_job_recorder["gdf"]}
+    written = by_blob["pas/marine_0.5.geojson"]
 
-    def vertices(blob):
-        return int(shapely.get_num_coordinates(by_blob[blob].geometry.values).sum())
+    def vertices(geoms):
+        return int(shapely.get_num_coordinates(geoms).sum())
 
-    assert vertices("pas/marine_0.5.geojson") < vertices("pas/marine_0.001.geojson")
+    source = mock_wdpa_parquet[mock_wdpa_parquet["REALM"].isin(["Marine", "Coastal"])]
+
+    assert vertices(written.geometry.values) < vertices(source.geometry.values)
 
 
 def test_realm_split_and_mab_filter(mock_wdpa_parquet, pa_job_recorder):
@@ -215,18 +210,4 @@ def test_each_output_is_archived(mock_wdpa_parquet, pa_job_recorder):
     assert set(pa_job_recorder["duplicates"]) == {
         ("pas/terrestrial_0.5.geojson", "archive/pas/terrestrial_0.5.geojson"),
         ("pas/marine_0.5.geojson", "archive/pas/marine_0.5.geojson"),
-        ("pas/terrestrial_0.001.geojson", "archive/pas/terrestrial_0.001.geojson"),
-        ("pas/marine_0.001.geojson", "archive/pas/marine_0.001.geojson"),
     }
-
-
-def test_single_tolerance_runs_clean(mock_wdpa_parquet, pa_job_recorder):
-    """The loop must not depend on there being more than one tolerance."""
-    _run_job(tolerances=(0.5,))
-
-    assert {call["blob"] for call in pa_job_recorder["gdf"]} == {
-        "pas/terrestrial_0.5.geojson",
-        "pas/marine_0.5.geojson",
-    }
-    assert len(pa_job_recorder["dataframe"]) == 1
-    assert not os.path.exists(PA_DIR)

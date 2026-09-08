@@ -10,7 +10,7 @@ from src.core.params import (
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
-    TERRESTRIAL_TOLERANCE,
+    TOLERANCE,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.raster_pa_stats import compute_class_areas_by_location
@@ -41,7 +41,7 @@ def generate_terrestrial_biome_stats_pa(
     country_col="ISO3",
     tile_size_pixels=8192,
     verbose: bool = True,
-    tolerance: float = TERRESTRIAL_TOLERANCE,
+    tolerance: float = TOLERANCE,
 ):
     terrestrial_pa_file_name = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
     gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)

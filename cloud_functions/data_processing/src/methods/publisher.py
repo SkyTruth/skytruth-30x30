@@ -31,12 +31,10 @@ from src.core.params import (
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
-    MARINE_TOLERANCE,
     MPATLAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
-    TERRESTRIAL_TOLERANCE,
-    TOLERANCES,
+    TOLERANCE,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
@@ -400,7 +398,7 @@ def dispatch_publisher(
         case "download_protected_planet_pas":
             download_and_process_protected_planet_pas(
                 verbose=verbose,
-                tolerances=TOLERANCES,
+                tolerance=TOLERANCE,
                 batch_size=1000,
             )
             step_list = [
@@ -463,7 +461,7 @@ def dispatch_publisher(
                 pa_file=WDPA_TERRESTRIAL_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-                tolerance=TERRESTRIAL_TOLERANCE,
+                tolerance=TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_gadm_minus_pa"]
@@ -474,7 +472,7 @@ def dispatch_publisher(
                 pa_file=WDPA_MARINE_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
-                tolerance=MARINE_TOLERANCE,
+                tolerance=TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_eez_minus_mpa"]
@@ -485,7 +483,7 @@ def dispatch_publisher(
                 loc_file=EEZ_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
-                tolerance=MARINE_TOLERANCE,
+                tolerance=TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_location_minus_fhp_mpa"]
@@ -577,7 +575,7 @@ def dispatch_publisher(
                 tileset_file=map_params.MARINE_PA_TILESET_FILE,
                 tileset_id=map_params.MARINE_PA_TILESET_ID,
                 display_name=map_params.MARINE_PA_TILESET_NAME,
-                tolerance=map_params.WDPA_TOLERANCE,
+                tolerance=TOLERANCE,
                 method="update_marine_protected_areas_tileset",
                 verbose=verbose,
             )
@@ -589,7 +587,7 @@ def dispatch_publisher(
                 tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
                 tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
                 display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
-                tolerance=map_params.WDPA_TOLERANCE,
+                tolerance=TOLERANCE,
                 method="update_terrestrial_protected_areas_tileset",
                 verbose=verbose,
             )

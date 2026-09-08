@@ -138,8 +138,8 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
         assert kwargs["request"] == {"METHOD": "update_locations"}
 
 
-def test_protected_planet_pas_receives_every_tolerance(patched_all):
-    """The PA job simplifies at every tolerance in one invocation.
+def test_protected_planet_pas_receives_the_tolerance(patched_all):
+    """The PA job simplifies once, at the single pipeline tolerance.
 
     It used to be dispatched once per tolerance, which meant two full WDPA
     downloads and two downstream chains that could interleave.
@@ -148,32 +148,29 @@ def test_protected_planet_pas_receives_every_tolerance(patched_all):
 
     assert resp == ("OK", 200)
     _, _, kwargs = patched_all[0]
-    assert tuple(kwargs["tolerances"]) == tuple(main.TOLERANCES)
-    assert "tolerance" not in kwargs
+    assert kwargs["tolerance"] == main.TOLERANCE
+    assert "tolerances" not in kwargs
 
 
 @pytest.mark.parametrize(
-    "method, expected_tolerance",
+    "method",
     [
-        ("generate_gadm_minus_pa", "TERRESTRIAL_TOLERANCE"),
-        ("generate_eez_minus_mpa", "MARINE_TOLERANCE"),
-        ("generate_location_minus_fhp_mpa", "MARINE_TOLERANCE"),
+        "generate_gadm_minus_pa",
+        "generate_eez_minus_mpa",
+        "generate_location_minus_fhp_mpa",
     ],
 )
-def test_conservation_builder_methods_use_their_domain_tolerance(
-    patched_all, method, expected_tolerance
-):
-    """Each subtraction job builds at the tolerance for its own environment.
+def test_conservation_builder_methods_use_the_pipeline_tolerance(patched_all, method):
+    """Each subtraction job builds at the single pipeline tolerance.
 
     All three used to read it from the payload, which meant the value was
-    whatever TOLERANCES[0] happened to be - so both marine layers silently ran
-    at the terrestrial tolerance.
+    whatever the first configured tolerance happened to be.
     """
     resp = main.run_from_payload({"METHOD": method})
 
     assert resp == ("OK", 200)
     _, _, kwargs = patched_all[0]
-    assert kwargs["tolerance"] == getattr(main, expected_tolerance)
+    assert kwargs["tolerance"] == main.TOLERANCE
 
 
 @pytest.mark.parametrize(

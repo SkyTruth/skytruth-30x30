@@ -10,10 +10,9 @@ from src.core.params import (
     GADM_FILE_NAME,
     LOCATIONS_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
-    MARINE_TOLERANCE,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
-    TERRESTRIAL_TOLERANCE,
+    TOLERANCE,
 )
 from src.core.processors import round_to_list
 from src.utils.gcp import (
@@ -41,8 +40,8 @@ def generate_locations_table(
     if verbose:
         logger.info({"message": "Generating locations table"})
 
-    eez_file = add_tolerance_suffix(eez_file_name, MARINE_TOLERANCE)
-    gadm_file = add_tolerance_suffix(gadm_file_name, TERRESTRIAL_TOLERANCE)
+    eez_file = add_tolerance_suffix(eez_file_name, TOLERANCE)
+    gadm_file = add_tolerance_suffix(gadm_file_name, TOLERANCE)
 
     eez = read_json_df(bucket_name=bucket, filename=eez_file, verbose=verbose)
     gadm = read_json_df(bucket_name=bucket, filename=gadm_file, verbose=verbose)
