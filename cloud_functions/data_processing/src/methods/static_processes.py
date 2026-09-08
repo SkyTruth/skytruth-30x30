@@ -214,11 +214,7 @@ def process_eez_geoms(
     if tolerance is not None:
         if verbose:
             logger.info(
-                {
-                    "message": (
-                        f"simplifying eez by sovereign geometries with tolerance {tolerance}"
-                    )
-                }
+                {"message": (f"simplifying eez by sovereign geometries with tolerance {tolerance}")}
             )
         eez_by_sov["geometry"] = eez_by_sov["geometry"].simplify(tolerance=tolerance)
 
@@ -233,14 +229,11 @@ def process_eez_geoms(
         logger.info(
             {
                 "message": (
-                    f"simplifying eez with mulit-sovereign geometries "
-                    f"with tolerance {TOLERANCE}"
+                    f"simplifying eez with mulit-sovereign geometries with tolerance {TOLERANCE}"
                 )
             }
         )
-    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(
-        tolerance=TOLERANCE
-    )
+    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCE)
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
     blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, TOLERANCE)
