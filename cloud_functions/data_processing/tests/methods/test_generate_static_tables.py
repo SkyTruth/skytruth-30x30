@@ -204,7 +204,7 @@ def test_generate_locations_table_happy(
     calls, upload_mock = upload_recorder
 
     # Fix the tolerance so the code resolves eez/gadm filenames deterministically
-    monkeypatch.setattr(gen_static_tbl, "TOLERANCE", 0.1, raising=True)
+    tolerance = 0.1
 
     # The filenames the function will compute internally
     eez_suffix = gen_static_tbl.EEZ_FILE_NAME.replace(".geojson", "_0.1.geojson")
@@ -248,6 +248,7 @@ def test_generate_locations_table_happy(
     gen_static_tbl.generate_locations_table(
         output_file_name="locations.csv",
         bucket="test-bucket",
+        tolerance=tolerance,
         verbose=False,
     )
 
@@ -297,7 +298,7 @@ def test_generate_locations_table_read_failure(
 ):
     calls, upload_mock = upload_recorder
 
-    monkeypatch.setattr(gen_static_tbl, "TOLERANCE", 0.1, raising=True)
+    tolerance = 0.1
 
     eez_suffix = gen_static_tbl.EEZ_FILE_NAME.replace(".geojson", "_0.1.geojson")
 
@@ -332,6 +333,8 @@ def test_generate_locations_table_read_failure(
     monkeypatch.setattr(gen_static_tbl, "round_to_list", lambda s: list(s), raising=True)
 
     with pytest.raises(RuntimeError, match="EEZ load failed"):
-        gen_static_tbl.generate_locations_table(bucket="test-bucket", verbose=False)
+        gen_static_tbl.generate_locations_table(
+            bucket="test-bucket", tolerance=tolerance, verbose=False
+        )
 
     assert calls == []

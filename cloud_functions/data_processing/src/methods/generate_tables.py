@@ -180,9 +180,10 @@ def generate_habitat_protection_table(
     eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
-    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, TOLERANCE)
+    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, tolerance)
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
@@ -201,7 +202,7 @@ def generate_habitat_protection_table(
         marine_pa_file_name=marine_pa_file_name,
         eez_file=eez_file,
         bucket=bucket,
-        tolerance=TOLERANCE,
+        tolerance=tolerance,
         verbose=verbose,
     )
 

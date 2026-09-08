@@ -36,6 +36,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "tileset_file": "out.mbtiles",
                 "tileset_id": "eez.id",
                 "display_name": "EEZ",
+                "tolerance": 5,
             },
             "eez.geojson",
             "_5.geojson",
@@ -49,6 +50,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "tileset_file": "mr.mbtiles",
                 "tileset_id": "mr.id",
                 "display_name": "Marine Regions",
+                "tolerance": 5,
             },
             "marine_regions.geojson",
             "_5.geojson",
@@ -62,6 +64,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "tileset_file": "cty.mbtiles",
                 "tileset_id": "cty.id",
                 "display_name": "Countries",
+                "tolerance": 5,
             },
             "countries.geojson",
             "_5.geojson",
@@ -75,6 +78,7 @@ def mock_add_translations(df, translations_df, key_col, code_col):
                 "tileset_file": "terr.mbtiles",
                 "tileset_id": "terr.id",
                 "display_name": "Terrestrial Regions",
+                "tolerance": 5,
             },
             "terrestrial_regions.geojson",
             "_5.geojson",
@@ -120,7 +124,6 @@ def test_wrappers_call_pipeline_with_expected_config(
         calls["process"] = process
         return {"tileset_id": cfg.tileset_id, "gcs_blob": cfg.tileset_blob_name}
 
-    monkeypatch.setattr(vtp, "TOLERANCE", 5, raising=True)
     monkeypatch.setattr(
         vtp, "run_vector_tileset_pipeline", mock_run_vector_tileset_pipeline, raising=True
     )
@@ -173,7 +176,7 @@ def test_mpatlas_process():
         crs="EPSG:4326",
     )
 
-    out = tp.mpatlas_process(gdf.copy(), {"verbose": False})
+    out = tp.mpatlas_process(gdf.copy(), {"verbose": False, "tolerance": 5})
     expected = {
         "designatio",
         "establishm",

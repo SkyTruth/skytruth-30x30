@@ -229,14 +229,14 @@ def process_eez_geoms(
         logger.info(
             {
                 "message": (
-                    f"simplifying eez with mulit-sovereign geometries with tolerance {TOLERANCE}"
+                    f"simplifying eez with mulit-sovereign geometries with tolerance {tolerance}"
                 )
             }
         )
-    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCE)
+    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=tolerance)
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
-    blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, TOLERANCE)
+    blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, tolerance)
     if verbose:
         logger.info({"message": f"uploading eez with multi-sovereign file to {blob_name}"})
     upload_gdf(bucket, eez_multiple_sovs, blob_name)
@@ -522,7 +522,7 @@ def process_mangroves(
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
-    tolerance=0.001,
+    tolerance=TOLERANCE,
     batch_size=3000,
 ):
     tqdm.pandas()

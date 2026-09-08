@@ -77,7 +77,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     ]
 
     # simplify geometry to match same simplification of Protected Areas
-    gdf["geometry"] = gdf["geometry"].simplify(TOLERANCE)
+    gdf["geometry"] = gdf["geometry"].simplify(ctx["tolerance"])
     gdf["geometry"] = gdf["geometry"].make_valid()
 
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
@@ -92,6 +92,7 @@ def create_and_update_mpatlas_tileset(
     tileset_id: str = MPATLAS_TILESET_ID,
     display_name: str = MPATLAST_TILESET_NAME,
     method: str = "update_mpatlas_tileset",
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -107,9 +108,12 @@ def create_and_update_mpatlas_tileset(
             display_name=display_name,
             local_geojson_name=f"{tileset_id}.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
+            # MPAtlas is read as published, so the source name takes no tolerance
+            # suffix - the simplification happens in mpatlas_process instead.
             source_file=source_file,
             verbose=verbose,
             keep_temp=keep_temp,
+            extra={"tolerance": tolerance},
         )
 
         return run_vector_tileset_pipeline(
@@ -144,6 +148,7 @@ def create_and_update_eez_tileset(
     tileset_file: str = EEZ_TILESET_FILE,
     tileset_id: str = EEZ_TILESET_ID,
     display_name: str = EEZ_TILESET_NAME,
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -159,7 +164,7 @@ def create_and_update_eez_tileset(
             display_name=display_name,
             local_geojson_name="eez.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=add_tolerance_suffix(source_file, TOLERANCE),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
         )
@@ -177,6 +182,7 @@ def create_and_update_marine_regions_tileset(
     tileset_file: str = MARINE_REGIONS_TILESET_FILE,
     tileset_id: str = MARINE_REGIONS_TILESET_ID,
     display_name: str = MARINE_REGIONS_TILESET_NAME,
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -192,7 +198,7 @@ def create_and_update_marine_regions_tileset(
             display_name=display_name,
             local_geojson_name="marine_regions.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=add_tolerance_suffix(source_file, TOLERANCE),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
@@ -248,6 +254,7 @@ def create_and_update_country_tileset(
     tileset_file: str = COUNTRIES_TILESET_FILE,
     tileset_id: str = COUNTRIES_TILESET_ID,
     display_name: str = COUNTRIES_TILESET_NAME,
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -263,7 +270,7 @@ def create_and_update_country_tileset(
             display_name=display_name,
             local_geojson_name="countries.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=add_tolerance_suffix(source_file, TOLERANCE),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
@@ -314,6 +321,7 @@ def create_and_update_terrestrial_regions_tileset(
     tileset_file: str = TERRESTRIAL_REGIONS_TILESET_FILE,
     tileset_id: str = TERRESTRIAL_REGIONS_TILESET_ID,
     display_name: str = TERRESTRIAL_REGIONS_TILESET_NAME,
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -329,7 +337,7 @@ def create_and_update_terrestrial_regions_tileset(
             display_name=display_name,
             local_geojson_name="terrestrial_regions.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=add_tolerance_suffix(source_file, TOLERANCE),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={

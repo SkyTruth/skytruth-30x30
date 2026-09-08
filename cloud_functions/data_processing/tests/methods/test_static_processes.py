@@ -591,7 +591,6 @@ def test_process_eez_geoms_loader_failure(
     )
     monkeypatch.setattr(static_processes, "clean_geometries", lambda g: g, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
-    monkeypatch.setattr(static_processes, "TOLERANCE", 0.1, raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
     monkeypatch.setattr(
         static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True

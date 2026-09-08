@@ -35,13 +35,14 @@ def generate_locations_table(
     regions_file_name: str = REGIONS_FILE_NAME,
     translation_file_name: str = LOCATIONS_TRANSLATED_FILE_NAME,
     bucket: str = BUCKET,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
     if verbose:
         logger.info({"message": "Generating locations table"})
 
-    eez_file = add_tolerance_suffix(eez_file_name, TOLERANCE)
-    gadm_file = add_tolerance_suffix(gadm_file_name, TOLERANCE)
+    eez_file = add_tolerance_suffix(eez_file_name, tolerance)
+    gadm_file = add_tolerance_suffix(gadm_file_name, tolerance)
 
     eez = read_json_df(bucket_name=bucket, filename=eez_file, verbose=verbose)
     gadm = read_json_df(bucket_name=bucket, filename=gadm_file, verbose=verbose)
