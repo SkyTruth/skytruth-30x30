@@ -7,7 +7,9 @@ import { useLocale } from 'next-intl';
 
 import DeckJsonLayer from '@/components/map/layers/deck-json-layer';
 import MapboxLayer from '@/components/map/layers/mapbox-layer';
-import PmtilesLayer from '@/components/map/layers/pmtiles-layer';
+import PmtilesLayer, {
+  type PmtilesVectorRenderConfig,
+} from '@/components/map/layers/pmtiles-layer';
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { layersInteractiveAtom, layersInteractiveIdsAtom } from '@/containers/map/store';
 import useResolvedConfig from '@/hooks/use-resolved-config';
@@ -116,6 +118,7 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
         id={`${slug}-layer`}
         beforeId={beforeId}
         url={url}
+        render={(config as Config & { render?: PmtilesVectorRenderConfig }).render}
         opacity={(settings.opacity as number) ?? 1}
         visibility={(settings.visibility as boolean) ?? true}
       />
