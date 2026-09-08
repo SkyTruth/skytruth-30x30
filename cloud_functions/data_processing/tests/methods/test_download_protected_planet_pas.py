@@ -170,7 +170,6 @@ def test_metadata_is_uploaded_exactly_once(mock_wdpa_parquet, pa_job_recorder):
     meta = pa_job_recorder["dataframe"][0]
     assert meta["blob"] == "pas/meta.csv"
     assert "geometry" not in meta["df"].columns
-    # Written before the MAB filter, so every source row is represented
     assert len(meta["df"]) == len(mock_wdpa_parquet)
 
 
@@ -189,8 +188,14 @@ def test_geometries_are_simplified_at_the_given_tolerance(mock_wdpa_parquet, pa_
     assert vertices(written.geometry.values) < vertices(source.geometry.values)
 
 
-def test_realm_split_and_mab_filter(mock_wdpa_parquet, pa_job_recorder):
-    """REALM drives the split; non-OECM MAB reserves are dropped from both files."""
+def test_realm_drives_the_split(mock_wdpa_parquet, pa_job_recorder):
+    """REALM decides which file a site lands in, and nothing is dropped here.
+
+    Sites Protected Planet excludes from its coverage statistics - including
+    non-OECM MAB reserves - stay in these files, because the PA table and the
+    tilesets publish them. `filter_protected_planet` drops them at read time in
+    the statistics jobs instead.
+    """
     _run_job()
 
     by_blob = {call["blob"]: call["gdf"] for call in pa_job_recorder["gdf"]}
@@ -198,8 +203,8 @@ def test_realm_split_and_mab_filter(mock_wdpa_parquet, pa_job_recorder):
     terrestrial = by_blob["pas/terrestrial_0.5.geojson"]
     marine = by_blob["pas/marine_0.5.geojson"]
 
-    # Terrestrial keeps the plain PA and the MAB OECM, but not the MAB PA
-    assert set(terrestrial["WDPAID"]) == {1, 5}
+    # Every terrestrial site, MAB PA (4) and MAB OECM (5) included
+    assert set(terrestrial["WDPAID"]) == {1, 4, 5}
     # Marine and Coastal both land in the marine file
     assert set(marine["WDPAID"]) == {2, 3}
 

@@ -3,7 +3,7 @@ import ast
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import Polygon, box
+from shapely.geometry import MultiPoint, Point, Polygon, box
 
 import src.methods.protection_coverage as protection_coverage
 
@@ -13,7 +13,12 @@ def _iho_gdf(rows):
 
 
 def _pa_gdf(rows):
-    return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:6933")
+    """Build a marine PA frame, defaulting rows to values the coverage filter keeps."""
+    return gpd.GeoDataFrame(
+        [{"STATUS": "Designated", "DESIG_ENG": "Marine Protected Area", **row} for row in rows],
+        geometry="geometry",
+        crs="EPSG:6933",
+    )
 
 
 def _run_coverage(monkeypatch, iho, pas, wdpa_global):
@@ -322,3 +327,156 @@ def test_iho_coverage_measures_global_contribution_against_global_ocean_area(
     assert result["global_contribution"] == pytest.approx(
         round(100 * protected_km2 / _global_area(wdpa_global, "ocean"), 2)
     )
+
+
+@pytest.mark.parametrize("excluded_status", ["Proposed", "Not Reported"])
+def test_iho_coverage_excludes_sites_protected_planet_leaves_out(
+    monkeypatch, wdpa_global, excluded_status
+):
+    """Exclude proposed and unreported sites, as the country-level statistics already do."""
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf(
+        [
+            {"PA_DEF": 1, "geometry": box(0, 0, 500, 1000)},
+            {"PA_DEF": 1, "STATUS": excluded_status, "geometry": box(1000, 0, 1500, 1000)},
+        ]
+    )
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    # Only the designated 0.5 km² site may reach the area, coverage and count.
+    assert result["protected_area"] == 0.5
+    assert result["coverage"] == 25.0
+    assert result["protected_areas_count"] == 1
+
+
+@pytest.mark.parametrize("kept_status", ["Designated", "Established", "Inscribed", "Adopted"])
+def test_iho_coverage_keeps_every_status_protected_planet_counts(
+    monkeypatch, wdpa_global, kept_status
+):
+    """Keep the non-designated statuses that Protected Planet still counts as coverage."""
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf([{"PA_DEF": 1, "STATUS": kept_status, "geometry": box(0, 0, 1000, 1000)}])
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    assert result["protected_area"] == 1.0
+    assert result["coverage"] == 50.0
+    assert result["protected_areas_count"] == 1
+
+
+def test_iho_coverage_returns_zero_when_every_site_is_filtered_out(monkeypatch, wdpa_global):
+    """Report a sea as uncovered when the filter removes all of its sites."""
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf([{"PA_DEF": 1, "STATUS": "Proposed", "geometry": box(0, 0, 1000, 1000)}])
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    assert result["protected_area"] == 0.0
+    assert result["coverage"] == 0.0
+    assert result["protected_areas_count"] == 0
+
+
+@pytest.mark.parametrize(
+    "point",
+    [Point(250, 500), MultiPoint([(250, 500), (300, 500)])],
+    ids=["point", "multipoint"],
+)
+def test_iho_coverage_excludes_points_with_no_reported_area(monkeypatch, wdpa_global, point):
+    """Exclude sites left as points, which reported no area to buffer into a polygon.
+
+    They contribute no area either way, but counting them would inflate the site count.
+    """
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf(
+        [
+            {"PA_DEF": 1, "geometry": box(0, 0, 500, 1000)},
+            {"PA_DEF": 1, "geometry": point},
+        ]
+    )
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    assert result["protected_area"] == 0.5
+    assert result["coverage"] == 25.0
+    assert result["protected_areas_count"] == 1
+
+
+def test_iho_coverage_keeps_polygons_that_report_no_area(monkeypatch, wdpa_global):
+    """Keep polygons whose provider reported no area, since we measure their boundary.
+
+    Only points are dropped for want of an area. A polygon carries its own geometry, so
+    a missing REP_AREA says nothing about whether it counts.
+    """
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf([{"PA_DEF": 1, "REP_AREA": 0.0, "geometry": box(0, 0, 1000, 1000)}])
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    assert result["protected_area"] == 1.0
+    assert result["coverage"] == 50.0
+    assert result["protected_areas_count"] == 1
+
+
+def test_iho_coverage_keeps_points_already_buffered_into_polygons(monkeypatch, wdpa_global):
+    """Keep sites submitted as points that reported an area.
+
+    The download step buffers those into circular polygons, so they reach the filter as
+    polygons and must survive it.
+    """
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    buffered_point = Point(500, 500).buffer(200)
+    pas = _pa_gdf([{"PA_DEF": 1, "REP_AREA": 0.1256, "geometry": buffered_point}])
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    assert result["protected_areas_count"] == 1
+    # The function rounds to two decimals, and buffer() approximates the circle.
+    assert result["protected_area"] == round(buffered_point.area / 1e6, 2)
+    assert result["protected_area"] > 0
+
+
+def test_iho_coverage_excludes_biosphere_reserves_that_are_not_oecms(monkeypatch, wdpa_global):
+    """Exclude MAB reserves recorded as protected areas, as Protected Planet does.
+
+    Their buffer and transition zones are not themselves protected, so counting the
+    whole reserve would overstate coverage. They stay in the PA table and tilesets.
+    """
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf(
+        [
+            {"PA_DEF": 1, "geometry": box(0, 0, 500, 1000)},
+            {
+                "PA_DEF": 1,
+                "DESIG_ENG": "UNESCO-MAB Biosphere Reserve",
+                "geometry": box(1000, 0, 1500, 1000),
+            },
+        ]
+    )
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    # Only the 0.5 km² non-MAB site may reach the area, coverage and count.
+    assert result["protected_area"] == 0.5
+    assert result["coverage"] == 25.0
+    assert result["protected_areas_count"] == 1
+
+
+def test_iho_coverage_keeps_biosphere_reserves_recorded_as_oecms(monkeypatch, wdpa_global):
+    """Keep MAB reserves that are also OECMs, which Protected Planet does count."""
+    iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
+    pas = _pa_gdf(
+        [
+            {
+                "PA_DEF": 0,
+                "DESIG_ENG": "UNESCO-MAB Biosphere Reserve",
+                "geometry": box(0, 0, 1000, 1000),
+            }
+        ]
+    )
+
+    result = _run_coverage(monkeypatch, iho, pas, wdpa_global).iloc[0]
+
+    assert result["protected_area"] == 1.0
+    assert result["coverage"] == 50.0
+    assert result["protected_areas_count"] == 1
