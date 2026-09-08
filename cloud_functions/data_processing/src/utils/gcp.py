@@ -26,6 +26,8 @@ from src.utils.logger import Logger
 PROJECT = os.getenv("PROJECT", "")
 logger = Logger()
 
+os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
+
 
 class TqdmBytesIO(BytesIO):
     """
