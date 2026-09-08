@@ -21,8 +21,15 @@ package-mode = false
 [dependency-groups]
 dev = [
     "pytest (>=9.1.1,<10.0.0)",
-    "httpx2 (>=2.12.0,<3.0.0)"
+    "httpx2 (>=2.12.0,<3.0.0)",
+    "ruff (>=0.16.6,<0.17.0)"
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "B", "SIM", "I"]
