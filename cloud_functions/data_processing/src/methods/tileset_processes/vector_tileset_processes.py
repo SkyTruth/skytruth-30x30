@@ -77,7 +77,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     ]
 
     # simplify geometry to match same simplification of Protected Areas
-    gdf["geometry"] = gdf["geometry"].simplify(ctx["tolerance"])
+    gdf["geometry"] = gdf["geometry"].simplify(TOLERANCE)
     gdf["geometry"] = gdf["geometry"].make_valid()
 
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
@@ -92,7 +92,6 @@ def create_and_update_mpatlas_tileset(
     tileset_id: str = MPATLAS_TILESET_ID,
     display_name: str = MPATLAST_TILESET_NAME,
     method: str = "update_mpatlas_tileset",
-    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -108,12 +107,9 @@ def create_and_update_mpatlas_tileset(
             display_name=display_name,
             local_geojson_name=f"{tileset_id}.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            # MPAtlas is read as published, so the source name takes no tolerance
-            # suffix - the simplification happens in mpatlas_process instead.
             source_file=source_file,
             verbose=verbose,
             keep_temp=keep_temp,
-            extra={"tolerance": tolerance},
         )
 
         return run_vector_tileset_pipeline(

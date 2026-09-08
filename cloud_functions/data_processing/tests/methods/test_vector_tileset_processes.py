@@ -176,7 +176,7 @@ def test_mpatlas_process():
         crs="EPSG:4326",
     )
 
-    out = tp.mpatlas_process(gdf.copy(), {"verbose": False, "tolerance": 5})
+    out = tp.mpatlas_process(gdf.copy(), {"verbose": False})
     expected = {
         "designatio",
         "establishm",
