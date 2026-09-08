@@ -50,7 +50,6 @@ from src.core.params import (
     HABITAT_PROCESSING_PARAMS,
     HIGH_SEAS_PARAMS,
     MARINE_HABITAT_PARAMS,
-    MARINE_HABITAT_TOLERANCE,
     NEAR_SHORE_BUFFER_KM,
     NEAR_SHORE_IHO_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
@@ -681,7 +680,7 @@ def process_marine_habitat_geoms(
     project: str = PROJECT,
     verbose: bool = True,
     tolerance: float = TOLERANCE,
-    simplify_tolerance: float = MARINE_HABITAT_TOLERANCE,
+    simplify_tolerance: float = TOLERANCE,
     batch_size: int = 3000,
     n_jobs: int = -1,
 ) -> None:

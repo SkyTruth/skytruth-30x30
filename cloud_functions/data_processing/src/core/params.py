@@ -216,7 +216,6 @@ HABITAT_PROCESSING_PARAMS = {
 }
 
 UNEP_POINT_AREA_KM2 = 1.0
-MARINE_HABITAT_TOLERANCE = 0.0001
 HABITAT_BY_LOCATION_FILE_PATTERN = "static/{habitat}_by_location.parquet"
 GLOBAL_HABITAT_AREA_FILE_PATTERN = "intermediates/total_area/global_{habitat}_area.json"
 

@@ -170,6 +170,8 @@ def test_conservation_builder_methods_use_the_pipeline_tolerance(patched_all, me
     assert resp == ("OK", 200)
     _, _, kwargs = patched_all[0]
     assert kwargs["tolerance"] == main.TOLERANCE
+
+
 def _next_step_payloads(call_log):
     """The payloads of every downstream task the dispatch enqueued."""
     return [args[0] for name, args, _ in call_log if name == "create_task"]
