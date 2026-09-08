@@ -284,4 +284,12 @@ LONG_RUNNING_TASKS = [
     "process_mangroves",
     "download_protected_seas",
     "generate_protection_coverage_stats_table",
+    "generate_terrestrial_biome_stats_country",
+    "generate_eez_minus_mpa",
+    "generate_location_minus_fhp_mpa",
+    "update_eez_minus_mpa",
+    "update_location_minus_fhp_mpa",
+    "generate_locations_table",
+    "update_marine_protected_areas_tileset",
+    "update_terrestrial_protected_areas_tileset",
 ]
