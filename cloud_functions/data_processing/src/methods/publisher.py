@@ -205,10 +205,6 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
             "METHOD": "download_protected_seas",
             **task_config,
         },
-        {
-            "METHOD": "download_protected_planet_pas",
-            **task_config,
-        },
     ]
 
     for job in jobs:
@@ -409,7 +405,7 @@ def dispatch_publisher(
         case "download_mpatlas":
             download_mpatlas(verbose=verbose)
             step_list = [
-                "generate_marine_protection_level_stats_table",
+                "download_protected_planet_pas",
                 "generate_location_minus_fhp_mpa",
             ]
 
@@ -435,6 +431,7 @@ def dispatch_publisher(
         case "generate_iho_pa_intersections":
             generate_iho_pa_intersections(verbose=verbose)
             step_list = [
+                "generate_marine_protection_level_stats_table",
                 "generate_protected_areas_table",
                 "generate_terrestrial_biome_stats",
                 "generate_eez_minus_mpa",
