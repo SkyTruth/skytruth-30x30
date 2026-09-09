@@ -10,11 +10,16 @@ from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
+<<<<<<< HEAD
     MARINE_TOLERANCE,
     MPATLAS_IHO_FILE_NAME,
     MPATLAS_META_FILE_NAME,
     TERRESTRIAL_TOLERANCE,
     WDPA_IHO_FILE_NAME,
+=======
+    MPATLAS_META_FILE_NAME,
+    TOLERANCE,
+>>>>>>> refactor-tolerance-handling
     WDPA_META_FILE_NAME,
 )
 from src.core.processors import (
@@ -28,7 +33,6 @@ from src.core.processors import (
     country_wrapping,
     remove_columns,
     remove_non_designated_m,
-    remove_non_designated_p,
     update_mpaa_establishment_stage,
 )
 from src.methods.protected_areas.pa_processors import (
@@ -60,6 +64,7 @@ def generate_protected_areas_table(
     wdpa_iho_file_name: str = WDPA_IHO_FILE_NAME,
     mpatlas_iho_file_name: str = MPATLAS_IHO_FILE_NAME,
     bucket: str = BUCKET,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
     def add_parent_children(subset: pd.DataFrame, fields=None) -> pd.DataFrame:
@@ -138,7 +143,6 @@ def generate_protected_areas_table(
             wdpa[cols]
             .rename(columns=wdpa_dict)
             .pipe(country_wrapping)
-            .pipe(remove_non_designated_p)
             .pipe(add_environment)
             .pipe(add_oecm_status)
             .pipe(
@@ -247,9 +251,14 @@ def generate_protected_areas_table(
     )
     wdpa = pd.concat([wdpa, wdpa_pairs], axis=0, ignore_index=True)
 
+<<<<<<< HEAD
     # Load the marine and terrestrial boundaries to calculate percent coverage of PAs
     eez_file_name = add_tolerance_suffix(eez_file_name, MARINE_TOLERANCE)
     gadm_file_name = add_tolerance_suffix(gadm_file_name, TERRESTRIAL_TOLERANCE)
+=======
+    eez_file_name = add_tolerance_suffix(eez_file_name, tolerance)
+    gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
+>>>>>>> refactor-tolerance-handling
     if verbose:
         logger.info({"message": f"loading eez from {eez_file_name}"})
     eez = read_json_df(BUCKET, eez_file_name)

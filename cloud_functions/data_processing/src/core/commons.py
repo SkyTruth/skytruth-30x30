@@ -26,7 +26,6 @@ from tqdm.auto import tqdm
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
-    MARINE_TOLERANCE,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
@@ -34,6 +33,7 @@ from src.core.params import (
     NEAR_SHORE_IHO_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
+    TOLERANCE,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
 )
@@ -521,10 +521,7 @@ def intersect_with_iho(
 
 def intersect_wdpa_with_iho(
     bucket: str = BUCKET,
-    tolerance: float = MARINE_TOLERANCE,
-    pa_file_name: str = WDPA_MARINE_FILE_NAME,
-    buffer: bool = False,
-    with_geometry: bool = False,
+    tolerance: float = TOLERANCE,
 ) -> pd.DataFrame:
     """One row per (PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID.
 

@@ -15,15 +15,10 @@ from src.core.commons import (
 from src.core.params import (
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
-    EEZ_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
-    GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITAT_PROTECTION_FILE_NAME,
-    HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
-    MANGROVES_BY_LOCATION_FILE_NAME,
-    MARINE_TOLERANCE,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
@@ -34,8 +29,7 @@ from src.core.params import (
     PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
-    SEAMOUNTS_SHAPEFILE_NAME,
-    SEAMOUNTS_ZIPFILE_NAME,
+    TOLERANCE,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -168,21 +162,16 @@ def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.Ge
 
 def generate_habitat_protection_table(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
-    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
-    seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
-    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
-    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
-    eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
-    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, MARINE_TOLERANCE)
+    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, tolerance)
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
@@ -193,15 +182,9 @@ def generate_habitat_protection_table(
     marine_habitats = process_marine_habitats(
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
-        habitats_zipfile_name=habitats_zipfile_name,
-        seamounts_zipfile_name=seamounts_zipfile_name,
-        seamounts_shapefile_name=seamounts_shapefile_name,
-        mangroves_by_location_file_name=mangroves_by_location_file_name,
-        global_mangrove_area_file_name=global_mangrove_area_file_name,
         marine_pa_file_name=marine_pa_file_name,
-        eez_file=eez_file,
         bucket=bucket,
-        tolerance=MARINE_TOLERANCE,
+        tolerance=tolerance,
         verbose=verbose,
     )
 
