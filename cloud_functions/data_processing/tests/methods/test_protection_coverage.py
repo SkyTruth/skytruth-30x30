@@ -507,9 +507,7 @@ def _pairs_gdf(rows):
 
 
 def _run_protection_level(monkeypatch, pairs, seas):
-    monkeypatch.setattr(
-        protection_coverage, "read_parquet_from_gcs", lambda *a, **kw: pairs.copy()
-    )
+    monkeypatch.setattr(protection_coverage, "read_parquet_from_gcs", lambda *a, **kw: pairs.copy())
     monkeypatch.setattr(protection_coverage, "load_iho_regions", lambda: seas.copy())
     return protection_coverage.compute_iho_protection_level(bucket="bucket", verbose=False)
 
@@ -539,8 +537,9 @@ def test_protection_level_reports_one_row_per_sea_holding_a_qualifying_zone(monk
 @pytest.mark.parametrize("level", ["full", "high"])
 def test_protection_level_counts_fully_and_highly_protected_zones(monkeypatch, level):
     seas = _sea_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
-    pairs = _pairs_gdf([{"location": "1", "protection_mpaguide_level": level,
-                         "geometry": box(0, 0, 5, 10)}])
+    pairs = _pairs_gdf(
+        [{"location": "1", "protection_mpaguide_level": level, "geometry": box(0, 0, 5, 10)}]
+    )
 
     result = _run_protection_level(monkeypatch, pairs, seas)
 
@@ -551,8 +550,9 @@ def test_protection_level_counts_fully_and_highly_protected_zones(monkeypatch, l
 def test_protection_level_excludes_weaker_protection_levels(monkeypatch, level):
     """Only the fully and highly protected zones count toward this stat."""
     seas = _sea_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
-    pairs = _pairs_gdf([{"location": "1", "protection_mpaguide_level": level,
-                         "geometry": box(0, 0, 5, 10)}])
+    pairs = _pairs_gdf(
+        [{"location": "1", "protection_mpaguide_level": level, "geometry": box(0, 0, 5, 10)}]
+    )
 
     assert _run_protection_level(monkeypatch, pairs, seas).empty
 
