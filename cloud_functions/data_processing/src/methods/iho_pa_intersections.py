@@ -20,9 +20,9 @@ from src.core.params import (
     BUCKET,
     MPATLAS_SEA_PAIRS_FILE_NAME,
     TOLERANCE,
-    WDPA_IHO_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
-    WDPA_NEAR_SHORE_IHO_FILE_NAME,
+    WDPA_NEAR_SHORE_SEA_PAIRS_FILE_NAME,
+    WDPA_SEA_PAIRS_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.utils.gcp import upload_gdf
@@ -66,6 +66,9 @@ def generate_iho_pa_intersections(
 
     # The WDPA names take a tolerance because the PAs they were built from were
     # simplified to it. MPAtlas is read as published, so its name does not.
-    save(wdpa_pairs(buffer=False), add_tolerance_suffix(WDPA_IHO_FILE_NAME, tolerance))
-    save(wdpa_pairs(buffer=True), add_tolerance_suffix(WDPA_NEAR_SHORE_IHO_FILE_NAME, tolerance))
+    save(wdpa_pairs(buffer=False), add_tolerance_suffix(WDPA_SEA_PAIRS_FILE_NAME, tolerance))
+    save(
+        wdpa_pairs(buffer=True),
+        add_tolerance_suffix(WDPA_NEAR_SHORE_SEA_PAIRS_FILE_NAME, tolerance),
+    )
     save(intersect_mpatlas_with_iho(bucket=bucket, with_geometry=True), MPATLAS_SEA_PAIRS_FILE_NAME)

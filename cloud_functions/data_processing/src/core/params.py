@@ -257,11 +257,14 @@ NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parq
 
 # IHO/PA intersections
 IHO_INTERSECTIONS_DIR = "intermediates/iho_pa_intersections"
-WDPA_IHO_FILE_NAME = f"{IHO_INTERSECTIONS_DIR}/wdpa_iho.parquet"
-WDPA_NEAR_SHORE_IHO_FILE_NAME = (
-    f"{IHO_INTERSECTIONS_DIR}/wdpa_iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
+WDPA_SEA_PAIRS_FILE_NAME = f"{IHO_INTERSECTIONS_DIR}/wdpa_sea_pairs_{today_formatted}.parquet"
+WDPA_NEAR_SHORE_SEA_PAIRS_FILE_NAME = (
+    f"{IHO_INTERSECTIONS_DIR}/wdpa_near_shore_{NEAR_SHORE_BUFFER_KM}km_sea_pairs_"
+    f"{today_formatted}.parquet"
 )
-MPATLAS_SEA_PAIRS_FILE_NAME = f"{IHO_INTERSECTIONS_DIR}/mpatlas_sea_pairs.parquet"
+MPATLAS_SEA_PAIRS_FILE_NAME = (
+    f"{IHO_INTERSECTIONS_DIR}/mpatlas_sea_pairs_{today_formatted}.parquet"
+)
 
 # ------------------------------------------------------------
 #                     Conservation Builder

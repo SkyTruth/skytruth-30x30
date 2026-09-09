@@ -13,8 +13,8 @@ from src.core.params import (
     MPATLAS_META_FILE_NAME,
     MPATLAS_SEA_PAIRS_FILE_NAME,
     TOLERANCE,
-    WDPA_IHO_FILE_NAME,
     WDPA_META_FILE_NAME,
+    WDPA_SEA_PAIRS_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
@@ -55,7 +55,7 @@ def generate_protected_areas_table(
     mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
     eez_file_name: str = EEZ_FILE_NAME,
     gadm_file_name: str = GADM_FILE_NAME,
-    wdpa_iho_file_name: str = WDPA_IHO_FILE_NAME,
+    wdpa_sea_pairs_file_name: str = WDPA_SEA_PAIRS_FILE_NAME,
     mpatlas_sea_pairs_file_name: str = MPATLAS_SEA_PAIRS_FILE_NAME,
     bucket: str = BUCKET,
     tolerance: float = TOLERANCE,
@@ -237,7 +237,7 @@ def generate_protected_areas_table(
     mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
 
     wdpa_pairs = read_parquet_from_gcs(
-        bucket, add_tolerance_suffix(wdpa_iho_file_name, tolerance), verbose=verbose
+        bucket, add_tolerance_suffix(wdpa_sea_pairs_file_name, tolerance), verbose=verbose
     )
     wdpa_pairs = wdpa_pairs.loc[wdpa_pairs["environment"] == "marine", ["WDPA_PID", "location"]]
     wdpa_pairs = wdpa_pairs.merge(wdpa.drop(columns=["ISO3"]), on="WDPA_PID", how="inner").rename(
