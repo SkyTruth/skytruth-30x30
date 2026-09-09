@@ -18,8 +18,8 @@ from src.core.commons import (
 )
 from src.core.params import (
     BUCKET,
-    MARINE_TOLERANCE,
     MPATLAS_IHO_FILE_NAME,
+    TOLERANCE,
     WDPA_IHO_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
     WDPA_NEAR_SHORE_IHO_FILE_NAME,
@@ -37,7 +37,7 @@ WDPA_ENVIRONMENTS = (
 
 
 def generate_iho_pa_intersections(
-    tolerance: float = MARINE_TOLERANCE,
+    tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
     verbose: bool = True,
 ) -> None:

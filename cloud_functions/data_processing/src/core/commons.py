@@ -415,7 +415,7 @@ def read_mpatlas_from_gcs(
     return gdf
 
 
-def _polygonal_parts(geom):
+def polygonal_parts(geom):
     """The polygonal content of an intersection result, or None if it has none.
 
     An intersection is whatever GEOS returns: the overlapping polygon, a line or
@@ -500,7 +500,7 @@ def intersect_with_iho(
     # Clip each feature to the IHO sea area it intersects, reducing each result
     # to its polygonal content.
     seas = gpd.GeoSeries(iho.geometry.loc[pairs["index_right"]].to_numpy(), crs=iho.crs)
-    cut = pairs.geometry.intersection(seas, align=False).apply(_polygonal_parts)
+    cut = pairs.geometry.intersection(seas, align=False).apply(polygonal_parts)
     pairs = pairs.set_geometry(cut)
 
     # Keep pairs that have a polygonal intersection or are point features
@@ -522,6 +522,9 @@ def intersect_with_iho(
 def intersect_wdpa_with_iho(
     bucket: str = BUCKET,
     tolerance: float = TOLERANCE,
+    pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    buffer: bool = False,
+    with_geometry: bool = False,
 ) -> pd.DataFrame:
     """One row per (PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID.
 

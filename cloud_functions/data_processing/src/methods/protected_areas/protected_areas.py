@@ -10,16 +10,10 @@ from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
-<<<<<<< HEAD
-    MARINE_TOLERANCE,
     MPATLAS_IHO_FILE_NAME,
     MPATLAS_META_FILE_NAME,
-    TERRESTRIAL_TOLERANCE,
-    WDPA_IHO_FILE_NAME,
-=======
-    MPATLAS_META_FILE_NAME,
     TOLERANCE,
->>>>>>> refactor-tolerance-handling
+    WDPA_IHO_FILE_NAME,
     WDPA_META_FILE_NAME,
 )
 from src.core.processors import (
@@ -243,7 +237,7 @@ def generate_protected_areas_table(
     mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
 
     wdpa_pairs = read_parquet_from_gcs(
-        bucket, add_tolerance_suffix(wdpa_iho_file_name, MARINE_TOLERANCE), verbose=verbose
+        bucket, add_tolerance_suffix(wdpa_iho_file_name, tolerance), verbose=verbose
     )
     wdpa_pairs = wdpa_pairs.loc[wdpa_pairs["environment"] == "marine", ["WDPA_PID", "location"]]
     wdpa_pairs = wdpa_pairs.merge(wdpa.drop(columns=["ISO3"]), on="WDPA_PID", how="inner").rename(
@@ -251,14 +245,8 @@ def generate_protected_areas_table(
     )
     wdpa = pd.concat([wdpa, wdpa_pairs], axis=0, ignore_index=True)
 
-<<<<<<< HEAD
-    # Load the marine and terrestrial boundaries to calculate percent coverage of PAs
-    eez_file_name = add_tolerance_suffix(eez_file_name, MARINE_TOLERANCE)
-    gadm_file_name = add_tolerance_suffix(gadm_file_name, TERRESTRIAL_TOLERANCE)
-=======
     eez_file_name = add_tolerance_suffix(eez_file_name, tolerance)
     gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
->>>>>>> refactor-tolerance-handling
     if verbose:
         logger.info({"message": f"loading eez from {eez_file_name}"})
     eez = read_json_df(BUCKET, eez_file_name)
