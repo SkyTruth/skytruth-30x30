@@ -38,18 +38,7 @@ def compute_iho_protection_coverage(
     tolerance: float = TOLERANCE,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """Marine protected area coverage of every IHO sea area.
-
-    One row per sea, seas with no protected area included at zero, giving the
-    sea's total area, the area its marine PAs and OECMs cover, that as a
-    percentage of the sea, the PA and OECM shares of it, how many sites
-    contribute, and the share of the global ocean the coverage represents.
-    Areas are in km2, measured on an equal-area projection.
-
-    Reads the (PA, sea) pairs written by ``generate_iho_pa_intersections``,
-    where each pair carries its PA clipped to that one sea along with the
-    columns ``filter_protected_planet`` needs.
-    """
+    """Marine protected area coverage of every IHO sea area."""
     pairs_file = add_tolerance_suffix(wdpa_sea_pairs_file_name, tolerance)
 
     if verbose:

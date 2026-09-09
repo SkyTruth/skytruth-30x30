@@ -1,9 +1,8 @@
-"""Save the (protected area, IHO sea area) intersections the pipeline reads.
+"""The (protected area, IHO sea area) pairs the pipeline reads.
 
-The coverage and protection level stats, the protected areas table, the mangrove
-and coral habitat stats and the Conservation Builder layers each ran their own
-spatial join against the IHO layer. They are joined once here and saved for
-those jobs to read instead.
+Three files are written, each one row per (feature, sea area) pair carrying the
+feature clipped to that sea: the WDPA pairs, the WDPA pairs against the
+near-shore buffered seas, and the MPAtlas pairs.
 
 The near-shore file uses the buffered seas, which stand in for the land/sea
 union that exists for countries but not for sea areas.

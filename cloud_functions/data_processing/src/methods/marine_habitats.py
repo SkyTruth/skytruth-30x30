@@ -22,6 +22,7 @@ from src.core.params import (
     SEAMOUNTS_ZIPFILE_NAME,
     TOLERANCE,
     WDPA_MARINE_FILE_NAME,
+    WDPA_NEAR_SHORE_SEA_PAIRS_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.processors import clean_geometries, filter_protected_planet
@@ -409,6 +410,7 @@ def create_climate_resilient_corals_subtable(
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
     terrestrial_protected_areas: gpd.GeoDataFrame | None = None,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
+    near_shore_pairs_file_name: str = WDPA_NEAR_SHORE_SEA_PAIRS_FILE_NAME,
     tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
     n_jobs: int = -1,
@@ -424,11 +426,15 @@ def create_climate_resilient_corals_subtable(
     (`marine_protected_areas`) plus terrestrial-flagged PAs clipped to the reef
     extent — since coastal reefs are often inside PAs WDPA flags MARINE=0. Only
     reef pixels inside a PA are counted, so this can't over-count.
+
+    Sea area rows take their protected pass from the saved (PA, near-shore sea)
+    pairs, which carry each PA already clipped to the sea it lies in.
     """
     if verbose:
         logger.info({"message": "loading GADM/EEZ union for coral coverage"})
     gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
     regions = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
+    near_shore_pairs_file = add_tolerance_suffix(near_shore_pairs_file_name, tolerance)
 
     if verbose:
         logger.info({"message": "loading IHO sea areas for coral coverage"})
@@ -525,13 +531,11 @@ def create_climate_resilient_corals_subtable(
     )
 
     if verbose:
-        logger.info({"message": "tagging protected areas to IHO regions"})
-    pas_iho = gpd.sjoin(
-        protected_areas[["geometry"]],
-        iho[["location", "geometry"]],
-        how="inner",
-        predicate="intersects",
-    )
+        logger.info({"message": f"loading PA/sea pairs from gs://{bucket}/{near_shore_pairs_file}"})
+    pas_iho = read_parquet_from_gcs(bucket, near_shore_pairs_file, verbose=verbose)
+    pas_iho = pas_iho[pas_iho.geometry.notna()].pipe(filter_protected_planet)
+    pas_iho = pas_iho[pas_iho.intersects(coral_extent)][["location", "geometry"]].to_crs(raster_crs)
+    pas_iho["geometry"] = pas_iho.geometry.apply(make_valid)
 
     if verbose:
         logger.info({"message": "computing protected coral class areas per IHO region"})
