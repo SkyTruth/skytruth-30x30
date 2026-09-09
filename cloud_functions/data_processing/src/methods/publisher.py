@@ -394,9 +394,6 @@ def dispatch_publisher(
             if remaining:
                 task_config["HABITAT"] = remaining
                 step_list = ["process_marine_habitat_geoms"]
-            else:
-                task_config.pop("HABITAT", None)
-                step_list = ["generate_habitat_protection_table"]
 
         case "generate_terrestrial_biome_stats_country":
             generate_terrestrial_biome_stats_country(verbose=verbose)

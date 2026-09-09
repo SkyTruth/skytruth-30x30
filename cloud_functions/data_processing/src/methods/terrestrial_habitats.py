@@ -115,7 +115,7 @@ def process_terrestrial_habitats(
     country_stats = country_stats.apply(pd.to_numeric, errors="ignore")
 
     if verbose:
-        logger.info({"message": f"loading country habitat stats from {pa_stats_filename}"})
+        logger.info({"message": f"loading PA habitat stats from {pa_stats_filename}"})
     pa_stats = read_dataframe(bucket, pa_stats_filename, verbose=verbose)
     pa_stats = pa_stats.apply(pd.to_numeric, errors="ignore")
 
