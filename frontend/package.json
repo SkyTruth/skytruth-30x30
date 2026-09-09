@@ -28,6 +28,7 @@
     "@loaders.gl/core": "^4.4.1",
     "@loaders.gl/kml": "^4.4.1",
     "@loaders.gl/loader-utils": "^4.4.1",
+    "@loaders.gl/mvt": "^4.4.1",
     "@loaders.gl/pmtiles": "^4.4.1",
     "@loaders.gl/shapefile": "^4.4.1",
     "@loaders.gl/zip": "^4.4.1",

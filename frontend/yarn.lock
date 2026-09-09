@@ -1121,7 +1121,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/mvt@npm:4.4.1":
+"@loaders.gl/mvt@npm:4.4.1, @loaders.gl/mvt@npm:^4.4.1":
   version: 4.4.1
   resolution: "@loaders.gl/mvt@npm:4.4.1"
   dependencies:
@@ -13554,6 +13554,7 @@ __metadata:
     "@loaders.gl/core": ^4.4.1
     "@loaders.gl/kml": ^4.4.1
     "@loaders.gl/loader-utils": ^4.4.1
+    "@loaders.gl/mvt": ^4.4.1
     "@loaders.gl/pmtiles": ^4.4.1
     "@loaders.gl/shapefile": ^4.4.1
     "@loaders.gl/zip": ^4.4.1
