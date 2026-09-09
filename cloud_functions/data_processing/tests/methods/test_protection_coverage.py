@@ -6,7 +6,7 @@ import pytest
 from shapely.geometry import MultiPoint, Point, box
 from shapely.ops import unary_union
 
-import src.core.commons as commons
+import src.methods.iho_pa_intersections as iho_pa_intersections
 import src.methods.protection_coverage as protection_coverage
 from src.core.processors import filter_protected_planet
 
@@ -574,8 +574,8 @@ def test_iho_coverage_matches_a_direct_join_of_pas_against_seas(monkeypatch, wdp
             "protected_areas_count": len(actual),
         }
 
-    monkeypatch.setattr(commons, "load_iho_regions", lambda buffer=False: seas.copy())
-    pairs = commons.intersect_with_iho(
+    monkeypatch.setattr(iho_pa_intersections, "load_iho_regions", lambda buffer=False: seas.copy())
+    pairs = iho_pa_intersections.intersect_with_iho(
         pas,
         ["WDPA_PID", "WDPAID", "PA_DEF", "STATUS", "DESIG_ENG"],
         with_geometry=True,
@@ -755,8 +755,8 @@ def test_protection_level_matches_the_overlay_of_zones_against_seas(monkeypatch)
         for location, group in joined.groupby("location")
     }
 
-    monkeypatch.setattr(commons, "load_iho_regions", lambda buffer=False: seas.copy())
-    pairs = commons.intersect_with_iho(
+    monkeypatch.setattr(iho_pa_intersections, "load_iho_regions", lambda buffer=False: seas.copy())
+    pairs = iho_pa_intersections.intersect_with_iho(
         zones, ["zone_id", "protection_mpaguide_level"], with_geometry=True
     )
 
