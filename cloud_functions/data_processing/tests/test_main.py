@@ -249,31 +249,32 @@ def test_download_marine_habitats_launches_the_step_that_processes_each_habitat(
 
 
 @pytest.mark.parametrize(
-    ("habitat", "expected_processed", "expected_step", "expected_habitat"),
+    ("habitat", "expected_processed", "expected_steps", "expected_habitat"),
     [
         (
             None,
             list(HABITAT_PROCESSING_PARAMS)[0],
-            "process_marine_habitat_geoms",
+            ["process_marine_habitat_geoms"],
             list(HABITAT_PROCESSING_PARAMS)[1:],
         ),
         (
             ["saltmarshes", "seagrasses"],
             "saltmarshes",
-            "process_marine_habitat_geoms",
+            ["process_marine_habitat_geoms"],
             ["seagrasses"],
         ),
-        (["mangroves"], "mangroves", "generate_habitat_protection_table", None),
-        (["seagrasses"], "seagrasses", "generate_habitat_protection_table", None),
-        ("seagrasses", "seagrasses", "generate_habitat_protection_table", None),
+        (["mangroves"], "mangroves", [], None),
+        (["seagrasses"], "seagrasses", [], None),
+        ("seagrasses", "seagrasses", [], None),
     ],
     ids=["all", "two_left", "last_mangroves", "last_one", "single_string"],
 )
 def test_process_marine_habitat_geoms_relays_one_habitat_at_a_time(
-    patched_all, habitat, expected_processed, expected_step, expected_habitat
+    patched_all, habitat, expected_processed, expected_steps, expected_habitat
 ):
-    """Each task processes exactly one habitat and launches the next, so the
-    table generation is saved for last using complete data."""
+    """Each task processes exactly one habitat and launches the next. The last habitat
+    ends the chain - no table generation follows, so the habitat stats are left for the
+    monthly run to pick up."""
     payload = {"METHOD": "process_marine_habitat_geoms", "TRIGGER_NEXT": True}
     if habitat is not None:
         payload["HABITAT"] = habitat
@@ -287,8 +288,10 @@ def test_process_marine_habitat_geoms_relays_one_habitat_at_a_time(
     assert processed[0]["habitats"] == expected_processed
 
     payloads = _next_step_payloads(patched_all)
-    assert [step["METHOD"] for step in payloads] == [expected_step]
-    assert payloads[0].get("HABITAT") == expected_habitat
+    assert [step["METHOD"] for step in payloads] == expected_steps
+
+    if payloads:
+        assert payloads[0].get("HABITAT") == expected_habitat
 
 
 def _retry_payloads(call_log):
@@ -371,16 +374,14 @@ def test_failed_download_retries_only_the_habitats_that_never_landed(patched_all
 
 
 def test_processing_every_habitat_covers_each_one_once(patched_all):
-    """Every dissolved habitat is processed once and runs in a chain,
-    ending with generate_habitat_protection_table."""
+    """Every dissolved habitat is processed once, in a chain that stops after the last
+    one rather than carrying on into the stats tables."""
     launched = [{"METHOD": "download_marine_habitats", "HABITAT": None, "TRIGGER_NEXT": True}]
     steps, processed = [], []
 
     while launched:
         current = launched.pop(0)
         steps.append(current["METHOD"])
-        if current["METHOD"] == "generate_habitat_protection_table":
-            continue
         del patched_all[:]
         main.run_from_payload(current)
         processed += [
@@ -391,7 +392,9 @@ def test_processing_every_habitat_covers_each_one_once(patched_all):
         launched.extend(_next_step_payloads(patched_all))
 
     assert processed == list(HABITAT_PROCESSING_PARAMS)
-    assert steps.count("generate_habitat_protection_table") == 1
+    assert steps == ["download_marine_habitats"] + ["process_marine_habitat_geoms"] * len(
+        HABITAT_PROCESSING_PARAMS
+    )
 
 
 # Tests for functions that directly call download_zip_to_gcs
