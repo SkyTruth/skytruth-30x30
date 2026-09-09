@@ -524,19 +524,22 @@ def intersect_wdpa_with_iho(
     tolerance: float = TOLERANCE,
     pa_file_name: str = WDPA_MARINE_FILE_NAME,
     buffer: bool = False,
-    with_geometry: bool = False,
+    with_geometry: bool = True,
 ) -> pd.DataFrame:
     """One row per (PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID.
 
     Pass ``pa_file_name`` to read the terrestrial PAs instead of the marine
-    ones, and ``buffer`` to join against the near-shore seas. ``PA_DEF`` and
-    ``WDPAID`` ride along so consumers can split PAs from OECMs and roll parcels
-    up to their parent without re-reading the protected areas file.
+    ones, and ``buffer`` to join against the near-shore seas.
+
+    Four attributes ride along so consumers need not re-read the protected areas
+    file: ``WDPAID``, each parcel's parent site; ``PA_DEF``, which separates
+    protected areas from OECMs; and ``STATUS`` and ``DESIG_ENG``, the site's
+    designation state and type.
     """
     pa_file = add_tolerance_suffix(pa_file_name, tolerance)
     logger.info({"message": f"loading PAs from gs://{bucket}/{pa_file}"})
 
-    keep_cols = ["WDPA_PID", "WDPAID", "PA_DEF"]
+    keep_cols = ["WDPA_PID", "WDPAID", "PA_DEF", "STATUS", "DESIG_ENG"]
     pas = read_json_df(bucket_name=bucket, filename=pa_file)[[*keep_cols, "geometry"]]
 
     return intersect_with_iho(pas, keep_cols, buffer=buffer, with_geometry=with_geometry)
@@ -546,12 +549,12 @@ def intersect_mpatlas_with_iho(
     bucket: str = BUCKET,
     mpa_file_name: str = MPATLAS_FILE_NAME,
     buffer: bool = False,
-    with_geometry: bool = False,
+    with_geometry: bool = True,
 ) -> pd.DataFrame:
     """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id.
 
-    ``protection_mpaguide_level`` rides along because both consumers filter to
-    the fully and highly protected zones.
+    ``protection_mpaguide_level`` rides along, the zone's protection level on the
+    MPAtlas guide's scale.
     """
     logger.info({"message": f"loading MPAtlas zones from gs://{bucket}/{mpa_file_name}"})
 

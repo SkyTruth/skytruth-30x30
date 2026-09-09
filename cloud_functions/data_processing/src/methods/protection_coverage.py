@@ -16,7 +16,7 @@ from src.core.params import (
     TOLERANCE,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
-    WDPA_MARINE_FILE_NAME,
+    WDPA_SEA_PAIRS_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
@@ -25,7 +25,7 @@ from src.core.processors import (
     filter_protected_planet,
     remove_columns,
 )
-from src.utils.gcp import read_dataframe, read_json_df, read_parquet_from_gcs
+from src.utils.gcp import read_dataframe, read_parquet_from_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -33,20 +33,35 @@ logger = Logger()
 
 def compute_iho_protection_coverage(
     bucket: str = BUCKET,
-    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    wdpa_sea_pairs_file_name: str = WDPA_SEA_PAIRS_FILE_NAME,
     wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
     tolerance: float = TOLERANCE,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    pa_file = add_tolerance_suffix(marine_pa_file_name, tolerance)
+    """Marine protected area coverage of every IHO sea area.
+
+    One row per sea, seas with no protected area included at zero, giving the
+    sea's total area, the area its marine PAs and OECMs cover, that as a
+    percentage of the sea, the PA and OECM shares of it, how many sites
+    contribute, and the share of the global ocean the coverage represents.
+    Areas are in km2, measured on an equal-area projection.
+
+    Reads the (PA, sea) pairs written by ``generate_iho_pa_intersections``,
+    where each pair carries its PA clipped to that one sea along with the
+    columns ``filter_protected_planet`` needs.
+    """
+    pairs_file = add_tolerance_suffix(wdpa_sea_pairs_file_name, tolerance)
 
     if verbose:
         logger.info({"message": "loading IHO sea areas from shared datasets"})
     iho = load_iho_regions()
 
     if verbose:
-        logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
-    pas = read_json_df(bucket_name=bucket, filename=pa_file).pipe(filter_protected_planet)
+        logger.info({"message": f"loading PA/sea pairs from gs://{bucket}/{pairs_file}"})
+    pairs = read_parquet_from_gcs(bucket, pairs_file, verbose=verbose)
+
+    pairs = pairs[pairs["environment"].eq("marine") & pairs.geometry.notna()]
+    pairs = pairs.pipe(filter_protected_planet)
 
     if verbose:
         logger.info(
@@ -58,12 +73,12 @@ def compute_iho_protection_coverage(
     global_marine_area = compute_global_area(wdpa_global, "marine")
 
     iho_proj = iho.to_crs(epsg=6933)
-    pas_proj = pas.to_crs(epsg=6933)
-
     iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
-    pas_proj["geometry"] = pas_proj.geometry.apply(make_valid)
 
-    sindex = pas_proj.sindex
+    pairs_proj = pairs.to_crs(epsg=6933)
+    pairs_proj["geometry"] = pairs_proj.geometry.apply(make_valid)
+    by_sea = dict(list(pairs_proj.groupby("location")))
+
     results = []
 
     empty_stats = {
@@ -76,24 +91,15 @@ def compute_iho_protection_coverage(
     }
 
     for _, sea in iho_proj.iterrows():
+        location = str(sea["MRGID"])
         base = {
-            "location": str(sea["MRGID"]),
+            "location": location,
             "environment": "marine",
             "total_area": round(sea.geometry.area / 1e6, 2),
         }
 
-        # Use the spatial index to cheaply narrow the full PA dataset to features
-        # whose bounding boxes overlap this sea's bounding box.
-        candidates = list(sindex.intersection(sea.geometry.bounds))
-        if not candidates:
-            results.append({**base, **empty_stats})
-            continue
-
-        # Apply the exact geometry so that only the actual intersections
-        # contribute to the protected-area count and coverage calculations below.
-        actual = pas_proj.iloc[candidates]
-        actual = actual[actual.intersects(sea.geometry)]
-        if actual.empty:
+        actual = by_sea.get(location)
+        if actual is None or actual.empty:
             results.append({**base, **empty_stats})
             continue
 
@@ -101,14 +107,10 @@ def compute_iho_protection_coverage(
         oecm = actual[actual["PA_DEF"] == 0]
 
         # Dissolve overlaps so shared portions of protected polygons are counted only once.
-        combined_union = unary_union(actual.geometry)
-        pa_union = unary_union(pa.geometry) if not pa.empty else None
-        oecm_union = unary_union(oecm.geometry) if not oecm.empty else None
-
-        # Clip each dissolved geometry to the sea and convert its area from m² to km².
-        protected_area = sea.geometry.intersection(combined_union).area / 1e6
-        pa_area = sea.geometry.intersection(pa_union).area / 1e6 if pa_union else 0.0
-        oecm_area = sea.geometry.intersection(oecm_union).area / 1e6 if oecm_union else 0.0
+        # Each pair is already clipped to this sea, so no further clipping is needed.
+        protected_area = unary_union(actual.geometry).area / 1e6
+        pa_area = unary_union(pa.geometry).area / 1e6 if not pa.empty else 0.0
+        oecm_area = unary_union(oecm.geometry).area / 1e6 if not oecm.empty else 0.0
 
         # Calculate sea coverage and the PA/OECM shares of its protected area.
         coverage = (protected_area / base["total_area"]) * 100 if base["total_area"] else 0.0
