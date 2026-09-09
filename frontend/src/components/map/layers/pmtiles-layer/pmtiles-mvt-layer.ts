@@ -26,10 +26,7 @@ export default class PmtilesMvtLayer extends MVTLayer<ExtraProps> {
   async getTileData({ index }: TileLoadProps) {
     const buffer = await this.props.source.getTile(index);
     if (!buffer) return [];
-    // Parsed with loaders.gl 4.x while deck.gl 8.9's MVTLayer bundles 3.x; the
-    // binary tile shape is compatible across the two. GeoJSON output on 4.x
-    // lacks `feature.id`, so non-binary layers need `uniqueIdProperty` for
-    // cross-tile highlighting.
+
     return parse(buffer, MVTLoader, {
       ...this.getLoadOptions(),
       mvt: {
