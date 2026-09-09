@@ -259,8 +259,7 @@ NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parq
 SEA_PAIRS_DIR = "intermediates/sea_pairs"
 WDPA_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_sea_pairs_{today_formatted}.parquet"
 WDPA_NEAR_SHORE_SEA_PAIRS_FILE_NAME = (
-    f"{SEA_PAIRS_DIR}/wdpa_near_shore_{NEAR_SHORE_BUFFER_KM}km_sea_pairs_"
-    f"{today_formatted}.parquet"
+    f"{SEA_PAIRS_DIR}/wdpa_near_shore_{NEAR_SHORE_BUFFER_KM}km_sea_pairs_{today_formatted}.parquet"
 )
 MPATLAS_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_sea_pairs_{today_formatted}.parquet"
 

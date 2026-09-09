@@ -380,9 +380,7 @@ def test_sea_pairs_give_the_same_coral_areas_as_joining_pas_to_seas(tmp_path, mo
     )
 
     # what the saved pairs give: the PA already clipped to that one sea
-    monkeypatch.setattr(
-        iho_pa_intersections, "load_iho_regions", lambda buffer=False: seas.copy()
-    )
+    monkeypatch.setattr(iho_pa_intersections, "load_iho_regions", lambda buffer=False: seas.copy())
     pairs = intersect_with_iho(
         pas, ["WDPA_PID", "WDPAID", "PA_DEF", "STATUS", "DESIG_ENG"], buffer=True
     )
