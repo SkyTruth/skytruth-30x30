@@ -2,7 +2,7 @@ import pandas as pd
 import requests
 
 from src.core.commons import add_tolerance_suffix
-from src.core.land_cover_params import LAND_COVER_CLASSES, terrestrial_tolerance
+from src.core.land_cover_params import LAND_COVER_CLASSES
 from src.core.params import (
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
@@ -10,6 +10,7 @@ from src.core.params import (
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
+    TOLERANCE,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.processors import filter_protected_planet
@@ -41,7 +42,7 @@ def generate_terrestrial_biome_stats_pa(
     country_col="ISO3",
     tile_size_pixels=8192,
     verbose: bool = True,
-    tolerance: float = terrestrial_tolerance,
+    tolerance: float = TOLERANCE,
 ):
     terrestrial_pa_file_name = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
     gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
@@ -114,7 +115,7 @@ def process_terrestrial_habitats(
     country_stats = country_stats.apply(pd.to_numeric, errors="ignore")
 
     if verbose:
-        logger.info({"message": f"loading country habitat stats from {pa_stats_filename}"})
+        logger.info({"message": f"loading PA habitat stats from {pa_stats_filename}"})
     pa_stats = read_dataframe(bucket, pa_stats_filename, verbose=verbose)
     pa_stats = pa_stats.apply(pd.to_numeric, errors="ignore")
 

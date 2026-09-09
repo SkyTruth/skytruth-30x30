@@ -202,7 +202,7 @@ def _mock_read_json_from_gcs(json):
 
 
 def _run_process_gadm(
-    monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerances
+    monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerance
 ):
     countries, sub_countries = mock_gadm_layers
     calls, upload_gdf_mock = uploads_recorder
@@ -226,7 +226,7 @@ def _run_process_gadm(
         gadm_zipfile_name="gadm.zip",
         bucket="test-bucket",
         related_countries_file_name="related.json",
-        tolerances=tolerances,
+        tolerance=tolerance,
         verbose=True,
     )
 
@@ -245,23 +245,27 @@ def _assert_output_df_shape_and_columns(df: gpd.GeoDataFrame):
 # -------------------------------
 
 
+@pytest.mark.parametrize(
+    "tolerance, expected_name",
+    [(None, "gadm_None.geojson"), (0.25, "gadm_0.25.geojson")],
+)
 def test_process_gadm_geoms_happy_path(
-    monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder
+    monkeypatch,
+    mock_gadm_layers,
+    mock_related_countries_map,
+    uploads_recorder,
+    tolerance,
+    expected_name,
 ):
-    tolerances = [None, 0.25]
-
     calls = _run_process_gadm(
-        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerances
+        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerance
     )
 
-    # One upload per tolerance value
-    assert len(calls) == len(tolerances)
+    # A single upload, named for the tolerance it was simplified at
+    assert len(calls) == 1
+    assert calls[0]["destination_blob"] == expected_name
 
-    # Filenames include the suffix for each tolerance (None and numeric)
-    expected_names = {"gadm_None.geojson", "gadm_0.25.geojson"}
-    assert set(call["destination_blob"] for call in calls) == expected_names
-
-    # Validate data structure and key content for each uploaded GeoDataFrame
+    # Validate data structure and key content for the uploaded GeoDataFrame
     for call in calls:
         df = call["df"]
         _assert_output_df_shape_and_columns(df)
@@ -288,8 +292,12 @@ def test_process_gadm_geoms_upload_content_changes_with_tolerance(
     Check that simplifying (non-None tolerance) changes serialized size for at least one upload.
     We don't assert a specific geometry size—just that something differs vs. None.
     """
+    # Both runs record into the same uploads_recorder list, in order.
+    _run_process_gadm(
+        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, None
+    )
     calls = _run_process_gadm(
-        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, [None, 0.5]
+        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, 0.5
     )
 
     # Ensure we indeed produced two different payload sizes or at least different byte strings.
@@ -327,7 +335,7 @@ def test_process_gadm_geoms_raises_on_reader_failure(
             gadm_zipfile_name="gadm.zip",
             bucket="test-bucket",
             related_countries_file_name="related.json",
-            tolerances=[None],
+            tolerance=None,
             verbose=False,
         )
 
@@ -375,7 +383,7 @@ def test_process_gadm_geoms_bad_input_columns(
             gadm_zipfile_name="gadm.zip",
             bucket="test-bucket",
             related_countries_file_name="related.json",
-            tolerances=[None],
+            tolerance=None,
             verbose=False,
         )
 
@@ -524,7 +532,7 @@ def test_process_eez_geoms_happy_path(
     )
     monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
-    monkeypatch.setattr(static_processes, "TOLERANCES", [0.1, 0.3], raising=True)
+    monkeypatch.setattr(static_processes, "TOLERANCE", 0.7, raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
     monkeypatch.setattr(
         static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True
@@ -537,23 +545,17 @@ def test_process_eez_geoms_happy_path(
         eez_params=static_processes.EEZ_PARAMS,
         bucket="test-bucket",
         related_countries_file_name=static_processes.RELATED_COUNTRIES_FILE_NAME,
-        tolerances=static_processes.TOLERANCES,
+        tolerance=static_processes.TOLERANCE,
         verbose=False,
     )
     # Function returns None; uploads recorded via our mock
     assert resp is None
 
-    # Expect one upload per tolerance for eez_by_sov + one final multi-sov upload
-    assert len(calls) == len(static_processes.TOLERANCES) + 1
+    # One eez_by_sov upload + one final multi-sov upload
+    assert len(calls) == 2
 
-    # Check filenames for the eez_by_sov uploads
-    by_sov_names = {f"eez_{t}.geojson" for t in static_processes.TOLERANCES}
-    seen_by_sov = {c["destination_blob"] for c in calls[:-1]}
-    assert seen_by_sov == by_sov_names
-
-    # The last call is multi-sovereign
-    last_call = calls[-1]
-    assert last_call["destination_blob"] == f"eez_multi_{static_processes.TOLERANCES[-1]}.geojson"
+    assert calls[0]["destination_blob"] == f"eez_{static_processes.TOLERANCE}.geojson"
+    assert calls[1]["destination_blob"] == f"eez_multi_{static_processes.TOLERANCE}.geojson"
 
     # Basic structure of uploaded frames
     for c in calls:
@@ -589,7 +591,6 @@ def test_process_eez_geoms_loader_failure(
     )
     monkeypatch.setattr(static_processes, "clean_geometries", lambda g: g, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
-    monkeypatch.setattr(static_processes, "TOLERANCES", [None, 0.1], raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
     monkeypatch.setattr(
         static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True

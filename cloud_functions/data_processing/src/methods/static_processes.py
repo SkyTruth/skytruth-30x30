@@ -31,9 +31,7 @@ from src.core.commons import (
 from src.core.land_cover_params import (
     BIOME_RASTER_PATH,
     LAND_COVER_CLASSES,
-    marine_tolerance,
     reclass_function,
-    terrestrial_tolerance,
 )
 from src.core.params import (
     BUCKET,
@@ -52,13 +50,12 @@ from src.core.params import (
     HABITAT_PROCESSING_PARAMS,
     HIGH_SEAS_PARAMS,
     MARINE_HABITAT_PARAMS,
-    MARINE_HABITAT_TOLERANCE,
     NEAR_SHORE_BUFFER_KM,
     NEAR_SHORE_IHO_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
     PROJECT,
     RELATED_COUNTRIES_FILE_NAME,
-    TOLERANCES,
+    TOLERANCE,
     UNEP_POINT_AREA_KM2,
 )
 from src.core.processors import add_translations, clean_geometries
@@ -77,9 +74,9 @@ from src.utils.gcp import (
 )
 from src.utils.geo import (
     buffer_km,
+    fast_union_area_km2,
     get_area_km2,
     tile_geometry,
-    fast_union_area_km2,
 )
 from src.utils.logger import Logger
 
@@ -91,7 +88,7 @@ def process_gadm_geoms(
     gadm_zipfile_name: str = GADM_ZIPFILE_NAME,
     bucket: str = BUCKET,
     related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
-    tolerances: list | tuple = TOLERANCES,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ) -> None:
     if verbose:
@@ -157,20 +154,19 @@ def process_gadm_geoms(
         .pipe(clean_geometries)
     )
 
-    for tolerance in tolerances:
-        df = countries.copy()
+    df = countries.copy()
 
-        if tolerance is not None:
-            if verbose:
-                logger.info({"message": f"simplifying geometries with tolerance {tolerance}"})
-            df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
-
-        df = df.pipe(clean_geometries)
-
-        out_fn = add_tolerance_suffix(gadm_file_name, tolerance)
+    if tolerance is not None:
         if verbose:
-            logger.info({"message": f"uploading simplified GADM countries to {out_fn}"})
-        upload_gdf(bucket, df, out_fn)
+            logger.info({"message": f"simplifying geometries with tolerance {tolerance}"})
+        df["geometry"] = df["geometry"].simplify(tolerance=tolerance)
+
+    df = df.pipe(clean_geometries)
+
+    out_fn = add_tolerance_suffix(gadm_file_name, tolerance)
+    if verbose:
+        logger.info({"message": f"uploading simplified GADM countries to {out_fn}"})
+    upload_gdf(bucket, df, out_fn)
 
     gc.collect()
 
@@ -180,7 +176,7 @@ def process_eez_geoms(
     eez_params: dict = EEZ_PARAMS,
     bucket: str = BUCKET,
     related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
-    tolerances: list | tuple = TOLERANCES,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
     """
@@ -226,38 +222,32 @@ def process_eez_geoms(
     eez_by_sov = _process_eez_by_sov(eez.copy(), high_seas.copy())
     eez_multiple_sovs = _proccess_eez_multiple_sovs(eez.copy(), high_seas.copy(), translations)
 
-    for tolerance in tolerances:
-        if tolerance is not None:
-            if verbose:
-                logger.info(
-                    {
-                        "message": (
-                            f"simplifying eez by sovereign geometries with tolerance {tolerance}"
-                        )
-                    }
-                )
-            eez_by_sov["geometry"] = eez_by_sov["geometry"].simplify(tolerance=tolerance)
-
-        eez_by_sov = eez_by_sov.pipe(clean_geometries)
-
-        out_fn = add_tolerance_suffix(eez_file_name, tolerance)
+    if tolerance is not None:
         if verbose:
-            logger.info({"message": f"uploading eez by sovereign file to {out_fn}"})
-        upload_gdf(bucket, eez_by_sov, out_fn)
+            logger.info(
+                {"message": (f"simplifying eez by sovereign geometries with tolerance {tolerance}")}
+            )
+        eez_by_sov["geometry"] = eez_by_sov["geometry"].simplify(tolerance=tolerance)
+
+    eez_by_sov = eez_by_sov.pipe(clean_geometries)
+
+    out_fn = add_tolerance_suffix(eez_file_name, tolerance)
+    if verbose:
+        logger.info({"message": f"uploading eez by sovereign file to {out_fn}"})
+    upload_gdf(bucket, eez_by_sov, out_fn)
 
     if verbose:
         logger.info(
             {
                 "message": (
-                    f"simplifying eez with mulit-sovereign geometries "
-                    f"with tolerance {TOLERANCES[1]}"
+                    f"simplifying eez with mulit-sovereign geometries with tolerance {tolerance}"
                 )
             }
         )
-    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=TOLERANCES[1])
+    eez_multiple_sovs["geometry"] = eez_multiple_sovs["geometry"].simplify(tolerance=tolerance)
     eez_multiple_sovs = eez_multiple_sovs.pipe(clean_geometries)
 
-    blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, TOLERANCES[1])
+    blob_name = add_tolerance_suffix(EEZ_MULTIPLE_SOV_FILE_NAME, tolerance)
     if verbose:
         logger.info({"message": f"uploading eez with multi-sovereign file to {blob_name}"})
     upload_gdf(bucket, eez_multiple_sovs, blob_name)
@@ -398,7 +388,7 @@ def process_eez_land_union(
     eez_land_union_params: dict = EEZ_LAND_UNION_PARAMS,
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -689,8 +679,8 @@ def process_marine_habitat_geoms(
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
-    tolerance: float = marine_tolerance,
-    simplify_tolerance: float = MARINE_HABITAT_TOLERANCE,
+    tolerance: float = TOLERANCE,
+    simplify_tolerance: float = TOLERANCE,
     batch_size: int = 3000,
     n_jobs: int = -1,
 ) -> None:
@@ -970,7 +960,7 @@ def generate_terrestrial_biome_stats_country(
     gadm_file_name: str = GADM_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
-    tolerance: float = terrestrial_tolerance,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
     gadm_file_name = add_tolerance_suffix(gadm_file_name, tolerance)
