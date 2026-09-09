@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { ClipExtension } from '@deck.gl/extensions/typed';
 import { TileLayer, type TileLayerProps } from '@deck.gl/geo-layers/typed';
 import type { TileLoadProps } from '@deck.gl/geo-layers/typed/tileset-2d/types';
-import { BitmapLayer, GeoJsonLayer } from '@deck.gl/layers/typed';
+import { BitmapLayer } from '@deck.gl/layers/typed';
 import { PMTilesTileSource } from '@loaders.gl/pmtiles';
 import GL from '@luma.gl/constants';
-import type { Feature } from 'geojson';
 
 import { useDeckMapboxOverlayContext } from '@/components/map/provider';
 import { LayerProps } from '@/types/layers';
+
+import PmtilesMvtLayer from './pmtiles-mvt-layer';
 
 type RGBAColor = [number, number, number, number];
 
@@ -20,6 +20,12 @@ export interface PmtilesVectorRenderConfig {
   lineWidth?: number;
   /** Point radius in pixels */
   pointRadius?: number;
+  /**
+   * Property identifying a feature across tiles, like Mapbox's `promoteId`.
+   * Set it on every vector layer so hover highlights whole features.
+   */
+  uniqueIdProperty?: string;
+  highlightColor?: RGBAColor;
 }
 
 interface PmtilesLayerProps extends LayerProps {
@@ -30,15 +36,16 @@ interface PmtilesLayerProps extends LayerProps {
   visibility?: boolean;
 }
 
-type TileData = ImageBitmap | Feature[] | null;
+type RasterTileData = ImageBitmap | null;
 
 // `beforeId` is honored by MapboxOverlay for layer ordering but isn't on
 // deck.gl 8.9's typed TileLayerProps — extend locally rather than `as any`.
-type PmtilesTileLayerProps = TileLayerProps<TileData> & { beforeId?: string };
+type RasterTileLayerProps = TileLayerProps<RasterTileData> & { beforeId?: string };
 
 const DEFAULT_MAX_ZOOM = 14;
 const DEFAULT_FILL_COLOR: RGBAColor = [0, 100, 200, 120];
 const DEFAULT_LINE_COLOR: RGBAColor = [0, 100, 200, 255];
+const DEFAULT_HIGHLIGHT_COLOR: RGBAColor = [253, 142, 40, 160];
 
 const PmtilesLayer = ({
   id,
@@ -78,54 +85,58 @@ const PmtilesLayer = ({
     };
   }, [url]);
 
-  const layerProps = useMemo<PmtilesTileLayerProps | null>(() => {
-    if (!source) return null;
-    return {
+  useEffect(() => {
+    if (!source) return;
+
+    const common = {
       id: deckId,
+      beforeId,
+      minZoom: 0,
+      maxZoom: archiveMaxZoom ?? DEFAULT_MAX_ZOOM,
+      refinementStrategy: 'best-available' as const,
+      maxRequests: 6,
+      opacity,
+      visible: visibility,
+    };
+
+    if (isVector) {
+      addLayer(
+        new PmtilesMvtLayer({
+          ...common,
+          source,
+          getFillColor: render?.fillColor ?? DEFAULT_FILL_COLOR,
+          getLineColor: render?.lineColor ?? DEFAULT_LINE_COLOR,
+          getLineWidth: render?.lineWidth ?? 1,
+          lineWidthUnits: 'pixels',
+          getPointRadius: render?.pointRadius ?? 3,
+          pointRadiusUnits: 'pixels',
+          pickable: true,
+          autoHighlight: true,
+          highlightColor: render?.highlightColor ?? DEFAULT_HIGHLIGHT_COLOR,
+          uniqueIdProperty: render?.uniqueIdProperty,
+        })
+      );
+      return;
+    }
+
+    const rasterProps: RasterTileLayerProps = {
+      ...common,
       // `data` is required by TileLayerProps but unused when getTileData is set;
       // pass the archive URL so the type is satisfied and tile cache keying stays
       // tied to the source.
       data: url,
-      beforeId,
       tileSize: 256,
-      minZoom: 0,
-      maxZoom: archiveMaxZoom ?? DEFAULT_MAX_ZOOM,
-      refinementStrategy: 'best-available',
-      maxRequests: 6,
       getTileData: async ({ index }: TileLoadProps) => {
-        if (isVector) {
-          const table = (await source.getVectorTile(index)) as { features: Feature[] } | null;
-          return table?.features ?? null;
-        }
         const data = await source.getTile(index);
         if (!data) return null;
         return createImageBitmap(new Blob([data], { type: 'image/png' }));
       },
       renderSubLayers: (props) => {
-        const { content } = props.tile;
-        if (!content) return null;
+        if (!props.tile.content) return null;
         const [[west, south], [east, north]] = props.tile.boundingBox;
-        if (Array.isArray(content)) {
-          // Clip to the tile bounds: MVT tiles carry a buffer, so unclipped
-          // features would double-draw across tile seams.
-          return new GeoJsonLayer<{ clipBounds: [number, number, number, number] }>({
-            id: `${props.id}-geojson`,
-            data: { type: 'FeatureCollection' as const, features: content },
-            opacity: props.opacity,
-            visible: props.visible,
-            getFillColor: render?.fillColor ?? DEFAULT_FILL_COLOR,
-            getLineColor: render?.lineColor ?? DEFAULT_LINE_COLOR,
-            getLineWidth: render?.lineWidth ?? 1,
-            lineWidthUnits: 'pixels',
-            getPointRadius: render?.pointRadius ?? 3,
-            pointRadiusUnits: 'pixels',
-            extensions: [new ClipExtension()],
-            clipBounds: [west, south, east, north],
-          });
-        }
         return new BitmapLayer({
           id: `${props.id}-bitmap`,
-          image: content,
+          image: props.tile.content,
           bounds: [west, south, east, north],
           opacity: props.opacity,
           visible: props.visible,
@@ -136,18 +147,19 @@ const PmtilesLayer = ({
         });
       },
     };
-  }, [deckId, url, beforeId, source, archiveMaxZoom, isVector, render]);
-
-  useEffect(() => {
-    if (!layerProps) return;
-    addLayer(
-      new TileLayer<TileData>({
-        ...layerProps,
-        opacity,
-        visible: visibility,
-      })
-    );
-  }, [layerProps, opacity, visibility, addLayer]);
+    addLayer(new TileLayer<RasterTileData>(rasterProps));
+  }, [
+    deckId,
+    url,
+    beforeId,
+    source,
+    archiveMaxZoom,
+    isVector,
+    render,
+    opacity,
+    visibility,
+    addLayer,
+  ]);
 
   useEffect(() => {
     return () => removeLayer(deckId);
