@@ -1,4 +1,3 @@
-import geopandas as gpd
 import pandas as pd
 from shapely.ops import unary_union
 from shapely.validation import make_valid
@@ -10,11 +9,10 @@ from src.core.commons import (
     load_iho_regions,
     load_regions,
     load_wdpa_global,
-    read_mpatlas_from_gcs,
 )
 from src.core.params import (
     BUCKET,
-    MPATLAS_FILE_NAME,
+    MPATLAS_SEA_PAIRS_FILE_NAME,
     TOLERANCE,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -27,7 +25,7 @@ from src.core.processors import (
     filter_protected_planet,
     remove_columns,
 )
-from src.utils.gcp import read_dataframe, read_json_df
+from src.utils.gcp import read_dataframe, read_json_df, read_parquet_from_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -141,37 +139,53 @@ def compute_iho_protection_coverage(
 
 def compute_iho_protection_level(
     bucket: str = BUCKET,
-    mpa_file_name: str = MPATLAS_FILE_NAME,
+    mpatlas_sea_pairs_file_name: str = MPATLAS_SEA_PAIRS_FILE_NAME,
     verbose: bool = True,
 ) -> pd.DataFrame:
+    """Fully/highly protected MPAtlas coverage of each IHO sea area.
+
+    One row per sea holding at least one fully or highly protected MPAtlas zone,
+    giving that sea's total area, the area its qualifying zones cover, and the
+    percentage. Areas are in km2, measured on an equal-area projection.
+
+    Reads the (zone, sea) pairs written by ``generate_iho_pa_intersections``,
+    where each pair carries its zone clipped to that one sea along with the
+    zone's ``protection_mpaguide_level``.
+    """
     if verbose:
-        logger.info({"message": "loading IHO sea areas from shared datasets"})
+        logger.info(
+            {
+                "message": f"loading MPAtlas/IHO pairs from gs://{bucket}/{mpatlas_sea_pairs_file_name}"
+            }
+        )
+    pairs = read_parquet_from_gcs(bucket, mpatlas_sea_pairs_file_name, verbose=verbose)
+
+    fully_highly = pairs[
+        pairs["protection_mpaguide_level"].isin(("full", "high")) & pairs.geometry.notna()
+    ]
+
+    if verbose:
+        logger.info(
+            {"message": f"dissolving {len(fully_highly)} fully/highly protected pair(s) by sea"}
+        )
+
+    # The pairs arrive in the IHO CRS; areas need an equal-area one.
+    protected = fully_highly.to_crs(epsg=6933).dissolve(by="location")
+
+    if verbose:
+        logger.info({"message": "loading IHO sea areas for their total areas"})
     iho = load_iho_regions()
-
-    if verbose:
-        logger.info({"message": f"loading MPAtlas data from gs://{bucket}/{mpa_file_name}"})
-    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
-
-    fully_highly = mpa[mpa["protection_mpaguide_level"].isin(["full", "high"])]
-    fully_highly = fully_highly[fully_highly.geometry.notna()].copy().to_crs(epsg=6933)
-    iho_proj = iho[iho.geometry.notna()].copy().to_crs(epsg=6933)
-
-    fully_highly["geometry"] = fully_highly.geometry.apply(make_valid)
-    iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
-
-    if verbose:
-        logger.info({"message": "overlaying fully/highly protected MPAs with IHO sea areas"})
-    joined = gpd.overlay(fully_highly, iho_proj, how="intersection")
+    iho = iho[iho.geometry.notna()].to_crs(epsg=6933)
+    total_areas = dict(zip(iho["location"], iho.geometry.area / 1e6, strict=True))
 
     results = []
-    for mrgid, group in joined.groupby("MRGID"):
-        iho_geom = iho_proj.loc[iho_proj["MRGID"] == mrgid, "geometry"].iloc[0]
-        total_area = iho_geom.area / 1e6
-        protected_union = group.geometry.unary_union
-        area = iho_geom.intersection(protected_union).area / 1e6
+    for location, protected_geom in protected.geometry.items():
+        total_area = total_areas.get(location)
+        # Each pair is already clipped to its sea, so the union lies within it.
+        area = protected_geom.area / 1e6
         results.append(
             {
-                "location": str(mrgid),
+                "location": location,
                 "total_area": total_area,
                 "area": area,
                 "mpaa_protection_level": "fully-highly-protected",

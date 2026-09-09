@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import MultiPoint, Point, Polygon, box
 
+import src.core.commons as commons
 import src.methods.protection_coverage as protection_coverage
 
 
@@ -480,3 +481,181 @@ def test_iho_coverage_keeps_biosphere_reserves_recorded_as_oecms(monkeypatch, wd
     assert result["protected_area"] == 1.0
     assert result["coverage"] == 50.0
     assert result["protected_areas_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# compute_iho_protection_level
+# ---------------------------------------------------------------------------
+
+
+def _sea_gdf(rows):
+    """IHO sea areas as load_iho_regions returns them, in the published CRS."""
+    return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+
+
+def _pairs_gdf(rows):
+    """(zone, sea) pairs as generate_iho_pa_intersections saves them.
+
+    Each row is one zone clipped to one sea, defaulting to a protection level
+    the filter keeps.
+    """
+    return gpd.GeoDataFrame(
+        [{"zone_id": i, "protection_mpaguide_level": "full", **row} for i, row in enumerate(rows)],
+        geometry="geometry",
+        crs="EPSG:4326",
+    )
+
+
+def _run_protection_level(monkeypatch, pairs, seas):
+    monkeypatch.setattr(
+        protection_coverage, "read_parquet_from_gcs", lambda *a, **kw: pairs.copy()
+    )
+    monkeypatch.setattr(protection_coverage, "load_iho_regions", lambda: seas.copy())
+    return protection_coverage.compute_iho_protection_level(bucket="bucket", verbose=False)
+
+
+def test_protection_level_reports_one_row_per_sea_holding_a_qualifying_zone(monkeypatch):
+    """A sea with no fully or highly protected zone contributes no row at all."""
+    seas = _sea_gdf(
+        [
+            {"location": "1", "geometry": box(0, 0, 10, 10)},
+            {"location": "2", "geometry": box(10, 0, 20, 10)},
+            {"location": "3", "geometry": box(20, 0, 30, 10)},
+        ]
+    )
+    pairs = _pairs_gdf(
+        [
+            {"location": "1", "geometry": box(0, 0, 5, 10)},
+            {"location": "2", "geometry": box(10, 0, 12, 10)},
+        ]
+    )
+
+    result = _run_protection_level(monkeypatch, pairs, seas)
+
+    assert sorted(result["location"]) == ["1", "2"]
+    assert set(result["mpaa_protection_level"]) == {"fully-highly-protected"}
+
+
+@pytest.mark.parametrize("level", ["full", "high"])
+def test_protection_level_counts_fully_and_highly_protected_zones(monkeypatch, level):
+    seas = _sea_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
+    pairs = _pairs_gdf([{"location": "1", "protection_mpaguide_level": level,
+                         "geometry": box(0, 0, 5, 10)}])
+
+    result = _run_protection_level(monkeypatch, pairs, seas)
+
+    assert result["location"].tolist() == ["1"]
+
+
+@pytest.mark.parametrize("level", ["less", "incompatible", "unknown"])
+def test_protection_level_excludes_weaker_protection_levels(monkeypatch, level):
+    """Only the fully and highly protected zones count toward this stat."""
+    seas = _sea_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
+    pairs = _pairs_gdf([{"location": "1", "protection_mpaguide_level": level,
+                         "geometry": box(0, 0, 5, 10)}])
+
+    assert _run_protection_level(monkeypatch, pairs, seas).empty
+
+
+def test_protection_level_ignores_point_zones_carrying_no_geometry(monkeypatch):
+    """Point zones ride along on the pairs with a null geometry and no area.
+
+    They must neither contribute area nor break the dissolve.
+    """
+    seas = _sea_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
+    pairs = _pairs_gdf(
+        [
+            {"location": "1", "geometry": box(0, 0, 5, 10)},
+            {"location": "1", "geometry": None},
+        ]
+    )
+
+    result = _run_protection_level(monkeypatch, pairs, seas)
+    only_polygon = _run_protection_level(
+        monkeypatch, _pairs_gdf([{"location": "1", "geometry": box(0, 0, 5, 10)}]), seas
+    )
+
+    assert result["area"].iloc[0] == pytest.approx(only_polygon["area"].iloc[0])
+
+
+def test_protection_level_counts_overlapping_zones_in_a_sea_once(monkeypatch):
+    """Zones in the same sea are unioned, so overlap is not double counted."""
+    seas = _sea_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
+    overlapping = _pairs_gdf(
+        [
+            {"location": "1", "geometry": box(0, 0, 6, 10)},
+            {"location": "1", "geometry": box(4, 0, 10, 10)},
+        ]
+    )
+    whole = _pairs_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
+
+    overlapped = _run_protection_level(monkeypatch, overlapping, seas)["area"].iloc[0]
+    unioned = _run_protection_level(monkeypatch, whole, seas)["area"].iloc[0]
+
+    assert overlapped == pytest.approx(unioned)
+
+
+def test_protection_level_percentage_is_the_protected_share_of_the_sea(monkeypatch):
+    seas = _sea_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
+    pairs = _pairs_gdf([{"location": "1", "geometry": box(0, 0, 5, 10)}])
+
+    result = _run_protection_level(monkeypatch, pairs, seas).iloc[0]
+
+    assert result["percentage"] == pytest.approx(50.0)
+    assert result["percentage"] == pytest.approx(100 * result["area"] / result["total_area"])
+
+
+def test_protection_level_total_area_is_the_whole_sea_not_the_protected_part(monkeypatch):
+    """total_area measures the sea itself, so coverage has a stable denominator."""
+    seas = _sea_gdf([{"location": "1", "geometry": box(0, 0, 10, 10)}])
+    sliver = _pairs_gdf([{"location": "1", "geometry": box(0, 0, 1, 10)}])
+    most = _pairs_gdf([{"location": "1", "geometry": box(0, 0, 9, 10)}])
+
+    assert _run_protection_level(monkeypatch, sliver, seas)["total_area"].iloc[0] == pytest.approx(
+        _run_protection_level(monkeypatch, most, seas)["total_area"].iloc[0]
+    )
+
+
+def test_protection_level_matches_the_overlay_of_zones_against_seas(monkeypatch):
+    """Reading saved pairs gives the areas a direct MPAtlas/IHO overlay gives.
+
+    The pairs are built by the real ``intersect_with_iho`` and then measured,
+    while the reference overlays the same zones against the same seas in the
+    equal-area projection and unions per sea. Both must agree, including for a
+    zone straddling two seas and for one excluded by protection level.
+    """
+    seas = _sea_gdf(
+        [
+            {"location": "1", "geometry": box(0, 0, 10, 10)},
+            {"location": "2", "geometry": box(10, 0, 20, 10)},
+        ]
+    )
+    zones = gpd.GeoDataFrame(
+        {
+            "zone_id": [10, 20, 30],
+            "protection_mpaguide_level": ["full", "high", "less"],
+            "geometry": [box(5, 1, 15, 3), box(1, 5, 3, 7), box(6, 6, 8, 8)],
+        },
+        geometry="geometry",
+        crs="EPSG:4326",
+    )
+
+    qualifying = zones[zones["protection_mpaguide_level"].isin(("full", "high"))]
+    seas_proj = seas.to_crs(epsg=6933)
+    joined = gpd.overlay(qualifying.to_crs(epsg=6933), seas_proj, how="intersection")
+    expected = {
+        location: group.geometry.union_all().area / 1e6
+        for location, group in joined.groupby("location")
+    }
+
+    monkeypatch.setattr(commons, "load_iho_regions", lambda buffer=False: seas.copy())
+    pairs = commons.intersect_with_iho(
+        zones, ["zone_id", "protection_mpaguide_level"], with_geometry=True
+    )
+
+    result = _run_protection_level(monkeypatch, pairs, seas)
+    actual = dict(zip(result["location"], result["area"], strict=True))
+
+    assert actual.keys() == expected.keys()
+    for location, area in expected.items():
+        assert actual[location] == pytest.approx(area, rel=1e-9)

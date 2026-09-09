@@ -261,7 +261,7 @@ WDPA_IHO_FILE_NAME = f"{IHO_INTERSECTIONS_DIR}/wdpa_iho.parquet"
 WDPA_NEAR_SHORE_IHO_FILE_NAME = (
     f"{IHO_INTERSECTIONS_DIR}/wdpa_iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
 )
-MPATLAS_IHO_FILE_NAME = f"{IHO_INTERSECTIONS_DIR}/mpatlas_iho.parquet"
+MPATLAS_SEA_PAIRS_FILE_NAME = f"{IHO_INTERSECTIONS_DIR}/mpatlas_sea_pairs.parquet"
 
 # ------------------------------------------------------------
 #                     Conservation Builder

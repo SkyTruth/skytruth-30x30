@@ -10,8 +10,8 @@ from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
-    MPATLAS_IHO_FILE_NAME,
     MPATLAS_META_FILE_NAME,
+    MPATLAS_SEA_PAIRS_FILE_NAME,
     TOLERANCE,
     WDPA_IHO_FILE_NAME,
     WDPA_META_FILE_NAME,
@@ -56,7 +56,7 @@ def generate_protected_areas_table(
     eez_file_name: str = EEZ_FILE_NAME,
     gadm_file_name: str = GADM_FILE_NAME,
     wdpa_iho_file_name: str = WDPA_IHO_FILE_NAME,
-    mpatlas_iho_file_name: str = MPATLAS_IHO_FILE_NAME,
+    mpatlas_sea_pairs_file_name: str = MPATLAS_SEA_PAIRS_FILE_NAME,
     bucket: str = BUCKET,
     tolerance: float = TOLERANCE,
     verbose: bool = True,
@@ -226,7 +226,7 @@ def generate_protected_areas_table(
     wdpa = read_dataframe(bucket, wdpa_file_name)
 
     # Load the MPA and WDPA pairs with IHO sea areas.
-    mpa_pairs = read_parquet_from_gcs(bucket, mpatlas_iho_file_name, verbose=verbose)[
+    mpa_pairs = read_parquet_from_gcs(bucket, mpatlas_sea_pairs_file_name, verbose=verbose)[
         ["zone_id", "location"]
     ]
 

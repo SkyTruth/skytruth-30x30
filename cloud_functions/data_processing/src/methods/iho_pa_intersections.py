@@ -18,7 +18,7 @@ from src.core.commons import (
 )
 from src.core.params import (
     BUCKET,
-    MPATLAS_IHO_FILE_NAME,
+    MPATLAS_SEA_PAIRS_FILE_NAME,
     TOLERANCE,
     WDPA_IHO_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -68,4 +68,4 @@ def generate_iho_pa_intersections(
     # simplified to it. MPAtlas is read as published, so its name does not.
     save(wdpa_pairs(buffer=False), add_tolerance_suffix(WDPA_IHO_FILE_NAME, tolerance))
     save(wdpa_pairs(buffer=True), add_tolerance_suffix(WDPA_NEAR_SHORE_IHO_FILE_NAME, tolerance))
-    save(intersect_mpatlas_with_iho(bucket=bucket, with_geometry=True), MPATLAS_IHO_FILE_NAME)
+    save(intersect_mpatlas_with_iho(bucket=bucket, with_geometry=True), MPATLAS_SEA_PAIRS_FILE_NAME)

@@ -681,7 +681,7 @@ def test_chained_pa_download_still_goes_to_the_job_runner(chained_jobs):
 def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained_jobs):
     """Everything reading the IHO/PA pairs must follow the step that builds them.
 
-    generate_marine_protection_level_stats_table reads mpatlas_iho.parquet, so
+    generate_marine_protection_level_stats_table reads mpatlas_sea_pairs.parquet, so
     it hangs off generate_iho_pa_intersections rather than download_mpatlas -
     otherwise it would race the writer and publish stale or empty stats. Both
     routes are checked because the method is itself long-running, so asking
