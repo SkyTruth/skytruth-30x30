@@ -10,7 +10,8 @@ dependencies = [
     "fastapi[standard] (>=0.141.1,<0.142.0)",
     "uvicorn (>=0.52.4,<0.53.0)",
     "sqlalchemy (>=2.0.52,<3.0.0)",
-    "pg8000 (>=1.31.5,<2.0.0)"
+    "pg8000 (>=1.31.5,<2.0.0)",
+    "pydantic-settings (>=2.15.0,<3.0.0)"
 ]
 
 [build-system]
