@@ -1,6 +1,5 @@
 import datetime
 import glob
-import os
 import re
 import time
 
@@ -64,8 +63,6 @@ def seed_protected_seas_sites(
         FileNotFoundError: If ``json_dir`` contains no matching LFP export files.
         ValueError: If the date cannot be parsed from the first export filename.
     """
-    os.environ["OGR_GEOJSON_MAX_OBJ_SIZE"] = "0"
-
     site_files = sorted(glob.glob(f"{json_dir}/*LFP[0-5]*.json"))
     if not site_files:
         raise FileNotFoundError(f"No Navigator LFP site files found in {json_dir}")

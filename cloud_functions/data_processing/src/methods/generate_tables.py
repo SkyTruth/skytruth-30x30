@@ -6,24 +6,19 @@ from google.cloud import storage
 
 from src.core.commons import (
     add_tolerance_suffix,
+    load_iho_regions,
     load_marine_regions,
     load_mpatlas_country,
     load_mpatlas_global,
     load_regions,
 )
-from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
-    EEZ_FILE_NAME,
     FISHING_PROTECTION_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
-    GLOBAL_MANGROVE_AREA_FILE_NAME,
     HABITAT_PROTECTION_FILE_NAME,
-    HABITATS_ZIP_FILE_NAME,
     HIGH_SEAS_PARAMS,
-    IHO_SEA_AREAS_FILE_NAME,
-    MANGROVES_BY_LOCATION_FILE_NAME,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
@@ -34,9 +29,7 @@ from src.core.params import (
     PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
-    SEAMOUNTS_SHAPEFILE_NAME,
-    SEAMOUNTS_ZIPFILE_NAME,
-    TOLERANCES,
+    TOLERANCE,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -81,7 +74,6 @@ def generate_protected_areas_diff_table(
     pa_file_name: str = WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
-    tolerance: float = TOLERANCES[0],
     verbose: bool = True,
 ):
     def clean_for_json(obj):
@@ -108,7 +100,6 @@ def generate_protected_areas_diff_table(
         mpatlas_file_name=mpatlas_file_name,
         bucket=bucket,
         verbose=verbose,
-        tolerance=tolerance,
     )
 
     # Get the current database
@@ -171,21 +162,16 @@ def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.Ge
 
 def generate_habitat_protection_table(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
-    habitats_zipfile_name: str = HABITATS_ZIP_FILE_NAME,
-    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
-    seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
-    mangroves_by_location_file_name: str = MANGROVES_BY_LOCATION_FILE_NAME,
-    global_mangrove_area_file_name: str = GLOBAL_MANGROVE_AREA_FILE_NAME,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
     country_stats_filename: str = COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
-    eez_file: dict = EEZ_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
-    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, marine_tolerance)
+    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, tolerance)
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
@@ -196,15 +182,9 @@ def generate_habitat_protection_table(
     marine_habitats = process_marine_habitats(
         combined_regions,
         gadm_eez_union_file_name=gadm_eez_union_file_name,
-        habitats_zipfile_name=habitats_zipfile_name,
-        seamounts_zipfile_name=seamounts_zipfile_name,
-        seamounts_shapefile_name=seamounts_shapefile_name,
-        mangroves_by_location_file_name=mangroves_by_location_file_name,
-        global_mangrove_area_file_name=global_mangrove_area_file_name,
         marine_pa_file_name=marine_pa_file_name,
-        eez_file=eez_file,
         bucket=bucket,
-        tolerance=marine_tolerance,
+        tolerance=tolerance,
         verbose=verbose,
     )
 
@@ -244,7 +224,11 @@ def generate_protection_coverage_stats_table(
 
     if verbose:
         logger.info({"message": "computing IHO sea area protection coverage stats"})
-    iho_coverage = compute_iho_protection_coverage(bucket=bucket, verbose=verbose)
+    iho_coverage = compute_iho_protection_coverage(
+        bucket=bucket,
+        wdpa_global_level_file_name=wdpa_global_level_file_name,
+        verbose=verbose,
+    )
 
     protection_coverage_table = pd.concat(
         (country_global_coverage, iho_coverage), axis=0, ignore_index=True
@@ -279,7 +263,6 @@ def generate_marine_protection_level_stats_table(
     mpa_file_name: str = MPATLAS_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     high_seas_params: dict = HIGH_SEAS_PARAMS,
-    tolerance: float = marine_tolerance,
     bucket: str = BUCKET,
     project: str = PROJECT,
     verbose: bool = True,
@@ -408,7 +391,6 @@ def generate_marine_protection_level_stats_table(
     iho_protection_level = compute_iho_protection_level(
         bucket=bucket,
         mpa_file_name=mpa_file_name,
-        tolerance=tolerance,
         verbose=verbose,
     )
 
@@ -432,14 +414,9 @@ def generate_marine_protection_level_stats_table(
     return protection_level_table.to_dict(orient="records")
 
 
-def get_iho_fishing_protection_region_stats(
-    iho_file_name, sites_file_name, tolerance, bucket=BUCKET, verbose=True
-):
+def get_iho_fishing_protection_region_stats(sites_file_name, bucket=BUCKET, verbose=True):
     # Load the simplified IHO sea areas at the requested tolerance.
-    iho = read_parquet_from_gcs(
-        bucket_name=bucket,
-        filename=add_tolerance_suffix(iho_file_name, tolerance),
-    ).rename(columns={"area": "total_area"})
+    iho = load_iho_regions(buffer=True).rename(columns={"area": "total_area"})
 
     # Load the current Protected Seas sites.
     ps_sites = read_parquet_from_gcs(bucket, sites_file_name, verbose=verbose)
@@ -474,7 +451,6 @@ def generate_fishing_protection_table(
     project: str = PROJECT,
     protected_seas_file_name: str = PROTECTED_SEAS_FILE_NAME,
     fishing_protecton_file_name: str = FISHING_PROTECTION_FILE_NAME,
-    iho_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     sites_file_name: str = PROTECTED_SEAS_SITES_FILE_NAME,
     verbose: bool = True,
 ):
@@ -613,7 +589,7 @@ def generate_fishing_protection_table(
         (
             fishing_protection_table,
             get_iho_fishing_protection_region_stats(
-                iho_file_name, sites_file_name, marine_tolerance, bucket=bucket, verbose=verbose
+                sites_file_name, bucket=bucket, verbose=verbose
             ),
         ),
         axis=0,

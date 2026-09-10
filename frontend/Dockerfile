@@ -1,17 +1,21 @@
 # Install dependencies only when needed
-FROM node:18.15-bullseye AS deps
+FROM node:26-bookworm AS deps
+
 WORKDIR /app
+
 COPY .yarn ./.yarn
 COPY package.json yarn.lock .yarnrc.yml ./
 
-RUN yarn install
+# Node images no longer ship yarn, and corepack was removed from Node in 25.x,
+# so invoke the yarn release vendored in .yarn/releases directly.
+RUN node .yarn/releases/yarn-3.5.0.cjs install
 
 # If using npm with a `package-lock.json` comment out above and use below instead
 # COPY package.json package-lock.json ./
 # RUN npm ci
 
 # Rebuild the source code only when needed
-FROM node:18.15-bullseye AS builder
+FROM node:26-bookworm AS builder
 WORKDIR /app
 COPY . .
 COPY --from=deps /app/node_modules ./node_modules
@@ -21,15 +25,15 @@ COPY --from=deps /app/node_modules ./node_modules
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN yarn build
+RUN node .yarn/releases/yarn-3.5.0.cjs build
 
 # Production image, copy all the files and run next
-FROM node:18.15-bullseye AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
 # Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -38,6 +42,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/.env ./.env
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing

@@ -50,13 +50,13 @@ def test_generate_protection_coverage_combines_rounds_and_uploads(monkeypatch, u
     monkeypatch.setattr(
         generate_tables,
         "compute_country_global_coverage",
-        lambda **kwargs: (country_calls.append(kwargs) or (country_coverage, country_areas)),
+        lambda **kwargs: country_calls.append(kwargs) or (country_coverage, country_areas),
     )
     iho_calls = []
     monkeypatch.setattr(
         generate_tables,
         "compute_iho_protection_coverage",
-        lambda **kwargs: (iho_calls.append(kwargs) or iho_coverage),
+        lambda **kwargs: iho_calls.append(kwargs) or iho_coverage,
     )
     uploads, upload = upload_recorder
     monkeypatch.setattr(generate_tables, "upload_dataframe", upload)
@@ -81,7 +81,9 @@ def test_generate_protection_coverage_combines_rounds_and_uploads(monkeypatch, u
             "verbose": False,
         }
     ]
-    assert iho_calls == [{"bucket": "bucket", "verbose": False}]
+    assert iho_calls == [
+        {"bucket": "bucket", "wdpa_global_level_file_name": "global.csv", "verbose": False}
+    ]
     assert result.set_index("location")["total_area"].to_dict() == {"BRA": 10, "123": 21}
 
     assert [call["destination"] for call in uploads] == [

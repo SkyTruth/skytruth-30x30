@@ -115,17 +115,15 @@ def _mock_read_json_df(mock_eez_by_loc_gdf, mock_gadm_gdf, eez_suffix, gadm_suff
     return _read_json_df
 
 
-def _mock_read_parquet_from_gcs(mock_iho_seas_gdf, iho_seas_suffix):
+def _mock_load_iho_regions(mock_iho_seas_gdf):
     """
     Return the IHO Seas GeoDataFrame
     """
 
-    def _read_parquet_from_gcs(*, bucket_name, filename, verbose=True):
-        if filename.endswith(iho_seas_suffix):
-            return mock_iho_seas_gdf.copy()
-        raise AssertionError(f"Unexpected filename: {filename}")
+    def _load_iho_regions():
+        return mock_iho_seas_gdf.copy()
 
-    return _read_parquet_from_gcs
+    return _load_iho_regions
 
 
 def _mock_read_json_from_gcs(mock_related_countries_map, mock_regions_map):
@@ -205,15 +203,12 @@ def test_generate_locations_table_happy(
 ):
     calls, upload_mock = upload_recorder
 
-    # Fix tolerances so the code resolves eez/gadm filenames deterministically
-    monkeypatch.setattr(gen_static_tbl, "marine_tolerance", 0.1, raising=True)
-    monkeypatch.setattr(gen_static_tbl, "terrestrial_tolerance", 0.2, raising=True)
-    monkeypatch.setattr(gen_static_tbl, "iho_sea_locations_tolerance", 0.3, raising=True)
+    # Fix the tolerance so the code resolves eez/gadm filenames deterministically
+    tolerance = 0.1
 
     # The filenames the function will compute internally
     eez_suffix = gen_static_tbl.EEZ_FILE_NAME.replace(".geojson", "_0.1.geojson")
-    gadm_suffix = gen_static_tbl.GADM_FILE_NAME.replace(".geojson", "_0.2.geojson")
-    iho_seas_suffix = gen_static_tbl.IHO_SEA_AREAS_FILE_NAME.replace(".parquet", "_0.3.parquet")
+    gadm_suffix = gen_static_tbl.GADM_FILE_NAME.replace(".geojson", "_0.1.geojson")
 
     # Patch I/O internal bu imported helpers
     monkeypatch.setattr(
@@ -224,8 +219,8 @@ def test_generate_locations_table_happy(
     )
     monkeypatch.setattr(
         gen_static_tbl,
-        "read_parquet_from_gcs",
-        _mock_read_parquet_from_gcs(mock_iho_seas_gdf, iho_seas_suffix),
+        "load_iho_regions",
+        _mock_load_iho_regions(mock_iho_seas_gdf),
         raising=True,
     )
     monkeypatch.setattr(
@@ -253,6 +248,7 @@ def test_generate_locations_table_happy(
     gen_static_tbl.generate_locations_table(
         output_file_name="locations.csv",
         bucket="test-bucket",
+        tolerance=tolerance,
         verbose=False,
     )
 
@@ -302,8 +298,7 @@ def test_generate_locations_table_read_failure(
 ):
     calls, upload_mock = upload_recorder
 
-    monkeypatch.setattr(gen_static_tbl, "marine_tolerance", 0.1, raising=True)
-    monkeypatch.setattr(gen_static_tbl, "terrestrial_tolerance", 0.2, raising=True)
+    tolerance = 0.1
 
     eez_suffix = gen_static_tbl.EEZ_FILE_NAME.replace(".geojson", "_0.1.geojson")
 
@@ -314,6 +309,13 @@ def test_generate_locations_table_read_failure(
         return mock_gadm_gdf.copy()
 
     monkeypatch.setattr(gen_static_tbl, "read_json_df", failing_read_json_df, raising=True)
+    # Stubbed even though the EEZ read fails first, so a reordering can't reach the network.
+    monkeypatch.setattr(
+        gen_static_tbl,
+        "load_iho_regions",
+        _mock_load_iho_regions(mock_iho_seas_gdf),
+        raising=True,
+    )
     monkeypatch.setattr(
         gen_static_tbl,
         "read_json_from_gcs",
@@ -331,6 +333,8 @@ def test_generate_locations_table_read_failure(
     monkeypatch.setattr(gen_static_tbl, "round_to_list", lambda s: list(s), raising=True)
 
     with pytest.raises(RuntimeError, match="EEZ load failed"):
-        gen_static_tbl.generate_locations_table(bucket="test-bucket", verbose=False)
+        gen_static_tbl.generate_locations_table(
+            bucket="test-bucket", tolerance=tolerance, verbose=False
+        )
 
     assert calls == []

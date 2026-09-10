@@ -1,5 +1,6 @@
 import gc
 import glob
+import json
 import os
 import shutil
 import subprocess
@@ -48,7 +49,7 @@ from src.core.params import (
     PROTECTED_SEAS_FILE_NAME,
     PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTED_SEAS_URL,
-    TOLERANCES,
+    TOLERANCE,
     WDPA_API_URL,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
@@ -61,7 +62,6 @@ from src.core.params import (
 from src.core.processors import (
     calculate_area,
     choose_pa_area,
-    mask_mpatlas_protection_level,
     match_old_pa_naming_convantion,
 )
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
@@ -125,6 +125,35 @@ def download_mpatlas_global(
     duplicate_blob(bucket, current_filename, archive_filename, verbose=True)
 
 
+# MPAtlas API v4 property names -> internal (v2-era) names used by the pipeline
+MPATLAS_V4_FIELD_MAP = {
+    "zone_name": "name",
+    "site_designation": "designation",
+    "mpaguide_protection_level": "protection_mpaguide_level",
+    "assessment_establishment_stage": "establishment_stage",
+}
+
+
+def normalize_mpatlas_geojson(data: dict) -> dict:
+    """
+    Rename MPAtlas API v4 feature properties in place to the internal names
+    used throughout the pipeline.
+
+    v4's establishment_stage is site-level; the zone-effective value moved to
+    assessment_establishment_stage, which replaces it here. Properties absent
+    from a feature are left alone, so already-normalized data passes through
+    unchanged.
+    """
+    for feature in data.get("features", []):
+        properties = feature.get("properties") or {}
+        if "assessment_establishment_stage" in properties:
+            properties.pop("establishment_stage", None)
+        for v4_name, internal_name in MPATLAS_V4_FIELD_MAP.items():
+            if v4_name in properties:
+                properties[internal_name] = properties.pop(v4_name)
+    return data
+
+
 def download_mpatlas_zone(
     url: str = MPATLAS_URL,
     bucket: str = BUCKET,
@@ -166,7 +195,19 @@ def download_mpatlas_zone(
         bucket,
         verbose=verbose,
     )
-    duplicate_blob(bucket, archive_filename, filename, verbose=True)
+
+    # The archive keeps the raw v4 response; the working copy is normalized to
+    # the internal field names so downstream readers stay unchanged.
+    if verbose:
+        logger.info({"message": f"saving normalized MPAtlas Zone Assessment to {filename}"})
+    normalized = normalize_mpatlas_geojson(response.json())
+    save_file_bucket(
+        json.dumps(normalized).encode("utf-8"),
+        "application/json",
+        filename,
+        bucket,
+        verbose=verbose,
+    )
 
 
 def download_mpatlas(
@@ -252,9 +293,6 @@ def download_mpatlas(
         logger.info({"message": "calculating MPA bounding box (bbox)"})
     mpa["bbox"] = mpa.geometry.apply(lambda g: g.bounds if g is not None else None)
 
-    # Set protection levels to unknown if establishment stage is not actively managed or implemented
-    mpa = mask_mpatlas_protection_level(mpa)
-
     # Upload metadata (no geometry)
     if verbose:
         logger.info({"message": f"saving metadata to {meta_file_name}"})
@@ -332,7 +370,7 @@ def download_and_process_protected_planet_pas(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     meta_file_name: str = WDPA_META_FILE_NAME,
     archive_wdpa_file_name: str = ARCHIVE_RAW_WDPA_FILE_NAME,
-    tolerance: float = TOLERANCES[0],
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
     bucket: str = BUCKET,
     project_id: str = PROJECT,
@@ -419,9 +457,7 @@ def download_and_process_protected_planet_pas(
         except Exception as e:
             logger.warning({"message": f"Warning: could not delete {path}: {e}"})
 
-    def process_protected_area_geoms(
-        pa_dir, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
-    ):
+    def process_protected_area_geoms(pa_dir, tolerance, batch_size=1000, n_jobs=-1, verbose=True):
         def stream_parquet_chunks(paths, batch_size=1000):
             """
             Lazily stream GeoDataFrame chunks from one or more Parquet files.
@@ -464,8 +500,8 @@ def download_and_process_protected_planet_pas(
             representative area value.
             """
 
-            # Get buffer area - do not buffer if MAB reserve as reported
-            # area can be unreliable
+            # Do not buffer MAB reserves as area can be unreliable
+            # Points stay in PA table but not used in statistics (see filter_protected_planet)
             rep_area = row.REP_AREA if row["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve" else 0
 
             g = row.geometry
@@ -480,7 +516,7 @@ def download_and_process_protected_planet_pas(
                 return buffed.geometry.iloc[0]
             return g
 
-        def simplify_chunk(chunk, tolerance=TOLERANCES[0]):
+        def simplify_chunk(chunk, tolerance):
             """
             Simplify and buffer geometries in a GeoDataFrame chunk.
             """
@@ -491,6 +527,7 @@ def download_and_process_protected_planet_pas(
                 chunk = choose_pa_area(chunk)
                 crs = chunk.crs
                 chunk["geometry"] = chunk.apply(lambda r: buffer_if_point(r, crs), axis=1)
+
                 chunk = chunk.loc[chunk.geometry.is_valid]
                 chunk.geometry = chunk.geometry.simplify(
                     tolerance=tolerance, preserve_topology=True
@@ -506,9 +543,7 @@ def download_and_process_protected_planet_pas(
                 del chunk
                 gc.collect()
 
-        def process_all_files(
-            paths, tolerance=TOLERANCES[0], batch_size=1000, n_jobs=-1, verbose=True
-        ):
+        def process_all_files(paths, tolerance, batch_size=1000, n_jobs=-1, verbose=True):
             """
             Process multiple Parquet files in parallel, simplifying geometries
             in streamed chunks while managing memory and logging progress.
@@ -621,15 +656,14 @@ def download_and_process_protected_planet_pas(
 
     if verbose:
         logger.info({"message": "processing and simplifying protected area geometries"})
-    df = process_protected_area_geoms(
-        pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
-    )
-
-    if verbose:
-        logger.info({"message": f"deleting {pa_dir}"})
-    remove_file_or_folder(pa_dir, verbose=verbose)
 
     try:
+        if verbose:
+            logger.info({"message": f"processing with tolerance {tolerance}"})
+        df = process_protected_area_geoms(
+            pa_dir, tolerance=tolerance, batch_size=batch_size, n_jobs=n_jobs, verbose=verbose
+        )
+
         if verbose:
             logger.info({"message": "Renaming variables to match old format"})
         # On failure, alert in case naming convention has changed
@@ -640,7 +674,6 @@ def download_and_process_protected_planet_pas(
             alert_message="Failed to match WDPA format - possible change to data format",
         )
 
-        # Save metadata
         if verbose:
             logger.info({"message": f"saving wdpa metadata to {meta_file_name}"})
 
@@ -653,12 +686,6 @@ def download_and_process_protected_planet_pas(
             verbose=verbose,
             alert_message="Failed to save WDPA metadata",
         )
-
-        # Remove non-OECM MAB reserves (matching Protected Planet's methods)
-        df = df[
-            (df["DESIG_ENG"] != "UNESCO-MAB Biosphere Reserve")
-            | (df["DESIG_ENG"] == "UNESCO-MAB Biosphere Reserve") & (df["PA_DEF"] == 0)
-        ]
 
         # Save terrestrial PAs
         ter_out_fn = add_tolerance_suffix(terrestrial_pa_file_name, tolerance)
@@ -687,12 +714,15 @@ def download_and_process_protected_planet_pas(
             alert_message="Failed to upload marine PAs",
         )
         duplicate_blob(bucket, mar_out_fn, f"archive/{mar_out_fn}", verbose=verbose)
-    except RetryFailed:
-        raise
+    finally:
+        df = pd.DataFrame()
+        gc.collect()
+        pyarrow.default_memory_pool().release_unused()
+        show_container_mem(f"After tolerance {tolerance}")
 
-    # Clean up memory
-    df = pd.DataFrame()
-    del df
+    if verbose:
+        logger.info({"message": f"deleting {pa_dir}"})
+    remove_file_or_folder(pa_dir, verbose=verbose)
 
 
 def download_protected_planet_global(
@@ -849,8 +879,8 @@ def download_protected_planet(
         Root of GCS blob name for terrestrial protected areas.
     marine_pa_file_name : str
         Root of GCS blob name for marine protected areas.
-    tolerances: list
-        Tolerances to simplify geometries by for further processing.
+    tolerance: float
+        Tolerance to simplify geometries by for further processing.
     bucket : str
         Name of the GCS bucket to upload all files to.
     verbose : bool, optional

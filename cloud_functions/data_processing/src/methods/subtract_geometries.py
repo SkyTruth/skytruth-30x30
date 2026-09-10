@@ -5,6 +5,7 @@ from tqdm.auto import tqdm
 
 from src.core.commons import add_tolerance_suffix
 from src.core.params import BUCKET
+from src.core.processors import filter_protected_planet
 from src.utils.gcp import (
     read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
     upload_gdf,  # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
@@ -90,7 +91,7 @@ def generate_total_area_minus_pa(
         bucket_name=bucket,
         filename=add_tolerance_suffix(pa_file, tolerance),
         verbose=verbose,
-    )
+    ).pipe(filter_protected_planet)
 
     # Create one row per country
     pa["ISO3"] = pa["ISO3"].str.split(";")
@@ -189,6 +190,12 @@ def generate_location_minus_fhp_mpa(
 
     if verbose:
         logger.info({"message": "Subtracting fully/highly protected areas from location areas..."})
+
+    # A zone may span multiple countries (e.g. "AUS,NZL"); one row per country
+    # so its geometry is subtracted from every location it belongs to
+    mpa_fhp["country"] = mpa_fhp["country"].astype(str).str.split(r"[;:,]")
+    mpa_fhp = mpa_fhp.explode("country")
+    mpa_fhp["country"] = mpa_fhp["country"].str.strip()
 
     # Difference the mpa_fhp from location; where location["location"] == mpa_fhp["country"]
     mpa_by_country = mpa_fhp.dissolve(by="country")["geometry"]

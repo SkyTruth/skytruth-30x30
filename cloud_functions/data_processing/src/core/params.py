@@ -63,13 +63,6 @@ EEZ_LAND_UNION_PARAMS = {
     "shapefile_name": "EEZ_land_union_v4_202410.shp",
 }
 
-IHO_SEA_AREAS_PARAMS = {
-    "name": "World_Seas_IHO_v3.zip",
-    "zipfile_name": "static/iho_sea_areas.zip",
-    "shapefile_name": "World_Seas_IHO_v3.shp",
-}
-IHO_SEA_AREAS_FILE_NAME = "static/iho_sea_areas_processed.parquet"
-
 EEZS_TRANSLATED_FILE_NAME = "processing/eezs_translated.csv"
 
 MARINE_REGIONS_FILE_NAME = "static/marine_regions_processed.geojson"
@@ -98,7 +91,7 @@ LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
 #                    MPATLAS
 # ------------------------------------------------------------
 
-MPATLAS_URL = "https://guide.mpatlas.org/api/v2/zone/geojson"
+MPATLAS_URL = "https://guide.mpatlas.org/api/public/v4/zone/geojson"
 MPATLAS_FILE_NAME = "raw/mpatlas_zone_assessment.geojson"
 MPATLAS_META_FILE_NAME = "intermediates/mpa_meta.csv"
 ARCHIVE_MPATLAS_FILE_NAME = f"archive/raw/mpatlas_zone_assessment_{today_formatted}.geojson"
@@ -141,7 +134,6 @@ ARCHIVE_WDPA_GLOBAL_LEVEL_FILE_NAME = f"archive/raw/WDPA_{today_formatted}_globa
 WDPA_PA_FILE_NAME = "intermediates/pa_updates/WDPA_PA_changes.pkl"
 ARCHIVE_WDPA_PA_FILE_NAME = f"archive/pa_updates/WDPA_{today_formatted}_PA_changes.pkl"
 WDPA_GLOBAL_LEVEL_URL = "https://www.protectedplanet.net/en/global_statistics_download"
-WDPA_MPA_FILE_NAME = "raw/WDPA_marine_protected_areas.geojson"
 WDPA_TERRESTRIAL_FILE_NAME = "intermediates/protected_area_geoms/terrestrial_wdpa.geojson"
 WDPA_MARINE_FILE_NAME = "intermediates/protected_area_geoms/marine_wdpa.geojson"
 WDPA_META_FILE_NAME = "intermediates/wdpa_meta.csv"
@@ -150,27 +142,10 @@ WDPA_META_FILE_NAME = "intermediates/wdpa_meta.csv"
 # ------------------------------------------------------------
 #                     Marine Habitats
 # ------------------------------------------------------------
-HABITATS_URL = "https://habitats.oceanplus.org/downloads/global_statistics.zip"
-HABITATS_ZIP_FILE_NAME = "habitats/global_statistics.zip"
-ARCHIVE_HABITATS_FILE_NAME = f"archive/habitats/global_statistics_{today_formatted}.zip"
-MANGROVES_API_URL = "https://mangrove-atlas-api.herokuapp.com/admin/widget_protected_areas.csv"
-MANGROVES_REQUEST_HEADERS = {
-    "Cookie": (
-        "_mangrove_atlas_api_session=fJuobvI2fH42WfGfMtRTp%2BksIDdPEpY6DG8uCuITsENtrRGG4AA3nYEeAI7"
-        "dytzpK%2F0dGIHq84O54MRr6eiPgiwCYXp2XP4IzXM40dFt%2FI6hoB0WXC%2Fwrd81XreNnMZiSEE6IVT5R0fqMcm"
-        "sZdPn53u0A1d4CGU3FfliOZuWkckBuA%2F7C4upBGuSS8817LqOh1slG%2BsEOGp3nk7WX4fMoPbsHWtARfFwdfoAH"
-        "z448LO7uWuZdyiu7YOrS0ZxOZEb9JZ8hcUJph4pBFofZLpOvtQQutgZY21T5bhQ7Kwfl56e6Qr0SZ%2B8sIzMfky3h"
-        "%2FjOA6DNTLoy%2BZLiZBAgFHlTYm2JwlwqWgAZU8D7cE7Zn"
-        "%2Fxgf3LFF9pZ9Fe3QG4c8LIwH%2FxqjEd8GsZAhBMg"
-        "BWbxubigQ9gZssZt6CIO--7qiVsTAT8JAKj1jU--U7TI%2Fz9c151bfD8iZdkBDw%3D%3D"
-    )
-}
+MANGROVES_URL = "https://zenodo.org/records/21346457/files/gmw_v4112_2025_mng_ext_cntry_info_vec.gpkg.gz?download=1"
+MANGROVES_FILE_NAME = "habitats/mangroves.gpkg.gz"
+ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_{today_formatted}.gpkg.gz"
 
-MANGROVES_ZIPFILE_NAME = "habitats/Marine-habitats_Mangroves_GlobalMangroveWatch_v3_2020.zip"
-MANGROVES_SHAPEFILE_NAME = "gmw_v3_2020_vec.shp"
-MANGROVES_FILE_NAME = "habitats/mangroves_protected_areas.csv"
-MANGROVES_BY_LOCATION_FILE_NAME = "static/mangroves_by_location.geojson"
-ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_protected_areas_{today_formatted}.csv"
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
 )
@@ -180,7 +155,69 @@ SEAMOUNTS_SHAPEFILE_NAME = (
 )
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
-# HABITATS_FILE_NAME = "habitats/habitats_table.csv"
+COLD_WATER_CORALS_URL = "https://wcmc.io/WCMC_001"
+COLD_WATER_CORALS_ZIPFILE_NAME = "habitats/cold_water_corals.zip"
+ARCHIVE_COLD_WATER_CORALS_FILE_NAME = f"archive/habitats/cold_water_corals_{today_formatted}.zip"
+
+SALTMARSHES_URL = "https://wcmc.io/WCMC_027"
+SALTMARSHES_ZIPFILE_NAME = "habitats/saltmarshes.zip"
+ARCHIVE_SALTMARSHES_FILE_NAME = f"archive/habitats/saltmarshes_{today_formatted}.zip"
+
+SEAGRASSES_URL = "https://wcmc.io/WCMC_013_014"
+SEAGRASSES_ZIPFILE_NAME = "habitats/seagrasses.zip"
+ARCHIVE_SEAGRASSES_FILE_NAME = f"archive/habitats/seagrasses_{today_formatted}.zip"
+
+MARINE_HABITAT_PARAMS = {
+    "mangroves": {
+        "url": MANGROVES_URL,
+        "file_name": MANGROVES_FILE_NAME,
+        "archive_file_name": ARCHIVE_MANGROVES_FILE_NAME,
+        "needs_processing": True,
+        "source": "gpkg",
+        # Data comes from raster extent converted to vector, so there are no overlaps
+        "overlaps": False,
+    },
+    "seamounts": {
+        "url": SEAMOUNTS_URL,
+        "file_name": SEAMOUNTS_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SEAMOUNTS_FILE_NAME,
+        "needs_processing": False,
+    },
+    "coldwatercorals": {
+        "url": COLD_WATER_CORALS_URL,
+        "file_name": COLD_WATER_CORALS_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
+    },
+    "saltmarshes": {
+        "url": SALTMARSHES_URL,
+        "file_name": SALTMARSHES_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SALTMARSHES_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
+    },
+    "seagrasses": {
+        "url": SEAGRASSES_URL,
+        "file_name": SEAGRASSES_ZIPFILE_NAME,
+        "archive_file_name": ARCHIVE_SEAGRASSES_FILE_NAME,
+        "needs_processing": True,
+        "source": "wcmc",
+        "overlaps": True,
+    },
+}
+
+HABITAT_PROCESSING_PARAMS = {
+    habitat: params
+    for habitat, params in MARINE_HABITAT_PARAMS.items()
+    if params["needs_processing"]
+}
+
+UNEP_POINT_AREA_KM2 = 1.0
+HABITAT_BY_LOCATION_FILE_PATTERN = "static/{habitat}_by_location.parquet"
+GLOBAL_HABITAT_AREA_FILE_PATTERN = "intermediates/total_area/global_{habitat}_area.json"
 
 # ------------------------------------------------------------
 #                     Terrestrial Habitats
@@ -195,7 +232,6 @@ PA_TERRESTRIAL_HABITATS_FILE_NAME = "habitats/pa_terrestrial_stats.json"
 # ------------------------------------------------------------
 #                       Global Areas
 # ------------------------------------------------------------
-GLOBAL_MANGROVE_AREA_FILE_NAME = "intermediates/total_area/global_mangrove_area.json"
 
 
 # ------------------------------------------------------------
@@ -211,11 +247,13 @@ PROTECTION_LEVEL_FILE_NAME = f"tables/protection_level_{today_formatted}.csv"
 # ------------------------------------------------------------
 
 CHUNK_SIZE = 8192
-TOLERANCES = (0.001, 0.0001)
+TOLERANCE = 0.0001
 LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
 RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
+NEAR_SHORE_BUFFER_KM = 10
+NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
 
 # ------------------------------------------------------------
 #                     Conservation Builder
@@ -252,5 +290,17 @@ LONG_RUNNING_TASKS = [
     "generate_protected_areas_table",
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
+    "process_marine_habitat_geoms",
     "generate_habitat_protection_table",
+    "generate_protection_coverage_stats_table",
+    "download_protected_seas",
+    "generate_terrestrial_biome_stats_country",
+    "generate_eez_minus_mpa",
+    "generate_location_minus_fhp_mpa",
+    "update_eez_minus_mpa",
+    "update_location_minus_fhp_mpa",
+    "generate_locations_table",
+    "generate_marine_protection_level_stats_table",
+    "update_marine_protected_areas_tileset",
+    "update_terrestrial_protected_areas_tileset",
 ]

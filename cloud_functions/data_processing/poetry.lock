@@ -5244,6 +5244,29 @@ files = [
 ]
 
 [[package]]
+name = "skytruth-shared-datasets"
+version = "0.1.0"
+description = "Tiny resolver SDK for SkyTruth shared dataset catalog entries."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = []
+develop = false
+
+[package.dependencies]
+google-cloud-storage = {version = ">=2.19.0", optional = true}
+
+[package.extras]
+gcs = ["google-cloud-storage (>=2.19.0)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/SkyTruth/shared-datasets-1.git"
+reference = "main"
+resolved_reference = "c69850b9337e9ab14bbcdb4267dfecdf7bd9aab6"
+subdirectory = "api/python"
+
+[[package]]
 name = "soupsieve"
 version = "2.9.1"
 description = "A modern CSS selector implementation for Beautiful Soup."
@@ -6195,4 +6218,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "f27fcb1cd29847f4a436161a4b5fbb83c70adf0d83404d8594aa0ec0060cc48f"
+content-hash = "8a9d3d5fae6071ac81fb8282134c5a6ede1dd698b199a75fc3ce36d5e8461a19"

@@ -3,28 +3,22 @@ import numpy as np
 import pandas as pd
 from shapely.ops import unary_union
 
-from src.core.commons import add_tolerance_suffix
-from src.core.land_cover_params import (
-    iho_sea_locations_tolerance,
-    marine_tolerance,
-    terrestrial_tolerance,
-)
+from src.core.commons import add_tolerance_suffix, load_iho_regions
 from src.core.params import (
     BUCKET,
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
-    IHO_SEA_AREAS_FILE_NAME,
     LOCATIONS_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
+    TOLERANCE,
 )
 from src.core.processors import round_to_list
 from src.utils.gcp import (
     read_dataframe,
     read_json_df,
     read_json_from_gcs,
-    read_parquet_from_gcs,
     upload_dataframe,
 )
 from src.utils.geo import get_area_km2
@@ -35,27 +29,24 @@ logger = Logger()
 
 def generate_locations_table(
     eez_file_name: str = EEZ_FILE_NAME,
-    iho_sea_areas_file_name: str = IHO_SEA_AREAS_FILE_NAME,
     gadm_file_name: str = GADM_FILE_NAME,
     output_file_name: str = LOCATIONS_FILE_NAME,
     related_countries_file_name: str = RELATED_COUNTRIES_FILE_NAME,
     regions_file_name: str = REGIONS_FILE_NAME,
     translation_file_name: str = LOCATIONS_TRANSLATED_FILE_NAME,
     bucket: str = BUCKET,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
     if verbose:
         logger.info({"message": "Generating locations table"})
 
-    eez_file = add_tolerance_suffix(eez_file_name, marine_tolerance)
-    gadm_file = add_tolerance_suffix(gadm_file_name, terrestrial_tolerance)
-    iho_sea_areas_file = add_tolerance_suffix(iho_sea_areas_file_name, iho_sea_locations_tolerance)
+    eez_file = add_tolerance_suffix(eez_file_name, tolerance)
+    gadm_file = add_tolerance_suffix(gadm_file_name, tolerance)
 
     eez = read_json_df(bucket_name=bucket, filename=eez_file, verbose=verbose)
     gadm = read_json_df(bucket_name=bucket, filename=gadm_file, verbose=verbose)
-    iho_sea_areas = read_parquet_from_gcs(
-        bucket_name=bucket, filename=iho_sea_areas_file, verbose=verbose
-    )
+    iho_sea_areas = load_iho_regions()
 
     related_countries = read_json_from_gcs(
         bucket_name=bucket, filename=related_countries_file_name, verbose=verbose
