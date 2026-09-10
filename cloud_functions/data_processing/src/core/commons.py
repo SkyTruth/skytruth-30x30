@@ -413,14 +413,7 @@ def read_mpatlas_from_gcs(
 
 
 def polygonal_parts(geom):
-    """The polygonal content of an intersection result, or None if it has none.
-
-    An intersection is whatever GEOS returns: the overlapping polygon, a line or
-    point where the two geometries only touch, or a GeometryCollection of both
-    when a multipart feature does each at once. Only polygonal content has area
-    to contribute, and it has to survive that mixed case rather than being
-    thrown out with the dangling bits.
-    """
+    """The polygonal content of an intersection result, or None if it has none."""
     if geom is None or geom.is_empty:
         return None
 

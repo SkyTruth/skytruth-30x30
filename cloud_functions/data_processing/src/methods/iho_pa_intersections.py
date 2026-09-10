@@ -10,6 +10,7 @@ union that exists for countries but not for sea areas.
 
 import geopandas as gpd
 import pandas as pd
+from tqdm.auto import tqdm
 
 from src.core.commons import (
     add_tolerance_suffix,
@@ -37,6 +38,7 @@ WDPA_ENVIRONMENTS = (
     ("terrestrial", WDPA_TERRESTRIAL_FILE_NAME),
 )
 
+tqdm.pandas()
 
 def intersect_with_iho(
     features: gpd.GeoDataFrame,
@@ -95,7 +97,7 @@ def intersect_with_iho(
     # Clip each feature to the IHO sea area it intersects, reducing each result
     # to its polygonal content.
     seas = gpd.GeoSeries(iho.geometry.loc[pairs["index_right"]].to_numpy(), crs=iho.crs)
-    cut = pairs.geometry.intersection(seas, align=False).apply(polygonal_parts)
+    cut = pairs.geometry.intersection(seas, align=False).progress_apply(polygonal_parts)
     pairs = pairs.set_geometry(cut)
 
     # Keep pairs that have a polygonal intersection or are point features
