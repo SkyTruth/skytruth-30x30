@@ -311,4 +311,5 @@ LONG_RUNNING_TASKS = [
     "generate_marine_protection_level_stats_table",
     "update_marine_protected_areas_tileset",
     "update_terrestrial_protected_areas_tileset",
+    "generate_iho_pa_intersections"
 ]
