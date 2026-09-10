@@ -14,7 +14,9 @@ poetry run uvicorn src.main:app --reload
 ```
 
 ```
-docker run --rm -p 8080:8080 conservation-builder-api
+docker build -t cb-api ./cb_api
+docker run --rm -p 8080:8080 --env-file cb_api/.env cb-api
+curl localhost:8080/health
 ```
 
 Format
