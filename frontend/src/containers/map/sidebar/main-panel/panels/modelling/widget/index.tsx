@@ -11,6 +11,7 @@ import TooltipButton from '@/components/tooltip-button';
 import Widget from '@/components/widget';
 import { drawStateAtom, modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
@@ -91,6 +92,8 @@ const ModellingWidget: FCWithMessages = () => {
 
   // Tooltips with mapping
   const tooltips = useTooltips();
+
+  const isIhoActive = useFeatureFlag('is_iho_active');
 
   const { data: globalProtectionStatsData } = useGetProtectionCoverageStats<{
     protectedArea: number;
@@ -205,6 +208,8 @@ const ModellingWidget: FCWithMessages = () => {
               // existing protected area
               const protectedArea = data?.[0]?.protected_area ?? 0;
               const currentLoc = data?.[0]?.location;
+
+              if (!isIhoActive && currentLoc?.type === 'sea') return null;
 
               // Fallback area if location isn't in WDPA
               const fallBackArea =
