@@ -7,12 +7,12 @@ ENV POETRY_NO_INTERACTION=1 \
   POETRY_CACHE_DIR='/var/cache/pypoetry' \
   POETRY_HOME='/usr/local'
 
-RUN pip install --upgrade pip && pip install "poetry==2.1.4"
-
 WORKDIR /app
 
 COPY poetry.lock pyproject.toml ./
-RUN poetry install --only main
+RUN pip install --upgrade pip && \
+    pip install "poetry$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["tool"]["poetry"]["requires-poetry"])')" && \
+    poetry install --only main
 
 COPY src/ ./src/
 
