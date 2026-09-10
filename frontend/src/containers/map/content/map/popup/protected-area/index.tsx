@@ -52,6 +52,10 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
   const DATA_REF = useRef<Feature['properties'][]>([]);
   const { default: map } = useMap();
 
+  const [openPa, setOpenPa] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
   const getLocationName = useLocationName();
 
   const popup = useAtomValue(popupAtom);
@@ -103,8 +107,8 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
         layers: layersInteractiveIds,
       });
 
-      // Overlapping features at the click point are distinct sites (tiles are
-      // dissolved by WDPAID), but keep one entry per WDPAID just in case.
+      // Overlapping features at the click point are distinct sites, except that
+      // one site split across tile boundaries repeats its WDPAID.
       const seen = new Set<unknown>();
       const features = query
         .filter((feature) => feature.source === source.id)
@@ -127,10 +131,8 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
 
   const paQuery = useGetPas<Pa[]>(
     {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: ['name', 'area', 'wdpaid', 'zone_id'],
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       populate: {
         protection_status: {
@@ -207,6 +209,16 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
         };
       });
   }, [paQuery.data, wdpaids, locale, getLocationName]);
+
+  // Anchoring on the trigger rather than the content keeps this independent of
+  // the expand animation.
+  useEffect(() => {
+    const container = scrollRef.current;
+    const item = itemRefs.current[openPa];
+    if (!container || !item) return;
+
+    container.scrollTop += item.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  }, [openPa]);
 
   // handle renderer
   const handleMapRender = useCallback(() => {
@@ -298,7 +310,12 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
   );
 
   return (
-    <div className="flex flex-col gap-2">
+    <div
+      ref={scrollRef}
+      className={cn(
+        DATA.length > 1 ? 'max-h-[30vh] overflow-y-auto overflow-x-hidden' : 'flex flex-col gap-2'
+      )}
+    >
       {paQuery.isFetching && (
         <div className="my-4 text-center font-mono text-xl">{t('loading')}</div>
       )}
@@ -307,9 +324,21 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
       )}
       {!paQuery.isFetching && mergedPas.length === 1 && renderPa(mergedPas[0], true)}
       {!paQuery.isFetching && mergedPas.length > 1 && (
-        <Accordion type="single" collapsible className="divide-y">
+        <Accordion
+          type="single"
+          collapsible
+          className="divide-y"
+          value={openPa}
+          onValueChange={setOpenPa}
+        >
           {mergedPas.map((pa) => (
-            <AccordionItem value={pa.wdpaid} key={pa.wdpaid}>
+            <AccordionItem
+              value={pa.wdpaid}
+              key={pa.wdpaid}
+              ref={(element) => {
+                itemRefs.current[pa.wdpaid] = element;
+              }}
+            >
               <AccordionHeader>
                 <AccordionTrigger className="group grid w-full grid-cols-6 justify-items-start gap-4 py-2 text-left">
                   <span className="col-span-5 col-start-1 font-semibold">{pa.name}</span>
