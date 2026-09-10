@@ -348,7 +348,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
                   />
                 </AccordionTrigger>
               </AccordionHeader>
-              <AccordionContent className="text-xs pb-1">{renderPa(pa, false)}</AccordionContent>
+              <AccordionContent className="pb-1 text-xs">{renderPa(pa, false)}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
