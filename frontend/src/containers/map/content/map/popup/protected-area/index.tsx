@@ -35,7 +35,9 @@ const TERMS_CLASSES = 'font-mono font-bold uppercase';
  * per country.
  */
 type MergedPa = {
+  id: string;
   wdpaid: string;
+  wdpaPId?: string;
   name?: string;
   area?: number;
   protectionStatus?: { slug?: string; name?: string };
@@ -135,7 +137,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
   const paQuery = useGetPas<Pa[]>(
     {
       // @ts-ignore
-      fields: ['name', 'area', 'wdpaid', 'zone_id'],
+      fields: ['name', 'area', 'wdpaid', 'wdpa_p_id', 'zone_id'],
       // @ts-ignore
       populate: {
         protection_status: {
@@ -171,50 +173,61 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
     const rows = paQuery.data;
     if (!rows?.length) return [];
 
-    const rowsByWdpaid = new Map<string, Pa[]>();
+    // Group by parcel when the row has one, else by site.
+    const rowsById = new Map<string, Pa[]>();
     rows.forEach((row) => {
-      const wdpaid = String(row.wdpaid);
-      rowsByWdpaid.set(wdpaid, [...(rowsByWdpaid.get(wdpaid) ?? []), row]);
+      const id = row.wdpa_p_id || String(row.wdpaid);
+      rowsById.set(id, [...(rowsById.get(id) ?? []), row]);
     });
 
-    // Iterating the clicked ids keeps the popup in click order, which the
-    // Strapi `$in` filter does not preserve.
-    return wdpaids
-      .filter((wdpaid) => rowsByWdpaid.has(wdpaid))
-      .map((wdpaid) => {
-        const group = rowsByWdpaid.get(wdpaid);
-        const baseRow =
-          group.find((row) => row.data_source?.slug === 'protected-planet') ?? group[0];
+    return (
+      [...rowsById.entries()]
+        .map(([id, group]) => {
+          const wdpaid = String(group[0].wdpaid);
+          const baseRow =
+            group.find((row) => row.data_source?.slug === 'protected-planet') ?? group[0];
 
-        const iucnCategory = group.find((row) => row.iucn_category)?.iucn_category;
-        const mpaaProtectionLevel = group.find(
-          (row) => row.mpaa_protection_level
-        )?.mpaa_protection_level;
-        const protectionStatus = pickLocalized(baseRow.protection_status, locale);
+          const iucnCategory = group.find((row) => row.iucn_category)?.iucn_category;
+          const mpaaProtectionLevel = group.find(
+            (row) => row.mpaa_protection_level
+          )?.mpaa_protection_level;
+          const protectionStatus = pickLocalized(baseRow.protection_status, locale);
 
-        const locationsByCode = new Map<string, string>();
-        group.forEach((row) => {
-          if (row.location?.type === 'sea' && !isIhoActive) return;
-          const name = getLocationName(row.location);
-          if (row.location?.code && name) locationsByCode.set(row.location.code, name);
-        });
+          const locationsByCode = new Map<string, string>();
+          group.forEach((row) => {
+            if (row.location?.type === 'sea' && !isIhoActive) return;
+            const name = getLocationName(row.location);
+            if (row.location?.code && name) locationsByCode.set(row.location.code, name);
+          });
 
-        return {
-          wdpaid,
-          name: baseRow.name,
-          area: baseRow.area,
-          protectionStatus: protectionStatus && {
-            slug: protectionStatus.slug,
-            name: protectionStatus.name,
-          },
-          mpaaProtectionLevel: pickLocalized(mpaaProtectionLevel, locale)?.name,
-          iucnCategory: pickLocalized(iucnCategory, locale)?.name,
-          locations: [...locationsByCode.values()],
-          zoneId: group.find((row) => row.zone_id)?.zone_id,
-          isMarine: baseRow.environment?.slug === 'marine',
-        };
-      });
-  }, [paQuery.data, wdpaids, locale, getLocationName, isIhoActive]);
+          return {
+            id,
+            wdpaid,
+            wdpaPId: group[0].wdpa_p_id,
+            name: baseRow.name,
+            area: baseRow.area,
+            protectionStatus: protectionStatus && {
+              slug: protectionStatus.slug,
+              name: protectionStatus.name,
+            },
+            mpaaProtectionLevel: pickLocalized(mpaaProtectionLevel, locale)?.name,
+            iucnCategory: pickLocalized(iucnCategory, locale)?.name,
+            locations: [...locationsByCode.values()],
+            zoneId: group.find((row) => row.zone_id)?.zone_id,
+            isMarine: baseRow.environment?.slug === 'marine',
+          };
+        })
+        // Sites without a zone id first, by WDPAID; then MPAtlas zones by zone id.
+        .sort((a, b) => {
+          if (!a.zoneId !== !b.zoneId) return a.zoneId ? 1 : -1;
+          if (a.zoneId) return Number(a.zoneId) - Number(b.zoneId);
+          return (
+            a.wdpaid.localeCompare(b.wdpaid, undefined, { numeric: true }) ||
+            a.id.localeCompare(b.id, undefined, { numeric: true })
+          );
+        })
+    );
+  }, [paQuery.data, locale, getLocationName, isIhoActive]);
 
   // Anchoring on the trigger rather than the content keeps this independent of
   // the expand animation.
@@ -314,6 +327,10 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
           {t('view-on-mpatlas')}
         </a>
       )}
+      {/* Debug only; remove before merging. */}
+      <div className="font-mono text-xs text-gray-300">
+        WDPAID {pa.wdpaid} · WDPA_PID {pa.wdpaPId ?? '-'} · ZONE_ID {pa.zoneId ?? '-'}
+      </div>
     </div>
   );
 
@@ -341,10 +358,10 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
         >
           {mergedPas.map((pa) => (
             <AccordionItem
-              value={pa.wdpaid}
-              key={pa.wdpaid}
+              value={pa.id}
+              key={pa.id}
               ref={(element) => {
-                itemRefs.current[pa.wdpaid] = element;
+                itemRefs.current[pa.id] = element;
               }}
             >
               <AccordionHeader>
