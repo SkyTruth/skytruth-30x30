@@ -649,6 +649,9 @@ def chained_jobs(monkeypatch, call_log):
         monkeypatch.setattr(
             main, "long_running_tasks", make_recorder(call_log, "long_running_tasks"), raising=True
         )
+        # Stand in for running as the Cloud Run Job. A long-running method
+        # otherwise re-dispatches itself and never reaches its step_list.
+        monkeypatch.setenv("RUN_PAYLOAD", "1")
 
         main.run_from_payload({"METHOD": method, "TRIGGER_NEXT": True}, verbose=False)
         return {
