@@ -25,7 +25,7 @@ import { useGetPas } from '@/types/generated/pa';
 import { Pa } from '@/types/generated/strapi.schemas';
 import { LayerTyped } from '@/types/layers';
 
-const TERMS_CLASSES = 'font-mono uppercase';
+const TERMS_CLASSES = 'font-mono font-bold uppercase';
 
 /**
  * One protected area, assembled from every `/pas` row sharing its WDPAID: the
