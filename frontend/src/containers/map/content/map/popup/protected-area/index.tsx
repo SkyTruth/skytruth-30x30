@@ -15,6 +15,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { layersInteractiveIdsAtom, popupAtom } from '@/containers/map/store';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import { format } from '@/lib/utils/formats';
@@ -42,6 +43,7 @@ type MergedPa = {
   iucnCategory?: string;
   locations: string[];
   zoneId?: string;
+  isMarine: boolean;
 };
 
 const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) => {
@@ -57,6 +59,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const getLocationName = useLocationName();
+  const isIhoActive = useFeatureFlag('is_iho_active');
 
   const popup = useAtomValue(popupAtom);
   const layersInteractiveIds = useAtomValue(layersInteractiveIdsAtom);
@@ -148,6 +151,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
           populate: { localizations: { fields: ['slug', 'name', 'locale'] } },
         },
         data_source: { fields: ['slug'] },
+        environment: { fields: ['slug'] },
         location: { fields: ['code', 'type'] },
       },
       filters: {
@@ -190,6 +194,7 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
 
         const locationsByCode = new Map<string, string>();
         group.forEach((row) => {
+          if (row.location?.type === 'sea' && !isIhoActive) return;
           const name = getLocationName(row.location);
           if (row.location?.code && name) locationsByCode.set(row.location.code, name);
         });
@@ -206,9 +211,10 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
           iucnCategory: pickLocalized(iucnCategory, locale)?.name,
           locations: [...locationsByCode.values()],
           zoneId: group.find((row) => row.zone_id)?.zone_id,
+          isMarine: baseRow.environment?.slug === 'marine',
         };
       });
-  }, [paQuery.data, wdpaids, locale, getLocationName]);
+  }, [paQuery.data, wdpaids, locale, getLocationName, isIhoActive]);
 
   // Anchoring on the trigger rather than the content keeps this independent of
   // the expand animation.
@@ -271,10 +277,12 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }
             </dd>
           </div>
         )}
-        <div>
-          <dt className={TERMS_CLASSES}>{t('protection-level')}</dt>
-          <dd>{pa.mpaaProtectionLevel ?? t('not-assessed')}</dd>
-        </div>
+        {pa.isMarine && (
+          <div>
+            <dt className={TERMS_CLASSES}>{t('protection-level')}</dt>
+            <dd>{pa.mpaaProtectionLevel ?? t('not-assessed')}</dd>
+          </div>
+        )}
         <div>
           <dt className={TERMS_CLASSES}>{t('iucn-category')}</dt>
           <dd>{pa.iucnCategory ?? t('n-a')}</dd>
