@@ -33,8 +33,9 @@ resource "google_cloud_run_service" "cloud_run" {
 
   template {
     spec {
-      timeout_seconds      = var.timeout_seconds
-      service_account_name = google_service_account.service_account.email
+      timeout_seconds       = var.timeout_seconds
+      service_account_name  = google_service_account.service_account.email
+      container_concurrency = var.container_concurrency
 
       containers {
         image = local.image
@@ -47,6 +48,27 @@ resource "google_cloud_run_service" "cloud_run" {
           limits = {
             cpu    = var.cpu
             memory = var.memory
+          }
+        }
+
+        dynamic "env" {
+          for_each = var.env_vars
+          content {
+            name  = env.value.name
+            value = env.value.value
+          }
+        }
+
+        dynamic "env" {
+          for_each = var.secrets
+          content {
+            name = env.value.name
+            value_from {
+              secret_key_ref {
+                name = env.value.secret_name
+                key  = "latest"
+              }
+            }
           }
         }
       }
