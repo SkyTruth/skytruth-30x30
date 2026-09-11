@@ -33,16 +33,13 @@ from src.core.params import (
     NEAR_SHORE_IHO_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
-    TOLERANCE,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
-    WDPA_MARINE_FILE_NAME,
 )
 from src.core.processors import clean_geometries
 from src.utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
     read_dataframe,
-    read_json_df,
     read_json_from_gcs,
     read_parquet_from_gcs,
 )
@@ -68,7 +65,8 @@ UNBUFFERED_MRGID = {1906, 1907}  # Arctic Ocean
 def stitch_mediterannean(iho):
     iho = iho.copy()
 
-    medi = iho[iho["MRGID"].isin(MEDI_MRGID)].dissolve().reset_index(drop=True)
+    medi_parts = iho[iho["MRGID"].isin(MEDI_MRGID)]
+    medi = medi_parts.dissolve().reset_index(drop=True)
 
     # Recompute the geometry-derived fields from the dissolved polygon
     bounds = medi.total_bounds  # (minx, miny, maxx, maxy) in the layer CRS (4326)
@@ -80,7 +78,7 @@ def stitch_mediterannean(iho):
     medi["Longitude"] = centroid.x
     medi["Latitude"] = centroid.y
     medi["min_X"], medi["min_Y"], medi["max_X"], medi["max_Y"] = bounds
-    medi["area"] = medi.to_crs(epsg=6933).geometry.area.iloc[0] / 1e6
+    medi["area"] = medi_parts["area"].sum()
 
     iho["MRGID"] = iho["MRGID"].astype(str)
     iho = pd.concat((iho, medi), axis=0, ignore_index=True)
@@ -176,6 +174,7 @@ def _load_iho_regions_cached(buffer=False):
     logger.info({"message": "stitching IHO regions to form Mediterranean"})
     water_bodies = stitch_mediterannean(water_bodies)
     water_bodies["location"] = water_bodies["MRGID"].astype(str)
+    water_bodies["geometry"] = water_bodies["geometry"].make_valid()
 
     return water_bodies
 
@@ -209,16 +208,6 @@ def load_marine_regions(params: dict, bucket: str = BUCKET):
             gdf = gpd.read_file(zip_path).pipe(clean_geometries)
 
     return gdf
-
-
-def extract_polygons(geom):
-    if isinstance(geom, (Polygon, MultiPolygon)):
-        return geom
-    elif isinstance(geom, GeometryCollection):
-        polys = [g for g in geom.geoms if isinstance(g, (Polygon, MultiPolygon))]
-        return MultiPolygon(polys) if polys else None
-    else:
-        return None
 
 
 def load_regions(
@@ -424,43 +413,25 @@ def read_mpatlas_from_gcs(
     return gdf
 
 
-def _iho_sea_membership(features: gpd.GeoDataFrame, id_col: str) -> pd.DataFrame:
-    """
-    Returns a DataFrame with one row per (feature, IHO sea) pair the feature overlaps,
-    """
-    iho = load_iho_regions()[["location", "geometry"]]
-    iho["geometry"] = iho.geometry.make_valid()
+def polygonal_parts(geom):
+    """The polygonal content of an intersection result, or None if it has none."""
+    if geom is None or geom.is_empty:
+        return None
 
-    logger.info({"message": f"matching {len(features)} features to {len(iho)} IHO sea areas"})
-    pairs = features.sjoin(iho, predicate="intersects")
-    logger.info({"message": f"found {len(pairs)} feature / IHO sea overlaps"})
+    if isinstance(geom, (Polygon, MultiPolygon)):
+        return geom
 
-    return pd.DataFrame(pairs[[id_col, "location"]])
+    if isinstance(geom, GeometryCollection):
+        parts = [
+            part
+            for part in geom.geoms
+            if isinstance(part, (Polygon, MultiPolygon)) and not part.is_empty
+        ]
 
+        return unary_union(parts) if parts else None
 
-def intersect_wdpa_with_iho(
-    bucket: str = BUCKET,
-    tolerance: float = TOLERANCE,
-) -> pd.DataFrame:
-    """One row per (marine PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID."""
-    pa_file = add_tolerance_suffix(WDPA_MARINE_FILE_NAME, tolerance)
-    logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
-
-    pas = read_json_df(bucket_name=bucket, filename=pa_file)[["WDPA_PID", "geometry"]]
-
-    return _iho_sea_membership(pas, "WDPA_PID")
-
-
-def intersect_mpatlas_with_iho(
-    bucket: str = BUCKET,
-    mpa_file_name: str = MPATLAS_FILE_NAME,
-) -> pd.DataFrame:
-    """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id."""
-    logger.info({"message": f"loading MPAtlas zones from gs://{bucket}/{mpa_file_name}"})
-
-    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)[["zone_id", "geometry"]]
-
-    return _iho_sea_membership(mpa, "zone_id")
+    # A line or point intersection: the two geometries touch but do not overlap.
+    return None
 
 
 def download_file_with_progress(url: str, filename: str, verbose: bool = True):

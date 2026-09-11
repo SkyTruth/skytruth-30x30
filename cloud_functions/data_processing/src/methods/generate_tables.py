@@ -20,9 +20,9 @@ from src.core.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
-    MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
     MPATLAS_META_FILE_NAME,
+    MPATLAS_SEA_PAIRS_FILE_NAME,
     PA_TERRESTRIAL_HABITATS_FILE_NAME,
     PROJECT,
     PROTECTED_SEAS_FILE_NAME,
@@ -260,7 +260,7 @@ def generate_protection_coverage_stats_table(
 def generate_marine_protection_level_stats_table(
     mpatlas_country_level_file_name: str = MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     mpatlas_global_file_name: str = MPATLAS_GLOBAL_FILE_NAME,
-    mpa_file_name: str = MPATLAS_FILE_NAME,
+    mpatlas_sea_pairs_file_name: str = MPATLAS_SEA_PAIRS_FILE_NAME,
     protection_level_file_name: str = PROTECTION_LEVEL_FILE_NAME,
     high_seas_params: dict = HIGH_SEAS_PARAMS,
     bucket: str = BUCKET,
@@ -390,7 +390,7 @@ def generate_marine_protection_level_stats_table(
         logger.info({"message": "computing IHO sea area protection level stats"})
     iho_protection_level = compute_iho_protection_level(
         bucket=bucket,
-        mpa_file_name=mpa_file_name,
+        mpatlas_sea_pairs_file_name=mpatlas_sea_pairs_file_name,
         verbose=verbose,
     )
 

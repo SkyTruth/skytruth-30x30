@@ -46,6 +46,7 @@ def patched_all(monkeypatch, call_log):
         "download_protected_seas",
         "download_protected_planet",
         "download_and_process_protected_planet_pas",
+        "generate_iho_pa_intersections",
         "generate_protected_areas_diff_table",
         "generate_terrestrial_biome_stats_pa",
         "generate_habitat_protection_table",
@@ -625,8 +626,76 @@ def test_monthly_publisher_routes_long_running_jobs_to_the_job_runner(enqueued_j
     """Long-running methods must go to a Cloud Run Job, not the task queue."""
     jobs = enqueued_jobs()
 
-    assert "download_protected_planet_pas" in {job["METHOD"] for job in jobs["long_running_tasks"]}
+    assert {job["METHOD"] for job in jobs["long_running_tasks"]} == {"download_protected_seas"}
     assert {job["METHOD"] for job in jobs["create_task"]} == {"download_mpatlas"}
+
+
+@pytest.fixture
+def chained_jobs(monkeypatch, call_log):
+    """Run one method for real and record what it enqueues next.
+
+    Neither existing fixture fits: `enqueued_jobs` leaves the methods unpatched,
+    so the step under test would reach the network, while `patched_all` blanks
+    LONG_RUNNING_TASKS, which is the routing this needs to exercise. So patch
+    the method and the two enqueue routes, and leave LONG_RUNNING_TASKS real.
+    """
+
+    def _run(method):
+        call_log.clear()
+        monkeypatch.setattr(main, method, make_recorder(call_log, method), raising=True)
+        monkeypatch.setattr(
+            main, "create_task", make_recorder(call_log, "create_task"), raising=True
+        )
+        monkeypatch.setattr(
+            main, "long_running_tasks", make_recorder(call_log, "long_running_tasks"), raising=True
+        )
+        # Stand in for running as the Cloud Run Job. A long-running method
+        # otherwise re-dispatches itself and never reaches its step_list.
+        monkeypatch.setenv("RUN_PAYLOAD", "1")
+
+        main.run_from_payload({"METHOD": method, "TRIGGER_NEXT": True}, verbose=False)
+        return {
+            route: [args[0]["METHOD"] for name, args, _ in call_log if name == route]
+            for route in ("create_task", "long_running_tasks")
+        }
+
+    return _run
+
+
+def _all_enqueued(enqueued):
+    """Every downstream method, whichever route carried it."""
+    return enqueued["create_task"] + enqueued["long_running_tasks"]
+
+
+def test_chained_pa_download_still_goes_to_the_job_runner(chained_jobs):
+    """A long-running job keeps its routing when it is a follow-up step.
+
+    download_protected_planet_pas moved out of the monthly fan-out and behind
+    download_mpatlas. Were the chained hop to route through the task queue
+    instead, a multi-hour job would land on Cloud Tasks and time out - and only
+    during a monthly run.
+    """
+    enqueued = chained_jobs("download_mpatlas")
+
+    assert "download_protected_planet_pas" in enqueued["long_running_tasks"]
+    assert "download_protected_planet_pas" not in enqueued["create_task"]
+
+
+def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained_jobs):
+    """Everything reading the IHO/PA pairs must follow the step that builds them.
+
+    generate_marine_protection_level_stats_table reads mpatlas_sea_pairs.parquet, so
+    it hangs off generate_iho_pa_intersections rather than download_mpatlas -
+    otherwise it would race the writer and publish stale or empty stats. Both
+    routes are checked because the method is itself long-running, so asking
+    only about the task queue would pass either way.
+    """
+    assert "generate_marine_protection_level_stats_table" not in _all_enqueued(
+        chained_jobs("download_mpatlas")
+    )
+    assert "generate_marine_protection_level_stats_table" in _all_enqueued(
+        chained_jobs("generate_iho_pa_intersections")
+    )
 
 
 # Non-invoking / generic flows

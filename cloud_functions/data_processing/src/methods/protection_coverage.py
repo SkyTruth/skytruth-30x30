@@ -1,4 +1,3 @@
-import geopandas as gpd
 import pandas as pd
 from shapely.ops import unary_union
 from shapely.validation import make_valid
@@ -10,15 +9,14 @@ from src.core.commons import (
     load_iho_regions,
     load_regions,
     load_wdpa_global,
-    read_mpatlas_from_gcs,
 )
 from src.core.params import (
     BUCKET,
-    MPATLAS_FILE_NAME,
+    MPATLAS_SEA_PAIRS_FILE_NAME,
     TOLERANCE,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
-    WDPA_MARINE_FILE_NAME,
+    WDPA_SEA_PAIRS_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
@@ -27,7 +25,7 @@ from src.core.processors import (
     filter_protected_planet,
     remove_columns,
 )
-from src.utils.gcp import read_dataframe, read_json_df
+from src.utils.gcp import read_dataframe, read_parquet_from_gcs
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -35,20 +33,24 @@ logger = Logger()
 
 def compute_iho_protection_coverage(
     bucket: str = BUCKET,
-    marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
+    wdpa_sea_pairs_file_name: str = WDPA_SEA_PAIRS_FILE_NAME,
     wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
     tolerance: float = TOLERANCE,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    pa_file = add_tolerance_suffix(marine_pa_file_name, tolerance)
+    """Marine protected area coverage of every IHO sea area."""
+    pairs_file = add_tolerance_suffix(wdpa_sea_pairs_file_name, tolerance)
 
     if verbose:
         logger.info({"message": "loading IHO sea areas from shared datasets"})
     iho = load_iho_regions()
 
     if verbose:
-        logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
-    pas = read_json_df(bucket_name=bucket, filename=pa_file).pipe(filter_protected_planet)
+        logger.info({"message": f"loading PA/sea pairs from gs://{bucket}/{pairs_file}"})
+    pairs = read_parquet_from_gcs(bucket, pairs_file, verbose=verbose)
+
+    pairs = pairs[pairs["environment"].eq("marine") & pairs.geometry.notna()]
+    pairs = pairs.pipe(filter_protected_planet)
 
     if verbose:
         logger.info(
@@ -60,12 +62,12 @@ def compute_iho_protection_coverage(
     global_marine_area = compute_global_area(wdpa_global, "marine")
 
     iho_proj = iho.to_crs(epsg=6933)
-    pas_proj = pas.to_crs(epsg=6933)
-
     iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
-    pas_proj["geometry"] = pas_proj.geometry.apply(make_valid)
 
-    sindex = pas_proj.sindex
+    pairs_proj = pairs.to_crs(epsg=6933)
+    pairs_proj["geometry"] = pairs_proj.geometry.apply(make_valid)
+    by_sea = dict(list(pairs_proj.groupby("location")))
+
     results = []
 
     empty_stats = {
@@ -78,24 +80,15 @@ def compute_iho_protection_coverage(
     }
 
     for _, sea in iho_proj.iterrows():
+        location = str(sea["MRGID"])
         base = {
-            "location": str(sea["MRGID"]),
+            "location": location,
             "environment": "marine",
             "total_area": round(sea.geometry.area / 1e6, 2),
         }
 
-        # Use the spatial index to cheaply narrow the full PA dataset to features
-        # whose bounding boxes overlap this sea's bounding box.
-        candidates = list(sindex.intersection(sea.geometry.bounds))
-        if not candidates:
-            results.append({**base, **empty_stats})
-            continue
-
-        # Apply the exact geometry so that only the actual intersections
-        # contribute to the protected-area count and coverage calculations below.
-        actual = pas_proj.iloc[candidates]
-        actual = actual[actual.intersects(sea.geometry)]
-        if actual.empty:
+        actual = by_sea.get(location)
+        if actual is None or actual.empty:
             results.append({**base, **empty_stats})
             continue
 
@@ -103,14 +96,10 @@ def compute_iho_protection_coverage(
         oecm = actual[actual["PA_DEF"] == 0]
 
         # Dissolve overlaps so shared portions of protected polygons are counted only once.
-        combined_union = unary_union(actual.geometry)
-        pa_union = unary_union(pa.geometry) if not pa.empty else None
-        oecm_union = unary_union(oecm.geometry) if not oecm.empty else None
-
-        # Clip each dissolved geometry to the sea and convert its area from m² to km².
-        protected_area = sea.geometry.intersection(combined_union).area / 1e6
-        pa_area = sea.geometry.intersection(pa_union).area / 1e6 if pa_union else 0.0
-        oecm_area = sea.geometry.intersection(oecm_union).area / 1e6 if oecm_union else 0.0
+        # Each pair is already clipped to this sea, so no further clipping is needed.
+        protected_area = unary_union(actual.geometry).area / 1e6
+        pa_area = unary_union(pa.geometry).area / 1e6 if not pa.empty else 0.0
+        oecm_area = unary_union(oecm.geometry).area / 1e6 if not oecm.empty else 0.0
 
         # Calculate sea coverage and the PA/OECM shares of its protected area.
         coverage = (protected_area / base["total_area"]) * 100 if base["total_area"] else 0.0
@@ -141,37 +130,53 @@ def compute_iho_protection_coverage(
 
 def compute_iho_protection_level(
     bucket: str = BUCKET,
-    mpa_file_name: str = MPATLAS_FILE_NAME,
+    mpatlas_sea_pairs_file_name: str = MPATLAS_SEA_PAIRS_FILE_NAME,
     verbose: bool = True,
 ) -> pd.DataFrame:
+    """Fully/highly protected MPAtlas coverage of each IHO sea area.
+
+    One row per sea holding at least one fully or highly protected MPAtlas zone,
+    giving that sea's total area, the area its qualifying zones cover, and the
+    percentage. Areas are in km2, measured on an equal-area projection.
+
+    Reads the (zone, sea) pairs written by ``generate_iho_pa_intersections``,
+    where each pair carries its zone clipped to that one sea along with the
+    zone's ``protection_mpaguide_level``.
+    """
     if verbose:
-        logger.info({"message": "loading IHO sea areas from shared datasets"})
+        logger.info(
+            {
+                "message": f"loading MPAtlas/IHO pairs from gs://{bucket}/{mpatlas_sea_pairs_file_name}"
+            }
+        )
+    pairs = read_parquet_from_gcs(bucket, mpatlas_sea_pairs_file_name, verbose=verbose)
+
+    fully_highly = pairs[
+        pairs["protection_mpaguide_level"].isin(("full", "high")) & pairs.geometry.notna()
+    ]
+
+    if verbose:
+        logger.info(
+            {"message": f"dissolving {len(fully_highly)} fully/highly protected pair(s) by sea"}
+        )
+
+    # The pairs arrive in the IHO CRS; areas need an equal-area one.
+    protected = fully_highly.to_crs(epsg=6933).dissolve(by="location")
+
+    if verbose:
+        logger.info({"message": "loading IHO sea areas for their total areas"})
     iho = load_iho_regions()
-
-    if verbose:
-        logger.info({"message": f"loading MPAtlas data from gs://{bucket}/{mpa_file_name}"})
-    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
-
-    fully_highly = mpa[mpa["protection_mpaguide_level"].isin(["full", "high"])]
-    fully_highly = fully_highly[fully_highly.geometry.notna()].copy().to_crs(epsg=6933)
-    iho_proj = iho[iho.geometry.notna()].copy().to_crs(epsg=6933)
-
-    fully_highly["geometry"] = fully_highly.geometry.apply(make_valid)
-    iho_proj["geometry"] = iho_proj.geometry.apply(make_valid)
-
-    if verbose:
-        logger.info({"message": "overlaying fully/highly protected MPAs with IHO sea areas"})
-    joined = gpd.overlay(fully_highly, iho_proj, how="intersection")
+    iho = iho[iho.geometry.notna()].to_crs(epsg=6933)
+    total_areas = dict(zip(iho["location"], iho.geometry.area / 1e6, strict=True))
 
     results = []
-    for mrgid, group in joined.groupby("MRGID"):
-        iho_geom = iho_proj.loc[iho_proj["MRGID"] == mrgid, "geometry"].iloc[0]
-        total_area = iho_geom.area / 1e6
-        protected_union = group.geometry.unary_union
-        area = iho_geom.intersection(protected_union).area / 1e6
+    for location, protected_geom in protected.geometry.items():
+        total_area = total_areas.get(location)
+        # Each pair is already clipped to its sea, so the union lies within it.
+        area = protected_geom.area / 1e6
         results.append(
             {
-                "location": str(mrgid),
+                "location": location,
                 "total_area": total_area,
                 "area": area,
                 "mpaa_protection_level": "fully-highly-protected",
