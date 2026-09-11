@@ -92,8 +92,10 @@ def test_wdpa_iho_join_uses_the_marine_file_for_the_given_tolerance(monkeypatch)
 
 
 def test_wdpa_iho_join_uses_unbuffered_iho(monkeypatch):
-    """The near-shore buffered layer is for habitats; sea assignment must use
-    the true IHO boundaries."""
+    """Sea assignment must use the true IHO boundaries.
+
+    The saved pairs are measured against the published seas, so a buffered join
+    would credit a sea with protected area lying outside it."""
     buffers = []
     _patch_iho(monkeypatch, calls=buffers)
     _patch_wdpa(monkeypatch, _wdpa_frame([box(1, 1, 2, 2)]))
@@ -139,20 +141,6 @@ def test_wdpa_iho_join_keeps_point_pas(monkeypatch):
     result = intersect_wdpa_with_iho(bucket="b", tolerance=0.0001)
 
     assert sorted(result["WDPA_PID"]) == ["point_in_sea", "polygon"]
-
-
-def test_wdpa_iho_join_counts_a_pa_that_only_touches_a_sea(monkeypatch):
-    """Asking for membership alone counts a PA abutting a sea as a member.
-
-    `intersects` is true of a shared boundary, and without the clipped geometry
-    there is no overlap to test it against. Callers wanting those pairs dropped
-    take the geometry, which is the default."""
-    _patch_iho(monkeypatch)
-    _patch_wdpa(monkeypatch, _wdpa_frame([box(-5, 0, 0, 10)], pids=["adjacent"]))
-
-    result = intersect_wdpa_with_iho(bucket="b", tolerance=0.0001, with_geometry=False)
-
-    assert result["WDPA_PID"].tolist() == ["adjacent"]
 
 
 def test_mpatlas_iho_join_pairs_zones_with_the_seas_they_overlap(monkeypatch):
@@ -289,14 +277,3 @@ def test_geometry_join_carries_the_requested_columns_through(monkeypatch):
     )
 
     assert list(result.columns) == ["WDPA_PID", "WDPAID", "PA_DEF", "location", "geometry"]
-
-
-def test_geometry_join_can_use_the_buffered_seas(monkeypatch):
-    """Habitat callers join against the near-shore layer; everything else uses
-    the true boundaries."""
-    buffers = []
-    _patch_iho(monkeypatch, calls=buffers)
-
-    intersect_with_iho(_wdpa_frame([box(1, 1, 2, 2)]), ["WDPA_PID"], buffer=True)
-
-    assert buffers == [True]
