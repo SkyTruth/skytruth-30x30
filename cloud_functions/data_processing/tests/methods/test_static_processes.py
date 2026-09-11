@@ -5,7 +5,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pytest
-from shapely.geometry import Point
+from shapely.geometry import Point, box
 
 from src.methods import static_processes
 from src.methods.static_processes import (
@@ -202,7 +202,7 @@ def _mock_read_json_from_gcs(json):
 
 
 def _run_process_gadm(
-    monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerances
+    monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerance
 ):
     countries, sub_countries = mock_gadm_layers
     calls, upload_gdf_mock = uploads_recorder
@@ -226,7 +226,7 @@ def _run_process_gadm(
         gadm_zipfile_name="gadm.zip",
         bucket="test-bucket",
         related_countries_file_name="related.json",
-        tolerances=tolerances,
+        tolerance=tolerance,
         verbose=True,
     )
 
@@ -245,23 +245,27 @@ def _assert_output_df_shape_and_columns(df: gpd.GeoDataFrame):
 # -------------------------------
 
 
+@pytest.mark.parametrize(
+    "tolerance, expected_name",
+    [(None, "gadm_None.geojson"), (0.25, "gadm_0.25.geojson")],
+)
 def test_process_gadm_geoms_happy_path(
-    monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder
+    monkeypatch,
+    mock_gadm_layers,
+    mock_related_countries_map,
+    uploads_recorder,
+    tolerance,
+    expected_name,
 ):
-    tolerances = [None, 0.25]
-
     calls = _run_process_gadm(
-        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerances
+        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, tolerance
     )
 
-    # One upload per tolerance value
-    assert len(calls) == len(tolerances)
+    # A single upload, named for the tolerance it was simplified at
+    assert len(calls) == 1
+    assert calls[0]["destination_blob"] == expected_name
 
-    # Filenames include the suffix for each tolerance (None and numeric)
-    expected_names = {"gadm_None.geojson", "gadm_0.25.geojson"}
-    assert set(call["destination_blob"] for call in calls) == expected_names
-
-    # Validate data structure and key content for each uploaded GeoDataFrame
+    # Validate data structure and key content for the uploaded GeoDataFrame
     for call in calls:
         df = call["df"]
         _assert_output_df_shape_and_columns(df)
@@ -288,8 +292,12 @@ def test_process_gadm_geoms_upload_content_changes_with_tolerance(
     Check that simplifying (non-None tolerance) changes serialized size for at least one upload.
     We don't assert a specific geometry size—just that something differs vs. None.
     """
+    # Both runs record into the same uploads_recorder list, in order.
+    _run_process_gadm(
+        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, None
+    )
     calls = _run_process_gadm(
-        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, [None, 0.5]
+        monkeypatch, mock_gadm_layers, mock_related_countries_map, uploads_recorder, 0.5
     )
 
     # Ensure we indeed produced two different payload sizes or at least different byte strings.
@@ -327,7 +335,7 @@ def test_process_gadm_geoms_raises_on_reader_failure(
             gadm_zipfile_name="gadm.zip",
             bucket="test-bucket",
             related_countries_file_name="related.json",
-            tolerances=[None],
+            tolerance=None,
             verbose=False,
         )
 
@@ -375,7 +383,7 @@ def test_process_gadm_geoms_bad_input_columns(
             gadm_zipfile_name="gadm.zip",
             bucket="test-bucket",
             related_countries_file_name="related.json",
-            tolerances=[None],
+            tolerance=None,
             verbose=False,
         )
 
@@ -524,7 +532,7 @@ def test_process_eez_geoms_happy_path(
     )
     monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
-    monkeypatch.setattr(static_processes, "TOLERANCES", [0.1, 0.3], raising=True)
+    monkeypatch.setattr(static_processes, "TOLERANCE", 0.7, raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
     monkeypatch.setattr(
         static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True
@@ -537,23 +545,17 @@ def test_process_eez_geoms_happy_path(
         eez_params=static_processes.EEZ_PARAMS,
         bucket="test-bucket",
         related_countries_file_name=static_processes.RELATED_COUNTRIES_FILE_NAME,
-        tolerances=static_processes.TOLERANCES,
+        tolerance=static_processes.TOLERANCE,
         verbose=False,
     )
     # Function returns None; uploads recorded via our mock
     assert resp is None
 
-    # Expect one upload per tolerance for eez_by_sov + one final multi-sov upload
-    assert len(calls) == len(static_processes.TOLERANCES) + 1
+    # One eez_by_sov upload + one final multi-sov upload
+    assert len(calls) == 2
 
-    # Check filenames for the eez_by_sov uploads
-    by_sov_names = {f"eez_{t}.geojson" for t in static_processes.TOLERANCES}
-    seen_by_sov = {c["destination_blob"] for c in calls[:-1]}
-    assert seen_by_sov == by_sov_names
-
-    # The last call is multi-sovereign
-    last_call = calls[-1]
-    assert last_call["destination_blob"] == f"eez_multi_{static_processes.TOLERANCES[-1]}.geojson"
+    assert calls[0]["destination_blob"] == f"eez_{static_processes.TOLERANCE}.geojson"
+    assert calls[1]["destination_blob"] == f"eez_multi_{static_processes.TOLERANCE}.geojson"
 
     # Basic structure of uploaded frames
     for c in calls:
@@ -589,7 +591,6 @@ def test_process_eez_geoms_loader_failure(
     )
     monkeypatch.setattr(static_processes, "clean_geometries", lambda g: g, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
-    monkeypatch.setattr(static_processes, "TOLERANCES", [None, 0.1], raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
     monkeypatch.setattr(
         static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True
@@ -790,17 +791,17 @@ def test_process_eez_land_union_no_fill_preserves_holes(
 FAKE_HABITAT_PARAMS = {
     "coldwatercorals": {
         "url": "https://example.test/corals.zip",
-        "zipfile_name": "habitats/corals.zip",
+        "file_name": "habitats/corals.zip",
         "archive_file_name": "archive/habitats/corals_v1.zip",
     },
     "saltmarshes": {
         "url": "https://example.test/saltmarshes.zip",
-        "zipfile_name": "habitats/saltmarshes.zip",
+        "file_name": "habitats/saltmarshes.zip",
         "archive_file_name": "archive/habitats/saltmarshes_v1.zip",
     },
     "seagrasses": {
         "url": "https://example.test/seagrasses.zip",
-        "zipfile_name": "habitats/seagrasses.zip",
+        "file_name": "habitats/seagrasses.zip",
         "archive_file_name": "archive/habitats/seagrasses_v1.zip",
     },
 }
@@ -893,3 +894,106 @@ def test_unknown_habitats_raise_before_downloading_anything(download_recorder, h
         download(habitats)
 
     assert download_recorder == [], "nothing should be downloaded when the request is invalid"
+
+
+# ---------------------------------------------------------------------------
+# Tests for process_marine_habitat_geoms
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mangrove_extent():
+    """The mangrove extent as read from the .gpkg.gz, geometry column only.
+
+    Global Mangrove Watch polygons never overlap each other.
+    """
+    return gpd.GeoDataFrame(
+        geometry=[
+            box(0.5, 0.5, 1.5, 1.5),  # wholly inside AAA
+            box(1.8, 0.5, 2.2, 1.5),  # straddles the AAA/BBB boundary
+            box(10.0, 10.0, 10.5, 10.5),  # only the IHO sea area holds this one
+        ],
+        crs="EPSG:4326",
+    )
+
+
+@pytest.fixture
+def mangrove_regions():
+    """The land/EEZ union and IHO sea areas process_marine_habitat_geoms dissolves by.
+
+    AAA and BBB are adjacent; the IHO sea area sits away from both.
+    """
+    gadm_eez_union = gpd.GeoDataFrame(
+        {"location": ["AAA", "BBB"], "geometry": [box(0, 0, 2, 2), box(2, 0, 4, 2)]},
+        crs="EPSG:4326",
+    )
+    iho = gpd.GeoDataFrame(
+        {"MRGID": [999], "location": ["999"], "geometry": [box(9, 9, 11, 11)]}, crs="EPSG:4326"
+    )
+    return gadm_eez_union, iho
+
+
+@pytest.fixture
+def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
+    """Wire process_marine_habitat_geoms up to in-memory inputs and record what it writes."""
+    gadm_eez_union, iho = mangrove_regions
+    uploads = []
+    saved_json = []
+
+    def _read_gpkg(bucket, blob_name, layer=None, columns=None, verbose=True):
+        return mangrove_extent.copy()
+
+    def _read_json_df(bucket, blob_name, verbose=True):
+        return gadm_eez_union.copy()
+
+    def _load_iho_regions(buffer=False):
+        return iho.copy()
+
+    def _save_json_to_gcs(bucket, data, blob_name, project=None, verbose=True):
+        saved_json.append({"bucket": bucket, "data": data, "blob_name": blob_name})
+
+    def _upload_gdf(bucket, df, destination_blob, project_id=None, verbose=True, timeout=600):
+        uploads.append({"bucket": bucket, "df": df, "destination_blob": destination_blob})
+
+    monkeypatch.setattr(static_processes, "read_gzipped_gpkg_from_gcs", _read_gpkg, raising=True)
+    monkeypatch.setattr(static_processes, "read_json_df", _read_json_df, raising=True)
+    monkeypatch.setattr(static_processes, "load_iho_regions", _load_iho_regions, raising=True)
+    monkeypatch.setattr(static_processes, "save_json_to_gcs", _save_json_to_gcs, raising=True)
+    monkeypatch.setattr(static_processes, "upload_gdf", _upload_gdf, raising=True)
+
+    return uploads, saved_json
+
+
+def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_recorders):
+    """One row per location holding mangroves, IHO sea areas included."""
+    uploads, _ = mangrove_recorders
+
+    static_processes.process_marine_habitat_geoms(
+        habitats="mangroves",
+        gadm_eez_union_file_name="GADM_eez_union.geojson",
+        by_location_file_pattern="static/{habitat}_by_location.parquet",
+        global_area_file_pattern="intermediates/global_{habitat}_area.json",
+        bucket="test-bucket",
+        project="test-project",
+        verbose=False,
+        n_jobs=1,
+    )
+
+    assert len(uploads) == 1
+    out = uploads[0]
+    assert out["destination_blob"] == "static/mangroves_by_location.parquet"
+
+    df = out["df"]
+    assert isinstance(df, gpd.GeoDataFrame)
+    assert set(df["location"]) == {"AAA", "BBB", "999"}
+    # The schema every habitat's by-location layer shares
+    assert list(df.columns) == [
+        "location",
+        "n_habitat_polygons",
+        "bbox",
+        "area_km2",
+        "geometry",
+        "habitat",
+    ]
+    assert set(df["habitat"]) == {"mangroves"}
+    assert len(df) == 3

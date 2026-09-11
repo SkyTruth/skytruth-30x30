@@ -1,5 +1,6 @@
 """Tests for src/utils/geo.py: per-pixel raster areas (compute_pixel_area_map_km2),
-robust geometry unioning (robust_unary_union), and metric buffering (buffer_km)."""
+robust geometry unioning (robust_unary_union, fast_union_area_km2), and metric buffering
+(buffer_km)."""
 
 import numpy as np
 import pyproj
@@ -15,6 +16,8 @@ from src.utils.geo import (
     _wrap_to_180,
     buffer_km,
     compute_pixel_area_map_km2,
+    fast_union_area_km2,
+    get_area_km2,
     robust_unary_union,
 )
 
@@ -27,6 +30,12 @@ GEOD = pyproj.Geod(ellps="WGS84")
 def _pixel_area_6933_km2(minx, miny, maxx, maxy):
     """Independent equal-area (EPSG:6933) area of a 3857 pixel box, in km²."""
     return shp_transform(_TO_6933, box(minx, miny, maxx, maxy)).area / 1e6
+
+
+def _max_longitude(geom):
+    """Largest absolute longitude anywhere in ``geom``."""
+    minx, _, maxx, _ = geom.bounds
+    return max(abs(minx), abs(maxx))
 
 
 # ---------- geographic CRS ----------
@@ -141,12 +150,6 @@ def test_robust_unary_union_empty_input_returns_empty():
 
 
 # ---------- buffer_km ----------
-
-
-def _max_longitude(geom):
-    """Largest absolute longitude anywhere in ``geom``."""
-    minx, _, maxx, _ = geom.bounds
-    return max(abs(minx), abs(maxx))
 
 
 def test_buffer_km_radius_is_geodesically_accurate():
@@ -284,3 +287,31 @@ def test_shift_negative_longitudes_handles_scalars_and_arrays():
 
 def test_shift_negative_longitudes_preserves_z():
     assert _shift_negative_longitudes(-170.0, 5.0, 3.0) == (190.0, 5.0, 3.0)
+
+
+def test_fast_union_area_km2_matches_a_single_global_union():
+    """Tiling is only an optimisation, so it must agree with unioning the whole layer."""
+    rng = np.random.default_rng(0)
+    points = [
+        Point(x, y)
+        for x, y in zip(rng.uniform(-170, 170, 400), rng.uniform(-60, 60, 400), strict=True)
+    ]
+    overlapping = [point.buffer(3.0) for point in points]
+
+    tiled = fast_union_area_km2(overlapping, n_jobs=1)
+    whole = get_area_km2(robust_unary_union(overlapping))
+
+    assert tiled == pytest.approx(whole, rel=1e-6)
+
+
+def test_fast_union_area_km2_deduplicates_overlap_across_a_tile_edge():
+    """A shape against a tile boundary is clipped into both tiles, not counted twice."""
+    edge = box(4.0, 0.0, 6.0, 1.0)
+
+    assert fast_union_area_km2([edge, edge], n_jobs=1) == pytest.approx(
+        get_area_km2(edge), rel=1e-9
+    )
+
+
+def test_fast_union_area_km2_of_nothing_is_zero():
+    assert fast_union_area_km2([], n_jobs=1) == 0.0

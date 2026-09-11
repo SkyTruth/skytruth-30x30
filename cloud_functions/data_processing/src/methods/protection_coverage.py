@@ -12,10 +12,10 @@ from src.core.commons import (
     load_wdpa_global,
     read_mpatlas_from_gcs,
 )
-from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     MPATLAS_FILE_NAME,
+    TOLERANCE,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -24,6 +24,7 @@ from src.core.processors import (
     add_constants,
     add_pas_oecm,
     extract_column_dict_str,
+    filter_protected_planet,
     remove_columns,
 )
 from src.utils.gcp import read_dataframe, read_json_df
@@ -36,7 +37,7 @@ def compute_iho_protection_coverage(
     bucket: str = BUCKET,
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     wdpa_global_level_file_name: str = WDPA_GLOBAL_LEVEL_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ) -> pd.DataFrame:
     pa_file = add_tolerance_suffix(marine_pa_file_name, tolerance)
@@ -47,7 +48,7 @@ def compute_iho_protection_coverage(
 
     if verbose:
         logger.info({"message": f"loading marine PAs from gs://{bucket}/{pa_file}"})
-    pas = read_json_df(bucket_name=bucket, filename=pa_file)
+    pas = read_json_df(bucket_name=bucket, filename=pa_file).pipe(filter_protected_planet)
 
     if verbose:
         logger.info(
