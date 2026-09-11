@@ -11,9 +11,11 @@ import TooltipButton from '@/components/tooltip-button';
 import Widget from '@/components/widget';
 import { drawStateAtom, modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
+import { useGetLocations } from '@/types/generated/location';
 import {
   getGetProtectionCoverageStatsQueryOptions,
   useGetProtectionCoverageStats,
@@ -28,6 +30,17 @@ const DEFAULT_CHART_PROPS = {
   className: 'py-2',
   showLegend: false,
   showTarget: false,
+};
+
+type NationalLevelContribution = {
+  location: Location;
+  totalArea: number;
+  totalProtectedArea: number;
+  protectedArea: number;
+  totalExistingAreaPercentage: number;
+  totalCustomArea: number;
+  totalCustomAreaPercentage: number;
+  totalPercentage: number;
 };
 
 type WidgetSectionWidgetTitleProps = PropsWithChildren<{
@@ -92,83 +105,12 @@ const ModellingWidget: FCWithMessages = () => {
   // Tooltips with mapping
   const tooltips = useTooltips();
 
-  const { data: globalProtectionStatsData } = useGetProtectionCoverageStats<{
-    protectedArea: number;
-    percentageProtectedArea: number;
-    totalArea: number;
-    totalProtectedArea: number;
-    totalPercentage: number;
-    totalCustomAreas: number;
-    totalExistingAreaPercentage: number;
-    totalCustomAreasPercentage: number;
-  }>(
-    {
-      locale,
-      filters: {
-        location: {
-          code: 'GLOB',
-        },
-        is_last_year: {
-          $eq: true,
-        },
-        environment: {
-          slug: {
-            $eq: tab,
-          },
-        },
-      },
-      populate: {
-        location: {
-          fields: ['total_marine_area', 'total_terrestrial_area'],
-        },
-      },
-      'pagination[limit]': 1,
-      // @ts-ignore
-      fields: ['protected_area', 'total_area'],
-    },
-    {
-      query: {
-        queryKey: [modellingData, tab, locale],
-        enabled: Boolean(modellingData?.locations_area) && ['marine', 'terrestrial'].includes(tab),
-        select: ({ data }) => {
-          if (!data) return null;
-
-          // existing global protected area
-          const protectedArea = data?.[0].protected_area ?? 0;
-          // total area
-          const totalArea = Number(data?.[0].total_area ?? 0);
-          // total custom protected areas (analysis)
-          const totalCustomAreas = modellingData.locations_area.reduce((acc, location) => {
-            return acc + location.protected_area;
-          }, 0);
-          // sum of existing global protected area and custom protected areas (analysis)
-          const totalProtectedArea = protectedArea + totalCustomAreas;
-          // percentage of custom protected areas (analysis)
-          const totalCustomAreasPercentage = (totalCustomAreas / totalArea) * 100;
-          // percentage of existing global protected area
-          const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
-          // percentage of existing global protected area and custom protected areas
-          const totalPercentage = totalCustomAreasPercentage + totalExistingAreaPercentage;
-
-          return {
-            protectedArea,
-            percentageProtectedArea: (protectedArea / totalArea) * 100,
-            totalArea,
-            totalProtectedArea,
-            totalPercentage,
-            totalCustomAreas,
-            totalExistingAreaPercentage,
-            totalCustomAreasPercentage,
-          };
-        },
-        refetchOnWindowFocus: false,
-      },
-    }
-  );
+  // TECH-3764: Clean up
+  const isIhoActive = useFeatureFlag('is_iho_active');
 
   const locationQueries = useQueries({
     queries: (modellingData?.locations_area || []).map((location) =>
-      getGetProtectionCoverageStatsQueryOptions(
+      getGetProtectionCoverageStatsQueryOptions<NationalLevelContribution | null>(
         {
           locale,
           filters: {
@@ -248,23 +190,43 @@ const ModellingWidget: FCWithMessages = () => {
     ),
   });
 
-  const loading = modellingStatus === 'running' || drawStatus === 'uploading';
+  const loading =
+    modellingStatus === 'running' ||
+    drawStatus === 'uploading' ||
+    locationQueries.some((query) => query.isInitialLoading);
   const error = modellingStatus === 'error';
   const loadingMessage =
     drawStatus === 'uploading' ? t('uploading-layer-to-map') : t('loading-data');
 
-  // @ts-expect-error will check later
-  const nationalLevelContributions: {
-    location: Location;
-    percentageProtectedArea: number;
-    totalArea: number;
-    totalProtectedArea: number;
-    protectedArea: number;
-    totalExistingAreaPercentage: number;
-    totalCustomArea: number;
-    totalCustomAreaPercentage: number;
-    totalPercentage: number;
-  }[] = useMemo(
+  // Seas overlap national waters, so they are excluded from the contributions and the global
+  // total. Queried separately because the coverage stats above may have no row for a sea.
+  const locationCodes = (modellingData?.locations_area || []).map(({ code }) => code);
+
+  const { data: seaCodes } = useGetLocations<Set<string>>(
+    {
+      locale,
+      // @ts-ignore
+      fields: ['code'],
+      filters: {
+        code: {
+          $in: locationCodes,
+        },
+        type: {
+          $eq: 'sea',
+        },
+      },
+      'pagination[limit]': locationCodes.length,
+    },
+    {
+      query: {
+        enabled: locationCodes.length > 0,
+        select: ({ data }) => new Set(data.map(({ code }) => code)),
+        placeholderData: { data: [] },
+      },
+    }
+  );
+
+  const nationalLevelContributions = useMemo(
     () =>
       locationQueries
         .map((query) => {
@@ -272,18 +234,97 @@ const ModellingWidget: FCWithMessages = () => {
 
           return query.data;
         })
-        .filter((d) => Boolean(d)),
-    [locationQueries]
+        .filter((d): d is NationalLevelContribution => Boolean(d))
+        // TECH-3764: Clean up
+        .filter(({ location }) => isIhoActive || !seaCodes.has(location?.code)),
+    [locationQueries, seaCodes, isIhoActive]
   );
 
-  const administrativeBoundaries = nationalLevelContributions?.map((contribution) =>
+  const { data: globalProtectionStatsData } = useGetProtectionCoverageStats<{
+    protectedArea: number;
+    percentageProtectedArea: number;
+    totalArea: number;
+    totalProtectedArea: number;
+    totalPercentage: number;
+    totalCustomAreas: number;
+    totalExistingAreaPercentage: number;
+    totalCustomAreasPercentage: number;
+  }>(
+    {
+      locale,
+      filters: {
+        location: {
+          code: 'GLOB',
+        },
+        is_last_year: {
+          $eq: true,
+        },
+        environment: {
+          slug: {
+            $eq: tab,
+          },
+        },
+      },
+      // @ts-ignore
+      populate: {
+        location: {
+          fields: ['total_marine_area', 'total_terrestrial_area'],
+        },
+      },
+      'pagination[limit]': 1,
+      // @ts-ignore
+      fields: ['protected_area', 'total_area'],
+    },
+    {
+      query: {
+        queryKey: [modellingData, tab, locale],
+        enabled: Boolean(modellingData?.locations_area) && ['marine', 'terrestrial'].includes(tab),
+        select: ({ data }) => {
+          if (!data) return null;
+
+          // existing global protected area
+          const protectedArea = data?.[0].protected_area ?? 0;
+          // total area
+          const totalArea = Number(data?.[0].total_area ?? 0);
+
+          // total custom protected areas: filter out seas because they overlap
+          // national waters
+          const totalCustomAreas = modellingData.locations_area
+            .filter(({ code }) => !seaCodes.has(code))
+            .reduce((acc, { protected_area }) => acc + protected_area, 0);
+          // sum of existing global protected area and custom protected areas (analysis)
+          const totalProtectedArea = protectedArea + totalCustomAreas;
+          // percentage of custom protected areas (analysis)
+          const totalCustomAreasPercentage = (totalCustomAreas / totalArea) * 100;
+          // percentage of existing global protected area
+          const totalExistingAreaPercentage = (protectedArea / totalArea) * 100;
+          // percentage of existing global protected area and custom protected areas
+          const totalPercentage = totalCustomAreasPercentage + totalExistingAreaPercentage;
+
+          return {
+            protectedArea,
+            percentageProtectedArea: (protectedArea / totalArea) * 100,
+            totalArea,
+            totalProtectedArea,
+            totalPercentage,
+            totalCustomAreas,
+            totalExistingAreaPercentage,
+            totalCustomAreasPercentage,
+          };
+        },
+        refetchOnWindowFocus: false,
+      },
+    }
+  );
+
+  const administrativeBoundaries = nationalLevelContributions.map((contribution) =>
     getLocationName(contribution.location)
   );
 
   return (
     <Widget
       className="border-black py-0"
-      noData={!nationalLevelContributions}
+      noData={!nationalLevelContributions.length}
       loading={loading}
       loadingMessage={loadingMessage}
       error={error}
@@ -296,8 +337,8 @@ const ModellingWidget: FCWithMessages = () => {
             tooltip={tooltips?.['administrativeBoundary']}
           />
           <span className="text-right font-mono text-xs font-bold underline">
-            {administrativeBoundaries?.[0]}{' '}
-            {administrativeBoundaries?.length > 1 && `+${administrativeBoundaries?.length - 1}`}
+            {administrativeBoundaries[0]}{' '}
+            {administrativeBoundaries.length > 1 && `+${administrativeBoundaries.length - 1}`}
           </span>
         </div>
         <div className={cn(DEFAULT_ENTRY_CLASSNAMES)}>
@@ -308,7 +349,7 @@ const ModellingWidget: FCWithMessages = () => {
             />
             <WidgetLegend />
           </div>
-          {nationalLevelContributions?.map((contribution) => {
+          {nationalLevelContributions.map((contribution) => {
             const locationName = getLocationName(contribution.location);
 
             return (
