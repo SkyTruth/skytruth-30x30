@@ -1,10 +1,14 @@
 """The (protected area, IHO sea area) pairs the pipeline reads.
 
 Two files are written, each one row per (feature, sea area) pair carrying the
-feature clipped to that sea: the WDPA pairs and the MPAtlas pairs. Both exist so
-their consumers can measure protected area within a sea without re-running the
-clip; a consumer that only needs to know which sea a feature lies in, or that
-clips against the seas itself, should join in place rather than read these.
+feature clipped to that sea: the marine WDPA pairs and the MPAtlas pairs. Both
+exist so their consumers can measure protected area within a sea without
+re-running the clip; a consumer that only needs to know which sea a feature lies
+in, or that clips against the seas itself, should join in place rather than read
+these.
+
+The WDPA pairs carry an ``environment`` column, always "marine" today. See
+``WDPA_ENVIRONMENTS`` for why the terrestrial estate is left out.
 """
 
 import geopandas as gpd
@@ -24,17 +28,13 @@ from src.core.params import (
     TOLERANCE,
     WDPA_MARINE_FILE_NAME,
     WDPA_SEA_PAIRS_FILE_NAME,
-    WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.utils.gcp import read_json_df, upload_gdf
 from src.utils.logger import Logger
 
 logger = Logger()
 
-WDPA_ENVIRONMENTS = (
-    ("marine", WDPA_MARINE_FILE_NAME),
-    ("terrestrial", WDPA_TERRESTRIAL_FILE_NAME),
-)
+WDPA_ENVIRONMENTS = (("marine", WDPA_MARINE_FILE_NAME),)
 
 tqdm.pandas()
 
@@ -168,7 +168,7 @@ def generate_iho_pa_intersections(
     """Join every protected area dataset to the IHO sea areas and save the pairs."""
 
     def wdpa_pairs():
-        """Marine and terrestrial PAs, labelled, so a consumer can take either or both."""
+        """The PAs of each environment in WDPA_ENVIRONMENTS, labelled with it."""
         return pd.concat(
             [
                 intersect_wdpa_with_iho(

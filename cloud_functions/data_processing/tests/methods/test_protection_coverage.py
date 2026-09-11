@@ -265,7 +265,12 @@ def test_iho_coverage_reports_a_sea_with_no_pairs_as_uncovered(monkeypatch, wdpa
 
 
 def test_iho_coverage_ignores_pairs_belonging_to_other_environments(monkeypatch, wdpa_global):
-    """The pairs file holds terrestrial PAs too; marine coverage must skip them."""
+    """Marine coverage must skip any pair that is not marine.
+
+    The writer emits marine pairs only, so nothing exercises this today. It is
+    the filter that keeps adding the terrestrial estate back to the pairs file a
+    safe change, which is why the guard stays.
+    """
     iho = _iho_gdf([{"MRGID": "sea", "geometry": box(0, 0, 2000, 1000)}])
     pairs = _wdpa_pairs_gdf(
         [
