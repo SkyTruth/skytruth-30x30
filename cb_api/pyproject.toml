@@ -27,11 +27,15 @@ dev = [
     "pytest (>=9.1.1,<10.0.0)",
     "httpx2 (>=2.12.0,<3.0.0)",
     "ruff (>=0.16.6,<0.17.0)",
-    "httpx (>=0.28.1,<0.29.0)"
+    "httpx (>=0.28.1,<0.29.0)",
+    "pyyaml (>=6.0.3,<7.0.0)"
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
+markers = [
+    "integration: needs a live PostGIS; start one with `docker compose up -d`",
+]
 
 [tool.ruff]
 line-length = 100
