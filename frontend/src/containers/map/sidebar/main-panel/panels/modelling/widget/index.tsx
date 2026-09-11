@@ -107,7 +107,6 @@ const ModellingWidget: FCWithMessages = () => {
 
   // TECH-3764: Clean up
   const isIhoActive = useFeatureFlag('is_iho_active');
-  console.log("Is ioho", isIhoActive)
 
   const locationQueries = useQueries({
     queries: (modellingData?.locations_area || []).map((location) =>
