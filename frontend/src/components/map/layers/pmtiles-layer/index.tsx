@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { TileLayer, type TileLayerProps } from '@deck.gl/geo-layers/typed';
 import type { TileLoadProps } from '@deck.gl/geo-layers/typed/tileset-2d/types';
@@ -10,8 +10,7 @@ import { useDeckMapboxOverlayContext } from '@/components/map/provider';
 import { Config, LayerProps } from '@/types/layers';
 
 import PmtilesMvtLayer from './pmtiles-mvt-layer';
-
-type RGBAColor = [number, number, number, number];
+import { compileStyles, type RGBAColor } from './style-interpreter';
 
 interface PmtilesLayerProps extends LayerProps {
   beforeId?: string;
@@ -27,8 +26,6 @@ type RasterTileData = ImageBitmap | null;
 type RasterTileLayerProps = TileLayerProps<RasterTileData> & { beforeId?: string };
 
 const DEFAULT_MAX_ZOOM = 14;
-const DEFAULT_FILL_COLOR: RGBAColor = [0, 100, 200, 120];
-const DEFAULT_LINE_COLOR: RGBAColor = [0, 100, 200, 255];
 const DEFAULT_HIGHLIGHT_COLOR: RGBAColor = [253, 142, 40, 160];
 
 const PmtilesLayer = ({
@@ -47,6 +44,7 @@ const PmtilesLayer = ({
     'promoteId' in sourceConfig && typeof sourceConfig.promoteId === 'string'
       ? sourceConfig.promoteId
       : undefined;
+  const styles = useMemo(() => compileStyles(config.styles), [config.styles]);
 
   const [source, setSource] = useState<PMTilesTileSource | null>(null);
   const [archiveMaxZoom, setArchiveMaxZoom] = useState<number | undefined>();
@@ -95,12 +93,7 @@ const PmtilesLayer = ({
         new PmtilesMvtLayer({
           ...common,
           source,
-          getFillColor: DEFAULT_FILL_COLOR,
-          getLineColor: DEFAULT_LINE_COLOR,
-          getLineWidth: 1,
-          lineWidthUnits: 'pixels',
-          getPointRadius: 3,
-          pointRadiusUnits: 'pixels',
+          styles,
           pickable: true,
           autoHighlight: true,
           highlightColor: DEFAULT_HIGHLIGHT_COLOR,
@@ -147,6 +140,7 @@ const PmtilesLayer = ({
     archiveMaxZoom,
     isVector,
     uniqueIdProperty,
+    styles,
     opacity,
     visibility,
     addLayer,

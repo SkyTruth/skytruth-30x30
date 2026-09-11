@@ -1499,6 +1499,25 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mapbox/mapbox-gl-style-spec@npm:^14.30.0":
+  version: 14.30.0
+  resolution: "@mapbox/mapbox-gl-style-spec@npm:14.30.0"
+  dependencies:
+    "@mapbox/point-geometry": ^1.1.0
+    "@mapbox/unitbezier": ^1.0.0
+    csscolorparser: ~1.0.3
+    json-stringify-pretty-compact: ^4.0.0
+    quickselect: ^3.0.0
+    tinyqueue: ^3.0.0
+  bin:
+    gl-style-composite: bin/gl-style-composite.js
+    gl-style-format: bin/gl-style-format.js
+    gl-style-migrate: bin/gl-style-migrate.js
+    gl-style-validate: bin/gl-style-validate.js
+  checksum: 3e3be1543a02caf17b2fe8e27bc3a9de7fa97fd0fde21b9a2678e29ebd945b7133c5776561db54f9e2c1668cd9470381616df1139b14273047cdfc05f7510254
+  languageName: node
+  linkType: hard
+
 "@mapbox/mapbox-gl-supported@npm:^2.0.1":
   version: 2.0.1
   resolution: "@mapbox/mapbox-gl-supported@npm:2.0.1"
@@ -1517,6 +1536,13 @@ __metadata:
   version: 0.1.0
   resolution: "@mapbox/point-geometry@npm:0.1.0"
   checksum: ed41c1ce0140de81039424415d9a199abba72cdb2287314e1b8c3e295da3224f7e8c1b0ae99a9b097703e7abe63e1978a518e29896989cc8bba3d482360bc22f
+  languageName: node
+  linkType: hard
+
+"@mapbox/point-geometry@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "@mapbox/point-geometry@npm:1.1.0"
+  checksum: b69c136566b08921286b2b5abcf35a1a015ce106af02c6914a74acff57b381e2fe167ce11268d5c26739f044813ae43c0581d3dbd7eb9b68bc9d7147ad74d6f1
   languageName: node
   linkType: hard
 
@@ -1540,6 +1566,13 @@ __metadata:
   version: 0.0.1
   resolution: "@mapbox/unitbezier@npm:0.0.1"
   checksum: bf104c85dbff37bf47d3217d9457a3abbf23714f78fefadea64e56bdc7c538491b626166809ef28db134f09baccd6ca3df6988a6422df90d8d0c9a23b0686043
+  languageName: node
+  linkType: hard
+
+"@mapbox/unitbezier@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "@mapbox/unitbezier@npm:1.0.0"
+  checksum: 41371f6edf0c643da0867453c18e1f7070d4c342339817495075bbb841d5283589a1b5492da6f2eb617803e0d6efc2e5354080b302b0eb84b13b3dcd64991230
   languageName: node
   linkType: hard
 
@@ -10535,6 +10568,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"json-stringify-pretty-compact@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "json-stringify-pretty-compact@npm:4.0.0"
+  checksum: a10d5c423e467872994a49c5c1b56b073f277ce02d899cf567fc625f3783b89406bee6408bfb3b4bdeeff509b6a562f5259227e26754a6186f721809ca895f0c
+  languageName: node
+  linkType: hard
+
 "json5@npm:^1.0.1, json5@npm:^1.0.2":
   version: 1.0.2
   resolution: "json5@npm:1.0.2"
@@ -13560,6 +13600,7 @@ __metadata:
     "@loaders.gl/zip": ^4.4.1
     "@localazy/cdn-client": ^1.5.2
     "@mapbox/mapbox-gl-draw": 1.4.3
+    "@mapbox/mapbox-gl-style-spec": ^14.30.0
     "@radix-ui/react-accordion": ^1.1.2
     "@radix-ui/react-checkbox": ^1.0.4
     "@radix-ui/react-collapsible": ^1.0.3
