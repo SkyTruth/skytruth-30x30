@@ -1,11 +1,10 @@
 """The (protected area, IHO sea area) pairs the pipeline reads.
 
-Three files are written, each one row per (feature, sea area) pair carrying the
-feature clipped to that sea: the WDPA pairs, the WDPA pairs against the
-near-shore buffered seas, and the MPAtlas pairs.
-
-The near-shore file uses the buffered seas, which stand in for the land/sea
-union that exists for countries but not for sea areas.
+Two files are written, each one row per (feature, sea area) pair carrying the
+feature clipped to that sea: the WDPA pairs and the MPAtlas pairs. Both exist so
+their consumers can measure protected area within a sea without re-running the
+clip; a consumer that only needs to know which sea a feature lies in, or that
+clips against the seas itself, should join in place rather than read these.
 """
 
 import geopandas as gpd
@@ -24,7 +23,6 @@ from src.core.params import (
     MPATLAS_SEA_PAIRS_FILE_NAME,
     TOLERANCE,
     WDPA_MARINE_FILE_NAME,
-    WDPA_NEAR_SHORE_SEA_PAIRS_FILE_NAME,
     WDPA_SEA_PAIRS_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
@@ -169,7 +167,7 @@ def generate_iho_pa_intersections(
 ) -> None:
     """Join every protected area dataset to the IHO sea areas and save the pairs."""
 
-    def wdpa_pairs(buffer):
+    def wdpa_pairs():
         """Marine and terrestrial PAs, labelled, so a consumer can take either or both."""
         return pd.concat(
             [
@@ -177,7 +175,6 @@ def generate_iho_pa_intersections(
                     bucket=bucket,
                     tolerance=tolerance,
                     pa_file_name=pa_file_name,
-                    buffer=buffer,
                     with_geometry=True,
                 ).assign(environment=environment)
                 for environment, pa_file_name in WDPA_ENVIRONMENTS
@@ -192,9 +189,5 @@ def generate_iho_pa_intersections(
 
     # The WDPA names take a tolerance because the PAs they were built from were
     # simplified to it. MPAtlas is read as published, so its name does not.
-    save(wdpa_pairs(buffer=False), add_tolerance_suffix(WDPA_SEA_PAIRS_FILE_NAME, tolerance))
-    save(
-        wdpa_pairs(buffer=True),
-        add_tolerance_suffix(WDPA_NEAR_SHORE_SEA_PAIRS_FILE_NAME, tolerance),
-    )
+    save(wdpa_pairs(), add_tolerance_suffix(WDPA_SEA_PAIRS_FILE_NAME, tolerance))
     save(intersect_mpatlas_with_iho(bucket=bucket, with_geometry=True), MPATLAS_SEA_PAIRS_FILE_NAME)

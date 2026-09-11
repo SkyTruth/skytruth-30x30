@@ -8,8 +8,6 @@ from shapely.geometry import Point, box
 
 from src.core.params import UNEP_POINT_AREA_KM2
 from src.core.raster_pa_stats import compute_class_areas_by_location
-from src.methods import iho_pa_intersections
-from src.methods.iho_pa_intersections import intersect_with_iho
 from src.methods.marine_habitats import (
     CLIMATE_RESILIENT_CORALS_CLASS_MAP,
     CLIMATE_RESILIENT_CORALS_HABITATS,
@@ -330,12 +328,14 @@ def _write_coral_raster(path, arr):
         dst.write(arr, 1)
 
 
-def test_sea_pairs_give_the_same_coral_areas_as_joining_pas_to_seas(tmp_path, monkeypatch):
-    """Clipped pairs mask the raster exactly as whole PAs tagged by sea would.
+def test_tagging_pas_by_sea_gives_the_same_coral_areas_as_clipping_them(tmp_path):
+    """Whole PAs tagged by sea mask the raster exactly as PAs cut to that sea would.
 
     compute_class_areas_by_location restricts each region to the polygons it
-    contains, so a PA already cut to its sea intersects that sea identically to
-    the uncut PA. This pins the assumption the pairs substitution rests on.
+    contains, so the sea clip happens at mask time either way. This pins the
+    assumption create_climate_resilient_corals_subtable's sjoin rests on: were
+    that region clip to go away, a PA straddling two seas would contribute its
+    neighbour's reef pixels to both.
     """
     raster_path = tmp_path / "corals.tif"
     # Alternating columns so both coral classes occur inside both seas.
@@ -374,32 +374,31 @@ def test_sea_pairs_give_the_same_coral_areas_as_joining_pas_to_seas(tmp_path, mo
             verbose=False,
         ).set_index("location")
 
-    # what the removed sjoin produced: whole PA geometry tagged with each sea it hits
-    joined = gpd.sjoin(
+    # what the coral subtable builds: whole PA geometry tagged with each sea it hits
+    tagged = gpd.sjoin(
         pas[["geometry"]], seas[["location", "geometry"]], how="inner", predicate="intersects"
     )
 
-    # what the saved pairs give: the PA already clipped to that one sea
-    monkeypatch.setattr(iho_pa_intersections, "load_iho_regions", lambda buffer=False: seas.copy())
-    pairs = intersect_with_iho(
-        pas, ["WDPA_PID", "WDPAID", "PA_DEF", "STATUS", "DESIG_ENG"], buffer=True
-    )
+    # the same pairs, each PA cut down to its sea beforehand
+    sea_geoms = gpd.GeoSeries(seas.geometry.loc[tagged["index_right"]].to_numpy(), crs=seas.crs)
+    clipped = tagged.copy()
+    clipped["geometry"] = tagged.geometry.intersection(sea_geoms, align=False).to_numpy()
 
-    from_join = class_areas(joined[["location", "geometry"]])
-    from_pairs = class_areas(pairs[["location", "geometry"]])
+    from_tagged = class_areas(tagged[["location", "geometry"]])
+    from_clipped = class_areas(clipped[["location", "geometry"]])
 
     habitats = list(CLIMATE_RESILIENT_CORALS_CLASS_MAP.values())
 
-    # The straddling PA is one row per sea either way, but only the pairs carry
+    # The straddling PA is one row per sea either way, but only `clipped` carries
     # it cut down, so the comparison below is not of identical geometry.
-    assert len(pairs) == len(joined) == 3
-    assert not pairs.geometry.equals(joined.geometry.reset_index(drop=True))
+    assert len(tagged) == len(clipped) == 3
+    assert not tagged.geometry.equals(clipped.geometry)
     # Guard against agreeing on nothing: reef pixels must actually be protected.
-    assert from_join[habitats].to_numpy().sum() > 0
+    assert from_tagged[habitats].to_numpy().sum() > 0
 
-    assert sorted(from_pairs.index) == sorted(from_join.index)
-    for location in from_join.index:
+    assert sorted(from_tagged.index) == sorted(from_clipped.index)
+    for location in from_clipped.index:
         for habitat in habitats:
-            assert from_pairs.loc[location, habitat] == pytest.approx(
-                from_join.loc[location, habitat], rel=1e-9
+            assert from_tagged.loc[location, habitat] == pytest.approx(
+                from_clipped.loc[location, habitat], rel=1e-9
             ), f"{location}/{habitat}"
