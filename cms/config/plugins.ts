@@ -124,12 +124,24 @@ interface DocumentationDraft {
     string,
     {
       get?: {
-        parameters: Array<{ name: string; [key: string]: unknown }>;
+        parameters?: Array<{ name: string; [key: string]: unknown }>;
       };
       [key: string]: unknown;
     }
   >;
 }
+
+// Strapi accepts `populate` as a string, an array of strings, or a nested
+// object (qs deep syntax), but the generated docs only describe the string
+// form. Document all three so client types generated from the spec (orval)
+// accept object-style populate without suppressions.
+const POPULATE_SCHEMA = {
+  oneOf: [
+    { type: "string" },
+    { type: "array", items: { type: "string" } },
+    { type: "object", additionalProperties: true },
+  ],
+};
 
 export default {
   documentation: {
@@ -142,25 +154,24 @@ export default {
           }
 
           Object.keys(generatedDocumentationDraft.paths).forEach((path) => {
-            // check if it has {id} in the path
-            if (path.includes("{id}")) {
-              // add `populate` as params
-              if (generatedDocumentationDraft.paths[path].get) {
-                if (!generatedDocumentationDraft.paths[path].get.parameters.find((param) => param.name === "populate")) {
-                  generatedDocumentationDraft.paths[path].get.parameters.push(
-                    {
-                      "name": "populate",
-                      "in": "query",
-                      "description": "Relations to return",
-                      "deprecated": false,
-                      "required": false,
-                      "schema": {
-                        "type": "string"
-                      }
-                    },
-                  );
-                }
-              }
+            const operation = generatedDocumentationDraft.paths[path].get;
+            if (!operation?.parameters) return;
+
+            const populateParam = operation.parameters.find((param) => param.name === "populate");
+            if (populateParam) {
+              populateParam.schema = POPULATE_SCHEMA;
+            } else if (path.includes("{id}")) {
+              // `{id}` paths are generated without a `populate` param; add it
+              operation.parameters.push(
+                {
+                  "name": "populate",
+                  "in": "query",
+                  "description": "Relations to return",
+                  "deprecated": false,
+                  "required": false,
+                  "schema": POPULATE_SCHEMA
+                },
+              );
             }
           });
         },

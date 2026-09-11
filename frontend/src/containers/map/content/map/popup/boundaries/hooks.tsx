@@ -47,7 +47,6 @@ const useFormattedStats = (
           },
         },
       },
-      // @ts-expect-error
       populate: {
         location: {
           fields: [

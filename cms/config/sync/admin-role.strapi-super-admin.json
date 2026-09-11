@@ -5,6 +5,152 @@
   "locale": null,
   "permissions": [
     {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "admin::api-token",
+      "properties": {
+        "fields": [
+          "name",
+          "description",
+          "kind",
+          "type",
+          "accessKey",
+          "encryptedKey",
+          "lastUsedAt",
+          "permissions",
+          "adminPermissions",
+          "adminUserOwner",
+          "expiresAt",
+          "lifespan"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "admin::api-token-permission",
+      "properties": {
+        "fields": [
+          "action",
+          "token"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "admin::permission",
+      "properties": {
+        "fields": [
+          "action",
+          "actionParameters",
+          "subject",
+          "properties",
+          "conditions",
+          "role",
+          "apiToken"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "admin::role",
+      "properties": {
+        "fields": [
+          "name",
+          "code",
+          "description",
+          "users",
+          "permissions"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "admin::session",
+      "properties": {
+        "fields": [
+          "userId",
+          "sessionId",
+          "childId",
+          "deviceId",
+          "origin",
+          "expiresAt",
+          "absoluteExpiresAt",
+          "status",
+          "type",
+          "metadata"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "admin::transfer-token",
+      "properties": {
+        "fields": [
+          "name",
+          "description",
+          "accessKey",
+          "lastUsedAt",
+          "permissions",
+          "expiresAt",
+          "lifespan"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "admin::transfer-token-permission",
+      "properties": {
+        "fields": [
+          "action",
+          "token"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "admin::user",
+      "properties": {
+        "fields": [
+          "firstname",
+          "lastname",
+          "username",
+          "email",
+          "password",
+          "resetPasswordToken",
+          "resetPasswordTokenExpiresAt",
+          "registrationToken",
+          "isActive",
+          "roles",
+          "apiTokens",
+          "blocked",
+          "preferedLanguage"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
       "action": "plugin::content-manager.explorer.create",
       "subject": "api::contact-detail.contact-detail",
       "properties": {
@@ -2307,6 +2453,54 @@
           "sw"
         ]
       },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "admin::admin-tokens.access",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "admin::admin-tokens.create",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "admin::admin-tokens.delete",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "admin::admin-tokens.read",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "admin::admin-tokens.regenerate",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "admin::admin-tokens.update",
+      "subject": null,
+      "properties": {},
       "conditions": [],
       "actionParameters": {},
       "locale": null
@@ -2560,6 +2754,157 @@
       "locale": null
     },
     {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::content-releases.release",
+      "properties": {
+        "fields": [
+          "name",
+          "releasedAt",
+          "scheduledAt",
+          "timezone",
+          "status",
+          "actions"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::content-releases.release-action",
+      "properties": {
+        "fields": [
+          "type",
+          "contentType",
+          "entryDocumentId",
+          "release",
+          "isEntryValid"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::i18n.locale",
+      "properties": {
+        "fields": [
+          "name",
+          "code"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::review-workflows.workflow",
+      "properties": {
+        "fields": [
+          "name",
+          "stages",
+          "stageRequiredToPublish",
+          "contentTypes"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::review-workflows.workflow-stage",
+      "properties": {
+        "fields": [
+          "name",
+          "color",
+          "workflow",
+          "permissions"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::upload.file",
+      "properties": {
+        "fields": [
+          "name",
+          "alternativeText",
+          "caption",
+          "focalPoint",
+          "width",
+          "height",
+          "formats",
+          "hash",
+          "ext",
+          "mime",
+          "size",
+          "url",
+          "previewUrl",
+          "provider",
+          "provider_metadata",
+          "related",
+          "folder",
+          "folderPath"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::upload.folder",
+      "properties": {
+        "fields": [
+          "name",
+          "pathId",
+          "parent",
+          "children",
+          "files",
+          "path"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::users-permissions.permission",
+      "properties": {
+        "fields": [
+          "action",
+          "role"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::content-manager.explorer.read",
+      "subject": "plugin::users-permissions.role",
+      "properties": {
+        "fields": [
+          "name",
+          "description",
+          "type",
+          "permissions",
+          "users"
+        ]
+      },
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
       "action": "plugin::content-manager.explorer.create",
       "subject": "plugin::users-permissions.user",
       "properties": {
@@ -2717,6 +3062,38 @@
     },
     {
       "action": "plugin::i18n.locale.update",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::localazy.read",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::localazy.settings.read",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::localazy.settings.update",
+      "subject": null,
+      "properties": {},
+      "conditions": [],
+      "actionParameters": {},
+      "locale": null
+    },
+    {
+      "action": "plugin::localazy.transfer",
       "subject": null,
       "properties": {},
       "conditions": [],
