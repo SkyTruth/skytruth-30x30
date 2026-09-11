@@ -65,7 +65,8 @@ UNBUFFERED_MRGID = {1906, 1907}  # Arctic Ocean
 def stitch_mediterannean(iho):
     iho = iho.copy()
 
-    medi = iho[iho["MRGID"].isin(MEDI_MRGID)].dissolve().reset_index(drop=True)
+    medi_parts = iho[iho["MRGID"].isin(MEDI_MRGID)]
+    medi = medi_parts.dissolve().reset_index(drop=True)
 
     # Recompute the geometry-derived fields from the dissolved polygon
     bounds = medi.total_bounds  # (minx, miny, maxx, maxy) in the layer CRS (4326)
@@ -77,7 +78,7 @@ def stitch_mediterannean(iho):
     medi["Longitude"] = centroid.x
     medi["Latitude"] = centroid.y
     medi["min_X"], medi["min_Y"], medi["max_X"], medi["max_Y"] = bounds
-    medi["area"] = medi.to_crs(epsg=6933).geometry.area.iloc[0] / 1e6
+    medi["area"] = medi_parts["area"].sum()
 
     iho["MRGID"] = iho["MRGID"].astype(str)
     iho = pd.concat((iho, medi), axis=0, ignore_index=True)
