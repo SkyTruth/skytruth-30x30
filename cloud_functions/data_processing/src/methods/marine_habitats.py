@@ -424,11 +424,6 @@ def create_climate_resilient_corals_subtable(
     (`marine_protected_areas`) plus terrestrial-flagged PAs clipped to the reef
     extent — since coastal reefs are often inside PAs WDPA flags MARINE=0. Only
     reef pixels inside a PA are counted, so this can't over-count.
-
-    Sea area rows reuse the same PA estate, tagged with the near-shore sea each
-    PA falls in. The tag is all that is needed: `compute_class_areas_by_location`
-    masks the raster with each sea's geometry intersected with its PAs, so the
-    PAs need not be clipped to the sea beforehand.
     """
     if verbose:
         logger.info({"message": "loading GADM/EEZ union for coral coverage"})
