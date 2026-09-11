@@ -117,7 +117,6 @@ const ModellingWidget: FCWithMessages = () => {
           },
         },
       },
-      // @ts-ignore
       populate: {
         location: {
           fields: ['total_marine_area', 'total_terrestrial_area'],
@@ -185,7 +184,6 @@ const ModellingWidget: FCWithMessages = () => {
               },
             },
           },
-          // @ts-ignore
           populate: {
             location: {
               fields: ['name', 'code', 'type', 'total_marine_area', 'total_terrestrial_area'],

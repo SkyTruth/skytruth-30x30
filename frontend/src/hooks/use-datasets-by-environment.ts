@@ -17,7 +17,6 @@ export default function useDatasetsByEnvironment() {
     {
       locale,
       sort: 'name:asc',
-      // @ts-ignore
       populate: {
         layers: {
           populate: {

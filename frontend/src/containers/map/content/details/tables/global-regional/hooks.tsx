@@ -402,7 +402,6 @@ export const useData = (
     {
       // @ts-ignore
       fields: ['coverage', 'protected_area', 'pas', 'oecms', 'global_contribution'],
-      // @ts-ignore
       populate: {
         location: {
           fields: ['name', 'code', 'type'],

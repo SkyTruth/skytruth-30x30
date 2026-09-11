@@ -699,8 +699,6 @@ export const useData = (
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       fields: queryFields,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
       populate: {
         ...queryPopulate,
         children: {
