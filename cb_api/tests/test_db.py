@@ -13,7 +13,7 @@ SETTINGS = Settings(
 )
 
 
-def test_url_matches_the_cloud_function_connection():
+def test_url_is_assembled_from_settings():
     url = build_database_url(SETTINGS)
 
     assert url.drivername == "postgresql+pg8000"
