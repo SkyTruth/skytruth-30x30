@@ -11,6 +11,7 @@ import TooltipButton from '@/components/tooltip-button';
 import Widget from '@/components/widget';
 import { drawStateAtom, modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
@@ -104,6 +105,10 @@ const ModellingWidget: FCWithMessages = () => {
   // Tooltips with mapping
   const tooltips = useTooltips();
 
+  // TECH-3764: Clean up
+  const isIhoActive = useFeatureFlag('is_iho_active');
+  console.log("Is ioho", isIhoActive)
+
   const locationQueries = useQueries({
     queries: (modellingData?.locations_area || []).map((location) =>
       getGetProtectionCoverageStatsQueryOptions<NationalLevelContribution | null>(
@@ -187,22 +192,13 @@ const ModellingWidget: FCWithMessages = () => {
     ),
   });
 
-  const loading = modellingStatus === 'running' || drawStatus === 'uploading';
+  const loading =
+    modellingStatus === 'running' ||
+    drawStatus === 'uploading' ||
+    locationQueries.some((query) => query.isInitialLoading);
   const error = modellingStatus === 'error';
   const loadingMessage =
     drawStatus === 'uploading' ? t('uploading-layer-to-map') : t('loading-data');
-
-  const allContributions = useMemo(
-    () =>
-      locationQueries
-        .map((query) => {
-          if (['loading', 'error'].includes(query.status)) return null;
-
-          return query.data;
-        })
-        .filter((d): d is NationalLevelContribution => Boolean(d)),
-    [locationQueries]
-  );
 
   // Seas overlap national waters, so they are excluded from the contributions and the global
   // total. Queried separately because the coverage stats above may have no row for a sea.
@@ -232,8 +228,18 @@ const ModellingWidget: FCWithMessages = () => {
     }
   );
 
-  const nationalLevelContributions = allContributions.filter(
-    ({ location }) => !seaCodes.has(location?.code)
+  const nationalLevelContributions = useMemo(
+    () =>
+      locationQueries
+        .map((query) => {
+          if (['loading', 'error'].includes(query.status)) return null;
+
+          return query.data;
+        })
+        .filter((d): d is NationalLevelContribution => Boolean(d))
+        // TECH-3764: Clean up
+        .filter(({ location }) => isIhoActive || !seaCodes.has(location?.code)),
+    [locationQueries, seaCodes, isIhoActive]
   );
 
   const { data: globalProtectionStatsData } = useGetProtectionCoverageStats<{
@@ -313,15 +319,14 @@ const ModellingWidget: FCWithMessages = () => {
     }
   );
 
-  // TECH-3764: Clean up - nationalLevelContributions becomes allContributions
-  const administrativeBoundaries = nationalLevelContributions?.map((contribution) =>
+  const administrativeBoundaries = nationalLevelContributions.map((contribution) =>
     getLocationName(contribution.location)
   );
 
   return (
     <Widget
       className="border-black py-0"
-      noData={!nationalLevelContributions}
+      noData={!nationalLevelContributions.length}
       loading={loading}
       loadingMessage={loadingMessage}
       error={error}
@@ -334,8 +339,8 @@ const ModellingWidget: FCWithMessages = () => {
             tooltip={tooltips?.['administrativeBoundary']}
           />
           <span className="text-right font-mono text-xs font-bold underline">
-            {administrativeBoundaries?.[0]}{' '}
-            {administrativeBoundaries?.length > 1 && `+${administrativeBoundaries?.length - 1}`}
+            {administrativeBoundaries[0]}{' '}
+            {administrativeBoundaries.length > 1 && `+${administrativeBoundaries.length - 1}`}
           </span>
         </div>
         <div className={cn(DEFAULT_ENTRY_CLASSNAMES)}>
@@ -346,7 +351,7 @@ const ModellingWidget: FCWithMessages = () => {
             />
             <WidgetLegend />
           </div>
-          {nationalLevelContributions?.map((contribution) => {
+          {nationalLevelContributions.map((contribution) => {
             const locationName = getLocationName(contribution.location);
 
             return (
