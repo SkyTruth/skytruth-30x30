@@ -7,31 +7,15 @@ import { PMTilesTileSource } from '@loaders.gl/pmtiles';
 import GL from '@luma.gl/constants';
 
 import { useDeckMapboxOverlayContext } from '@/components/map/provider';
-import { LayerProps } from '@/types/layers';
+import { Config, LayerProps } from '@/types/layers';
 
 import PmtilesMvtLayer from './pmtiles-mvt-layer';
 
 type RGBAColor = [number, number, number, number];
 
-export interface PmtilesVectorRenderConfig {
-  fillColor?: RGBAColor;
-  lineColor?: RGBAColor;
-  /** Line width in pixels */
-  lineWidth?: number;
-  /** Point radius in pixels */
-  pointRadius?: number;
-  /**
-   * Property identifying a feature across tiles, like Mapbox's `promoteId`.
-   * Set it on every vector layer so hover highlights whole features.
-   */
-  uniqueIdProperty?: string;
-  highlightColor?: RGBAColor;
-}
-
 interface PmtilesLayerProps extends LayerProps {
   beforeId?: string;
-  url: string;
-  render?: PmtilesVectorRenderConfig;
+  config: Config;
   opacity?: number;
   visibility?: boolean;
 }
@@ -50,19 +34,26 @@ const DEFAULT_HIGHLIGHT_COLOR: RGBAColor = [253, 142, 40, 160];
 const PmtilesLayer = ({
   id,
   beforeId,
-  url,
-  render,
+  config,
   opacity = 1,
   visibility = true,
 }: PmtilesLayerProps) => {
   const deckId = `${id}-deck`;
   const { addLayer, removeLayer } = useDeckMapboxOverlayContext();
 
+  const { source: sourceConfig } = config;
+  const url = 'url' in sourceConfig ? sourceConfig.url : undefined;
+  const uniqueIdProperty =
+    'promoteId' in sourceConfig && typeof sourceConfig.promoteId === 'string'
+      ? sourceConfig.promoteId
+      : undefined;
+
   const [source, setSource] = useState<PMTilesTileSource | null>(null);
   const [archiveMaxZoom, setArchiveMaxZoom] = useState<number | undefined>();
   const [isVector, setIsVector] = useState(false);
 
   useEffect(() => {
+    if (!url) return;
     let cancelled = false;
     const next = new PMTilesTileSource(url, { pmtiles: {} });
     next
@@ -86,7 +77,7 @@ const PmtilesLayer = ({
   }, [url]);
 
   useEffect(() => {
-    if (!source) return;
+    if (!source || !url) return;
 
     const common = {
       id: deckId,
@@ -104,16 +95,16 @@ const PmtilesLayer = ({
         new PmtilesMvtLayer({
           ...common,
           source,
-          getFillColor: render?.fillColor ?? DEFAULT_FILL_COLOR,
-          getLineColor: render?.lineColor ?? DEFAULT_LINE_COLOR,
-          getLineWidth: render?.lineWidth ?? 1,
+          getFillColor: DEFAULT_FILL_COLOR,
+          getLineColor: DEFAULT_LINE_COLOR,
+          getLineWidth: 1,
           lineWidthUnits: 'pixels',
-          getPointRadius: render?.pointRadius ?? 3,
+          getPointRadius: 3,
           pointRadiusUnits: 'pixels',
           pickable: true,
           autoHighlight: true,
-          highlightColor: render?.highlightColor ?? DEFAULT_HIGHLIGHT_COLOR,
-          uniqueIdProperty: render?.uniqueIdProperty,
+          highlightColor: DEFAULT_HIGHLIGHT_COLOR,
+          uniqueIdProperty,
         })
       );
       return;
@@ -155,7 +146,7 @@ const PmtilesLayer = ({
     source,
     archiveMaxZoom,
     isVector,
-    render,
+    uniqueIdProperty,
     opacity,
     visibility,
     addLayer,
