@@ -208,7 +208,7 @@ def generate_iho_pa_intersections(
     # TODO: I don't love that I'm renaming "location" to "ISO3" or "country" since the
     # IHO areas do not have these codes, but this is the simplest way to use it in
     # generate_total_area_minus_pa() without changing that function's signature.
-    # Maybe later we rename "ISO3" and "country" to "location", but that has more 
+    # Maybe later we rename "ISO3" and "country" to "location", but that has more
     # downstream implications.
     wdpa_sea_rows = pairs[pairs.geometry.notna()].rename(columns={"location": "ISO3"})
     wdpa_marine_with_seas = pd.concat([wdpa["marine"], wdpa_sea_rows], ignore_index=True)
