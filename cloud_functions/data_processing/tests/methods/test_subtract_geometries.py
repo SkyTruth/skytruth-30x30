@@ -3,6 +3,7 @@ import pytest
 from shapely.geometry import MultiPolygon, box
 
 import src.methods.subtract_geometries as subtract
+from src.core.commons import add_tolerance_suffix
 
 
 @pytest.fixture
@@ -30,6 +31,57 @@ def mock_location_gdf():
         },
         crs="EPSG:4326",
     )
+
+
+@pytest.fixture
+def mock_pa_gdf():
+    return gpd.GeoDataFrame(
+        {
+            "ISO3": ["AUS"],
+            "STATUS": ["Designated"],
+            "DESIG_ENG": ["Marine Park"],
+            "PA_DEF": [1],
+            "geometry": [box(0, 0, 1, 1)],
+        },
+        crs="EPSG:4326",
+    )
+
+
+@pytest.mark.parametrize(
+    ("pa_file", "expected_reader"),
+    [("pas.parquet", "read_parquet_from_gcs"), ("pas.geojson", "read_json_df")],
+)
+def test_pa_file_is_read_by_its_format(
+    monkeypatch, mock_location_gdf, mock_pa_gdf, pa_file, expected_reader
+):
+    """The marine job reads the PAs carrying their sea rows, which are saved as a
+    parquet; the terrestrial job still reads a geojson."""
+    pa_file_read = add_tolerance_suffix(pa_file, 0.001)
+    frames = {"locations_0.001.geojson": mock_location_gdf, pa_file_read: mock_pa_gdf}
+    reads = []
+
+    def reader(name):
+        def read(bucket_name, filename, verbose=True):
+            reads.append((name, filename))
+            return frames[filename].copy()
+
+        return read
+
+    monkeypatch.setattr(subtract, "read_json_df", reader("read_json_df"))
+    monkeypatch.setattr(subtract, "read_parquet_from_gcs", reader("read_parquet_from_gcs"))
+    monkeypatch.setattr(subtract, "upload_gdf", lambda **kwargs: None)
+
+    subtract.generate_total_area_minus_pa(
+        total_area_file="locations.geojson",
+        pa_file=pa_file,
+        out_file="out.parquet",
+        archive_out_file="archive/out.parquet",
+        tolerance=0.001,
+        bucket="mock-bucket",
+        verbose=False,
+    )
+
+    assert (expected_reader, pa_file_read) in reads
 
 
 def test_multi_country_zone_subtracted_from_all_its_locations(

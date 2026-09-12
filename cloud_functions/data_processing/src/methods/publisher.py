@@ -38,6 +38,7 @@ from src.core.params import (
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCE,
     WDPA_MARINE_FILE_NAME,
+    WDPA_MARINE_WITH_SEAS_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.retry_params import DEFAULT_RETRY_CONFIG, ScheduleRetry
@@ -498,7 +499,7 @@ def dispatch_publisher(
         case "generate_eez_minus_mpa":
             generate_total_area_minus_pa(
                 total_area_file=EEZ_FILE_NAME,
-                pa_file=WDPA_MARINE_FILE_NAME,
+                pa_file=WDPA_MARINE_WITH_SEAS_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
                 tolerance=TOLERANCE,

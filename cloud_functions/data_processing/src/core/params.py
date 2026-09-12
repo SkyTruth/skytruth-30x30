@@ -259,6 +259,7 @@ NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parq
 SEA_PAIRS_DIR = "intermediates/sea_pairs"
 WDPA_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_sea_pairs_{today_formatted}.parquet"
 MPATLAS_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_sea_pairs_{today_formatted}.parquet"
+WDPA_MARINE_WITH_SEAS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_marine_with_seas_{today_formatted}.parquet"
 
 # ------------------------------------------------------------
 #                     Conservation Builder
