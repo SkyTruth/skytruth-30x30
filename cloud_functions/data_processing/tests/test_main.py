@@ -156,7 +156,7 @@ def test_protected_planet_pas_receives_the_tolerance(patched_all):
     "method",
     [
         "generate_gadm_minus_pa",
-        "generate_eez_minus_mpa",
+        "generate_location_minus_mpa",
         "generate_location_minus_fhp_mpa",
     ],
 )

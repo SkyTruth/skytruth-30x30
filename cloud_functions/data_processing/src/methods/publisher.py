@@ -436,7 +436,7 @@ def dispatch_publisher(
                 "generate_marine_protection_level_stats_table",
                 "generate_protected_areas_table",
                 "generate_terrestrial_biome_stats",
-                "generate_eez_minus_mpa",
+                "generate_location_minus_mpa",
                 "download_protected_planet_country",
             ]
 
@@ -497,7 +497,7 @@ def dispatch_publisher(
             )
             step_list = ["update_gadm_minus_pa"]
 
-        case "generate_eez_minus_mpa":
+        case "generate_location_minus_mpa":
             generate_total_area_minus_pa(
                 total_area_file=MARINE_LOCATIONS_FILE_NAME,
                 pa_file=WDPA_MARINE_WITH_SEAS_FILE_NAME,
@@ -506,7 +506,7 @@ def dispatch_publisher(
                 tolerance=TOLERANCE,
                 verbose=verbose,
             )
-            step_list = ["update_eez_minus_mpa"]
+            step_list = ["update_location_minus_mpa"]
 
         case "generate_location_minus_fhp_mpa":
             generate_location_minus_fhp_mpa(
@@ -569,7 +569,7 @@ def dispatch_publisher(
                 verbose=verbose,
             )
 
-        case "update_eez_minus_mpa":
+        case "update_location_minus_mpa":
             update_cb(
                 table_name="eez_minus_mpa_v2",
                 gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
