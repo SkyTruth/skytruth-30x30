@@ -30,6 +30,7 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     LONG_RUNNING_TASKS,
     MARINE_HABITAT_PARAMS,
+    MARINE_LOCATIONS_FILE_NAME,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
@@ -498,7 +499,7 @@ def dispatch_publisher(
 
         case "generate_eez_minus_mpa":
             generate_total_area_minus_pa(
-                total_area_file=EEZ_FILE_NAME,
+                total_area_file=MARINE_LOCATIONS_FILE_NAME,
                 pa_file=WDPA_MARINE_WITH_SEAS_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
