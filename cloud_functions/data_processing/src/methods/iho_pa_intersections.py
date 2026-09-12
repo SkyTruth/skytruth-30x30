@@ -25,6 +25,7 @@ from src.core.params import (
     BUCKET,
     MPATLAS_FILE_NAME,
     MPATLAS_SEA_PAIRS_FILE_NAME,
+    MPATLAS_WITH_SEAS_FILE_NAME,
     TOLERANCE,
     WDPA_MARINE_FILE_NAME,
     WDPA_MARINE_WITH_SEAS_FILE_NAME,
@@ -151,18 +152,22 @@ def intersect_mpatlas_with_iho(
     mpa_file_name: str = MPATLAS_FILE_NAME,
     buffer: bool = False,
     with_geometry: bool = True,
+    mpa: gpd.GeoDataFrame | None = None,
 ) -> pd.DataFrame:
     """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id.
 
     ``protection_mpaguide_level`` rides along, the zone's protection level on the
     MPAtlas guide's scale.
     """
-    logger.info({"message": f"loading MPAtlas zones from gs://{bucket}/{mpa_file_name}"})
+    if mpa is None:
+        logger.info({"message": f"loading MPAtlas zones from gs://{bucket}/{mpa_file_name}"})
+        mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)
 
     keep_cols = ["zone_id", "protection_mpaguide_level"]
-    mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)[[*keep_cols, "geometry"]]
 
-    return intersect_with_iho(mpa, keep_cols, buffer=buffer, with_geometry=with_geometry)
+    return intersect_with_iho(
+        mpa[[*keep_cols, "geometry"]], keep_cols, buffer=buffer, with_geometry=with_geometry
+    )
 
 
 def generate_iho_pa_intersections(
@@ -197,15 +202,23 @@ def generate_iho_pa_intersections(
     }
     pairs = wdpa_pairs(wdpa)
 
-    # TODO: I don't love that I'm renaming "location" to "ISO3" since the IHO areas
-    # do not have ISO3 codes, but this is the simplest way to use it in
+    mpa = read_mpatlas_from_gcs(bucket, MPATLAS_FILE_NAME)
+    mpa_pairs = intersect_mpatlas_with_iho(mpa=mpa, with_geometry=True)
+
+    # TODO: I don't love that I'm renaming "location" to "ISO3" or "country" since the
+    # IHO areas do not have these codes, but this is the simplest way to use it in
     # generate_total_area_minus_pa() without changing that function's signature.
-    # Maybe later we rename "ISO3" to "location", but that has more downstream implications.
-    sea_rows = pairs[pairs.geometry.notna()].rename(columns={"location": "ISO3"})
-    marine_with_seas = pd.concat([wdpa["marine"], sea_rows], ignore_index=True)
+    # Maybe later we rename "ISO3" and "country" to "location", but that has more 
+    # downstream implications.
+    wdpa_sea_rows = pairs[pairs.geometry.notna()].rename(columns={"location": "ISO3"})
+    wdpa_marine_with_seas = pd.concat([wdpa["marine"], wdpa_sea_rows], ignore_index=True)
+
+    mpa_sea_rows = mpa_pairs[mpa_pairs.geometry.notna()].rename(columns={"location": "country"})
+    mpatlas_with_seas = pd.concat([mpa, mpa_sea_rows], ignore_index=True)
 
     # The WDPA names take a tolerance because the PAs they were built from were
     # simplified to it. MPAtlas is read as published, so its name does not.
     save(pairs, add_tolerance_suffix(WDPA_SEA_PAIRS_FILE_NAME, tolerance))
-    save(marine_with_seas, add_tolerance_suffix(WDPA_MARINE_WITH_SEAS_FILE_NAME, tolerance))
-    save(intersect_mpatlas_with_iho(bucket=bucket, with_geometry=True), MPATLAS_SEA_PAIRS_FILE_NAME)
+    save(wdpa_marine_with_seas, add_tolerance_suffix(WDPA_MARINE_WITH_SEAS_FILE_NAME, tolerance))
+    save(mpa_pairs, MPATLAS_SEA_PAIRS_FILE_NAME)
+    save(mpatlas_with_seas, MPATLAS_WITH_SEAS_FILE_NAME)

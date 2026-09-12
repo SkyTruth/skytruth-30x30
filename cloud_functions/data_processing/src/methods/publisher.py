@@ -18,7 +18,6 @@ from src.core.params import (
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-    EEZ_FILE_NAME,
     EEZ_LAND_UNION_PARAMS,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
@@ -34,7 +33,7 @@ from src.core.params import (
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
-    MPATLAS_FILE_NAME,
+    MPATLAS_WITH_SEAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCE,
@@ -406,10 +405,7 @@ def dispatch_publisher(
         # ------------------
         case "download_mpatlas":
             download_mpatlas(verbose=verbose)
-            step_list = [
-                "download_protected_planet_pas",
-                "generate_location_minus_fhp_mpa",
-            ]
+            step_list = ["download_protected_planet_pas"]
 
         case "download_protected_seas":
             download_protected_seas(verbose=verbose)
@@ -437,6 +433,7 @@ def dispatch_publisher(
                 "generate_protected_areas_table",
                 "generate_terrestrial_biome_stats",
                 "generate_location_minus_mpa",
+                "generate_location_minus_fhp_mpa",
                 "download_protected_planet_country",
             ]
 
@@ -510,8 +507,8 @@ def dispatch_publisher(
 
         case "generate_location_minus_fhp_mpa":
             generate_location_minus_fhp_mpa(
-                mpa_file=MPATLAS_FILE_NAME,
-                loc_file=EEZ_FILE_NAME,
+                mpa_file=MPATLAS_WITH_SEAS_FILE_NAME,
+                loc_file=MARINE_LOCATIONS_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 tolerance=TOLERANCE,

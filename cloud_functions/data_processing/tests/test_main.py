@@ -681,21 +681,22 @@ def test_chained_pa_download_still_goes_to_the_job_runner(chained_jobs):
     assert "download_protected_planet_pas" not in enqueued["create_task"]
 
 
-def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained_jobs):
+@pytest.mark.parametrize(
+    "method",
+    ["generate_marine_protection_level_stats_table", "generate_location_minus_fhp_mpa"],
+)
+def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained_jobs, method):
     """Everything reading the IHO/PA pairs must follow the step that builds them.
 
-    generate_marine_protection_level_stats_table reads mpatlas_sea_pairs.parquet, so
-    it hangs off generate_iho_pa_intersections rather than download_mpatlas -
-    otherwise it would race the writer and publish stale or empty stats. Both
-    routes are checked because the method is itself long-running, so asking
+    generate_marine_protection_level_stats_table reads mpatlas_sea_pairs.parquet and
+    generate_location_minus_fhp_mpa the MPAtlas zones with their sea rows appended, so
+    both hang off generate_iho_pa_intersections rather than download_mpatlas -
+    otherwise they would race the writer and publish stale or empty stats. Both
+    routes are checked because the methods are themselves long-running, so asking
     only about the task queue would pass either way.
     """
-    assert "generate_marine_protection_level_stats_table" not in _all_enqueued(
-        chained_jobs("download_mpatlas")
-    )
-    assert "generate_marine_protection_level_stats_table" in _all_enqueued(
-        chained_jobs("generate_iho_pa_intersections")
-    )
+    assert method not in _all_enqueued(chained_jobs("download_mpatlas"))
+    assert method in _all_enqueued(chained_jobs("generate_iho_pa_intersections"))
 
 
 # Non-invoking / generic flows

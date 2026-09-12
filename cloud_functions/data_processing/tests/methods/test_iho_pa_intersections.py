@@ -6,7 +6,7 @@ import geopandas as gpd
 from shapely.geometry import MultiPolygon, Point, box
 
 from src.core.commons import add_tolerance_suffix
-from src.core.params import WDPA_MARINE_WITH_SEAS_FILE_NAME
+from src.core.params import MPATLAS_WITH_SEAS_FILE_NAME, WDPA_MARINE_WITH_SEAS_FILE_NAME
 from src.methods import iho_pa_intersections
 from src.methods.iho_pa_intersections import (
     generate_iho_pa_intersections,
@@ -271,13 +271,20 @@ def test_geometry_join_keeps_the_polygonal_part_of_a_mixed_intersection(monkeypa
 # ---------- generate_iho_pa_intersections ----------
 
 
-def _patch_mpatlas(monkeypatch):
-    mpa = gpd.GeoDataFrame(
-        {"zone_id": [10], "protection_mpaguide_level": ["full"]},
-        geometry=[box(1, 1, 2, 2)],
-        crs="EPSG:4326",
-    )
-    monkeypatch.setattr(iho_pa_intersections, "read_mpatlas_from_gcs", lambda bucket, filename: mpa)
+def _patch_mpatlas(monkeypatch, mpa=None, calls=None):
+    if mpa is None:
+        mpa = gpd.GeoDataFrame(
+            {"zone_id": [10], "protection_mpaguide_level": ["full"]},
+            geometry=[box(1, 1, 2, 2)],
+            crs="EPSG:4326",
+        )
+
+    def fake_read_mpatlas_from_gcs(bucket, filename):
+        if calls is not None:
+            calls.append(filename)
+        return mpa
+
+    monkeypatch.setattr(iho_pa_intersections, "read_mpatlas_from_gcs", fake_read_mpatlas_from_gcs)
 
 
 def _patch_upload(monkeypatch):
@@ -332,6 +339,40 @@ def test_generate_appends_each_sea_pair_to_the_marine_pas(monkeypatch):
     # the appended rows carry the PA clipped to their own sea
     sea_a = combined[(combined["WDPA_PID"] == "straddler") & (combined["ISO3"] == "1")]
     assert sea_a.geometry.iloc[0].equals(box(5, 1, 10, 2))
+
+
+def test_generate_appends_each_sea_pair_to_the_mpatlas_zones(monkeypatch):
+    """Same shape as the marine PAs, but keyed on country: that is the column
+    generate_location_minus_fhp_mpa matches a zone to its location on."""
+    _patch_iho(monkeypatch)
+    _patch_wdpa(monkeypatch, _wdpa_frame([box(1, 1, 2, 2)], ISO3=["FRA"]))
+    saved = _patch_upload(monkeypatch)
+    reads = []
+    _patch_mpatlas(
+        monkeypatch,
+        mpa=gpd.GeoDataFrame(
+            {
+                "zone_id": [10, 20],
+                "protection_mpaguide_level": ["full", "full"],
+                "country": ["AUS", "AUS"],
+            },
+            geometry=[box(5, 1, 15, 2), Point(3, 3)],
+            crs="EPSG:4326",
+        ),
+        calls=reads,
+    )
+
+    generate_iho_pa_intersections(tolerance=0.0001, bucket="b", verbose=False)
+
+    combined = saved[MPATLAS_WITH_SEAS_FILE_NAME]
+
+    assert reads == ["raw/mpatlas_zone_assessment.geojson"]
+    assert sorted(zip(combined["zone_id"], combined["country"], strict=True)) == [
+        (10, "1"),
+        (10, "2"),
+        (10, "AUS"),
+        (20, "AUS"),
+    ]
 
 
 def test_geometry_join_carries_the_requested_columns_through(monkeypatch):

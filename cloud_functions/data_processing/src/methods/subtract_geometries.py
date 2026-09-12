@@ -169,7 +169,8 @@ def generate_location_minus_fhp_mpa(
         to GCS as a Parquet file.
     """
 
-    mpa = read_json_df(
+    read_mpa = read_parquet_from_gcs if mpa_file.endswith(".parquet") else read_json_df
+    mpa = read_mpa(
         bucket_name=bucket,
         filename=mpa_file,
         verbose=verbose,
