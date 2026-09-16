@@ -50,6 +50,7 @@ EEZ_PARAMS = {
 }
 EEZ_FILE_NAME = "static/eez_processed.geojson"
 EEZ_MULTIPLE_SOV_FILE_NAME = "static/eez_multi_sov_processed.geojson"
+MARINE_LOCATIONS_FILE_NAME = "static/marine_locations.geojson"
 
 HIGH_SEAS_PARAMS = {
     "name": "World_High_Seas_v2_20241010.zip",
@@ -259,6 +260,8 @@ NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parq
 SEA_PAIRS_DIR = "intermediates/sea_pairs"
 WDPA_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_sea_pairs_{today_formatted}.parquet"
 MPATLAS_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_sea_pairs_{today_formatted}.parquet"
+WDPA_MARINE_WITH_SEAS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_marine_with_seas_{today_formatted}.parquet"
+MPATLAS_WITH_SEAS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_with_seas_{today_formatted}.parquet"
 
 # ------------------------------------------------------------
 #                     Conservation Builder
@@ -300,9 +303,9 @@ LONG_RUNNING_TASKS = [
     "generate_protection_coverage_stats_table",
     "download_protected_seas",
     "generate_terrestrial_biome_stats_country",
-    "generate_eez_minus_mpa",
+    "generate_location_minus_mpa",
     "generate_location_minus_fhp_mpa",
-    "update_eez_minus_mpa",
+    "update_location_minus_mpa",
     "update_location_minus_fhp_mpa",
     "generate_locations_table",
     "generate_marine_protection_level_stats_table",
