@@ -74,7 +74,7 @@
       "upload-step-3-description": "For statistics calculation, files must contain at least one polygon or multipolygon with valid geometries. Files with other geometries or topology errors cannot be used for statistics, but can be added to the map as context layers.",
       "upload-step-4-description": "Uploaded layers will be added to the <b>Map Layers</b> panel, where you can select which layer to calculate statistics on by clicking on the <i></i> icon. Only layers with this icon are eligible for statistics calculation. You can also save layers to your browser to revisit later, or remove them.",
       "marine-existing-conservation": "Existing marine conservation coverage",
-      "new-added-area": "New added area",
+      "new-added-area": "Added marine conservation coverage",
       "administrative-boundary": "Administrative boundary",
       "national-level-contribution": "National level contribution",
       "global": "Global",
@@ -110,8 +110,8 @@
       "warning": "Warning",
       "remove-from-custom-region": "Remove from Custom Region",
       "global-contribution": "Global level contribution",
-      "existing-fully-highly-protected": "Existing fully/highly protected",
-      "becomes-fully-highly-protected": "Becomes fully/highly protected"
+      "existing-fully-highly-protected": "Existing fully/highly protected area",
+      "becomes-fully-highly-protected": "Added fully/highly protected area"
     },
     "map-sidebar-layers-panel": {
       "map-layers": "Map Layers",

@@ -31,6 +31,8 @@ const config: Config = {
         blue: '#3C70FF',
         'blue-600': '#4879FF',
         green: '#02B07C',
+        'green-dark': '#016A4A',
+        'green-light': '#9ADFCB',
         orange: '#FD8E28',
         violet: '#AD6CFF',
         'gray-300': '#999999',

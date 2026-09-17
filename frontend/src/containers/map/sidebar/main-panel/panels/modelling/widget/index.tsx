@@ -35,12 +35,13 @@ const DEFAULT_CHART_PROPS = {
 
 const EXISTING_AREA_COLOR = theme.colors.green as string;
 const NEW_AREA_COLOR = theme.colors.black as string;
-const FULLY_HIGHLY_PROTECTED_COLOR = theme.colors.red as string;
+const FULLY_HIGHLY_PROTECTED_COLOR = theme.colors['green-dark'] as string;
+const BECOMES_FULLY_HIGHLY_PROTECTED_COLOR = theme.colors['green-light'] as string;
 
 const hatch = (color: string) =>
   `repeating-linear-gradient(45deg, ${color} 0 2px, transparent 2px 5px)`;
 const FULLY_HIGHLY_PROTECTED_HATCH = hatch(FULLY_HIGHLY_PROTECTED_COLOR);
-const BECOMES_FULLY_HIGHLY_PROTECTED_HATCH = hatch(NEW_AREA_COLOR);
+const BECOMES_FULLY_HIGHLY_PROTECTED_HATCH = hatch(BECOMES_FULLY_HIGHLY_PROTECTED_COLOR);
 
 type FullyHighlyProtectedStats = {
   existingFullyHighlyProtectedPercentage: number;
@@ -100,7 +101,7 @@ const getFullyHighlyProtectedOverlays = (
       startPercentage: upgradedStartPercentage,
       totalPercentage: stats.upgradedFullyHighlyProtectedPercentage,
       background: BECOMES_FULLY_HIGHLY_PROTECTED_HATCH,
-      outlineColor: NEW_AREA_COLOR,
+      outlineColor: BECOMES_FULLY_HIGHLY_PROTECTED_COLOR,
     },
   ].filter(({ totalPercentage }) => totalPercentage > 0);
 };
@@ -125,14 +126,15 @@ const LEGEND_LINE_CLASSES = cn(
   'before:absolute before:left-0 before:top-1/2 before:h-[2px] before:w-[28px] before:-translate-y-1/2'
 );
 
-const LegendHatch: React.FC<{ hatch: string; outlineColor: string }> = ({
+const LegendHatch: React.FC<{ backgroundColor: string; hatch: string; outlineColor: string }> = ({
+  backgroundColor,
   hatch: background,
   outlineColor,
 }) => (
   <span
     className="absolute left-0 top-1/2 h-2.5 w-[28px] -translate-y-1/2"
     style={{
-      backgroundColor: EXISTING_AREA_COLOR,
+      backgroundColor,
       backgroundImage: background,
       boxShadow: `inset 0 0 0 1px ${outlineColor}`,
     }}
@@ -161,6 +163,7 @@ const WidgetLegend: FCWithMessages<WidgetLegendProps> = ({
         <li>
           <span className={LEGEND_ITEM_CLASSES}>
             <LegendHatch
+              backgroundColor={EXISTING_AREA_COLOR}
               hatch={FULLY_HIGHLY_PROTECTED_HATCH}
               outlineColor={FULLY_HIGHLY_PROTECTED_COLOR}
             />
@@ -172,8 +175,9 @@ const WidgetLegend: FCWithMessages<WidgetLegendProps> = ({
         <li>
           <span className={LEGEND_ITEM_CLASSES}>
             <LegendHatch
+              backgroundColor={NEW_AREA_COLOR}
               hatch={BECOMES_FULLY_HIGHLY_PROTECTED_HATCH}
-              outlineColor={NEW_AREA_COLOR}
+              outlineColor={BECOMES_FULLY_HIGHLY_PROTECTED_COLOR}
             />
             {t('becomes-fully-highly-protected')}
           </span>
