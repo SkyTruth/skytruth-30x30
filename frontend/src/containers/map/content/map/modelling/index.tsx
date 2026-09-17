@@ -2,8 +2,7 @@ import { FC, useEffect, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import type { GeoJSONObject } from '@turf/turf';
-import axios, { isAxiosError } from 'axios';
-import type { Feature } from 'geojson';
+import { isAxiosError } from 'axios';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { conservationStatsImpressed } from '@/components/analytics/heap';
@@ -13,15 +12,8 @@ import {
   modellingCustomLayerIdAtom,
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { fetchModelling, getModellingQueryKey } from '@/lib/utils/fetch-modelling';
 import { extractPolygons } from '@/lib/utils/file-upload';
-import { ModellingData } from '@/types/modelling';
-
-const fetchModelling = async (tab: string, feature: Feature) => {
-  return axios.post<ModellingData>(process.env.NEXT_PUBLIC_ANALYSIS_CF_URL, {
-    environment: tab,
-    geometry: feature,
-  });
-};
 
 const Modelling: FC = () => {
   const modellingLayerId = useAtomValue(modellingCustomLayerIdAtom);
@@ -56,7 +48,7 @@ const Modelling: FC = () => {
   };
 
   const { isFetching, isSuccess, data } = useQuery(
-    ['modelling', tab, modellingLayerId],
+    getModellingQueryKey(tab, modellingLayerId),
     () => fetchModelling(tab, feature),
     {
       enabled: Boolean(feature) && ['marine', 'terrestrial'].includes(tab),

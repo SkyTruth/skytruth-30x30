@@ -16,6 +16,7 @@ import useLocationName from '@/hooks/use-location-name';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetLocations } from '@/types/generated/location';
+import { useGetMpaaProtectionLevelStats } from '@/types/generated/mpaa-protection-level-stat';
 import {
   getGetProtectionCoverageStatsQueryOptions,
   useGetProtectionCoverageStats,
@@ -32,6 +33,20 @@ const DEFAULT_CHART_PROPS = {
   showTarget: false,
 };
 
+const EXISTING_AREA_COLOR = theme.colors.green as string;
+const NEW_AREA_COLOR = theme.colors.black as string;
+const FULLY_HIGHLY_PROTECTED_COLOR = theme.colors.red as string;
+
+const hatch = (color: string) =>
+  `repeating-linear-gradient(45deg, ${color} 0 2px, transparent 2px 5px)`;
+const FULLY_HIGHLY_PROTECTED_HATCH = hatch(FULLY_HIGHLY_PROTECTED_COLOR);
+const BECOMES_FULLY_HIGHLY_PROTECTED_HATCH = hatch(NEW_AREA_COLOR);
+
+type FullyHighlyProtectedStats = {
+  existingFullyHighlyProtectedPercentage: number;
+  upgradedFullyHighlyProtectedPercentage: number;
+};
+
 type NationalLevelContribution = {
   location: Location;
   totalArea: number;
@@ -41,6 +56,53 @@ type NationalLevelContribution = {
   totalCustomArea: number;
   totalCustomAreaPercentage: number;
   totalPercentage: number;
+};
+
+const getFullyHighlyProtectedStats = ({
+  totalArea,
+  protectedArea,
+  totalProtectedArea,
+  customArea,
+  existingArea,
+  newArea,
+}: {
+  totalArea: number;
+  protectedArea: number;
+  totalProtectedArea: number;
+  customArea: number;
+  existingArea: number;
+  newArea: number;
+}): FullyHighlyProtectedStats => {
+  const existing = Math.min(Math.max(existingArea, 0), protectedArea);
+  const added = Math.min(Math.max(newArea, 0), Math.max(totalProtectedArea - existing, 0));
+  const upgraded = Math.min(Math.max(added - customArea, 0), protectedArea - existing);
+
+  return {
+    existingFullyHighlyProtectedPercentage: totalArea ? (existing / totalArea) * 100 : 0,
+    upgradedFullyHighlyProtectedPercentage: totalArea ? (upgraded / totalArea) * 100 : 0,
+  };
+};
+
+const getFullyHighlyProtectedOverlays = (
+  stats: FullyHighlyProtectedStats & { totalExistingAreaPercentage: number }
+) => {
+  const upgradedStartPercentage =
+    stats.totalExistingAreaPercentage - stats.upgradedFullyHighlyProtectedPercentage;
+
+  return [
+    {
+      startPercentage: upgradedStartPercentage - stats.existingFullyHighlyProtectedPercentage,
+      totalPercentage: stats.existingFullyHighlyProtectedPercentage,
+      background: FULLY_HIGHLY_PROTECTED_HATCH,
+      outlineColor: FULLY_HIGHLY_PROTECTED_COLOR,
+    },
+    {
+      startPercentage: upgradedStartPercentage,
+      totalPercentage: stats.upgradedFullyHighlyProtectedPercentage,
+      background: BECOMES_FULLY_HIGHLY_PROTECTED_HATCH,
+      outlineColor: NEW_AREA_COLOR,
+    },
+  ].filter(({ totalPercentage }) => totalPercentage > 0);
 };
 
 type WidgetSectionWidgetTitleProps = PropsWithChildren<{
@@ -57,12 +119,35 @@ const WidgetSectionWidgetTitle: React.FC<WidgetSectionWidgetTitleProps> = ({ tit
   );
 };
 
-const WidgetLegend: FCWithMessages = () => {
+const LEGEND_ITEM_CLASSES = 'relative pl-9 font-mono text-xs';
+const LEGEND_LINE_CLASSES = cn(
+  LEGEND_ITEM_CLASSES,
+  'before:absolute before:left-0 before:top-1/2 before:h-[2px] before:w-[28px] before:-translate-y-1/2'
+);
+
+const LegendHatch: React.FC<{ hatch: string; outlineColor: string }> = ({
+  hatch: background,
+  outlineColor,
+}) => (
+  <span
+    className="absolute left-0 top-1/2 h-2.5 w-[28px] -translate-y-1/2"
+    style={{
+      backgroundColor: EXISTING_AREA_COLOR,
+      backgroundImage: background,
+      boxShadow: `inset 0 0 0 1px ${outlineColor}`,
+    }}
+  />
+);
+
+type WidgetLegendProps = {
+  showBecomesFullyHighlyProtected?: boolean;
+};
+
+const WidgetLegend: FCWithMessages<WidgetLegendProps> = ({
+  showBecomesFullyHighlyProtected = false,
+}) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
-
-  const LEGEND_LINE_CLASSES =
-    'relative pl-9 font-mono text-xs before:absolute before:left-0 before:top-1/2 before:h-[2px] before:w-[28px] before:-translate-y-1/2';
 
   return (
     <ul>
@@ -72,6 +157,28 @@ const WidgetLegend: FCWithMessages = () => {
           {tab === 'terrestrial' && t('terrestrial-existing-conservation')}
         </span>
       </li>
+      {tab === 'marine' && (
+        <li>
+          <span className={LEGEND_ITEM_CLASSES}>
+            <LegendHatch
+              hatch={FULLY_HIGHLY_PROTECTED_HATCH}
+              outlineColor={FULLY_HIGHLY_PROTECTED_COLOR}
+            />
+            {t('existing-fully-highly-protected')}
+          </span>
+        </li>
+      )}
+      {tab === 'marine' && showBecomesFullyHighlyProtected && (
+        <li>
+          <span className={LEGEND_ITEM_CLASSES}>
+            <LegendHatch
+              hatch={BECOMES_FULLY_HIGHLY_PROTECTED_HATCH}
+              outlineColor={NEW_AREA_COLOR}
+            />
+            {t('becomes-fully-highly-protected')}
+          </span>
+        </li>
+      )}
       <li>
         <span className={cn(LEGEND_LINE_CLASSES, 'before:bg-black')}>{t('new-added-area')}</span>
       </li>
@@ -227,6 +334,60 @@ const ModellingWidget: FCWithMessages = () => {
     }
   );
 
+  // Existing fully/highly protected area, per location and globally
+  const { data: existingFullyHighlyProtectedAreas } = useGetMpaaProtectionLevelStats<
+    Map<string, number>
+  >(
+    {
+      locale,
+      filters: {
+        location: {
+          code: {
+            $in: [...locationCodes, 'GLOB'],
+          },
+        },
+        mpaa_protection_level: {
+          slug: {
+            $eq: 'fully-highly-protected',
+          },
+        },
+      },
+      // @ts-ignore
+      fields: ['area'],
+      // @ts-ignore
+      populate: {
+        location: {
+          fields: ['code'],
+        },
+      },
+      'pagination[limit]': locationCodes.length + 1,
+    },
+    {
+      query: {
+        enabled: tab === 'marine' && locationCodes.length > 0,
+        select: ({ data }) =>
+          new Map(data.map(({ location, area }) => [location?.code, Number(area)])),
+        placeholderData: { data: [] },
+        refetchOnWindowFocus: false,
+      },
+    }
+  );
+
+  // Fully/highly protected area the drawn areas add, per location and globally
+  const addedFullyHighlyProtectedAreas = useMemo(() => {
+    const byLocation = new Map<string, number>();
+    let total = 0;
+
+    (modellingData?.fully_highly_protected?.locations_area || []).forEach(
+      ({ code, protected_area }) => {
+        byLocation.set(code, protected_area);
+        if (!seaCodes?.has(code)) total += protected_area;
+      }
+    );
+
+    return { byLocation, total };
+  }, [modellingData, seaCodes]);
+
   const nationalLevelContributions = useMemo(
     () =>
       locationQueries
@@ -237,8 +398,26 @@ const ModellingWidget: FCWithMessages = () => {
         })
         .filter((d): d is NationalLevelContribution => Boolean(d))
         // TECH-3764: Clean up
-        .filter(({ location }) => isIhoActive || !seaCodes.has(location?.code)),
-    [locationQueries, seaCodes, isIhoActive]
+        .filter(({ location }) => isIhoActive || !seaCodes.has(location?.code))
+        .map((contribution) => ({
+          ...contribution,
+          ...getFullyHighlyProtectedStats({
+            totalArea: contribution.totalArea,
+            protectedArea: contribution.protectedArea,
+            totalProtectedArea: contribution.totalProtectedArea,
+            customArea: contribution.totalCustomArea,
+            existingArea: existingFullyHighlyProtectedAreas?.get(contribution.location?.code) ?? 0,
+            newArea:
+              addedFullyHighlyProtectedAreas.byLocation.get(contribution.location?.code) ?? 0,
+          }),
+        })),
+    [
+      locationQueries,
+      seaCodes,
+      isIhoActive,
+      existingFullyHighlyProtectedAreas,
+      addedFullyHighlyProtectedAreas,
+    ]
   );
 
   const { data: globalProtectionStatsData } = useGetProtectionCoverageStats<{
@@ -318,9 +497,35 @@ const ModellingWidget: FCWithMessages = () => {
     }
   );
 
+  const globalContribution = useMemo(() => {
+    if (!globalProtectionStatsData) return null;
+
+    return {
+      ...globalProtectionStatsData,
+      ...getFullyHighlyProtectedStats({
+        totalArea: globalProtectionStatsData.totalArea,
+        protectedArea: globalProtectionStatsData.protectedArea,
+        totalProtectedArea: globalProtectionStatsData.totalProtectedArea,
+        customArea: globalProtectionStatsData.totalCustomAreas,
+        existingArea: existingFullyHighlyProtectedAreas?.get('GLOB') ?? 0,
+        newArea: addedFullyHighlyProtectedAreas.total,
+      }),
+    };
+  }, [
+    globalProtectionStatsData,
+    existingFullyHighlyProtectedAreas,
+    addedFullyHighlyProtectedAreas,
+  ]);
+
   const administrativeBoundaries = nationalLevelContributions.map((contribution) =>
     getLocationName(contribution.location)
   );
+
+  const hasNationalUpgradedArea = nationalLevelContributions.some(
+    ({ upgradedFullyHighlyProtectedPercentage }) => upgradedFullyHighlyProtectedPercentage > 0
+  );
+  const hasGlobalUpgradedArea =
+    (globalContribution?.upgradedFullyHighlyProtectedPercentage ?? 0) > 0;
 
   return (
     <Widget
@@ -348,7 +553,7 @@ const ModellingWidget: FCWithMessages = () => {
               title={t('national-level-contribution')}
               tooltip={tooltips?.['contributionDetails']}
             />
-            <WidgetLegend />
+            <WidgetLegend showBecomesFullyHighlyProtected={hasNationalUpgradedArea} />
           </div>
           {nationalLevelContributions.map((contribution) => {
             const locationName = getLocationName(contribution.location);
@@ -361,14 +566,17 @@ const ModellingWidget: FCWithMessages = () => {
                 totalProtectedArea={contribution?.totalProtectedArea}
                 totalArea={contribution?.totalArea}
                 highlightedPercentage={contribution?.totalPercentage}
+                {...(tab === 'marine' && {
+                  overlays: getFullyHighlyProtectedOverlays(contribution),
+                })}
                 data={[
                   {
-                    background: theme.colors.green as string,
+                    background: EXISTING_AREA_COLOR,
                     total: contribution?.protectedArea,
                     totalPercentage: contribution?.totalExistingAreaPercentage,
                   },
                   {
-                    background: theme.colors.black as string,
+                    background: NEW_AREA_COLOR,
                     total: contribution?.totalCustomArea,
                     totalPercentage: contribution?.totalCustomAreaPercentage,
                   },
@@ -384,24 +592,28 @@ const ModellingWidget: FCWithMessages = () => {
               title={t('global-contribution')}
               tooltip={tooltips?.['globalContribution']}
             />
-            <WidgetLegend />
+            <WidgetLegend showBecomesFullyHighlyProtected={hasGlobalUpgradedArea} />
           </div>
           <StackedHorizontalBarChart
             title={t('global')}
-            customArea={globalProtectionStatsData?.totalCustomAreas}
-            totalProtectedArea={globalProtectionStatsData?.totalProtectedArea}
-            totalArea={globalProtectionStatsData?.totalArea}
-            highlightedPercentage={globalProtectionStatsData?.totalPercentage}
+            customArea={globalContribution?.totalCustomAreas}
+            totalProtectedArea={globalContribution?.totalProtectedArea}
+            totalArea={globalContribution?.totalArea}
+            highlightedPercentage={globalContribution?.totalPercentage}
+            {...(tab === 'marine' &&
+              globalContribution && {
+                overlays: getFullyHighlyProtectedOverlays(globalContribution),
+              })}
             data={[
               {
-                background: theme.colors.green as string,
-                total: globalProtectionStatsData?.protectedArea,
-                totalPercentage: globalProtectionStatsData?.totalExistingAreaPercentage,
+                background: EXISTING_AREA_COLOR,
+                total: globalContribution?.protectedArea,
+                totalPercentage: globalContribution?.totalExistingAreaPercentage,
               },
               {
-                background: theme.colors.black as string,
-                total: globalProtectionStatsData?.totalCustomAreas,
-                totalPercentage: globalProtectionStatsData?.totalCustomAreasPercentage,
+                background: NEW_AREA_COLOR,
+                total: globalContribution?.totalCustomAreas,
+                totalPercentage: globalContribution?.totalCustomAreasPercentage,
               },
             ]}
             {...chartsProps}

@@ -20,6 +20,12 @@ type StackedHorizontalBarChartProps = {
     total: number;
     totalPercentage: number;
   }[];
+  overlays?: {
+    background: string;
+    outlineColor: string;
+    startPercentage: number;
+    totalPercentage: number;
+  }[];
   showLegend?: boolean;
   showTarget?: boolean;
 };
@@ -33,6 +39,7 @@ const StackedHorizontalBarChart: FCWithMessages<StackedHorizontalBarChartProps> 
   totalProtectedArea,
   totalArea,
   highlightedPercentage,
+  overlays = [],
   showLegend = true,
   showTarget = true,
 }) => {
@@ -74,6 +81,18 @@ const StackedHorizontalBarChart: FCWithMessages<StackedHorizontalBarChartProps> 
               background: item.background,
               width: `${item.totalPercentage}%`,
               ...(index > 0 && { left: `${data[index - 1].totalPercentage}%` }),
+            }}
+          />
+        ))}
+        {overlays.map((overlay, index) => (
+          <span
+            key={index}
+            className="absolute bottom-0 top-0"
+            style={{
+              background: overlay.background,
+              boxShadow: `inset 0 0 0 1px ${overlay.outlineColor}`,
+              left: `${overlay.startPercentage}%`,
+              width: `${overlay.totalPercentage}%`,
             }}
           />
         ))}

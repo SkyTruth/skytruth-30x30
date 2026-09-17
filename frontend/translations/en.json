@@ -109,7 +109,9 @@
       "overlapping-eez-explainer": "Some selected countries may have overlapping EEZs (red dashed outline), which could affect statistics. <a>Reach out to us</a> to request analysis. <Button>Hide warning</Button>",
       "warning": "Warning",
       "remove-from-custom-region": "Remove from Custom Region",
-      "global-contribution": "Global level contribution"
+      "global-contribution": "Global level contribution",
+      "existing-fully-highly-protected": "Existing fully/highly protected",
+      "becomes-fully-highly-protected": "Becomes fully/highly protected"
     },
     "map-sidebar-layers-panel": {
       "map-layers": "Map Layers",
