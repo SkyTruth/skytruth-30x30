@@ -18,7 +18,6 @@ from src.core.params import (
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-    EEZ_FILE_NAME,
     EEZ_LAND_UNION_PARAMS,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
@@ -30,14 +29,16 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     LONG_RUNNING_TASKS,
     MARINE_HABITAT_PARAMS,
+    MARINE_LOCATIONS_FILE_NAME,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
-    MPATLAS_FILE_NAME,
+    MPATLAS_WITH_SEAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCE,
     WDPA_MARINE_FILE_NAME,
+    WDPA_MARINE_WITH_SEAS_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.retry_params import DEFAULT_RETRY_CONFIG, ScheduleRetry
@@ -404,10 +405,7 @@ def dispatch_publisher(
         # ------------------
         case "download_mpatlas":
             download_mpatlas(verbose=verbose)
-            step_list = [
-                "download_protected_planet_pas",
-                "generate_location_minus_fhp_mpa",
-            ]
+            step_list = ["download_protected_planet_pas"]
 
         case "download_protected_seas":
             download_protected_seas(verbose=verbose)
@@ -434,7 +432,8 @@ def dispatch_publisher(
                 "generate_marine_protection_level_stats_table",
                 "generate_protected_areas_table",
                 "generate_terrestrial_biome_stats",
-                "generate_eez_minus_mpa",
+                "generate_location_minus_mpa",
+                "generate_location_minus_fhp_mpa",
                 "download_protected_planet_country",
             ]
 
@@ -495,21 +494,21 @@ def dispatch_publisher(
             )
             step_list = ["update_gadm_minus_pa"]
 
-        case "generate_eez_minus_mpa":
+        case "generate_location_minus_mpa":
             generate_total_area_minus_pa(
-                total_area_file=EEZ_FILE_NAME,
-                pa_file=WDPA_MARINE_FILE_NAME,
+                total_area_file=MARINE_LOCATIONS_FILE_NAME,
+                pa_file=WDPA_MARINE_WITH_SEAS_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
                 tolerance=TOLERANCE,
                 verbose=verbose,
             )
-            step_list = ["update_eez_minus_mpa"]
+            step_list = ["update_location_minus_mpa"]
 
         case "generate_location_minus_fhp_mpa":
             generate_location_minus_fhp_mpa(
-                mpa_file=MPATLAS_FILE_NAME,
-                loc_file=EEZ_FILE_NAME,
+                mpa_file=MPATLAS_WITH_SEAS_FILE_NAME,
+                loc_file=MARINE_LOCATIONS_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 tolerance=TOLERANCE,
@@ -567,7 +566,7 @@ def dispatch_publisher(
                 verbose=verbose,
             )
 
-        case "update_eez_minus_mpa":
+        case "update_location_minus_mpa":
             update_cb(
                 table_name="eez_minus_mpa_v2",
                 gcs_file=CONSERVATION_BUILDER_MARINE_DATA,

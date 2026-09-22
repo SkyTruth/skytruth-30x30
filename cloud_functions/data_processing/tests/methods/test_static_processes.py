@@ -187,6 +187,15 @@ def _mock_load_marine_regions(eez_gdf, hs_gdf):
     return _loader
 
 
+def _mock_load_iho_regions(buffer=False):
+    """Two IHO sea areas, keyed on MRGID like the real loader."""
+    return gpd.GeoDataFrame(
+        {"MRGID": ["1", "2"], "location": ["1", "2"]},
+        geometry=[Point(30, 30).buffer(1.0), Point(40, 40).buffer(1.0)],
+        crs="EPSG:4326",
+    )
+
+
 def _mock_read_dataframe(translations_df):
     def _reader(bucket, blob_name):
         return translations_df.copy()
@@ -532,10 +541,14 @@ def test_process_eez_geoms_happy_path(
     )
     monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
+    monkeypatch.setattr(static_processes, "load_iho_regions", _mock_load_iho_regions, raising=True)
     monkeypatch.setattr(static_processes, "TOLERANCE", 0.7, raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
     monkeypatch.setattr(
         static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True
+    )
+    monkeypatch.setattr(
+        static_processes, "MARINE_LOCATIONS_FILE_NAME", "marine_locations.geojson", raising=True
     )
     # Ensure gc exists
     monkeypatch.setitem(globals(), "gc", gc)
@@ -551,11 +564,17 @@ def test_process_eez_geoms_happy_path(
     # Function returns None; uploads recorded via our mock
     assert resp is None
 
-    # One eez_by_sov upload + one final multi-sov upload
-    assert len(calls) == 2
+    # One eez_by_sov upload + the eez/IHO locations + one final multi-sov upload
+    assert len(calls) == 3
 
     assert calls[0]["destination_blob"] == f"eez_{static_processes.TOLERANCE}.geojson"
-    assert calls[1]["destination_blob"] == f"eez_multi_{static_processes.TOLERANCE}.geojson"
+    assert calls[1]["destination_blob"] == f"marine_locations_{static_processes.TOLERANCE}.geojson"
+    assert calls[2]["destination_blob"] == f"eez_multi_{static_processes.TOLERANCE}.geojson"
+
+    # The locations file carries both the EEZs and the IHO sea areas
+    marine_locations = calls[1]["df"]
+    assert {"AAA", "PRI", "ABNJ"}.issubset(set(marine_locations["location"]))
+    assert {"1", "2"}.issubset(set(marine_locations["location"]))
 
     # Basic structure of uploaded frames
     for c in calls:
