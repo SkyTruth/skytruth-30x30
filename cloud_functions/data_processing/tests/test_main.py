@@ -56,6 +56,7 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
         "generate_total_area_minus_pa",
         "generate_location_minus_fhp_mpa",
+        "generate_habitat_minus_pa",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -868,4 +869,30 @@ def test_eez_land_union_chains_into_the_near_shore_iho_job(patched_all):
 
     assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
         "process_near_shore_iho"
+    ]
+
+
+@pytest.mark.parametrize("habitat", list(HABITAT_PROCESSING_PARAMS))
+def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
+    """One method per habitat, each dispatching only its own key, so a Workflow can fan
+    them out unchanged. Everything else is defaulted inside generate_habitat_minus_pa."""
+    resp = main.run_from_payload({"METHOD": f"generate_{habitat}_minus_pa"})
+
+    assert resp == ("OK", 200)
+
+    generated = [kwargs for name, _, kwargs in patched_all if name == "generate_habitat_minus_pa"]
+    assert len(generated) == 1
+    assert generated[0]["habitat"] == habitat
+
+
+def test_iho_pa_intersections_launches_every_habitat_minus_pa_job(patched_all):
+    """The habitat jobs read both PA estates, and this step is the only one downstream
+    of both writes: the terrestrial geojson lands in download_protected_planet_pas
+    upstream of it, and it writes the marine sea-pairs file itself."""
+    main.run_from_payload({"METHOD": "generate_iho_pa_intersections", "TRIGGER_NEXT": True})
+
+    launched = [payload["METHOD"] for payload in _next_step_payloads(patched_all)]
+
+    assert [f"generate_{habitat}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS] == [
+        method for method in launched if method.endswith("_minus_pa") and "location" not in method
     ]

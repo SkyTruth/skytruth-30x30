@@ -282,6 +282,10 @@ ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA = (
 ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
     f"archive/conservation_builder/gadm_minus_pa_{today_formatted}.parquet"
 )
+CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = "conservation_builder/{habitat}_minus_pa.parquet"
+ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = (
+    f"archive/conservation_builder/{{habitat}}_minus_pa_{today_formatted}.parquet"
+)
 
 # ------------------------------------------------------------
 #                     Raster Data Sources
@@ -293,6 +297,10 @@ CLIMATE_RES_CORAL_SOURCE_FILE = "raw/climate_resilient_corals.tif"
 # ------------------------------------------------------------
 LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
+    "generate_mangroves_minus_pa",
+    "generate_coldwatercorals_minus_pa",
+    "generate_saltmarshes_minus_pa",
+    "generate_seagrasses_minus_pa",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",

@@ -5,7 +5,16 @@ from shapely.geometry import box
 from tqdm.auto import tqdm
 
 from src.core.commons import add_tolerance_suffix
-from src.core.params import BUCKET
+from src.core.params import (
+    ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
+    BUCKET,
+    BUFFERED_MARINE_LOCATIONS_FILE_NAME,
+    CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
+    HABITAT_BY_LOCATION_FILE_PATTERN,
+    TOLERANCE,
+    WDPA_MARINE_WITH_SEAS_FILE_NAME,
+    WDPA_TERRESTRIAL_FILE_NAME,
+)
 from src.core.processors import filter_protected_planet
 from src.utils.gcp import (
     read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
@@ -186,12 +195,11 @@ def generate_total_area_minus_pa(
 
 
 def generate_habitat_minus_pa(
-    habitat: gpd.GeoDataFrame,
-    total_area_file: str,
-    pa_file: str,
-    out_file: str,
-    archive_out_file: str,
-    tolerance: float,
+    habitat: str,
+    total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
+    marine_pa_file=WDPA_MARINE_WITH_SEAS_FILE_NAME,
+    terrestrial_pa_file=WDPA_TERRESTRIAL_FILE_NAME,
+    tolerance=TOLERANCE,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -206,18 +214,16 @@ def generate_habitat_minus_pa(
 
     Parameters
     ----------
-    habitat : gpd.GeoDataFrame
-        Habitat geometries, in the same CRS as the total area file. The whole frame
-        goes to every country so its spatial index is built once and shared.
+    habitat : str
+        Habitat key.
     total_area_file : str
-        Filename of the total area layer (GADM, EEZ, or the buffered marine locations).
-        Read as a parquet or a geojson according to its extension.
-    pa_file : str
-        Filename of protected area geojson (PA or MPA).
-    out_file : str
-        Filename for output file.
-    archive_out_file : str
-        Filename for the dated archive copy.
+        Filename of the buffered marine locations parquet.
+    marine_pa_file : str
+        Filename of the marine protected areas parquet.
+    terrestrial_pa_file : str
+        Filename of the terrestrial protected areas geojson. Coastal habitats are often
+        designated inside PAs that WDPA flags MARINE=0, so both estates are subtracted;
+        WDPAIDs do not repeat across the two, so they concatenate without deduplication.
     tolerance : float
         Tolerance value used in simplification.
     bucket : str
@@ -230,11 +236,14 @@ def generate_habitat_minus_pa(
         GeoDataFrame saved to GCS as a Parquet, one row per country holding habitat.
     """
 
-    # Total areas: GADM (terrestrial), EEZ, or the buffered marine locations
-    read_total_area = (
-        read_parquet_from_gcs if total_area_file.endswith(".parquet") else read_json_df
+    habitat_gdf = read_parquet_from_gcs(
+        bucket_name=bucket,
+        filename=HABITAT_BY_LOCATION_FILE_PATTERN.format(habitat=habitat),
+        verbose=verbose,
     )
-    total_area = read_total_area(
+
+    # Total areas: the land/EEZ union plus the buffered IHO sea areas
+    total_area = read_parquet_from_gcs(
         bucket_name=bucket,
         filename=add_tolerance_suffix(total_area_file, tolerance),
         verbose=verbose,
@@ -244,14 +253,18 @@ def generate_habitat_minus_pa(
     # Get list of unique country codes
     countries = total_area["location"].unique().tolist()
 
-    # Protected areas: PA (terrestrial) or MPA (marine)
-    pa_file = add_tolerance_suffix(pa_file, tolerance)
-    read_pa = read_parquet_from_gcs if pa_file.endswith(".parquet") else read_json_df
-    pa = read_pa(
+    # Protected areas: the marine and terrestrial estates together
+    marine_pa = read_parquet_from_gcs(
         bucket_name=bucket,
-        filename=pa_file,
+        filename=add_tolerance_suffix(marine_pa_file, tolerance),
         verbose=verbose,
-    ).pipe(filter_protected_planet)
+    )
+    terrestrial_pa = read_json_df(
+        bucket_name=bucket,
+        filename=add_tolerance_suffix(terrestrial_pa_file, tolerance),
+        verbose=verbose,
+    )
+    pa = pd.concat([marine_pa, terrestrial_pa], ignore_index=True).pipe(filter_protected_planet)
 
     # Create one row per country
     pa["ISO3"] = pa["ISO3"].str.split(";")
@@ -263,7 +276,7 @@ def generate_habitat_minus_pa(
     pa.geometry = pa.geometry.make_valid()
 
     # Build the habitat index once here rather than once per country inside the workers
-    habitat.sindex.query(box(0, 0, 0, 0))
+    habitat_gdf.sindex.query(box(0, 0, 0, 0))
 
     # Subtract geometries. Threading, not loky: the workers share one read-only habitat
     # frame and its index, which a process backend would pickle to every core.
@@ -273,7 +286,7 @@ def generate_habitat_minus_pa(
         delayed(process_country_habitat)(
             total_area[total_area["location"] == country].reset_index(drop=True),
             pa[pa["ISO3"] == country].reset_index(drop=True),
-            habitat,
+            habitat_gdf,
         )
         for country in tqdm(countries)
     )
@@ -286,13 +299,16 @@ def generate_habitat_minus_pa(
         logger.info({"message": f"Output file has {len(habitat_minus_pa)} rows."})
 
     # Save to GCS
+
+    out_file = CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
+    archive_out_file = ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
+
     upload_gdf(
         bucket_name=bucket,
         gdf=habitat_minus_pa,
         destination_blob_name=out_file,
     )
 
-    # Save to archive
     upload_gdf(
         bucket_name=bucket,
         gdf=habitat_minus_pa,
