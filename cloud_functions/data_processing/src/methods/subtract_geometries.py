@@ -1,6 +1,7 @@
 import geopandas as gpd
 import pandas as pd
 from joblib import Parallel, delayed
+from shapely.geometry import box
 from tqdm.auto import tqdm
 
 from src.core.commons import add_tolerance_suffix
@@ -180,6 +181,117 @@ def generate_total_area_minus_pa(
     upload_gdf(
         bucket_name=bucket,
         gdf=total_area_minus_pa,
+        destination_blob_name=archive_out_file,
+    )
+
+
+def generate_habitat_minus_pa(
+    habitat: gpd.GeoDataFrame,
+    total_area_file: str,
+    pa_file: str,
+    out_file: str,
+    archive_out_file: str,
+    tolerance: float,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+):
+    """
+    Subtracts protected areas from the habitat lying inside each country's boundaries;
+    saves the output to GCS as a Parquet.
+
+    The counterpart of ``generate_total_area_minus_pa``: same inputs and the same
+    per-country fan-out, but each row is a country's unprotected *habitat* rather than
+    its unprotected area. Countries holding none of the habitat are dropped rather than
+    written as empty rows, so the output is usually far shorter than the location list.
+
+    Parameters
+    ----------
+    habitat : gpd.GeoDataFrame
+        Habitat geometries, in the same CRS as the total area file. The whole frame
+        goes to every country so its spatial index is built once and shared.
+    total_area_file : str
+        Filename of total area geojson (GADM or EEZ).
+    pa_file : str
+        Filename of protected area geojson (PA or MPA).
+    out_file : str
+        Filename for output file.
+    archive_out_file : str
+        Filename for the dated archive copy.
+    tolerance : float
+        Tolerance value used in simplification.
+    bucket : str
+        GCS bucket name.
+    verbose : bool, optional
+        Whether to print verbose logs, by default True.
+
+    Returns
+    -------
+        GeoDataFrame saved to GCS as a Parquet, one row per country holding habitat.
+    """
+
+    # Total areas: GADM (terrestrial) or EEZ (marine)
+    total_area = read_json_df(
+        bucket_name=bucket,
+        filename=add_tolerance_suffix(total_area_file, tolerance),
+        verbose=verbose,
+    )
+    total_area = total_area[["location", "geometry"]]
+
+    # Get list of unique country codes
+    countries = total_area["location"].unique().tolist()
+
+    # Protected areas: PA (terrestrial) or MPA (marine)
+    pa_file = add_tolerance_suffix(pa_file, tolerance)
+    read_pa = read_parquet_from_gcs if pa_file.endswith(".parquet") else read_json_df
+    pa = read_pa(
+        bucket_name=bucket,
+        filename=pa_file,
+        verbose=verbose,
+    ).pipe(filter_protected_planet)
+
+    # Create one row per country
+    pa["ISO3"] = pa["ISO3"].str.split(";")
+    pa = pa.explode("ISO3")
+    pa["ISO3"] = pa["ISO3"].str.strip()
+
+    # Keep only polygon records and make the geometries valid
+    pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
+    pa.geometry = pa.geometry.make_valid()
+
+    # Build the habitat index once here rather than once per country inside the workers
+    habitat.sindex.query(box(0, 0, 0, 0))
+
+    # Subtract geometries. Threading, not loky: the workers share one read-only habitat
+    # frame and its index, which a process backend would pickle to every core.
+    if verbose:
+        logger.info({"message": "Subtracting protected areas from habitat areas..."})
+    results = Parallel(n_jobs=-1, backend="threading")(
+        delayed(process_country_habitat)(
+            total_area[total_area["location"] == country].reset_index(drop=True),
+            pa[pa["ISO3"] == country].reset_index(drop=True),
+            habitat,
+        )
+        for country in tqdm(countries)
+    )
+
+    populated = [result for result in results if not result.empty]
+    habitat_minus_pa = (
+        pd.concat(populated).reset_index(drop=True) if populated else total_area.iloc[:0]
+    )
+    if verbose:
+        logger.info({"message": f"Output file has {len(habitat_minus_pa)} rows."})
+
+    # Save to GCS
+    upload_gdf(
+        bucket_name=bucket,
+        gdf=habitat_minus_pa,
+        destination_blob_name=out_file,
+    )
+
+    # Save to archive
+    upload_gdf(
+        bucket_name=bucket,
+        gdf=habitat_minus_pa,
         destination_blob_name=archive_out_file,
     )
 

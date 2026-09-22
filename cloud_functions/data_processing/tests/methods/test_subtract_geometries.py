@@ -115,3 +115,76 @@ def test_multi_country_zone_subtracted_from_all_its_locations(
     # the "less" protected zone must not be subtracted at all.
     assert result.loc["AUS"].geometry.area == pytest.approx(3.0)
     assert result.loc["NZL"].geometry.area == pytest.approx(3.0)
+
+
+@pytest.fixture
+def mock_habitat_gdf():
+    """One patch wholly inside AUS, one straddling its eastern edge, none near NZL."""
+    return gpd.GeoDataFrame(
+        {"geometry": [box(0, 0, 1, 2), box(1.5, 0, 3, 1)]},
+        crs="EPSG:4326",
+    )
+
+
+def test_habitat_is_clipped_to_the_country_and_has_pas_subtracted(
+    monkeypatch, mock_location_gdf, mock_pa_gdf, mock_habitat_gdf
+):
+    reads = {"locations_0.001.geojson": mock_location_gdf, "pas_0.001.geojson": mock_pa_gdf}
+    monkeypatch.setattr(
+        subtract, "read_json_df", lambda bucket_name, filename, verbose: reads[filename].copy()
+    )
+
+    uploads = {}
+
+    def mock_upload_gdf(bucket_name, gdf, destination_blob_name, **_):
+        uploads[destination_blob_name] = gdf.copy()
+
+    monkeypatch.setattr(subtract, "upload_gdf", mock_upload_gdf)
+
+    subtract.generate_habitat_minus_pa(
+        habitat=mock_habitat_gdf,
+        total_area_file="locations.geojson",
+        pa_file="pas.geojson",
+        out_file="out.parquet",
+        archive_out_file="archive/out.parquet",
+        tolerance=0.001,
+        bucket="mock-bucket",
+        verbose=False,
+    )
+
+    result = uploads["out.parquet"].set_index("location")
+
+    # box(0,0,1,2) contributes 2.0; box(1.5,0,3,1) is clipped at the AUS edge x=2 down
+    # to 0.5; the AUS PA box(0,0,1,1) then removes 1.0 of the total.
+    assert result.loc["AUS"].geometry.area == pytest.approx(1.5)
+
+
+def test_countries_holding_no_habitat_are_dropped(
+    monkeypatch, mock_location_gdf, mock_pa_gdf, mock_habitat_gdf
+):
+    reads = {"locations_0.001.geojson": mock_location_gdf, "pas_0.001.geojson": mock_pa_gdf}
+    monkeypatch.setattr(
+        subtract, "read_json_df", lambda bucket_name, filename, verbose: reads[filename].copy()
+    )
+
+    uploads = {}
+
+    def mock_upload_gdf(bucket_name, gdf, destination_blob_name, **_):
+        uploads[destination_blob_name] = gdf.copy()
+
+    monkeypatch.setattr(subtract, "upload_gdf", mock_upload_gdf)
+
+    subtract.generate_habitat_minus_pa(
+        habitat=mock_habitat_gdf,
+        total_area_file="locations.geojson",
+        pa_file="pas.geojson",
+        out_file="out.parquet",
+        archive_out_file="archive/out.parquet",
+        tolerance=0.001,
+        bucket="mock-bucket",
+        verbose=False,
+    )
+
+    # NZL's box(10,0,12,2) holds none of the habitat, so it gets no row at all
+    # rather than a row with empty geometry.
+    assert list(uploads["out.parquet"]["location"]) == ["AUS"]
