@@ -11,6 +11,7 @@ from src.utils.gcp import (
     read_parquet_from_gcs,  # Reads a .parquet file from GCS and returns a GeoDataFrame
     upload_gdf,  # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
 )
+from src.utils.geo import robust_unary_union
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -39,6 +40,54 @@ def process_country(country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame
         pa_union = country_pa.geometry.union_all()
         country_area.geometry = country_area.geometry.difference(pa_union)
         return country_area
+
+
+def process_country_habitat(
+    country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame, habitat: gpd.GeoDataFrame
+):
+    """
+    Returns the unprotected habitat within a country.
+
+    The habitat near the country is dissolved first and clipped to the country
+    boundary once, rather than clipped feature by feature. Every clip pays for the
+    country's full vertex count, so on a dense archipelagic boundary that ordering,
+    not the number of habitat features, is what dominates the runtime. The
+    country's protected areas are then subtracted from the clipped result.
+
+    Parameters
+    ----------
+    country_area : gpd.GeoDataFrame
+        GeoDataFrame with total area for a country.
+    country_pa : gpd.GeoDataFrame
+        GeoDataFrame with protected areas for a country.
+    habitat : gpd.GeoDataFrame
+        GeoDataFrame of habitat geometries, in the same CRS as country_area. The
+        spatial index is built on first use, so pass one frame across countries
+        rather than a per-country slice.
+
+    Returns
+    -------
+        Single-row GeoDataFrame of unprotected habitat carrying country_area's
+        columns, or an empty GeoDataFrame with those columns where the country
+        holds none of the habitat.
+    """
+    country_area = country_area.copy()
+    country_geom = country_area.geometry.union_all()
+
+    nearby = habitat.geometry.values[habitat.sindex.query(country_geom, predicate="intersects")]
+    if len(nearby) == 0:
+        return country_area.iloc[:0]
+
+    habitat_union = robust_unary_union(nearby).intersection(country_geom)
+
+    if not country_pa.empty:
+        habitat_union = habitat_union.difference(robust_unary_union(country_pa.geometry.values))
+
+    if habitat_union.is_empty:
+        return country_area.iloc[:0]
+
+    country_area.geometry = [habitat_union]
+    return country_area
 
 
 def generate_total_area_minus_pa(

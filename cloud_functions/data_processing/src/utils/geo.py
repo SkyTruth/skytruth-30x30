@@ -185,7 +185,7 @@ def robust_unary_union(geometries):
     """
     geoms = list(geometries)
     try:
-        return unary_union(geoms)
+        return shapely.disjoint_subset_union_all(geoms)
     except shapely.errors.GEOSException:
         valid = [make_valid(geom) for geom in geoms]
         scale = max((abs(coord) for geom in valid for coord in geom.bounds), default=1.0) or 1.0
