@@ -354,7 +354,7 @@ def dispatch_publisher(
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
-            step_list = ["process_marine_habitat_geoms"]
+            step_list = ["process_near_shore_iho"]
 
         case "download_marine_habitats":
             requested = data.get("HABITAT") or list(MARINE_HABITAT_PARAMS)

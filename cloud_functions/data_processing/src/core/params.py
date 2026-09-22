@@ -255,6 +255,7 @@ RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 NEAR_SHORE_BUFFER_KM = 10
 NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
+BUFFERED_MARINE_LOCATIONS_FILE_NAME = "static/buffered_marine_locations.parquet"
 
 # PA/IHO sea area pairs
 SEA_PAIRS_DIR = "intermediates/sea_pairs"

@@ -858,3 +858,14 @@ def test_schedule_retry_prevents_next_steps(monkeypatch, call_log):
     # pipe_next_steps was never called
     next_step_calls = [call for call in call_log if call[0] == "pipe_next_steps"]
     assert len(next_step_calls) == 0
+
+
+def test_eez_land_union_chains_into_the_near_shore_iho_job(patched_all):
+    """The buffered marine locations pair the union this step writes with the near-shore
+    sea areas, so the two can no longer run as independent siblings: process_near_shore_iho
+    builds the combined layer and needs the union already on disk."""
+    main.run_from_payload({"METHOD": "process_eez_land_union", "TRIGGER_NEXT": True})
+
+    assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
+        "process_near_shore_iho"
+    ]

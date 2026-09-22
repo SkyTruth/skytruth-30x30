@@ -210,7 +210,8 @@ def generate_habitat_minus_pa(
         Habitat geometries, in the same CRS as the total area file. The whole frame
         goes to every country so its spatial index is built once and shared.
     total_area_file : str
-        Filename of total area geojson (GADM or EEZ).
+        Filename of the total area layer (GADM, EEZ, or the buffered marine locations).
+        Read as a parquet or a geojson according to its extension.
     pa_file : str
         Filename of protected area geojson (PA or MPA).
     out_file : str
@@ -229,8 +230,11 @@ def generate_habitat_minus_pa(
         GeoDataFrame saved to GCS as a Parquet, one row per country holding habitat.
     """
 
-    # Total areas: GADM (terrestrial) or EEZ (marine)
-    total_area = read_json_df(
+    # Total areas: GADM (terrestrial), EEZ, or the buffered marine locations
+    read_total_area = (
+        read_parquet_from_gcs if total_area_file.endswith(".parquet") else read_json_df
+    )
+    total_area = read_total_area(
         bucket_name=bucket,
         filename=add_tolerance_suffix(total_area_file, tolerance),
         verbose=verbose,

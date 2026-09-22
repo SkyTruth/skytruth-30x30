@@ -188,3 +188,49 @@ def test_countries_holding_no_habitat_are_dropped(
     # NZL's box(10,0,12,2) holds none of the habitat, so it gets no row at all
     # rather than a row with empty geometry.
     assert list(uploads["out.parquet"]["location"]) == ["AUS"]
+
+
+@pytest.mark.parametrize(
+    ("total_area_file", "expected_reader"),
+    [
+        ("buffered_marine_locations.parquet", "read_parquet_from_gcs"),
+        ("locations.geojson", "read_json_df"),
+    ],
+)
+def test_location_file_is_read_by_its_format(
+    monkeypatch,
+    mock_location_gdf,
+    mock_pa_gdf,
+    mock_habitat_gdf,
+    total_area_file,
+    expected_reader,
+):
+    """The buffered marine locations are saved as a parquet; GADM and the EEZs are
+    still geojsons, so the habitat job picks its reader from the extension."""
+    location_file_read = add_tolerance_suffix(total_area_file, 0.001)
+    frames = {location_file_read: mock_location_gdf, "pas_0.001.geojson": mock_pa_gdf}
+    reads = []
+
+    def reader(name):
+        def read(bucket_name, filename, verbose=True):
+            reads.append((name, filename))
+            return frames[filename].copy()
+
+        return read
+
+    monkeypatch.setattr(subtract, "read_json_df", reader("read_json_df"))
+    monkeypatch.setattr(subtract, "read_parquet_from_gcs", reader("read_parquet_from_gcs"))
+    monkeypatch.setattr(subtract, "upload_gdf", lambda **kwargs: None)
+
+    subtract.generate_habitat_minus_pa(
+        habitat=mock_habitat_gdf,
+        total_area_file=total_area_file,
+        pa_file="pas.geojson",
+        out_file="out.parquet",
+        archive_out_file="archive/out.parquet",
+        tolerance=0.001,
+        bucket="mock-bucket",
+        verbose=False,
+    )
+
+    assert (expected_reader, location_file_read) in reads
