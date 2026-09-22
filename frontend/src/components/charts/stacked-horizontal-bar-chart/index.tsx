@@ -21,7 +21,8 @@ type StackedHorizontalBarChartProps = {
     totalPercentage: number;
   }[];
   overlays?: {
-    background: string;
+    backgroundColor: string;
+    backgroundImage: string;
     outlineColor: string;
     startPercentage: number;
     totalPercentage: number;
@@ -89,7 +90,8 @@ const StackedHorizontalBarChart: FCWithMessages<StackedHorizontalBarChartProps> 
             key={index}
             className="absolute bottom-0 top-0"
             style={{
-              background: overlay.background,
+              backgroundColor: overlay.backgroundColor,
+              backgroundImage: overlay.backgroundImage,
               boxShadow: `inset 0 0 0 1px ${overlay.outlineColor}`,
               left: `${overlay.startPercentage}%`,
               width: `${overlay.totalPercentage}%`,

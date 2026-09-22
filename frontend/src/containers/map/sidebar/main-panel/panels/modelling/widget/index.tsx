@@ -94,13 +94,15 @@ const getFullyHighlyProtectedOverlays = (
     {
       startPercentage: upgradedStartPercentage - stats.existingFullyHighlyProtectedPercentage,
       totalPercentage: stats.existingFullyHighlyProtectedPercentage,
-      background: FULLY_HIGHLY_PROTECTED_HATCH,
+      backgroundColor: EXISTING_AREA_COLOR,
+      backgroundImage: FULLY_HIGHLY_PROTECTED_HATCH,
       outlineColor: FULLY_HIGHLY_PROTECTED_COLOR,
     },
     {
       startPercentage: upgradedStartPercentage,
       totalPercentage: stats.upgradedFullyHighlyProtectedPercentage,
-      background: BECOMES_FULLY_HIGHLY_PROTECTED_HATCH,
+      backgroundColor: NEW_AREA_COLOR,
+      backgroundImage: BECOMES_FULLY_HIGHLY_PROTECTED_HATCH,
       outlineColor: BECOMES_FULLY_HIGHLY_PROTECTED_COLOR,
     },
   ].filter(({ totalPercentage }) => totalPercentage > 0);
