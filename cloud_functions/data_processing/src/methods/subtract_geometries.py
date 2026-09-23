@@ -201,6 +201,7 @@ def generate_habitat_minus_pa(
     terrestrial_pa_file=WDPA_TERRESTRIAL_FILE_NAME,
     tolerance=TOLERANCE,
     bucket: str = BUCKET,
+    n_jobs: int = 2,
     verbose: bool = True,
 ):
     """
@@ -282,7 +283,7 @@ def generate_habitat_minus_pa(
     # frame and its index, which a process backend would pickle to every core.
     if verbose:
         logger.info({"message": "Subtracting protected areas from habitat areas..."})
-    results = Parallel(n_jobs=-1, backend="threading")(
+    results = Parallel(n_jobs=n_jobs, backend="threading")(
         delayed(process_country_habitat)(
             total_area[total_area["location"] == country].reset_index(drop=True),
             pa[pa["ISO3"] == country].reset_index(drop=True),
