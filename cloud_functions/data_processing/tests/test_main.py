@@ -56,6 +56,7 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
         "generate_total_area_minus_pa",
         "generate_location_minus_fhp_mpa",
+        "generate_habitat_minus_pa",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -858,3 +859,55 @@ def test_schedule_retry_prevents_next_steps(monkeypatch, call_log):
     # pipe_next_steps was never called
     next_step_calls = [call for call in call_log if call[0] == "pipe_next_steps"]
     assert len(next_step_calls) == 0
+
+
+def test_eez_land_union_chains_into_the_near_shore_iho_job(patched_all):
+    """The buffered marine locations pair the union this step writes with the near-shore
+    sea areas, so the two can no longer run as independent siblings: process_near_shore_iho
+    builds the combined layer and needs the union already on disk."""
+    main.run_from_payload({"METHOD": "process_eez_land_union", "TRIGGER_NEXT": True})
+
+    assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
+        "process_near_shore_iho"
+    ]
+
+
+@pytest.mark.parametrize("habitat", list(HABITAT_PROCESSING_PARAMS))
+def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
+    """One method per habitat, each dispatching only its own key, so a Workflow can fan
+    them out unchanged. Everything else is defaulted inside generate_habitat_minus_pa."""
+    resp = main.run_from_payload({"METHOD": f"generate_{habitat}_minus_pa"})
+
+    assert resp == ("OK", 200)
+
+    generated = [kwargs for name, _, kwargs in patched_all if name == "generate_habitat_minus_pa"]
+    assert len(generated) == 1
+    assert generated[0]["habitat"] == habitat
+
+
+def test_only_the_buffered_case_asks_for_the_buffer(patched_all):
+    """Both cases call the same method. The unbuffered one writes the pairs the coverage
+    stats measure a sea's protected area with, which a near-shore join would overstate,
+    and those have to stay clipped to the sea they are measured against."""
+    main.run_from_payload({"METHOD": "generate_iho_pa_intersections"})
+    main.run_from_payload({"METHOD": "generate_buffered_iho_pa_intersections"})
+
+    assert [
+        (kwargs.get("buffer", False), kwargs.get("clip", True))
+        for name, _, kwargs in patched_all
+        if name == "generate_iho_pa_intersections"
+    ] == [(False, True), (True, False)]
+
+
+def test_buffered_iho_pa_intersections_launches_every_habitat_minus_pa_job(patched_all):
+    """The habitat jobs read the PAs keyed to the near-shore sea areas, which only the
+    buffered run writes, so they hang off it rather than off the unbuffered step."""
+    main.run_from_payload(
+        {"METHOD": "generate_buffered_iho_pa_intersections", "TRIGGER_NEXT": True}
+    )
+
+    launched = [payload["METHOD"] for payload in _next_step_payloads(patched_all)]
+
+    assert [f"generate_{habitat}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS] == [
+        method for method in launched if method.endswith("_minus_pa") and "location" not in method
+    ]

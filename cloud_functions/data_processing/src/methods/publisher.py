@@ -74,6 +74,7 @@ from src.methods.static_processes import (
     process_terrestrial_biome_raster,
 )
 from src.methods.subtract_geometries import (
+    generate_habitat_minus_pa,
     generate_location_minus_fhp_mpa,
     generate_total_area_minus_pa,
 )
@@ -354,7 +355,7 @@ def dispatch_publisher(
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
-            step_list = ["process_marine_habitat_geoms"]
+            step_list = ["process_near_shore_iho"]
 
         case "download_marine_habitats":
             requested = data.get("HABITAT") or list(MARINE_HABITAT_PARAMS)
@@ -434,7 +435,17 @@ def dispatch_publisher(
                 "generate_terrestrial_biome_stats",
                 "generate_location_minus_mpa",
                 "generate_location_minus_fhp_mpa",
+                "generate_buffered_iho_pa_intersections",
                 "download_protected_planet_country",
+            ]
+
+        case "generate_buffered_iho_pa_intersections":
+            generate_iho_pa_intersections(buffer=True, clip=False, verbose=verbose)
+            step_list = [
+                "generate_mangroves_minus_pa",
+                "generate_coldwatercorals_minus_pa",
+                "generate_saltmarshes_minus_pa",
+                "generate_seagrasses_minus_pa",
             ]
 
         # ------------------
@@ -515,6 +526,34 @@ def dispatch_publisher(
                 verbose=verbose,
             )
             step_list = ["update_location_minus_fhp_mpa"]
+
+        # TODO: one method per habitat rather than a single method looping over
+        # HABITAT_PROCESSING_PARAMS. When we move to Workflows, it is easiest to fan
+        # out to parallel if they are separate tasks without restructuring anything.
+        case "generate_mangroves_minus_pa":
+            generate_habitat_minus_pa(
+                habitat="mangroves",
+                n_jobs=2,
+                verbose=verbose,
+            )
+
+        case "generate_coldwatercorals_minus_pa":
+            generate_habitat_minus_pa(
+                habitat="coldwatercorals",
+                verbose=verbose,
+            )
+
+        case "generate_saltmarshes_minus_pa":
+            generate_habitat_minus_pa(
+                habitat="saltmarshes",
+                verbose=verbose,
+            )
+
+        case "generate_seagrasses_minus_pa":
+            generate_habitat_minus_pa(
+                habitat="seagrasses",
+                verbose=verbose,
+            )
 
         # ------------------
         #   Database updates

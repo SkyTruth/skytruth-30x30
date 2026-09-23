@@ -255,12 +255,16 @@ RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 NEAR_SHORE_BUFFER_KM = 10
 NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
+BUFFERED_MARINE_LOCATIONS_FILE_NAME = "static/buffered_marine_locations.parquet"
 
 # PA/IHO sea area pairs
 SEA_PAIRS_DIR = "intermediates/sea_pairs"
 WDPA_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_sea_pairs_{today_formatted}.parquet"
 MPATLAS_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_sea_pairs_{today_formatted}.parquet"
 WDPA_MARINE_WITH_SEAS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_marine_with_seas_{today_formatted}.parquet"
+WDPA_WITH_BUFFERED_SEAS_FILE_NAME = (
+    f"{SEA_PAIRS_DIR}/wdpa_with_buffered_seas_{today_formatted}.parquet"
+)
 MPATLAS_WITH_SEAS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_with_seas_{today_formatted}.parquet"
 
 # ------------------------------------------------------------
@@ -281,6 +285,10 @@ ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA = (
 ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
     f"archive/conservation_builder/gadm_minus_pa_{today_formatted}.parquet"
 )
+CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = "conservation_builder/{habitat}_minus_pa.parquet"
+ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = (
+    f"archive/conservation_builder/{{habitat}}_minus_pa_{today_formatted}.parquet"
+)
 
 # ------------------------------------------------------------
 #                     Raster Data Sources
@@ -292,6 +300,10 @@ CLIMATE_RES_CORAL_SOURCE_FILE = "raw/climate_resilient_corals.tif"
 # ------------------------------------------------------------
 LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
+    "generate_mangroves_minus_pa",
+    "generate_coldwatercorals_minus_pa",
+    "generate_saltmarshes_minus_pa",
+    "generate_seagrasses_minus_pa",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",
@@ -312,4 +324,5 @@ LONG_RUNNING_TASKS = [
     "update_marine_protected_areas_tileset",
     "update_terrestrial_protected_areas_tileset",
     "generate_iho_pa_intersections",
+    "generate_buffered_iho_pa_intersections",
 ]
