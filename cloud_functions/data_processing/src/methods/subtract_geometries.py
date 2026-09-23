@@ -279,8 +279,7 @@ def generate_habitat_minus_pa(
     # Build the habitat index once here rather than once per country inside the workers
     habitat_gdf.sindex.query(box(0, 0, 0, 0))
 
-    # Subtract geometries. Threading, not loky: the workers share one read-only habitat
-    # frame and its index, which a process backend would pickle to every core.
+    # Subtract geometries
     if verbose:
         logger.info({"message": "Subtracting protected areas from habitat areas..."})
     results = Parallel(n_jobs=n_jobs, backend="threading")(
@@ -300,7 +299,6 @@ def generate_habitat_minus_pa(
         logger.info({"message": f"Output file has {len(habitat_minus_pa)} rows."})
 
     # Save to GCS
-
     out_file = CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
     archive_out_file = ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
 
