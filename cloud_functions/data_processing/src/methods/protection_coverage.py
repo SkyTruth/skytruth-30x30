@@ -161,7 +161,7 @@ def compute_iho_protection_level(
         )
 
     # The pairs arrive in the IHO CRS; areas need an equal-area one.
-    protected = fully_highly.to_crs(epsg=6933).dissolve(by="location")
+    protected = fully_highly.to_crs(epsg=6933).dissolve(by="location").make_valid()
 
     if verbose:
         logger.info({"message": "loading IHO sea areas for their total areas"})
