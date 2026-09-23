@@ -57,6 +57,7 @@ def patched_all(monkeypatch, call_log):
         "generate_total_area_minus_pa",
         "generate_location_minus_fhp_mpa",
         "generate_habitat_minus_pa",
+        "update_cb",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -896,3 +897,26 @@ def test_iho_pa_intersections_launches_every_habitat_minus_pa_job(patched_all):
     assert [f"generate_{habitat}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS] == [
         method for method in launched if method.endswith("_minus_pa") and "location" not in method
     ]
+
+
+@pytest.mark.parametrize("habitat", list(HABITAT_PROCESSING_PARAMS))
+def test_each_habitat_generate_chains_into_its_own_update(patched_all, habitat):
+    """Each habitat writes its own conservation builder table, so a generate job hands
+    off only to its matching update rather than to a shared one."""
+    main.run_from_payload({"METHOD": f"generate_{habitat}_minus_pa", "TRIGGER_NEXT": True})
+
+    assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
+        f"update_{habitat}_minus_pa"
+    ]
+
+
+@pytest.mark.parametrize("habitat", list(HABITAT_PROCESSING_PARAMS))
+def test_each_habitat_update_targets_its_own_table(patched_all, habitat):
+    """update_cb writes with if_exists="replace", so each habitat must land in a table
+    of its own or the four concurrent jobs would drop each other's rows."""
+    main.run_from_payload({"METHOD": f"update_{habitat}_minus_pa"})
+
+    updates = [kwargs for name, _, kwargs in patched_all if name == "update_cb"]
+    assert len(updates) == 1
+    assert updates[0]["table_name"] == f"{habitat}_minus_pa"
+    assert updates[0]["gcs_file"] == f"conservation_builder/{habitat}_minus_pa.parquet"

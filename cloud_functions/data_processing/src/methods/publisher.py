@@ -15,6 +15,7 @@ from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     BUCKET,
     CHUNK_SIZE,
+    CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
@@ -530,24 +531,28 @@ def dispatch_publisher(
                 n_jobs=2,
                 verbose=verbose,
             )
+            step_list = ["update_mangroves_minus_pa"]
 
         case "generate_coldwatercorals_minus_pa":
             generate_habitat_minus_pa(
                 habitat="coldwatercorals",
                 verbose=verbose,
             )
+            step_list = ["update_coldwatercorals_minus_pa"]
 
         case "generate_saltmarshes_minus_pa":
             generate_habitat_minus_pa(
                 habitat="saltmarshes",
                 verbose=verbose,
             )
+            step_list = ["update_saltmarshes_minus_pa"]
 
         case "generate_seagrasses_minus_pa":
             generate_habitat_minus_pa(
                 habitat="seagrasses",
                 verbose=verbose,
             )
+            step_list = ["update_seagrasses_minus_pa"]
 
         # ------------------
         #   Database updates
@@ -610,6 +615,36 @@ def dispatch_publisher(
             update_cb(
                 table_name="location_minus_fhp_mpa",
                 gcs_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
+                verbose=verbose,
+            )
+
+        case "update_mangroves_minus_pa":
+            update_cb(
+                table_name="mangroves_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="mangroves"),
+                verbose=verbose,
+            )
+
+        case "update_coldwatercorals_minus_pa":
+            update_cb(
+                table_name="coldwatercorals_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(
+                    habitat="coldwatercorals"
+                ),
+                verbose=verbose,
+            )
+
+        case "update_saltmarshes_minus_pa":
+            update_cb(
+                table_name="saltmarshes_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="saltmarshes"),
+                verbose=verbose,
+            )
+
+        case "update_seagrasses_minus_pa":
+            update_cb(
+                table_name="seagrasses_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="seagrasses"),
                 verbose=verbose,
             )
 
