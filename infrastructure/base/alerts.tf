@@ -54,3 +54,37 @@ resource "google_monitoring_alert_policy" "scheduler_failures" {
 
   notification_channels = local.notification_channel_ids
 }
+
+# A Cloud Run job killed by the kernel OOM killer logs "Container terminated on
+# signal 9" and exits without raising in Python, so it fails silently. 
+# This policy alerts on that log entry.
+resource "google_monitoring_alert_policy" "cloudrun_job_killed" {
+  display_name = "Cloud Run job container killed on signal 9 (likely out of memory)"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "Cloud Run job container killed on signal 9"
+
+    condition_matched_log {
+      filter = "resource.type=\"cloud_run_job\" AND textPayload:\"terminated on signal 9\""
+
+      label_extractors = {
+        environment = "REGEXP_EXTRACT(resource.labels.job_name, \"^(${var.staging_project_name}|${var.production_project_name})\")"
+        job_name    = "EXTRACT(resource.labels.job_name)"
+      }
+    }
+  }
+
+  alert_strategy {
+    notification_rate_limit {
+      period = "300s"
+    }
+    auto_close = "1800s"
+  }
+
+  documentation {
+    content = "Cloud Run job $${log.extracted_label.job_name} was killed on signal 9 in environment $${log.extracted_label.environment}. That is usually the kernel OOM killer, but a timeout or a cancelled execution also terminates on signal 9, so check the execution's logs to confirm which. The METHOD it was running is in those logs. If it was memory, either lower the job's parallelism or raise cloudrun_jobs_available_memory."
+  }
+
+  notification_channels = local.notification_channel_ids
+}
