@@ -7,7 +7,6 @@ import { useLocale } from 'next-intl';
 
 import DeckJsonLayer from '@/components/map/layers/deck-json-layer';
 import MapboxLayer from '@/components/map/layers/mapbox-layer';
-import PmtilesLayer from '@/components/map/layers/pmtiles-layer';
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { layersInteractiveAtom, layersInteractiveIdsAtom } from '@/containers/map/store';
 import useResolvedConfig from '@/hooks/use-resolved-config';
@@ -109,18 +108,6 @@ const LayerManagerItem = ({ slug, beforeId, settings }: LayerManagerItemProps) =
 
   if (!parsedConfig) {
     return null;
-  }
-
-  if (type === 'pmtiles') {
-    return (
-      <PmtilesLayer
-        id={`${slug}-layer`}
-        beforeId={beforeId}
-        config={parsedConfig as Config}
-        opacity={(settings.opacity as number) ?? 1}
-        visibility={(settings.visibility as boolean) ?? true}
-      />
-    );
   }
 
   if (type === 'mapbox') {

@@ -18,7 +18,6 @@
   "packageManager": "yarn@3.5.0",
   "dependencies": {
     "@artsy/fresnel": "7.1.4",
-    "@deck.gl/geo-layers": "9.4.0",
     "@deck.gl/json": "9.4.0",
     "@deck.gl/layers": "9.4.0",
     "@deck.gl/mapbox": "9.4.0",
@@ -29,7 +28,6 @@
     "@loaders.gl/core": "^4.5.1",
     "@loaders.gl/kml": "^4.5.1",
     "@loaders.gl/loader-utils": "^4.5.1",
-    "@loaders.gl/pmtiles": "^4.5.1",
     "@loaders.gl/shapefile": "^4.5.1",
     "@loaders.gl/zip": "^4.5.1",
     "@localazy/cdn-client": "^1.5.2",

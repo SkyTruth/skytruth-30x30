@@ -1246,7 +1246,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/mvt@npm:4.5.1, @loaders.gl/mvt@npm:^4.4.3":
+"@loaders.gl/mvt@npm:^4.4.3":
   version: 4.5.1
   resolution: "@loaders.gl/mvt@npm:4.5.1"
   dependencies:
@@ -1262,21 +1262,6 @@ __metadata:
   peerDependencies:
     "@loaders.gl/core": ~4.4.0
   checksum: 9fce3d57b8f9593247a4d81f2aa660e49081bc2737f6c8482c2669c3ebda50e261e4d54c33727cbef3ac290c6b8e9ed69cc3be2c1614524e42b52236c70f43ce
-  languageName: node
-  linkType: hard
-
-"@loaders.gl/pmtiles@npm:^4.5.1":
-  version: 4.5.1
-  resolution: "@loaders.gl/pmtiles@npm:4.5.1"
-  dependencies:
-    "@loaders.gl/images": 4.5.1
-    "@loaders.gl/loader-utils": 4.5.1
-    "@loaders.gl/mvt": 4.5.1
-    "@loaders.gl/schema": 4.5.1
-    pmtiles: ^3.0.4
-  peerDependencies:
-    "@loaders.gl/core": ~4.4.0
-  checksum: ae3b88753558c7f8aecd53025876f4e1e642b3d545df8bc3946741a3212c6d546ac26c1d773cc4a4080f572cf78ef5037d4ce14f8abec21655e2ec4cb4a34f1a
   languageName: node
   linkType: hard
 
@@ -5675,15 +5660,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/leaflet@npm:^1.9.8":
-  version: 1.9.21
-  resolution: "@types/leaflet@npm:1.9.21"
-  dependencies:
-    "@types/geojson": "*"
-  checksum: 247f6492add1af10beabb410d2f7d6d272d0ffdbc96d2ad57175bbefcc6adf36e45dc44bbd9e3b736a7d7cea0ee2198ea364bf752db7f00ecffddc1996798fe1
-  languageName: node
-  linkType: hard
-
 "@types/mapbox-gl@npm:*, @types/mapbox-gl@npm:>=1.0.0":
   version: 3.4.1
   resolution: "@types/mapbox-gl@npm:3.4.1"
@@ -9212,13 +9188,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fflate@npm:^0.8.0":
-  version: 0.8.2
-  resolution: "fflate@npm:0.8.2"
-  checksum: 29470337b85d3831826758e78f370e15cda3169c5cd4477c9b5eea2402261a74b2975bae816afabe1c15d21d98591e0d30a574f7103aa117bff60756fa3035d4
-  languageName: node
-  linkType: hard
-
 "file-entry-cache@npm:^6.0.1":
   version: 6.0.1
   resolution: "file-entry-cache@npm:6.0.1"
@@ -12147,16 +12116,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pmtiles@npm:^3.0.4":
-  version: 3.2.1
-  resolution: "pmtiles@npm:3.2.1"
-  dependencies:
-    "@types/leaflet": ^1.9.8
-    fflate: ^0.8.0
-  checksum: 132c28ebc61fe77d0956cd24b60835ec2e68466e9479e5653893729369a61a81a53fb7cab40ff960c531117bb3efa663f2c36b7cb02988b3c7a7631c2785d1c4
-  languageName: node
-  linkType: hard
-
 "point-in-polygon@npm:^1.1.0":
   version: 1.1.0
   resolution: "point-in-polygon@npm:1.1.0"
@@ -13584,7 +13543,6 @@ __metadata:
   resolution: "skytruth-30x30-frontend@workspace:."
   dependencies:
     "@artsy/fresnel": 7.1.4
-    "@deck.gl/geo-layers": 9.4.0
     "@deck.gl/json": 9.4.0
     "@deck.gl/layers": 9.4.0
     "@deck.gl/mapbox": 9.4.0
@@ -13595,7 +13553,6 @@ __metadata:
     "@loaders.gl/core": ^4.5.1
     "@loaders.gl/kml": ^4.5.1
     "@loaders.gl/loader-utils": ^4.5.1
-    "@loaders.gl/pmtiles": ^4.5.1
     "@loaders.gl/shapefile": ^4.5.1
     "@loaders.gl/zip": ^4.5.1
     "@localazy/cdn-client": ^1.5.2
