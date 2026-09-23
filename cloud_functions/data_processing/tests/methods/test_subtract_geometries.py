@@ -1,4 +1,5 @@
 import geopandas as gpd
+import pandas as pd
 import pytest
 from shapely.geometry import MultiPolygon, box
 
@@ -143,32 +144,36 @@ def mock_terrestrial_pa_gdf():
 
 
 @pytest.fixture
-def habitat_job_mocks(
-    monkeypatch, mock_location_gdf, mock_pa_gdf, mock_terrestrial_pa_gdf, mock_habitat_gdf
-):
-    """Serve the four reads the habitat job makes and capture what it uploads.
+def mock_pa_with_seas_gdf(mock_pa_gdf, mock_terrestrial_pa_gdf):
+    """Both estates in one frame, as a buffered generate_iho_pa_intersections run saves
+    them: every PA labelled with the environment it was joined from."""
+    return pd.concat(
+        [
+            mock_pa_gdf.assign(environment="marine"),
+            mock_terrestrial_pa_gdf.assign(environment="terrestrial"),
+        ],
+        ignore_index=True,
+    )
+
+
+@pytest.fixture
+def habitat_job_mocks(monkeypatch, mock_location_gdf, mock_pa_with_seas_gdf, mock_habitat_gdf):
+    """Serve the three reads the habitat job makes and capture what it uploads.
 
     The job takes a habitat key and reads its own by-location geometries, so the
     habitat frame arrives through read_parquet_from_gcs rather than being passed in.
-    Only the terrestrial estate is a geojson; everything else is a parquet.
     """
     parquet_reads = {
         "static/mangroves_by_location.parquet": mock_habitat_gdf,
         "locations_0.001.parquet": mock_location_gdf,
-        "marine_0.001.parquet": mock_pa_gdf,
+        "pas_0.001.parquet": mock_pa_with_seas_gdf,
     }
-    json_reads = {"terrestrial_0.001.geojson": mock_terrestrial_pa_gdf}
     uploads = {}
 
     monkeypatch.setattr(
         subtract,
         "read_parquet_from_gcs",
         lambda bucket_name, filename, verbose=True: parquet_reads[filename].copy(),
-    )
-    monkeypatch.setattr(
-        subtract,
-        "read_json_df",
-        lambda bucket_name, filename, verbose=True: json_reads[filename].copy(),
     )
     monkeypatch.setattr(
         subtract,
@@ -185,8 +190,7 @@ def _run_habitat_job():
     subtract.generate_habitat_minus_pa(
         habitat="mangroves",
         total_area_file="locations.parquet",
-        marine_pa_file="marine.parquet",
-        terrestrial_pa_file="terrestrial.geojson",
+        pa_file="pas.parquet",
         tolerance=0.001,
         bucket="mock-bucket",
         verbose=False,
@@ -226,16 +230,15 @@ def test_countries_holding_no_habitat_are_dropped(habitat_job_mocks):
     ) == ["AUS"]
 
 
-def test_each_input_is_read_by_the_reader_for_its_format(
-    monkeypatch, mock_location_gdf, mock_pa_gdf, mock_terrestrial_pa_gdf, mock_habitat_gdf
+def test_each_input_is_read_once_through_the_parquet_reader(
+    monkeypatch, mock_location_gdf, mock_pa_with_seas_gdf, mock_habitat_gdf
 ):
-    """Only the terrestrial estate is a geojson. The habitat, the locations and the
-    marine estate are parquets, so each input gets the reader its own format needs."""
+    """Both estates now arrive in the one file a buffered run writes, so the habitat,
+    the locations and the protected areas are all parquets and none is read twice."""
     frames = {
         "static/mangroves_by_location.parquet": mock_habitat_gdf,
         "locations_0.001.parquet": mock_location_gdf,
-        "marine_0.001.parquet": mock_pa_gdf,
-        "terrestrial_0.001.geojson": mock_terrestrial_pa_gdf,
+        "pas_0.001.parquet": mock_pa_with_seas_gdf,
     }
     reads = []
 
@@ -255,16 +258,15 @@ def test_each_input_is_read_by_the_reader_for_its_format(
     assert reads == [
         ("read_parquet_from_gcs", "static/mangroves_by_location.parquet"),
         ("read_parquet_from_gcs", "locations_0.001.parquet"),
-        ("read_parquet_from_gcs", "marine_0.001.parquet"),
-        ("read_json_df", "terrestrial_0.001.geojson"),
+        ("read_parquet_from_gcs", "pas_0.001.parquet"),
     ]
 
 
 def test_both_pa_estates_are_subtracted(
     monkeypatch, mock_location_gdf, mock_pa_gdf, mock_habitat_gdf
 ):
-    """Coastal habitat sits in PAs that WDPA flags MARINE=0, so the habitat job reads
-    both estates and both must come off the habitat."""
+    """Coastal habitat sits in PAs that WDPA flags MARINE=0, so the buffered run carries
+    both estates into the one file and both must come off the habitat."""
     overlapping_terrestrial_pa = gpd.GeoDataFrame(
         {
             "ISO3": ["AUS"],
@@ -278,17 +280,18 @@ def test_both_pa_estates_are_subtracted(
     parquet_reads = {
         "static/mangroves_by_location.parquet": mock_habitat_gdf,
         "locations_0.001.parquet": mock_location_gdf,
-        "marine_0.001.parquet": mock_pa_gdf,
+        "pas_0.001.parquet": pd.concat(
+            [
+                mock_pa_gdf.assign(environment="marine"),
+                overlapping_terrestrial_pa.assign(environment="terrestrial"),
+            ],
+            ignore_index=True,
+        ),
     }
     monkeypatch.setattr(
         subtract,
         "read_parquet_from_gcs",
         lambda bucket_name, filename, verbose=True: parquet_reads[filename].copy(),
-    )
-    monkeypatch.setattr(
-        subtract,
-        "read_json_df",
-        lambda bucket_name, filename, verbose=True: overlapping_terrestrial_pa.copy(),
     )
 
     uploads = {}
@@ -307,15 +310,61 @@ def test_both_pa_estates_are_subtracted(
     assert result.loc["AUS"].geometry.area == pytest.approx(0.5)
 
 
+def test_pas_keyed_to_a_sea_area_are_subtracted_from_it(monkeypatch, mock_habitat_gdf):
+    """A near-shore sea area is a location like any country, keyed on its MRGID. Only
+    the rows a buffered run keys to that sea can be subtracted from it: a PA's own ISO3
+    is a country code and never matches one."""
+    locations = gpd.GeoDataFrame(
+        {"location": ["AUS", "4278"], "geometry": [box(0, 0, 2, 2), box(0, 0, 2, 2)]},
+        crs="EPSG:4326",
+    )
+    pas = gpd.GeoDataFrame(
+        {
+            "ISO3": ["4278"],
+            "STATUS": ["Designated"],
+            "DESIG_ENG": ["Marine Park"],
+            "PA_DEF": [1],
+            "environment": ["marine"],
+            "geometry": [box(0, 0, 1, 1)],
+        },
+        crs="EPSG:4326",
+    )
+    parquet_reads = {
+        "static/mangroves_by_location.parquet": mock_habitat_gdf,
+        "locations_0.001.parquet": locations,
+        "pas_0.001.parquet": pas,
+    }
+    monkeypatch.setattr(
+        subtract,
+        "read_parquet_from_gcs",
+        lambda bucket_name, filename, verbose=True: parquet_reads[filename].copy(),
+    )
+
+    uploads = {}
+
+    def mock_upload_gdf(bucket_name, gdf, destination_blob_name, **_):
+        uploads[destination_blob_name] = gdf.copy()
+
+    monkeypatch.setattr(subtract, "upload_gdf", mock_upload_gdf)
+
+    _run_habitat_job()
+
+    result = uploads["conservation_builder/mangroves_minus_pa.parquet"].set_index("location")
+
+    # Both locations cover the same 2.5 of habitat; the PA comes off the sea alone.
+    assert result.loc["4278"].geometry.area == pytest.approx(1.5)
+    assert result.loc["AUS"].geometry.area == pytest.approx(2.5)
+
+
 def test_every_input_is_read_from_the_given_bucket(
-    monkeypatch, mock_location_gdf, mock_pa_gdf, mock_terrestrial_pa_gdf, mock_habitat_gdf
+    monkeypatch, mock_location_gdf, mock_pa_with_seas_gdf, mock_habitat_gdf
 ):
     """Every read has to honour the bucket argument, or an override sends some inputs
     to one bucket and the rest to whichever the BUCKET constant points at."""
     parquet_reads = {
         "static/mangroves_by_location.parquet": mock_habitat_gdf,
         "locations_0.001.parquet": mock_location_gdf,
-        "marine_0.001.parquet": mock_pa_gdf,
+        "pas_0.001.parquet": mock_pa_with_seas_gdf,
     }
     buckets = []
 
@@ -327,13 +376,8 @@ def test_every_input_is_read_from_the_given_bucket(
         return read
 
     monkeypatch.setattr(subtract, "read_parquet_from_gcs", recording_reader(parquet_reads))
-    monkeypatch.setattr(
-        subtract,
-        "read_json_df",
-        recording_reader({"terrestrial_0.001.geojson": mock_terrestrial_pa_gdf}),
-    )
     monkeypatch.setattr(subtract, "upload_gdf", lambda **kwargs: None)
 
     _run_habitat_job()
 
-    assert buckets == ["mock-bucket"] * 4
+    assert buckets == ["mock-bucket"] * 3

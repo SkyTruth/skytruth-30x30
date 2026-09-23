@@ -885,11 +885,25 @@ def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
     assert generated[0]["habitat"] == habitat
 
 
-def test_iho_pa_intersections_launches_every_habitat_minus_pa_job(patched_all):
-    """The habitat jobs read both PA estates, and this step is the only one downstream
-    of both writes: the terrestrial geojson lands in download_protected_planet_pas
-    upstream of it, and it writes the marine sea-pairs file itself."""
-    main.run_from_payload({"METHOD": "generate_iho_pa_intersections", "TRIGGER_NEXT": True})
+def test_only_the_buffered_case_asks_for_the_buffer(patched_all):
+    """Both cases call the same method. The unbuffered one writes the pairs the coverage
+    stats measure a sea's protected area with, which a near-shore join would overstate."""
+    main.run_from_payload({"METHOD": "generate_iho_pa_intersections"})
+    main.run_from_payload({"METHOD": "generate_buffered_iho_pa_intersections"})
+
+    assert [
+        kwargs.get("buffer", False)
+        for name, _, kwargs in patched_all
+        if name == "generate_iho_pa_intersections"
+    ] == [False, True]
+
+
+def test_buffered_iho_pa_intersections_launches_every_habitat_minus_pa_job(patched_all):
+    """The habitat jobs read the PAs keyed to the near-shore sea areas, which only the
+    buffered run writes, so they hang off it rather than off the unbuffered step."""
+    main.run_from_payload(
+        {"METHOD": "generate_buffered_iho_pa_intersections", "TRIGGER_NEXT": True}
+    )
 
     launched = [payload["METHOD"] for payload in _next_step_payloads(patched_all)]
 

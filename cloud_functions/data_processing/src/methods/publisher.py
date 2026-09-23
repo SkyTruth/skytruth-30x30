@@ -435,11 +435,17 @@ def dispatch_publisher(
                 "generate_terrestrial_biome_stats",
                 "generate_location_minus_mpa",
                 "generate_location_minus_fhp_mpa",
+                "generate_buffered_iho_pa_intersections",
+                "download_protected_planet_country",
+            ]
+
+        case "generate_buffered_iho_pa_intersections":
+            generate_iho_pa_intersections(buffer=True, verbose=verbose)
+            step_list = [
                 "generate_mangroves_minus_pa",
                 "generate_coldwatercorals_minus_pa",
                 "generate_saltmarshes_minus_pa",
                 "generate_seagrasses_minus_pa",
-                "download_protected_planet_country",
             ]
 
         # ------------------

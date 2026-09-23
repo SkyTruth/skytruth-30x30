@@ -12,8 +12,7 @@ from src.core.params import (
     CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     HABITAT_BY_LOCATION_FILE_PATTERN,
     TOLERANCE,
-    WDPA_MARINE_WITH_SEAS_FILE_NAME,
-    WDPA_TERRESTRIAL_FILE_NAME,
+    WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
 )
 from src.core.processors import filter_protected_planet
 from src.utils.gcp import (
@@ -197,8 +196,7 @@ def generate_total_area_minus_pa(
 def generate_habitat_minus_pa(
     habitat: str,
     total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
-    marine_pa_file=WDPA_MARINE_WITH_SEAS_FILE_NAME,
-    terrestrial_pa_file=WDPA_TERRESTRIAL_FILE_NAME,
+    pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
     tolerance=TOLERANCE,
     bucket: str = BUCKET,
     n_jobs: int = -1,
@@ -219,12 +217,11 @@ def generate_habitat_minus_pa(
         Habitat key.
     total_area_file : str
         Filename of the buffered marine locations parquet.
-    marine_pa_file : str
-        Filename of the marine protected areas parquet.
-    terrestrial_pa_file : str
-        Filename of the terrestrial protected areas geojson. Coastal habitats are often
-        designated inside PAs that WDPA flags MARINE=0, so both estates are subtracted;
-        WDPAIDs do not repeat across the two, so they concatenate without deduplication.
+    pa_file : str
+        Filename of the protected areas parquet written by a buffered
+        ``generate_iho_pa_intersections`` run: both estates, carrying a row per PA per
+        near-shore sea area it lies in. Coastal habitats are often designated inside PAs
+        that WDPA flags MARINE=0, hence both estates rather than the marine one alone.
     tolerance : float
         Tolerance value used in simplification.
     bucket : str
@@ -254,18 +251,13 @@ def generate_habitat_minus_pa(
     # Get list of unique country codes
     countries = total_area["location"].unique().tolist()
 
-    # Protected areas: the marine and terrestrial estates together
-    marine_pa = read_parquet_from_gcs(
+    # Protected areas: the marine and terrestrial protected areas intersecting eezs and
+    # buffered IHO seas
+    pa = read_parquet_from_gcs(
         bucket_name=bucket,
-        filename=add_tolerance_suffix(marine_pa_file, tolerance),
+        filename=add_tolerance_suffix(pa_file, tolerance),
         verbose=verbose,
-    )
-    terrestrial_pa = read_json_df(
-        bucket_name=bucket,
-        filename=add_tolerance_suffix(terrestrial_pa_file, tolerance),
-        verbose=verbose,
-    )
-    pa = pd.concat([marine_pa, terrestrial_pa], ignore_index=True).pipe(filter_protected_planet)
+    ).pipe(filter_protected_planet)
 
     # Create one row per country
     pa["ISO3"] = pa["ISO3"].str.split(";")

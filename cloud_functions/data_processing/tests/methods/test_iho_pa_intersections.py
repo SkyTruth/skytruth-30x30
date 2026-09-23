@@ -6,7 +6,11 @@ import geopandas as gpd
 from shapely.geometry import MultiPolygon, Point, box
 
 from src.core.commons import add_tolerance_suffix
-from src.core.params import MPATLAS_WITH_SEAS_FILE_NAME, WDPA_MARINE_WITH_SEAS_FILE_NAME
+from src.core.params import (
+    MPATLAS_WITH_SEAS_FILE_NAME,
+    WDPA_MARINE_WITH_SEAS_FILE_NAME,
+    WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
+)
 from src.methods import iho_pa_intersections
 from src.methods.iho_pa_intersections import (
     generate_iho_pa_intersections,
@@ -339,6 +343,70 @@ def test_generate_appends_each_sea_pair_to_the_marine_pas(monkeypatch):
     # the appended rows carry the PA clipped to their own sea
     sea_a = combined[(combined["WDPA_PID"] == "straddler") & (combined["ISO3"] == "1")]
     assert sea_a.geometry.iloc[0].equals(box(5, 1, 10, 2))
+
+
+def test_buffered_generate_writes_only_the_with_seas_file(monkeypatch):
+    """The pairs and the MPAtlas files measure protected area within a published sea,
+    which a near-shore join would overstate, so a buffered run leaves them alone and
+    writes its own with-seas file rather than overwriting the unbuffered one."""
+    buffers = []
+    _patch_iho(monkeypatch, calls=buffers)
+    _patch_mpatlas(monkeypatch)
+    saved = _patch_upload(monkeypatch)
+    _patch_wdpa(monkeypatch, _wdpa_frame([box(1, 1, 2, 2)], ISO3=["FRA"]))
+
+    generate_iho_pa_intersections(tolerance=0.0001, bucket="b", buffer=True, verbose=False)
+
+    assert set(saved) == {add_tolerance_suffix(WDPA_WITH_BUFFERED_SEAS_FILE_NAME, 0.0001)}
+    assert set(buffers) == {True}
+
+
+def test_buffered_generate_carries_both_pa_estates(monkeypatch):
+    """Coastal habitat is often designated inside PAs that WDPA flags MARINE=0, so the
+    run that reaches inshore joins the terrestrial estate as well, labelled with it."""
+    _patch_iho(monkeypatch)
+    _patch_mpatlas(monkeypatch)
+    saved = _patch_upload(monkeypatch)
+    estates = {
+        "intermediates/protected_area_geoms/marine_wdpa_0.0001.geojson": _wdpa_frame(
+            [box(1, 1, 2, 2)], pids=["marine_pa"], ISO3=["FRA"]
+        ),
+        "intermediates/protected_area_geoms/terrestrial_wdpa_0.0001.geojson": _wdpa_frame(
+            [box(3, 3, 4, 4)], pids=["terrestrial_pa"], ISO3=["FRA"]
+        ),
+    }
+    monkeypatch.setattr(
+        iho_pa_intersections,
+        "read_json_df",
+        lambda bucket_name, filename, **kwargs: estates[filename],
+    )
+
+    generate_iho_pa_intersections(tolerance=0.0001, bucket="b", buffer=True, verbose=False)
+
+    combined = saved[add_tolerance_suffix(WDPA_WITH_BUFFERED_SEAS_FILE_NAME, 0.0001)]
+
+    assert sorted(
+        zip(combined["WDPA_PID"], combined["ISO3"], combined["environment"], strict=True)
+    ) == [
+        ("marine_pa", "1", "marine"),
+        ("marine_pa", "FRA", "marine"),
+        ("terrestrial_pa", "1", "terrestrial"),
+        ("terrestrial_pa", "FRA", "terrestrial"),
+    ]
+
+
+def test_unbuffered_generate_leaves_the_terrestrial_estate_out(monkeypatch):
+    """The pairs feed the marine coverage stats, which credit a sea only with the PAs
+    that lie in it, so the unbuffered run reads the marine estate alone."""
+    _patch_iho(monkeypatch)
+    _patch_mpatlas(monkeypatch)
+    _patch_upload(monkeypatch)
+    reads = []
+    _patch_wdpa(monkeypatch, _wdpa_frame([box(1, 1, 2, 2)], ISO3=["FRA"]), calls=reads)
+
+    generate_iho_pa_intersections(tolerance=0.0001, bucket="b", verbose=False)
+
+    assert reads == ["intermediates/protected_area_geoms/marine_wdpa_0.0001.geojson"]
 
 
 def test_generate_appends_each_sea_pair_to_the_mpatlas_zones(monkeypatch):

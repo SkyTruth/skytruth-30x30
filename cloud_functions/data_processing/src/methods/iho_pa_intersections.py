@@ -7,8 +7,8 @@ re-running the clip; a consumer that only needs to know which sea a feature lies
 in, or that clips against the seas itself, should join in place rather than read
 these.
 
-The WDPA pairs carry an ``environment`` column, always "marine" today. See
-``WDPA_ENVIRONMENTS`` for why the terrestrial estate is left out.
+The WDPA pairs carry an ``environment`` column, always "marine": the terrestrial
+estate is only joined on a buffered run, which writes the with-seas file alone.
 """
 
 import geopandas as gpd
@@ -30,6 +30,8 @@ from src.core.params import (
     WDPA_MARINE_FILE_NAME,
     WDPA_MARINE_WITH_SEAS_FILE_NAME,
     WDPA_SEA_PAIRS_FILE_NAME,
+    WDPA_TERRESTRIAL_FILE_NAME,
+    WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
 )
 from src.utils.gcp import read_json_df, upload_gdf
 from src.utils.logger import Logger
@@ -37,6 +39,10 @@ from src.utils.logger import Logger
 logger = Logger()
 
 WDPA_ENVIRONMENTS = (("marine", WDPA_MARINE_FILE_NAME),)
+BUFFERED_WDPA_ENVIRONMENTS = (
+    ("marine", WDPA_MARINE_FILE_NAME),
+    ("terrestrial", WDPA_TERRESTRIAL_FILE_NAME),
+)
 
 tqdm.pandas()
 
@@ -173,15 +179,31 @@ def intersect_mpatlas_with_iho(
 def generate_iho_pa_intersections(
     tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
+    buffer: bool = False,
     verbose: bool = True,
 ) -> None:
-    """Join every protected area dataset to the IHO sea areas and save the pairs."""
+    """Join every protected area dataset to the IHO sea areas and save the pairs.
+
+    Parameters
+    ----------
+    tolerance : float
+        Tolerance the protected areas were simplified to, used to name the files.
+    bucket : str
+        GCS bucket name.
+    buffer : bool
+        Join against the near-shore sea areas rather than the published ones, take
+        the terrestrial estate along, and save only the WDPA with their sea rows,
+        under its own name. Everything else written here measures protected area
+        within a sea, which a buffered join would overstate.
+    """
 
     def wdpa_pairs(wdpa):
-        """The PAs of each environment in WDPA_ENVIRONMENTS, labelled with it."""
+        """The PAs of each environment, labelled with it and paired with their seas."""
         return pd.concat(
             [
-                intersect_wdpa_with_iho(pas=pas, with_geometry=True).assign(environment=environment)
+                intersect_wdpa_with_iho(pas=pas, buffer=buffer, with_geometry=True).assign(
+                    environment=environment
+                )
                 for environment, pas in wdpa.items()
             ],
             ignore_index=True,
@@ -192,18 +214,16 @@ def generate_iho_pa_intersections(
             logger.info({"message": f"saving {len(gdf)} row(s) to gs://{bucket}/{file_name}"})
         upload_gdf(bucket_name=bucket, gdf=gdf, destination_blob_name=file_name, verbose=verbose)
 
+    environments = BUFFERED_WDPA_ENVIRONMENTS if buffer else WDPA_ENVIRONMENTS
     wdpa = {
         environment: read_json_df(
             bucket_name=bucket,
             filename=add_tolerance_suffix(pa_file_name, tolerance),
             verbose=verbose,
         )
-        for environment, pa_file_name in WDPA_ENVIRONMENTS
+        for environment, pa_file_name in environments
     }
     pairs = wdpa_pairs(wdpa)
-
-    mpa = read_mpatlas_from_gcs(bucket, MPATLAS_FILE_NAME)
-    mpa_pairs = intersect_mpatlas_with_iho(mpa=mpa, with_geometry=True)
 
     # TODO: I don't love that I'm renaming "location" to "ISO3" or "country" since the
     # IHO areas do not have these codes, but this is the simplest way to use it in
@@ -211,14 +231,27 @@ def generate_iho_pa_intersections(
     # Maybe later we rename "ISO3" and "country" to "location", but that has more
     # downstream implications.
     wdpa_sea_rows = pairs[pairs.geometry.notna()].rename(columns={"location": "ISO3"})
-    wdpa_marine_with_seas = pd.concat([wdpa["marine"], wdpa_sea_rows], ignore_index=True)
+    wdpa_with_seas = pd.concat(
+        [
+            *(pas.assign(environment=environment) for environment, pas in wdpa.items()),
+            wdpa_sea_rows,
+        ],
+        ignore_index=True,
+    )
+
+    # The WDPA names take a tolerance because the PAs they were built from were
+    # simplified to it. MPAtlas is read as published, so its name does not.
+    if buffer:
+        save(wdpa_with_seas, add_tolerance_suffix(WDPA_WITH_BUFFERED_SEAS_FILE_NAME, tolerance))
+        return
+
+    mpa = read_mpatlas_from_gcs(bucket, MPATLAS_FILE_NAME)
+    mpa_pairs = intersect_mpatlas_with_iho(mpa=mpa, with_geometry=True)
 
     mpa_sea_rows = mpa_pairs[mpa_pairs.geometry.notna()].rename(columns={"location": "country"})
     mpatlas_with_seas = pd.concat([mpa, mpa_sea_rows], ignore_index=True)
 
-    # The WDPA names take a tolerance because the PAs they were built from were
-    # simplified to it. MPAtlas is read as published, so its name does not.
     save(pairs, add_tolerance_suffix(WDPA_SEA_PAIRS_FILE_NAME, tolerance))
-    save(wdpa_marine_with_seas, add_tolerance_suffix(WDPA_MARINE_WITH_SEAS_FILE_NAME, tolerance))
+    save(wdpa_with_seas, add_tolerance_suffix(WDPA_MARINE_WITH_SEAS_FILE_NAME, tolerance))
     save(mpa_pairs, MPATLAS_SEA_PAIRS_FILE_NAME)
     save(mpatlas_with_seas, MPATLAS_WITH_SEAS_FILE_NAME)
