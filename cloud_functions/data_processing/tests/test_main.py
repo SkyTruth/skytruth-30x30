@@ -887,15 +887,16 @@ def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
 
 def test_only_the_buffered_case_asks_for_the_buffer(patched_all):
     """Both cases call the same method. The unbuffered one writes the pairs the coverage
-    stats measure a sea's protected area with, which a near-shore join would overstate."""
+    stats measure a sea's protected area with, which a near-shore join would overstate,
+    and those have to stay clipped to the sea they are measured against."""
     main.run_from_payload({"METHOD": "generate_iho_pa_intersections"})
     main.run_from_payload({"METHOD": "generate_buffered_iho_pa_intersections"})
 
     assert [
-        kwargs.get("buffer", False)
+        (kwargs.get("buffer", False), kwargs.get("clip", True))
         for name, _, kwargs in patched_all
         if name == "generate_iho_pa_intersections"
-    ] == [False, True]
+    ] == [(False, True), (True, False)]
 
 
 def test_buffered_iho_pa_intersections_launches_every_habitat_minus_pa_job(patched_all):

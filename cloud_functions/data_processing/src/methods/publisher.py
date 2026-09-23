@@ -440,7 +440,7 @@ def dispatch_publisher(
             ]
 
         case "generate_buffered_iho_pa_intersections":
-            generate_iho_pa_intersections(buffer=True, verbose=verbose)
+            generate_iho_pa_intersections(buffer=True, clip=False, verbose=verbose)
             step_list = [
                 "generate_mangroves_minus_pa",
                 "generate_coldwatercorals_minus_pa",

@@ -51,8 +51,8 @@ def intersect_with_iho(
     features: gpd.GeoDataFrame,
     keep_cols: list[str],
     buffer: bool = False,
-    with_geometry: bool = True,
-) -> gpd.GeoDataFrame | pd.DataFrame:
+    clip: bool = True,
+) -> gpd.GeoDataFrame:
     """One row per (feature, IHO sea area) pair the feature intersects.
 
     Parameters
@@ -67,18 +67,14 @@ def intersect_with_iho(
     buffer : bool
         Join against the near-shore buffered sea areas rather than the
         published IHO boundaries. See ``load_iho_regions``.
-    with_geometry : bool
-        Also return each pair's intersection: the feature clipped to that one
-        sea. A point feature has no area to clip, so it keeps its membership
-        with a null geometry; an areal feature with no polygonal intersection
-        merely touched the sea boundary and that pair is dropped as a clipping
-        artifact. Callers measuring area filter on ``geometry.notna()``, though
-        ``union_all``, ``difference`` and ``dissolve`` all ignore nulls.
+    clip : bool
+        Clip each pair's feature to its own sea.
 
     Returns
     -------
-    gpd.GeoDataFrame | pd.DataFrame
-        ``[*keep_cols, "location"]``, plus ``geometry`` when ``with_geometry``.
+    gpd.GeoDataFrame
+        ``[*keep_cols, "location", "geometry"]``, the geometry clipped to the
+        pair's sea unless ``clip`` is False.
     """
 
     # load IHO sea areas, optionally buffered to catch near-shore features
@@ -93,9 +89,9 @@ def intersect_with_iho(
     pairs = features.sjoin(iho, predicate="intersects").reset_index(drop=True)
     logger.info({"message": f"found {len(pairs)} feature / IHO sea overlaps"})
 
-    # If clipped geometry is not needed, skip computing the intersections.
-    if not with_geometry:
-        return pd.DataFrame(pairs[[*keep_cols, "location"]])
+    # A caller differencing these against a location of its own clips them there.
+    if not clip:
+        return pairs[[*keep_cols, "location", "geometry"]]
 
     # Identify the point PAs so they are not dropped when they have no polygonal
     # intersection with the sea. Taken before clipping replaces the geometry.
@@ -128,7 +124,7 @@ def intersect_wdpa_with_iho(
     tolerance: float = TOLERANCE,
     pa_file_name: str = WDPA_MARINE_FILE_NAME,
     buffer: bool = False,
-    with_geometry: bool = True,
+    clip: bool = True,
     pas: gpd.GeoDataFrame | None = None,
 ) -> pd.DataFrame:
     """One row per (PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID.
@@ -148,16 +144,14 @@ def intersect_wdpa_with_iho(
 
     keep_cols = ["WDPA_PID", "WDPAID", "PA_DEF", "STATUS", "DESIG_ENG"]
 
-    return intersect_with_iho(
-        pas[[*keep_cols, "geometry"]], keep_cols, buffer=buffer, with_geometry=with_geometry
-    )
+    return intersect_with_iho(pas[[*keep_cols, "geometry"]], keep_cols, buffer=buffer, clip=clip)
 
 
 def intersect_mpatlas_with_iho(
     bucket: str = BUCKET,
     mpa_file_name: str = MPATLAS_FILE_NAME,
     buffer: bool = False,
-    with_geometry: bool = True,
+    clip: bool = True,
     mpa: gpd.GeoDataFrame | None = None,
 ) -> pd.DataFrame:
     """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id.
@@ -171,15 +165,14 @@ def intersect_mpatlas_with_iho(
 
     keep_cols = ["zone_id", "protection_mpaguide_level"]
 
-    return intersect_with_iho(
-        mpa[[*keep_cols, "geometry"]], keep_cols, buffer=buffer, with_geometry=with_geometry
-    )
+    return intersect_with_iho(mpa[[*keep_cols, "geometry"]], keep_cols, buffer=buffer, clip=clip)
 
 
 def generate_iho_pa_intersections(
     tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
     buffer: bool = False,
+    clip: bool = True,
     verbose: bool = True,
 ) -> None:
     """Join every protected area dataset to the IHO sea areas and save the pairs.
@@ -195,13 +188,15 @@ def generate_iho_pa_intersections(
         the terrestrial estate along, and save only the WDPA with their sea rows,
         under its own name. Everything else written here measures protected area
         within a sea, which a buffered join would overstate.
+    clip : bool
+        Clip each PA to the sea it is paired with.
     """
 
     def wdpa_pairs(wdpa):
         """The PAs of each environment, labelled with it and paired with their seas."""
         return pd.concat(
             [
-                intersect_wdpa_with_iho(pas=pas, buffer=buffer, with_geometry=True).assign(
+                intersect_wdpa_with_iho(pas=pas, buffer=buffer, clip=clip).assign(
                     environment=environment
                 )
                 for environment, pas in wdpa.items()
@@ -246,7 +241,7 @@ def generate_iho_pa_intersections(
         return
 
     mpa = read_mpatlas_from_gcs(bucket, MPATLAS_FILE_NAME)
-    mpa_pairs = intersect_mpatlas_with_iho(mpa=mpa, with_geometry=True)
+    mpa_pairs = intersect_mpatlas_with_iho(mpa=mpa, clip=clip)
 
     mpa_sea_rows = mpa_pairs[mpa_pairs.geometry.notna()].rename(columns={"location": "country"})
     mpatlas_with_seas = pd.concat([mpa, mpa_sea_rows], ignore_index=True)
