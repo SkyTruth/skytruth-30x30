@@ -10,7 +10,6 @@ from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import add_tolerance_suffix, extract_polygons, load_iho_regions
-from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     CLIMATE_RES_CORAL_SOURCE_FILE,
@@ -21,6 +20,7 @@ from src.core.params import (
     HABITAT_PROCESSING_PARAMS,
     SEAMOUNTS_SHAPEFILE_NAME,
     SEAMOUNTS_ZIPFILE_NAME,
+    TOLERANCE,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
@@ -33,7 +33,7 @@ from src.utils.gcp import (
     read_json_from_gcs,
     read_parquet_from_gcs,
 )
-from src.utils.geo import get_area_km2, robust_unary_union, fast_union_area_km2
+from src.utils.geo import fast_union_area_km2, get_area_km2, robust_unary_union
 from src.utils.logger import Logger
 
 # Climate-resilient corals raster: 1 = climate-resilient corals, 0 = other corals.
@@ -49,7 +49,7 @@ def create_seamounts_subtable(
     seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
     seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
     eez_file_name: str = EEZ_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -264,7 +264,7 @@ def create_habitat_subtable(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
-    tolerance: float = marine_tolerance,
+    tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
     verbose: bool = True,
 ):
@@ -411,7 +411,7 @@ def create_climate_resilient_corals_subtable(
     coral_source_file: str = CLIMATE_RES_CORAL_SOURCE_FILE,
     terrestrial_protected_areas: gpd.GeoDataFrame | None = None,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
-    tolerance: float = marine_tolerance,
+    tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
     n_jobs: int = -1,
     verbose: bool = True,
@@ -627,7 +627,7 @@ def load_marine_terrestrial_pa(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     bucket: str = BUCKET,
-    tolerance: float = marine_tolerance,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """Load the dissolved marine PAs, the dissolved terrestrial PAs, and the full estate.
@@ -664,7 +664,7 @@ def process_marine_habitats(
     marine_pa_file_name: str = WDPA_MARINE_FILE_NAME,
     terrestrial_pa_file_name: str = WDPA_TERRESTRIAL_FILE_NAME,
     bucket: str = BUCKET,
-    tolerance: float = marine_tolerance,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
     marine_protected_areas, terrestrial_protected_areas, all_protected_areas = (

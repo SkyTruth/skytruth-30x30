@@ -9,7 +9,6 @@ from google.protobuf import timestamp_pb2
 
 from src.core import map_params
 from src.core.commons import send_slack_alert
-from src.core.land_cover_params import marine_tolerance, terrestrial_tolerance
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
@@ -37,7 +36,7 @@ from src.core.params import (
     MPATLAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
-    TOLERANCES,
+    TOLERANCE,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
@@ -205,16 +204,11 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
             "METHOD": "download_protected_seas",
             **task_config,
         },
+        {
+            "METHOD": "download_protected_planet_pas",
+            **task_config,
+        },
     ]
-
-    for tolerance in TOLERANCES:
-        jobs.append(
-            {
-                "METHOD": "download_protected_planet_pas",
-                **task_config,
-                "TOLERANCE": tolerance,
-            }
-        )
 
     for job in jobs:
         if long_running_task_list and job["METHOD"] in long_running_task_list:
@@ -273,7 +267,6 @@ def dispatch_publisher(
     data,
     trigger_next=False,
     env="staging",
-    tolerance=TOLERANCES[0],
     verbose=True,
 ):
     # By default, do not continue onto the next step
@@ -401,9 +394,6 @@ def dispatch_publisher(
             if remaining:
                 task_config["HABITAT"] = remaining
                 step_list = ["process_marine_habitat_geoms"]
-            else:
-                task_config.pop("HABITAT", None)
-                step_list = ["generate_habitat_protection_table"]
 
         case "generate_terrestrial_biome_stats_country":
             generate_terrestrial_biome_stats_country(verbose=verbose)
@@ -433,17 +423,16 @@ def dispatch_publisher(
         case "download_protected_planet_pas":
             download_and_process_protected_planet_pas(
                 verbose=verbose,
-                tolerance=tolerance,
+                tolerance=TOLERANCE,
                 batch_size=1000,
             )
-            if tolerance == terrestrial_tolerance:
-                step_list = [
-                    "generate_protected_areas_table",
-                    "generate_terrestrial_biome_stats",
-                    "generate_eez_minus_mpa",
-                ]
-            if tolerance == marine_tolerance:
-                step_list = ["download_protected_planet_country"]
+            step_list = [
+                "generate_protected_areas_table",
+                "generate_terrestrial_biome_stats",
+                "generate_eez_minus_mpa",
+                "generate_gadm_minus_pa",
+                "download_protected_planet_country",
+            ]
 
         # ------------------
         #   Table updates
@@ -497,7 +486,7 @@ def dispatch_publisher(
                 pa_file=WDPA_TERRESTRIAL_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-                tolerance=tolerance,
+                tolerance=TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_gadm_minus_pa"]
@@ -508,7 +497,7 @@ def dispatch_publisher(
                 pa_file=WDPA_MARINE_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
-                tolerance=tolerance,
+                tolerance=TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_eez_minus_mpa"]
@@ -519,7 +508,7 @@ def dispatch_publisher(
                 loc_file=EEZ_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
-                tolerance=tolerance,
+                tolerance=TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_location_minus_fhp_mpa"]
@@ -611,7 +600,7 @@ def dispatch_publisher(
                 tileset_file=map_params.MARINE_PA_TILESET_FILE,
                 tileset_id=map_params.MARINE_PA_TILESET_ID,
                 display_name=map_params.MARINE_PA_TILESET_NAME,
-                tolerance=map_params.WDPA_TOLERANCE,
+                tolerance=TOLERANCE,
                 method="update_marine_protected_areas_tileset",
                 verbose=verbose,
             )
@@ -623,7 +612,7 @@ def dispatch_publisher(
                 tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
                 tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
                 display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
-                tolerance=map_params.WDPA_TOLERANCE,
+                tolerance=TOLERANCE,
                 method="update_terrestrial_protected_areas_tileset",
                 verbose=verbose,
             )
@@ -661,7 +650,6 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
     webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
     method = data.get("METHOD", "dry_run")
     trigger_next = data.get("TRIGGER_NEXT", False)
-    tolerance = data.get("TOLERANCE", TOLERANCES[0])
     max_retries = data.get("MAX_RETRIES", DEFAULT_RETRY_CONFIG["max_retries"])
     attempt = data.get("attempt", 1)
 
@@ -672,7 +660,6 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
         "JOB_NAME": data.get("JOB_NAME", ""),
         "TARGET_URL": data.get("TARGET_URL", ""),
         "INVOKER_SA": data.get("INVOKER_SA", ""),
-        "TOLERANCE": tolerance,
         "TRIGGER_NEXT": trigger_next,
         "MAX_RETRIES": max_retries,
         "attempt": attempt,
@@ -703,7 +690,6 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
             data,
             trigger_next=trigger_next,
             env=env,
-            tolerance=tolerance,
             verbose=verbose,
         )
 

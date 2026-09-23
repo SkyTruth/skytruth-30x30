@@ -6,11 +6,6 @@ BIOME_RASTER_PATH = (
     "static/terrestrial_jung_etal_2020_iucn_habitatclassification_composite_lvl1_ver004.tif"
 )
 resolution_m = 100
-terrestrial_tolerance = (
-    0.001  # simplification tolerance (in degrees) for PA polygons; proportional to resolution_m
-)
-marine_tolerance = 0.0001
-iho_sea_locations_tolerance = 0.001
 
 LAND_COVER_CLASSES = {
     1: "Forest",

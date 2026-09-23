@@ -216,7 +216,6 @@ HABITAT_PROCESSING_PARAMS = {
 }
 
 UNEP_POINT_AREA_KM2 = 1.0
-MARINE_HABITAT_TOLERANCE = 0.0001
 HABITAT_BY_LOCATION_FILE_PATTERN = "static/{habitat}_by_location.parquet"
 GLOBAL_HABITAT_AREA_FILE_PATTERN = "intermediates/total_area/global_{habitat}_area.json"
 
@@ -248,7 +247,7 @@ PROTECTION_LEVEL_FILE_NAME = f"tables/protection_level_{today_formatted}.csv"
 # ------------------------------------------------------------
 
 CHUNK_SIZE = 8192
-TOLERANCES = (0.001, 0.0001)
+TOLERANCE = 0.0001
 LOCATIONS_TRANSLATED_FILE_NAME = "processing/locations_translated.csv"
 DEPENDENCY_TO_PARENT_FILE_NAME = "processing/dependency_to_parent.json"
 RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
@@ -294,7 +293,14 @@ LONG_RUNNING_TASKS = [
     "process_marine_habitat_geoms",
     "generate_habitat_protection_table",
     "generate_protection_coverage_stats_table",
-    "process_mangroves",
     "download_protected_seas",
-    "generate_protection_coverage_stats_table",
+    "generate_terrestrial_biome_stats_country",
+    "generate_eez_minus_mpa",
+    "generate_location_minus_fhp_mpa",
+    "update_eez_minus_mpa",
+    "update_location_minus_fhp_mpa",
+    "generate_locations_table",
+    "generate_marine_protection_level_stats_table",
+    "update_marine_protected_areas_tileset",
+    "update_terrestrial_protected_areas_tileset",
 ]

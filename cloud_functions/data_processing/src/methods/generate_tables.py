@@ -12,7 +12,6 @@ from src.core.commons import (
     load_mpatlas_global,
     load_regions,
 )
-from src.core.land_cover_params import marine_tolerance
 from src.core.params import (
     BUCKET,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
@@ -30,7 +29,7 @@ from src.core.params import (
     PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
-    TOLERANCES,
+    TOLERANCE,
     WDPA_COUNTRY_LEVEL_FILE_NAME,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
     WDPA_MARINE_FILE_NAME,
@@ -75,7 +74,6 @@ def generate_protected_areas_diff_table(
     pa_file_name: str = WDPA_PA_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
-    tolerance: float = TOLERANCES[0],
     verbose: bool = True,
 ):
     def clean_for_json(obj):
@@ -102,7 +100,6 @@ def generate_protected_areas_diff_table(
         mpatlas_file_name=mpatlas_file_name,
         bucket=bucket,
         verbose=verbose,
-        tolerance=tolerance,
     )
 
     # Get the current database
@@ -171,9 +168,10 @@ def generate_habitat_protection_table(
     file_name_out: str = HABITAT_PROTECTION_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
+    tolerance: float = TOLERANCE,
     verbose: bool = True,
 ):
-    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, marine_tolerance)
+    marine_pa_file_name = add_tolerance_suffix(marine_pa_file_name, tolerance)
 
     # TODO: check if we should return zero values for total_area. Right now we are not.
 
@@ -186,7 +184,7 @@ def generate_habitat_protection_table(
         gadm_eez_union_file_name=gadm_eez_union_file_name,
         marine_pa_file_name=marine_pa_file_name,
         bucket=bucket,
-        tolerance=marine_tolerance,
+        tolerance=tolerance,
         verbose=verbose,
     )
 

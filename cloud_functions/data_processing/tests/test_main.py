@@ -45,6 +45,7 @@ def patched_all(monkeypatch, call_log):
         "download_mpatlas",
         "download_protected_seas",
         "download_protected_planet",
+        "download_and_process_protected_planet_pas",
         "generate_protected_areas_diff_table",
         "generate_terrestrial_biome_stats_pa",
         "generate_habitat_protection_table",
@@ -52,6 +53,8 @@ def patched_all(monkeypatch, call_log):
         "generate_marine_protection_level_stats_table",
         "generate_fishing_protection_table",
         "upload_locations",
+        "generate_total_area_minus_pa",
+        "generate_location_minus_fhp_mpa",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -99,6 +102,10 @@ def patched_all(monkeypatch, call_log):
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
+        (
+            "download_protected_planet_pas",
+            "download_and_process_protected_planet_pas",
+        ),
         ("generate_protected_areas_table", "generate_protected_areas_diff_table"),
         ("generate_protection_coverage_stats_table", "generate_protection_coverage_stats_table"),
         (
@@ -128,6 +135,41 @@ def test_single_call_methods_route_and_pass_verbose(patched_all, method, expecte
     assert "verbose" in kwargs
     if method == "update_locations":
         assert kwargs["request"] == {"METHOD": "update_locations"}
+
+
+def test_protected_planet_pas_receives_the_tolerance(patched_all):
+    """The PA job simplifies once, at the single pipeline tolerance.
+
+    It used to be dispatched once per tolerance, which meant two full WDPA
+    downloads and two downstream chains that could interleave.
+    """
+    resp = main.run_from_payload({"METHOD": "download_protected_planet_pas"})
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert kwargs["tolerance"] == main.TOLERANCE
+    assert "tolerances" not in kwargs
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "generate_gadm_minus_pa",
+        "generate_eez_minus_mpa",
+        "generate_location_minus_fhp_mpa",
+    ],
+)
+def test_conservation_builder_methods_use_the_pipeline_tolerance(patched_all, method):
+    """Each subtraction job builds at the single pipeline tolerance.
+
+    All three used to read it from the payload, which meant the value was
+    whatever the first configured tolerance happened to be.
+    """
+    resp = main.run_from_payload({"METHOD": method})
+
+    assert resp == ("OK", 200)
+    _, _, kwargs = patched_all[0]
+    assert kwargs["tolerance"] == main.TOLERANCE
 
 
 def _next_step_payloads(call_log):
@@ -207,31 +249,32 @@ def test_download_marine_habitats_launches_the_step_that_processes_each_habitat(
 
 
 @pytest.mark.parametrize(
-    ("habitat", "expected_processed", "expected_step", "expected_habitat"),
+    ("habitat", "expected_processed", "expected_steps", "expected_habitat"),
     [
         (
             None,
             list(HABITAT_PROCESSING_PARAMS)[0],
-            "process_marine_habitat_geoms",
+            ["process_marine_habitat_geoms"],
             list(HABITAT_PROCESSING_PARAMS)[1:],
         ),
         (
             ["saltmarshes", "seagrasses"],
             "saltmarshes",
-            "process_marine_habitat_geoms",
+            ["process_marine_habitat_geoms"],
             ["seagrasses"],
         ),
-        (["mangroves"], "mangroves", "generate_habitat_protection_table", None),
-        (["seagrasses"], "seagrasses", "generate_habitat_protection_table", None),
-        ("seagrasses", "seagrasses", "generate_habitat_protection_table", None),
+        (["mangroves"], "mangroves", [], None),
+        (["seagrasses"], "seagrasses", [], None),
+        ("seagrasses", "seagrasses", [], None),
     ],
     ids=["all", "two_left", "last_mangroves", "last_one", "single_string"],
 )
 def test_process_marine_habitat_geoms_relays_one_habitat_at_a_time(
-    patched_all, habitat, expected_processed, expected_step, expected_habitat
+    patched_all, habitat, expected_processed, expected_steps, expected_habitat
 ):
-    """Each task processes exactly one habitat and launches the next, so the
-    table generation is saved for last using complete data."""
+    """Each task processes exactly one habitat and launches the next. The last habitat
+    ends the chain - no table generation follows, so the habitat stats are left for the
+    monthly run to pick up."""
     payload = {"METHOD": "process_marine_habitat_geoms", "TRIGGER_NEXT": True}
     if habitat is not None:
         payload["HABITAT"] = habitat
@@ -245,8 +288,10 @@ def test_process_marine_habitat_geoms_relays_one_habitat_at_a_time(
     assert processed[0]["habitats"] == expected_processed
 
     payloads = _next_step_payloads(patched_all)
-    assert [step["METHOD"] for step in payloads] == [expected_step]
-    assert payloads[0].get("HABITAT") == expected_habitat
+    assert [step["METHOD"] for step in payloads] == expected_steps
+
+    if payloads:
+        assert payloads[0].get("HABITAT") == expected_habitat
 
 
 def _retry_payloads(call_log):
@@ -329,16 +374,14 @@ def test_failed_download_retries_only_the_habitats_that_never_landed(patched_all
 
 
 def test_processing_every_habitat_covers_each_one_once(patched_all):
-    """Every dissolved habitat is processed once and runs in a chain,
-    ending with generate_habitat_protection_table."""
+    """Every dissolved habitat is processed once, in a chain that stops after the last
+    one rather than carrying on into the stats tables."""
     launched = [{"METHOD": "download_marine_habitats", "HABITAT": None, "TRIGGER_NEXT": True}]
     steps, processed = [], []
 
     while launched:
         current = launched.pop(0)
         steps.append(current["METHOD"])
-        if current["METHOD"] == "generate_habitat_protection_table":
-            continue
         del patched_all[:]
         main.run_from_payload(current)
         processed += [
@@ -349,7 +392,9 @@ def test_processing_every_habitat_covers_each_one_once(patched_all):
         launched.extend(_next_step_payloads(patched_all))
 
     assert processed == list(HABITAT_PROCESSING_PARAMS)
-    assert steps.count("generate_habitat_protection_table") == 1
+    assert steps == ["download_marine_habitats"] + ["process_marine_habitat_geoms"] * len(
+        HABITAT_PROCESSING_PARAMS
+    )
 
 
 # Tests for functions that directly call download_zip_to_gcs
@@ -551,6 +596,37 @@ def test_update_stats_routes_instantiate_strapi_and_pass_bound_method(
 
     # Verbose propagated from module
     assert recorder["verbose"] is True
+
+
+# Monthly fan-out
+@pytest.fixture
+def enqueued_jobs(monkeypatch, call_log):
+    """Patch only the two enqueue routes, leaving LONG_RUNNING_TASKS real.
+
+    `patched_all` blanks LONG_RUNNING_TASKS, which is exactly what these tests
+    need to exercise, so they patch narrowly instead.
+    """
+    monkeypatch.setattr(main, "create_task", make_recorder(call_log, "create_task"), raising=True)
+    monkeypatch.setattr(
+        main, "long_running_tasks", make_recorder(call_log, "long_running_tasks"), raising=True
+    )
+
+    def _run():
+        main.run_from_payload({"METHOD": "publisher"}, verbose=False)
+        return {
+            route: [args[0] for name, args, _ in call_log if name == route]
+            for route in ("create_task", "long_running_tasks")
+        }
+
+    return _run
+
+
+def test_monthly_publisher_routes_long_running_jobs_to_the_job_runner(enqueued_jobs):
+    """Long-running methods must go to a Cloud Run Job, not the task queue."""
+    jobs = enqueued_jobs()
+
+    assert "download_protected_planet_pas" in {job["METHOD"] for job in jobs["long_running_tasks"]}
+    assert {job["METHOD"] for job in jobs["create_task"]} == {"download_mpatlas"}
 
 
 # Non-invoking / generic flows

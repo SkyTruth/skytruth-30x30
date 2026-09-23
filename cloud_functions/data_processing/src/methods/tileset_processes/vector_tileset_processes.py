@@ -8,11 +8,9 @@ from src.core.map_params import (
     COUNTRIES_TILESET_FILE,
     COUNTRIES_TILESET_ID,
     COUNTRIES_TILESET_NAME,
-    COUNTRIES_TOLERANCE,
     EEZ_TILESET_FILE,
     EEZ_TILESET_ID,
     EEZ_TILESET_NAME,
-    EEZ_TOLERANCE,
     MARINE_REGIONS_TILESET_FILE,
     MARINE_REGIONS_TILESET_ID,
     MARINE_REGIONS_TILESET_NAME,
@@ -32,7 +30,7 @@ from src.core.params import (
     MPATLAS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
-    TOLERANCES,
+    TOLERANCE,
 )
 from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
@@ -79,7 +77,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     ]
 
     # simplify geometry to match same simplification of Protected Areas
-    gdf["geometry"] = gdf["geometry"].simplify(TOLERANCES[0])
+    gdf["geometry"] = gdf["geometry"].simplify(TOLERANCE)
     gdf["geometry"] = gdf["geometry"].make_valid()
 
     gdf.drop(columns=list(set(gdf.columns) - set(keep)), inplace=True)
@@ -146,6 +144,7 @@ def create_and_update_eez_tileset(
     tileset_file: str = EEZ_TILESET_FILE,
     tileset_id: str = EEZ_TILESET_ID,
     display_name: str = EEZ_TILESET_NAME,
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -161,7 +160,7 @@ def create_and_update_eez_tileset(
             display_name=display_name,
             local_geojson_name="eez.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=add_tolerance_suffix(source_file, EEZ_TOLERANCE),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
         )
@@ -179,6 +178,7 @@ def create_and_update_marine_regions_tileset(
     tileset_file: str = MARINE_REGIONS_TILESET_FILE,
     tileset_id: str = MARINE_REGIONS_TILESET_ID,
     display_name: str = MARINE_REGIONS_TILESET_NAME,
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -194,7 +194,7 @@ def create_and_update_marine_regions_tileset(
             display_name=display_name,
             local_geojson_name="marine_regions.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=add_tolerance_suffix(source_file, EEZ_TOLERANCE),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
@@ -250,6 +250,7 @@ def create_and_update_country_tileset(
     tileset_file: str = COUNTRIES_TILESET_FILE,
     tileset_id: str = COUNTRIES_TILESET_ID,
     display_name: str = COUNTRIES_TILESET_NAME,
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -265,7 +266,7 @@ def create_and_update_country_tileset(
             display_name=display_name,
             local_geojson_name="countries.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=add_tolerance_suffix(source_file, COUNTRIES_TOLERANCE),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={
@@ -316,6 +317,7 @@ def create_and_update_terrestrial_regions_tileset(
     tileset_file: str = TERRESTRIAL_REGIONS_TILESET_FILE,
     tileset_id: str = TERRESTRIAL_REGIONS_TILESET_ID,
     display_name: str = TERRESTRIAL_REGIONS_TILESET_NAME,
+    tolerance: float = TOLERANCE,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -331,7 +333,7 @@ def create_and_update_terrestrial_regions_tileset(
             display_name=display_name,
             local_geojson_name="terrestrial_regions.geojson",
             local_mbtiles_name=f"{tileset_id}.mbtiles",
-            source_file=add_tolerance_suffix(source_file, COUNTRIES_TOLERANCE),
+            source_file=add_tolerance_suffix(source_file, tolerance),
             verbose=verbose,
             keep_temp=keep_temp,
             extra={

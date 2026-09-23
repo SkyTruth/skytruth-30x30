@@ -366,7 +366,7 @@ def test_empty_current_db_does_not_raise(monkeypatch, tmp_path, updated_pas_df, 
 def test_parameters_are_forwarded_to_generate_protected_areas_table(
     monkeypatch, tmp_path, updated_pas_df, current_db_rows, gcs_mock
 ):
-    """wdpa_file_name, mpatlas_file_name, bucket, tolerance are forwarded verbatim."""
+    """wdpa_file_name, mpatlas_file_name and bucket are forwarded verbatim."""
     recorder = {}
     _patch_deps(
         monkeypatch,
@@ -381,14 +381,13 @@ def test_parameters_are_forwarded_to_generate_protected_areas_table(
         wdpa_file_name="wdpa.csv",
         mpatlas_file_name="mpa.csv",
         bucket="custom-bucket",
-        tolerance=0.5,
         verbose=False,
     )
 
     assert recorder["wdpa_file_name"] == "wdpa.csv"
     assert recorder["mpatlas_file_name"] == "mpa.csv"
     assert recorder["bucket"] == "custom-bucket"
-    assert recorder["tolerance"] == 0.5
+    assert "tolerance" not in recorder
     assert recorder["verbose"] is False
 
 
