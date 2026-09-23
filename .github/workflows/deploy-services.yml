@@ -42,6 +42,17 @@ jobs:
     with:
       target_env: STAGING
 
+  staging_cb_api:
+    if: |
+      inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy-cb-api.yml
+    secrets: inherit
+    with:
+      target_env: STAGING
+
   staging_analysis_cloud_functions:
     if: |
       inputs.deploy_to_staging && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -81,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [upload_localazy, staging_client, staging_cms, staging_analysis_cloud_functions, staging_data_cloud_functions, staging_data_cloud_job]
+    needs: [upload_localazy, staging_client, staging_cms, staging_cb_api, staging_analysis_cloud_functions, staging_data_cloud_functions, staging_data_cloud_job]
     steps:
       - run: echo "🎉 All staging deployments completed successfully."
 
