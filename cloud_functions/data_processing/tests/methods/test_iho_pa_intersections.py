@@ -168,7 +168,7 @@ def test_mpatlas_iho_join_pairs_zones_with_the_seas_they_overlap(monkeypatch):
     ]
 
 
-# ---------- intersect_with_iho(with_geometry=True) ----------
+# ---------- intersect_with_iho ----------
 
 
 def test_geometry_join_cuts_a_straddling_feature_into_one_piece_per_sea(monkeypatch):
@@ -177,9 +177,7 @@ def test_geometry_join_cuts_a_straddling_feature_into_one_piece_per_sea(monkeypa
     reaching back for the sea boundaries."""
     _patch_iho(monkeypatch)
 
-    result = intersect_with_iho(
-        _wdpa_frame([box(5, 1, 15, 2)], pids=["straddler"]), ["WDPA_PID"], with_geometry=True
-    )
+    result = intersect_with_iho(_wdpa_frame([box(5, 1, 15, 2)], pids=["straddler"]), ["WDPA_PID"])
 
     pieces = dict(zip(result["location"], result.geometry, strict=True))
     assert pieces["1"].equals(box(5, 1, 10, 2))
@@ -189,9 +187,7 @@ def test_geometry_join_cuts_a_straddling_feature_into_one_piece_per_sea(monkeypa
 def test_geometry_join_leaves_a_contained_feature_whole(monkeypatch):
     _patch_iho(monkeypatch)
 
-    result = intersect_with_iho(
-        _wdpa_frame([box(1, 1, 2, 2)], pids=["inside"]), ["WDPA_PID"], with_geometry=True
-    )
+    result = intersect_with_iho(_wdpa_frame([box(1, 1, 2, 2)], pids=["inside"]), ["WDPA_PID"])
 
     assert result.geometry.iloc[0].equals(box(1, 1, 2, 2))
 
@@ -202,7 +198,7 @@ def test_geometry_join_drops_an_areal_feature_that_only_touches_a_sea(monkeypatc
     _patch_iho(monkeypatch)
     features = _wdpa_frame([box(-5, 0, 0, 10)], pids=["adjacent"])
 
-    assert intersect_with_iho(features, ["WDPA_PID"], with_geometry=True).empty
+    assert intersect_with_iho(features, ["WDPA_PID"]).empty
 
 
 def test_geometry_join_drops_an_areal_feature_touching_a_sea_at_a_corner(monkeypatch):
@@ -212,7 +208,7 @@ def test_geometry_join_drops_an_areal_feature_touching_a_sea_at_a_corner(monkeyp
     _patch_iho(monkeypatch)
     features = _wdpa_frame([box(-5, -5, 0, 0)], pids=["corner"])
 
-    assert intersect_with_iho(features, ["WDPA_PID"], with_geometry=True).empty
+    assert intersect_with_iho(features, ["WDPA_PID"]).empty
 
 
 def test_geometry_join_keeps_point_features_with_no_geometry(monkeypatch):
@@ -222,30 +218,30 @@ def test_geometry_join_keeps_point_features_with_no_geometry(monkeypatch):
     _patch_iho(monkeypatch)
     features = _wdpa_frame([box(1, 1, 2, 2), Point(3, 3)], pids=["polygon", "point"])
 
-    result = intersect_with_iho(features, ["WDPA_PID"], with_geometry=True)
+    result = intersect_with_iho(features, ["WDPA_PID"])
 
     assert result["WDPA_PID"].tolist() == ["polygon", "point"]
     assert result.geometry.notna().tolist() == [True, False]
 
 
 def test_geometry_join_keeps_every_membership_pair_except_boundary_touches(monkeypatch):
-    """Asking for geometry may only shed the touch artifacts. Anything with area,
-    and every point member, has to survive or the pairs would understate which
-    seas a PA belongs to."""
+    """Clipping may only shed the touch artifacts. Anything with area, and every point
+    member, has to survive or the pairs would understate which seas a PA belongs to."""
     _patch_iho(monkeypatch)
     features = _wdpa_frame(
         [box(1, 1, 2, 2), box(5, 1, 15, 2), box(-5, 0, 0, 10), Point(3, 3)],
         pids=["inside", "straddler", "adjacent", "point"],
     )
 
-    members = intersect_with_iho(features, ["WDPA_PID"], with_geometry=False)
-    geoms = intersect_with_iho(features, ["WDPA_PID"], with_geometry=True)
+    result = intersect_with_iho(features, ["WDPA_PID"])
 
-    dropped = sorted(
-        set(zip(members["WDPA_PID"], members["location"], strict=True))
-        - set(zip(geoms["WDPA_PID"], geoms["location"], strict=True))
-    )
-    assert dropped == [("adjacent", "1")]
+    # every pair the sjoin finds but ("adjacent", "1"), which only touches Sea A
+    assert sorted(zip(result["WDPA_PID"], result["location"], strict=True)) == [
+        ("inside", "1"),
+        ("point", "1"),
+        ("straddler", "1"),
+        ("straddler", "2"),
+    ]
 
 
 def test_geometry_join_keeps_the_polygonal_part_of_a_mixed_intersection(monkeypatch):
@@ -257,9 +253,7 @@ def test_geometry_join_keeps_the_polygonal_part_of_a_mixed_intersection(monkeypa
     # along the x=10 edge the two seas share.
     straddler = MultiPolygon([box(5, 5, 15, 15), box(10, 0, 12, 2)])
 
-    result = intersect_with_iho(
-        _wdpa_frame([straddler], pids=["mixed"]), ["WDPA_PID"], with_geometry=True
-    )
+    result = intersect_with_iho(_wdpa_frame([straddler], pids=["mixed"]), ["WDPA_PID"])
 
     sea_a = result[result["location"] == "1"]
     assert sea_a.geometry.iloc[0].equals(box(5, 5, 10, 10))
@@ -273,7 +267,6 @@ def test_geometry_join_carries_the_requested_columns_through(monkeypatch):
     result = intersect_with_iho(
         _wdpa_frame([box(1, 1, 2, 2)], WDPAID=["555"], PA_DEF=[1], DESIG_ENG=["Marine Park"]),
         ["WDPA_PID", "WDPAID", "PA_DEF"],
-        with_geometry=True,
     )
 
     assert list(result.columns) == ["WDPA_PID", "WDPAID", "PA_DEF", "location", "geometry"]

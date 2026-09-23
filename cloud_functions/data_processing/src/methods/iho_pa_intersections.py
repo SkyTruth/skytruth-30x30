@@ -43,8 +43,7 @@ def intersect_with_iho(
     features: gpd.GeoDataFrame,
     keep_cols: list[str],
     buffer: bool = False,
-    with_geometry: bool = True,
-) -> gpd.GeoDataFrame | pd.DataFrame:
+) -> gpd.GeoDataFrame:
     """One row per (feature, IHO sea area) pair the feature intersects.
 
     Parameters
@@ -59,18 +58,11 @@ def intersect_with_iho(
     buffer : bool
         Join against the near-shore buffered sea areas rather than the
         published IHO boundaries. See ``load_iho_regions``.
-    with_geometry : bool
-        Also return each pair's intersection: the feature clipped to that one
-        sea. A point feature has no area to clip, so it keeps its membership
-        with a null geometry; an areal feature with no polygonal intersection
-        merely touched the sea boundary and that pair is dropped as a clipping
-        artifact. Callers measuring area filter on ``geometry.notna()``, though
-        ``union_all``, ``difference`` and ``dissolve`` all ignore nulls.
 
     Returns
     -------
-    gpd.GeoDataFrame | pd.DataFrame
-        ``[*keep_cols, "location"]``, plus ``geometry`` when ``with_geometry``.
+    gpd.GeoDataFrame
+        ``[*keep_cols, "location", "geometry"]``.
     """
 
     # load IHO sea areas, optionally buffered to catch near-shore features
@@ -84,10 +76,6 @@ def intersect_with_iho(
     logger.info({"message": f"matching {len(features)} features to {len(iho)} IHO sea areas"})
     pairs = features.sjoin(iho, predicate="intersects").reset_index(drop=True)
     logger.info({"message": f"found {len(pairs)} feature / IHO sea overlaps"})
-
-    # If clipped geometry is not needed, skip computing the intersections.
-    if not with_geometry:
-        return pd.DataFrame(pairs[[*keep_cols, "location"]])
 
     # Identify the point PAs so they are not dropped when they have no polygonal
     # intersection with the sea. Taken before clipping replaces the geometry.
@@ -120,7 +108,6 @@ def intersect_wdpa_with_iho(
     tolerance: float = TOLERANCE,
     pa_file_name: str = WDPA_MARINE_FILE_NAME,
     buffer: bool = False,
-    with_geometry: bool = True,
 ) -> pd.DataFrame:
     """One row per (PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID.
 
@@ -138,14 +125,13 @@ def intersect_wdpa_with_iho(
     keep_cols = ["WDPA_PID", "WDPAID", "PA_DEF", "STATUS", "DESIG_ENG"]
     pas = read_json_df(bucket_name=bucket, filename=pa_file)[[*keep_cols, "geometry"]]
 
-    return intersect_with_iho(pas, keep_cols, buffer=buffer, with_geometry=with_geometry)
+    return intersect_with_iho(pas, keep_cols, buffer=buffer)
 
 
 def intersect_mpatlas_with_iho(
     bucket: str = BUCKET,
     mpa_file_name: str = MPATLAS_FILE_NAME,
     buffer: bool = False,
-    with_geometry: bool = True,
 ) -> pd.DataFrame:
     """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id.
 
@@ -157,7 +143,7 @@ def intersect_mpatlas_with_iho(
     keep_cols = ["zone_id", "protection_mpaguide_level"]
     mpa = read_mpatlas_from_gcs(bucket, mpa_file_name)[[*keep_cols, "geometry"]]
 
-    return intersect_with_iho(mpa, keep_cols, buffer=buffer, with_geometry=with_geometry)
+    return intersect_with_iho(mpa, keep_cols, buffer=buffer)
 
 
 def generate_iho_pa_intersections(
@@ -175,7 +161,6 @@ def generate_iho_pa_intersections(
                     bucket=bucket,
                     tolerance=tolerance,
                     pa_file_name=pa_file_name,
-                    with_geometry=True,
                 ).assign(environment=environment)
                 for environment, pa_file_name in WDPA_ENVIRONMENTS
             ],
@@ -190,4 +175,4 @@ def generate_iho_pa_intersections(
     # The WDPA names take a tolerance because the PAs they were built from were
     # simplified to it. MPAtlas is read as published, so its name does not.
     save(wdpa_pairs(), add_tolerance_suffix(WDPA_SEA_PAIRS_FILE_NAME, tolerance))
-    save(intersect_mpatlas_with_iho(bucket=bucket, with_geometry=True), MPATLAS_SEA_PAIRS_FILE_NAME)
+    save(intersect_mpatlas_with_iho(bucket=bucket), MPATLAS_SEA_PAIRS_FILE_NAME)
