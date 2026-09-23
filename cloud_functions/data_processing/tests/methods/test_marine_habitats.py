@@ -1,10 +1,15 @@
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
+import rasterio
+from rasterio.transform import from_origin
 from shapely.geometry import Point, box
 
 from src.core.params import UNEP_POINT_AREA_KM2
+from src.core.raster_pa_stats import compute_class_areas_by_location
 from src.methods.marine_habitats import (
+    CLIMATE_RESILIENT_CORALS_CLASS_MAP,
     CLIMATE_RESILIENT_CORALS_HABITATS,
     _protected_habitat_all_locations,
     _rollup_corals_subtable,
@@ -299,3 +304,101 @@ def test_antimeridian_buffer_preserves_geometry_without_wrapping():
     # The point away from the dateline is left on the ordinary buffering path.
     assert ordinary.geom_type == "Polygon"
     assert get_area_km2(ordinary) == pytest.approx(UNEP_POINT_AREA_KM2, rel=0.01)
+
+
+# ---------------------------------------------------------------------------
+# The (PA, near-shore sea) pairs standing in for a PA/IHO spatial join
+# ---------------------------------------------------------------------------
+
+
+def _write_coral_raster(path, arr):
+    """A 1-degree-per-pixel coral raster covering the test seas."""
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=arr.shape[0],
+        width=arr.shape[1],
+        count=1,
+        dtype=arr.dtype,
+        crs="EPSG:4326",
+        transform=from_origin(0, 10, 1, 1),
+        nodata=255,
+    ) as dst:
+        dst.write(arr, 1)
+
+
+def test_tagging_pas_by_sea_gives_the_same_coral_areas_as_clipping_them(tmp_path):
+    """Whole PAs tagged by sea mask the raster exactly as PAs cut to that sea would.
+
+    compute_class_areas_by_location restricts each region to the polygons it
+    contains, so the sea clip happens at mask time either way. This pins the
+    assumption create_climate_resilient_corals_subtable's sjoin rests on: were
+    that region clip to go away, a PA straddling two seas would contribute its
+    neighbour's reef pixels to both.
+    """
+    raster_path = tmp_path / "corals.tif"
+    # Alternating columns so both coral classes occur inside both seas.
+    alternating = np.tile(np.array([1, 0], dtype="uint8"), 10)
+    _write_coral_raster(raster_path, np.broadcast_to(alternating, (10, 20)).copy())
+
+    seas = gpd.GeoDataFrame(
+        {"location": ["1", "2"], "geometry": [box(0, 0, 10, 10), box(10, 0, 20, 10)]},
+        geometry="geometry",
+        crs="EPSG:4326",
+    )
+    # 'a' straddles both seas, 'b' sits wholly inside sea 2
+    pas = gpd.GeoDataFrame(
+        {
+            "WDPA_PID": ["a", "b"],
+            "WDPAID": ["a", "b"],
+            "PA_DEF": [1, 1],
+            "STATUS": ["Designated", "Designated"],
+            "DESIG_ENG": ["Marine Protected Area", "Marine Protected Area"],
+            "geometry": [box(5, 2, 15, 6), box(16, 1, 19, 4)],
+        },
+        geometry="geometry",
+        crs="EPSG:4326",
+    )
+
+    def class_areas(polygons):
+        return compute_class_areas_by_location(
+            raster_path=str(raster_path),
+            regions_gdf=seas,
+            class_map=CLIMATE_RESILIENT_CORALS_CLASS_MAP,
+            region_col="location",
+            polygons_gdf=polygons,
+            polygon_location_col="location",
+            include_zero=True,
+            n_jobs=1,
+            verbose=False,
+        ).set_index("location")
+
+    # what the coral subtable builds: whole PA geometry tagged with each sea it hits
+    tagged = gpd.sjoin(
+        pas[["geometry"]], seas[["location", "geometry"]], how="inner", predicate="intersects"
+    )
+
+    # the same pairs, each PA cut down to its sea beforehand
+    sea_geoms = gpd.GeoSeries(seas.geometry.loc[tagged["index_right"]].to_numpy(), crs=seas.crs)
+    clipped = tagged.copy()
+    clipped["geometry"] = tagged.geometry.intersection(sea_geoms, align=False).to_numpy()
+
+    from_tagged = class_areas(tagged[["location", "geometry"]])
+    from_clipped = class_areas(clipped[["location", "geometry"]])
+
+    habitats = list(CLIMATE_RESILIENT_CORALS_CLASS_MAP.values())
+
+    # The straddling PA is one row per sea either way, but only `clipped` carries
+    # it cut down, so the comparison below is not of identical geometry.
+    assert len(tagged) == len(clipped) == 3
+    assert not tagged.geometry.equals(clipped.geometry)
+    # Guard against agreeing on nothing: reef pixels must actually be protected.
+    assert from_tagged[habitats].to_numpy().sum() > 0
+
+    assert sorted(from_tagged.index) == sorted(from_clipped.index)
+    for location in from_clipped.index:
+        for habitat in habitats:
+            assert from_tagged.loc[location, habitat] == pytest.approx(
+                from_clipped.loc[location, habitat], rel=1e-9
+            ), f"{location}/{habitat}"

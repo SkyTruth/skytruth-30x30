@@ -255,6 +255,11 @@ REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 NEAR_SHORE_BUFFER_KM = 10
 NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
 
+# PA/IHO sea area pairs
+SEA_PAIRS_DIR = "intermediates/sea_pairs"
+WDPA_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_sea_pairs_{today_formatted}.parquet"
+MPATLAS_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_sea_pairs_{today_formatted}.parquet"
+
 # ------------------------------------------------------------
 #                     Conservation Builder
 # ------------------------------------------------------------
@@ -303,4 +308,5 @@ LONG_RUNNING_TASKS = [
     "generate_marine_protection_level_stats_table",
     "update_marine_protected_areas_tileset",
     "update_terrestrial_protected_areas_tileset",
+    "generate_iho_pa_intersections",
 ]

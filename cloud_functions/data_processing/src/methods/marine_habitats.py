@@ -9,7 +9,7 @@ from shapely.geometry import box
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import add_tolerance_suffix, extract_polygons, load_iho_regions
+from src.core.commons import add_tolerance_suffix, load_iho_regions, polygonal_parts
 from src.core.params import (
     BUCKET,
     CLIMATE_RES_CORAL_SOURCE_FILE,
@@ -151,9 +151,7 @@ def create_seamounts_subtable(
 
 def _keep_polygonal(geom):
     """Drop line/point slivers an intersection can leave behind, so unions stay robust."""
-    if geom is None or geom.is_empty:
-        return None
-    polygonal = extract_polygons(geom)
+    polygonal = polygonal_parts(geom)
     if polygonal is None or polygonal.is_empty:
         return None
     return make_valid(polygonal)
