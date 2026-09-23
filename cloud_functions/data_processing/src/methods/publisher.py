@@ -527,6 +527,7 @@ def dispatch_publisher(
         case "generate_mangroves_minus_pa":
             generate_habitat_minus_pa(
                 habitat="mangroves",
+                n_jobs=2,
                 verbose=verbose,
             )
 

@@ -201,7 +201,7 @@ def generate_habitat_minus_pa(
     terrestrial_pa_file=WDPA_TERRESTRIAL_FILE_NAME,
     tolerance=TOLERANCE,
     bucket: str = BUCKET,
-    n_jobs: int = 2,
+    n_jobs: int = -1,
     verbose: bool = True,
 ):
     """
