@@ -413,46 +413,6 @@ def generate_location_minus_fhp_mpa(
     )
 
 
-def polygonize_mask(mask, transform, crs, values=None, connectivity=4):
-    """
-    Vectorizes the True cells of a raster mask into polygons.
-
-    Polygon boundaries follow pixel edges exactly and nothing is simplified, so
-    the polygonized extent covers the same ground as the masked pixels.
-
-    Parameters
-    ----------
-    mask : np.ndarray
-        Boolean (height x width) array. Only True cells are vectorized.
-    transform : Affine
-        Affine transform of the grid the mask sits on.
-    crs : Any
-        CRS of that grid, set on the returned frame.
-    values : np.ndarray, optional
-        Integer array the same shape as `mask`, carried into a "value" column and
-        splitting the output at class boundaries. When None every row gets 1.
-    connectivity : int
-        4 or 8. Under 4, regions meeting only at a corner become separate polygons.
-
-    Returns
-    -------
-    gpd.GeoDataFrame
-        One row per connected region, columns ["value", "geometry"].
-    """
-    source = mask.astype("uint8") if values is None else values.astype("int32")
-
-    records = [
-        (int(value), shape(geom))
-        for geom, value in shapes(source, mask=mask, transform=transform, connectivity=connectivity)
-    ]
-
-    return gpd.GeoDataFrame(
-        {"value": [value for value, _ in records]},
-        geometry=[geom for _, geom in records],
-        crs=crs,
-    )
-
-
 def process_country_raster_habitat(
     country_area: gpd.GeoDataFrame,
     country_pa: gpd.GeoDataFrame,
