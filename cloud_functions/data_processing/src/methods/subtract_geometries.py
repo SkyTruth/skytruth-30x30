@@ -15,6 +15,7 @@ from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     BUCKET,
     BUFFERED_MARINE_LOCATIONS_FILE_NAME,
+    CLIMATE_RESILIENT_CORALS_HABITATS,
     CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     HABITAT_BY_LOCATION_FILE_PATTERN,
     TOLERANCE,
@@ -558,8 +559,8 @@ def process_country_raster_habitat(
 
 
 def generate_raster_habitat_minus_pa(
-    habitat: str,
     habitat_file_name: str,
+    habitats: tuple = CLIMATE_RESILIENT_CORALS_HABITATS,
     total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
     tolerance=TOLERANCE,
@@ -567,8 +568,53 @@ def generate_raster_habitat_minus_pa(
     n_jobs: int = -1,
     verbose: bool = True,
 ):
+    """
+    Subtracts protected areas from the raster habitat lying inside each country's
+    boundaries; saves one Parquet per habitat class to GCS.
+
+    The raster counterpart of ``generate_habitat_minus_pa``: same inputs and the same
+    per-country fan-out, but the habitat comes from a raster and the protected areas are
+    removed on its grid rather than differenced as vectors. Each class gets its own file
+    because ``update_cb`` loads only a location and a geometry into each table.
+
+    Parameters
+    ----------
+    habitat_file_name : str
+        GCS path of the habitat raster.
+    habitats : tuple
+        Habitat names to write, each to its own file. Defaults to every class in the
+        raster; pass a subset to write only those. The pixel value encoding each class
+        is its position in ``CLIMATE_RESILIENT_CORALS_HABITATS``, so a subset here
+        narrows the output without disturbing it.
+    total_area_file : str
+        Filename of the buffered marine locations parquet.
+    pa_file : str
+        Filename of the protected areas parquet written by a buffered
+        ``generate_iho_pa_intersections`` run: both estates, carrying a row per PA per
+        near-shore sea area it lies in. Coastal habitats are often designated inside PAs
+        that WDPA flags MARINE=0, hence both estates rather than the marine one alone.
+    tolerance : float
+        Tolerance value used in simplification.
+    bucket : str
+        GCS bucket name.
+    n_jobs : int
+        Number of workers in the per-country fan-out.
+    verbose : bool, optional
+        Whether to print verbose logs, by default True.
+
+    Returns
+    -------
+        One GeoDataFrame per name in ``habitats`` saved to GCS as a Parquet, each with
+        one row per country holding that class.
+    """
+    class_map = {
+        value: name
+        for value, name in enumerate(CLIMATE_RESILIENT_CORALS_HABITATS)
+        if name in habitats
+    }
+
     local_raster = habitat_file_name.split("/")[-1]
-    download_file_from_gcs(bucket, habitat_file_name, local_raster, verbose=True)
+    download_file_from_gcs(bucket, habitat_file_name, local_raster, verbose=verbose)
 
     # Total areas: the land/EEZ union plus the buffered IHO sea areas
     total_area = read_parquet_from_gcs(
@@ -602,31 +648,43 @@ def generate_raster_habitat_minus_pa(
     if verbose:
         logger.info({"message": "Subtracting protected areas from habitat areas..."})
     results = Parallel(n_jobs=n_jobs, backend="threading")(
-        delayed(process_country_habitat)(
+        delayed(process_country_raster_habitat)(
             total_area[total_area["location"] == country].reset_index(drop=True),
             pa[pa["ISO3"] == country].reset_index(drop=True),
             local_raster,
+            class_map,
         )
         for country in tqdm(countries)
     )
 
-    total_area_minus_pa = pd.concat(results).reset_index(drop=True)
-    if verbose:
-        logger.info({"message": f"Output file has {len(total_area_minus_pa)} rows."})
-
-    out_file = CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
-    archive_out_file = ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
-
-    # Save to GCS
-    upload_gdf(
-        bucket_name=bucket,
-        gdf=total_area_minus_pa,
-        destination_blob_name=out_file,
+    # Countries holding none of the habitat come back empty; concat needs them dropped
+    populated = [result for result in results if not result.empty]
+    habitat_minus_pa = (
+        pd.concat(populated).reset_index(drop=True)
+        if populated
+        else gpd.GeoDataFrame({"location": [], "habitat": []}, geometry=[], crs="EPSG:4326")
     )
 
-    # Save to archive
-    upload_gdf(
-        bucket_name=bucket,
-        gdf=total_area_minus_pa,
-        destination_blob_name=archive_out_file,
-    )
+    # One file per class: update_cb loads only a location and a geometry per table, so
+    # the classes cannot share one.
+    for habitat in class_map.values():
+        rows = habitat_minus_pa[habitat_minus_pa["habitat"] == habitat]
+        if verbose:
+            logger.info({"message": f"{habitat} file has {len(rows)} rows."})
+
+        out_file = CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
+        archive_out_file = ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
+
+        # Save to GCS
+        upload_gdf(
+            bucket_name=bucket,
+            gdf=rows,
+            destination_blob_name=out_file,
+        )
+
+        # Save to archive
+        upload_gdf(
+            bucket_name=bucket,
+            gdf=rows,
+            destination_blob_name=archive_out_file,
+        )

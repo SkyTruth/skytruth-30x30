@@ -294,6 +294,7 @@ ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = (
 #                     Raster Data Sources
 # ------------------------------------------------------------
 CLIMATE_RES_CORAL_SOURCE_FILE = "raw/climate_resilient_corals.tif"
+CLIMATE_RESILIENT_CORALS_HABITATS = ("other-corals", "climate-resilient-corals")
 
 # ------------------------------------------------------------
 #                     Workflow Parameters
