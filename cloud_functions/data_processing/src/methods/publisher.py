@@ -561,8 +561,6 @@ def dispatch_publisher(
             )
 
         case "generate_climate_resilient_corals_minus_pa":
-            # TODO: verify that we want climate-resilient-corals separate from
-            # other-corals and not one combined corals habitat.
             generate_raster_habitat_minus_pa(
                 habitat_file_name=CLIMATE_RES_CORAL_SOURCE_FILE,
                 habitats=CLIMATE_RESILIENT_CORALS_HABITATS,
