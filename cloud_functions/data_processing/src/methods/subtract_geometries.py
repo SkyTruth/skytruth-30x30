@@ -15,7 +15,6 @@ from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     BUCKET,
     BUFFERED_MARINE_LOCATIONS_FILE_NAME,
-    CLIMATE_RESILIENT_CORALS_HABITATS,
     CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     HABITAT_BY_LOCATION_FILE_PATTERN,
     TOLERANCE,
@@ -560,9 +559,9 @@ def process_country_raster_habitat(
 
 def generate_raster_habitat_minus_pa(
     habitat_file_name: str,
-    habitats: tuple = CLIMATE_RESILIENT_CORALS_HABITATS,
-    total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
-    pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
+    habitats: tuple,
+    total_area_file: str,
+    pa_file: str,
     tolerance=TOLERANCE,
     bucket: str = BUCKET,
     n_jobs: int = -1,
@@ -582,17 +581,12 @@ def generate_raster_habitat_minus_pa(
     habitat_file_name : str
         GCS path of the habitat raster.
     habitats : tuple
-        Habitat names to write, each to its own file. Defaults to every class in the
-        raster; pass a subset to write only those. The pixel value encoding each class
-        is its position in ``CLIMATE_RESILIENT_CORALS_HABITATS``, so a subset here
-        narrows the output without disturbing it.
+        Every class the raster encodes, in pixel value order: the first name is the
+        class stored as 0, the second as 1, and so on. Each is written to its own file.
     total_area_file : str
-        Filename of the buffered marine locations parquet.
+        Filename of the locations parquet the habitat is attributed to.
     pa_file : str
-        Filename of the protected areas parquet written by a buffered
-        ``generate_iho_pa_intersections`` run: both estates, carrying a row per PA per
-        near-shore sea area it lies in. Coastal habitats are often designated inside PAs
-        that WDPA flags MARINE=0, hence both estates rather than the marine one alone.
+        Filename of the protected areas parquet to subtract, carrying an ISO3 column.
     tolerance : float
         Tolerance value used in simplification.
     bucket : str
@@ -607,11 +601,7 @@ def generate_raster_habitat_minus_pa(
         One GeoDataFrame per name in ``habitats`` saved to GCS as a Parquet, each with
         one row per country holding that class.
     """
-    class_map = {
-        value: name
-        for value, name in enumerate(CLIMATE_RESILIENT_CORALS_HABITATS)
-        if name in habitats
-    }
+    class_map = dict(enumerate(habitats))
 
     local_raster = habitat_file_name.split("/")[-1]
     download_file_from_gcs(bucket, habitat_file_name, local_raster, verbose=verbose)

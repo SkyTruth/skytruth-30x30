@@ -14,7 +14,10 @@ from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
     BUCKET,
+    BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     CHUNK_SIZE,
+    CLIMATE_RES_CORAL_SOURCE_FILE,
+    CLIMATE_RESILIENT_CORALS_HABITATS,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
@@ -40,6 +43,7 @@ from src.core.params import (
     WDPA_MARINE_FILE_NAME,
     WDPA_MARINE_WITH_SEAS_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
+    WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
 )
 from src.core.retry_params import DEFAULT_RETRY_CONFIG, ScheduleRetry
 from src.core.strapi import Strapi
@@ -76,6 +80,7 @@ from src.methods.static_processes import (
 from src.methods.subtract_geometries import (
     generate_habitat_minus_pa,
     generate_location_minus_fhp_mpa,
+    generate_raster_habitat_minus_pa,
     generate_total_area_minus_pa,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
@@ -552,6 +557,17 @@ def dispatch_publisher(
         case "generate_seagrasses_minus_pa":
             generate_habitat_minus_pa(
                 habitat="seagrasses",
+                verbose=verbose,
+            )
+
+        case "generate_climate_resilient_corals_minus_pa":
+            # TODO: verify that we want climate-resilient-corals separate from
+            # other-corals and not one combined corals habitat.
+            generate_raster_habitat_minus_pa(
+                habitat_file_name=CLIMATE_RES_CORAL_SOURCE_FILE,
+                habitats=CLIMATE_RESILIENT_CORALS_HABITATS,
+                total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
+                pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
                 verbose=verbose,
             )
 

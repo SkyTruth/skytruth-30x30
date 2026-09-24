@@ -305,6 +305,7 @@ LONG_RUNNING_TASKS = [
     "generate_coldwatercorals_minus_pa",
     "generate_saltmarshes_minus_pa",
     "generate_seagrasses_minus_pa",
+    "generate_climate_resilient_corals_minus_pa",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",
