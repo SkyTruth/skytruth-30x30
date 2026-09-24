@@ -566,6 +566,7 @@ def dispatch_publisher(
                 habitats=CLIMATE_RESILIENT_CORALS_HABITATS,
                 total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
                 pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
+                n_jobs=4,
                 verbose=verbose,
             )
 
