@@ -1,7 +1,13 @@
 import geopandas as gpd
+import numpy as np
 import pandas as pd
+import rasterio
 from joblib import Parallel, delayed
-from shapely.geometry import box
+from rasterio.features import rasterize, shapes
+from rasterio.windows import Window, from_bounds, intersection
+from shapely import MultiPolygon
+from shapely.geometry import box, shape
+from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import add_tolerance_suffix
@@ -16,6 +22,7 @@ from src.core.params import (
 )
 from src.core.processors import filter_protected_planet
 from src.utils.gcp import (
+    download_file_from_gcs,
     read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
     read_parquet_from_gcs,  # Reads a .parquet file from GCS and returns a GeoDataFrame
     upload_gdf,  # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
@@ -402,5 +409,223 @@ def generate_location_minus_fhp_mpa(
     upload_gdf(
         bucket_name=bucket,
         gdf=non_fh_protected_location_area,
+        destination_blob_name=archive_out_file,
+    )
+
+def polygonize_mask(mask, transform, crs, values=None, connectivity=4):
+    """
+    Vectorizes the True cells of a raster mask into polygons.
+
+    Polygon boundaries follow pixel edges exactly and nothing is simplified, so
+    the polygonized extent covers the same ground as the masked pixels.
+
+    Parameters
+    ----------
+    mask : np.ndarray
+        Boolean (height x width) array. Only True cells are vectorized.
+    transform : Affine
+        Affine transform of the grid the mask sits on.
+    crs : Any
+        CRS of that grid, set on the returned frame.
+    values : np.ndarray, optional
+        Integer array the same shape as `mask`, carried into a "value" column and
+        splitting the output at class boundaries. When None every row gets 1.
+    connectivity : int
+        4 or 8. Under 4, regions meeting only at a corner become separate polygons.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        One row per connected region, columns ["value", "geometry"].
+    """
+    source = mask.astype("uint8") if values is None else values.astype("int32")
+
+    records = [
+        (int(value), shape(geom))
+        for geom, value in shapes(source, mask=mask, transform=transform, connectivity=connectivity)
+    ]
+
+    return gpd.GeoDataFrame(
+        {"value": [value for value, _ in records]},
+        geometry=[geom for _, geom in records],
+        crs=crs,
+    )
+
+
+def process_country_raster_habitat(
+    country_area: gpd.GeoDataFrame,
+    country_pa: gpd.GeoDataFrame,
+    raster_path: str,
+    class_map: dict,
+    connectivity: int = 4,
+):
+    """
+    Returns the unprotected habitat within a country, polygonized from a raster.
+
+    The raster counterpart of ``process_country_habitat``. The country boundary and
+    its protected areas are burned onto the raster's own grid and removed there
+    rather than differenced as vectors, so the unprotected extent covers the same
+    pixels the published habitat stats are computed over, and the union and
+    difference that dominate the vector path are never run. Only the window
+    covering the country is read.
+
+    The polygons ``shapes`` returns tile the masked pixels without overlapping, so
+    each class's parts are assembled into one MultiPolygon directly; a union would
+    return the same geometry at far greater cost.
+
+    Parameters
+    ----------
+    country_area : gpd.GeoDataFrame
+        Single-country GeoDataFrame in EPSG:4326 carrying a "location" column.
+    country_pa : gpd.GeoDataFrame
+        The country's protected areas, in EPSG:4326.
+    raster_path : str
+        Local path to the habitat raster.
+    class_map : dict
+        Maps raster pixel value to habitat name.
+    connectivity : int
+        Passed to ``shapes``. 4 keeps regions meeting at a corner separate; 8
+        merges them into a self-touching ring PostGIS rejects as invalid.
+
+    Returns
+    -------
+        GeoDataFrame in EPSG:4326 with one row per class the country holds,
+        columns ["location", "habitat", "geometry"], or an empty GeoDataFrame
+        with those columns where the country holds none of the habitat.
+    """
+    empty = gpd.GeoDataFrame({"location": [], "habitat": []}, geometry=[], crs="EPSG:4326")
+    location = country_area["location"].iloc[0]
+
+    with rasterio.open(raster_path) as src:
+        raster_crs = src.crs
+        country_geom = robust_unary_union(
+            country_area.to_crs(raster_crs).geometry.apply(make_valid).values
+        )
+        if not country_geom.intersects(box(*src.bounds)):
+            return empty
+
+        window = from_bounds(*country_geom.bounds, transform=src.transform)
+        window = intersection(
+            window.round_offsets().round_lengths(), Window(0, 0, src.width, src.height)
+        )
+        habitat = src.read(1, window=window, masked=True)
+        transform = src.window_transform(window)
+
+    if habitat.size == 0:
+        return empty
+
+    # clip raster to the boundary on the grid.
+    unprotected = ~np.ma.getmaskarray(habitat) & rasterize(
+        [country_geom],
+        out_shape=habitat.shape,
+        transform=transform,
+        all_touched=False,
+        dtype="uint8",
+    ).astype(bool)
+
+    if not country_pa.empty:
+        unprotected &= ~rasterize(
+            country_pa.to_crs(raster_crs).geometry.apply(make_valid).values,
+            out_shape=habitat.shape,
+            transform=transform,
+            all_touched=False,
+            dtype="uint8",
+        ).astype(bool)
+
+    rows = []
+    for value, habitat_name in class_map.items():
+        class_mask = unprotected & (habitat.data == value)
+        if not class_mask.any():
+            continue
+        parts = [
+            shape(geom)
+            for geom, _ in shapes(
+                class_mask.astype("uint8"),
+                mask=class_mask,
+                transform=transform,
+                connectivity=connectivity,
+            )
+        ]
+        rows.append(
+            {"location": location, "habitat": habitat_name, "geometry": MultiPolygon(parts)}
+        )
+
+    if not rows:
+        return empty
+
+    return gpd.GeoDataFrame(rows, geometry="geometry", crs=raster_crs).to_crs("EPSG:4326")
+
+
+def generate_raster_habitat_minus_pa(
+    habitat: str,
+    habitat_file_name: str,
+    total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
+    pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
+    tolerance=TOLERANCE,
+    bucket: str = BUCKET,
+    n_jobs: int = -1,
+    verbose: bool = True,
+):
+    local_raster = habitat_file_name.split("/")[-1]
+    download_file_from_gcs(bucket, habitat_file_name, local_raster, verbose=True)
+
+    # Total areas: the land/EEZ union plus the buffered IHO sea areas
+    total_area = read_parquet_from_gcs(
+        bucket_name=bucket,
+        filename=add_tolerance_suffix(total_area_file, tolerance),
+        verbose=verbose,
+    )
+    total_area = total_area[["location", "geometry"]]
+
+    # Get list of unique country codes
+    countries = total_area["location"].unique().tolist()
+
+    # Protected areas: the marine and terrestrial protected areas intersecting eezs and
+    # buffered IHO seas
+    pa = read_parquet_from_gcs(
+        bucket_name=bucket,
+        filename=add_tolerance_suffix(pa_file, tolerance),
+        verbose=verbose,
+    ).pipe(filter_protected_planet)
+
+    # Create one row per country
+    pa["ISO3"] = pa["ISO3"].str.split(";")
+    pa = pa.explode("ISO3")
+    pa["ISO3"] = pa["ISO3"].str.strip()
+
+    # Keep only polygon records and make the geometries valid
+    pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
+    pa.geometry = pa.geometry.make_valid()
+
+    # Subtract geometries
+    if verbose:
+        logger.info({"message": "Subtracting protected areas from habitat areas..."})
+    results = Parallel(n_jobs=n_jobs, backend="threading")(
+        delayed(process_country_habitat)(
+            total_area[total_area["location"] == country].reset_index(drop=True),
+            pa[pa["ISO3"] == country].reset_index(drop=True),
+            local_raster,
+        )
+        for country in tqdm(countries)
+    )
+
+    total_area_minus_pa = pd.concat(results).reset_index(drop=True)
+    if verbose:
+        logger.info({"message": f"Output file has {len(total_area_minus_pa)} rows."})
+
+    out_file = CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
+    archive_out_file = ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat)
+
+    # Save to GCS
+    upload_gdf(
+        bucket_name=bucket,
+        gdf=total_area_minus_pa,
+        destination_blob_name=out_file,
+    )
+
+    # Save to archive
+    upload_gdf(
+        bucket_name=bucket,
+        gdf=total_area_minus_pa,
         destination_blob_name=archive_out_file,
     )
