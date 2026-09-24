@@ -412,6 +412,7 @@ def generate_location_minus_fhp_mpa(
         destination_blob_name=archive_out_file,
     )
 
+
 def polygonize_mask(mask, transform, crs, values=None, connectivity=4):
     """
     Vectorizes the True cells of a raster mask into polygons.
