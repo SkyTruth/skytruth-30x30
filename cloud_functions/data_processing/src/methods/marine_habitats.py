@@ -13,6 +13,7 @@ from src.core.commons import add_tolerance_suffix, load_iho_regions, polygonal_p
 from src.core.params import (
     BUCKET,
     CLIMATE_RES_CORAL_SOURCE_FILE,
+    CLIMATE_RESILIENT_CORALS_HABITATS,
     EEZ_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_HABITAT_AREA_FILE_PATTERN,
@@ -36,9 +37,7 @@ from src.utils.gcp import (
 from src.utils.geo import fast_union_area_km2, get_area_km2, robust_unary_union
 from src.utils.logger import Logger
 
-# Climate-resilient corals raster: 1 = climate-resilient corals, 0 = other corals.
-CLIMATE_RESILIENT_CORALS_CLASS_MAP = {0: "other-corals", 1: "climate-resilient-corals"}
-CLIMATE_RESILIENT_CORALS_HABITATS = ("climate-resilient-corals", "other-corals")
+CLIMATE_RESILIENT_CORALS_CLASS_MAP = dict(enumerate(CLIMATE_RESILIENT_CORALS_HABITATS))
 
 logger = Logger()
 
