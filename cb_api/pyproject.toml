@@ -17,6 +17,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 package-mode = false
+# Dockerfile also reads this line to get the correct poetry version
 requires-poetry = "==2.4.1"
 
 [dependency-groups]
