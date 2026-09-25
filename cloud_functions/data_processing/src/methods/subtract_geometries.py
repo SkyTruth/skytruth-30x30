@@ -173,12 +173,15 @@ def generate_total_area_minus_pa(
     # Subtract geometries
     if verbose:
         logger.info({"message": "Subtracting protected areas from total areas..."})
-    results = Parallel(n_jobs=-1, backend="loky")(
-        delayed(process_country)(
-            total_area[total_area["location"] == country].reset_index(),
-            pa[pa["ISO3"] == country].reset_index(),
-        )
-        for country in tqdm(countries)
+    results = tqdm(
+        Parallel(n_jobs=-1, backend="loky", return_as="generator_unordered")(
+            delayed(process_country)(
+                total_area[total_area["location"] == country].reset_index(),
+                pa[pa["ISO3"] == country].reset_index(),
+            )
+            for country in countries
+        ),
+        total=len(countries),
     )
 
     total_area_minus_pa = pd.concat(results).reset_index(drop=True)
@@ -281,13 +284,16 @@ def generate_habitat_minus_pa(
     # Subtract geometries
     if verbose:
         logger.info({"message": "Subtracting protected areas from habitat areas..."})
-    results = Parallel(n_jobs=n_jobs, backend="threading")(
-        delayed(process_country_habitat)(
-            total_area[total_area["location"] == country].reset_index(drop=True),
-            pa[pa["ISO3"] == country].reset_index(drop=True),
-            habitat_gdf,
-        )
-        for country in tqdm(countries)
+    results = tqdm(
+        Parallel(n_jobs=n_jobs, backend="threading", return_as="generator_unordered")(
+            delayed(process_country_habitat)(
+                total_area[total_area["location"] == country].reset_index(drop=True),
+                pa[pa["ISO3"] == country].reset_index(drop=True),
+                habitat_gdf,
+            )
+            for country in countries
+        ),
+        total=len(countries),
     )
 
     populated = [result for result in results if not result.empty]
@@ -617,14 +623,17 @@ def generate_raster_habitat_minus_pa(
     # Subtract geometries
     if verbose:
         logger.info({"message": "Subtracting protected areas from habitat areas..."})
-    results = Parallel(n_jobs=n_jobs, backend="threading")(
-        delayed(process_country_raster_habitat)(
-            total_area[total_area["location"] == country].reset_index(drop=True),
-            pa[pa["ISO3"] == country].reset_index(drop=True),
-            local_raster,
-            class_map,
-        )
-        for country in tqdm(countries)
+    results = tqdm(
+        Parallel(n_jobs=n_jobs, backend="threading", return_as="generator_unordered")(
+            delayed(process_country_raster_habitat)(
+                total_area[total_area["location"] == country].reset_index(drop=True),
+                pa[pa["ISO3"] == country].reset_index(drop=True),
+                local_raster,
+                class_map,
+            )
+            for country in countries
+        ),
+        total=len(countries),
     )
 
     # Countries holding none of the habitat come back empty; concat needs them dropped
