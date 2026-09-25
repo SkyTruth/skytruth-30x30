@@ -13,7 +13,6 @@ import rasterio
 from joblib import Parallel, delayed
 from rasterio.transform import rowcol
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, box, mapping
-from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import get_cover_areas
@@ -119,7 +118,7 @@ def compute_location_class_areas(
                 return None
 
             tile_geoms = [
-                make_valid(tile)
+                tile
                 for tile in tile_geometry(
                     location_geom, src.transform, tile_size_pixels=tile_size_pixels
                 )

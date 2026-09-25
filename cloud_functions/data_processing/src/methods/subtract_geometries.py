@@ -4,7 +4,7 @@ import pandas as pd
 import rasterio
 from joblib import Parallel, delayed
 from rasterio.features import rasterize, shapes
-from rasterio.windows import Window, from_bounds, intersection
+from rasterio.windows import from_bounds
 from shapely import MultiPolygon
 from shapely.geometry import box, shape
 from shapely.validation import make_valid
@@ -27,7 +27,7 @@ from src.utils.gcp import (
     read_parquet_from_gcs,  # Reads a .parquet file from GCS and returns a GeoDataFrame
     upload_gdf,  # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
 )
-from src.utils.geo import robust_unary_union
+from src.utils.geo import robust_unary_union, tile_geometry
 from src.utils.logger import Logger
 
 logger = Logger()
@@ -413,80 +413,29 @@ def generate_location_minus_fhp_mpa(
     )
 
 
-def process_country_raster_habitat(
-    country_area: gpd.GeoDataFrame,
-    country_pa: gpd.GeoDataFrame,
-    raster_path: str,
-    class_map: dict,
-    connectivity: int = 4,
+def process_poly_raster_habitat(
+    src, raster_crs, tile_geom, pas, empty, location, class_map, connectivity=4
 ):
-    """
-    Returns the unprotected habitat within a country, polygonized from a raster.
-
-    The raster counterpart of ``process_country_habitat``. The country boundary and
-    its protected areas are burned onto the raster's own grid and removed there
-    rather than differenced as vectors, so the unprotected extent covers the same
-    pixels the published habitat stats are computed over, and the union and
-    difference that dominate the vector path are never run. Only the window
-    covering the country is read.
-
-    The polygons ``shapes`` returns tile the masked pixels without overlapping, so
-    each class's parts are assembled into one MultiPolygon directly; a union would
-    return the same geometry at far greater cost.
-
-    Parameters
-    ----------
-    country_area : gpd.GeoDataFrame
-        Single-country GeoDataFrame in EPSG:4326 carrying a "location" column.
-    country_pa : gpd.GeoDataFrame
-        The country's protected areas, in EPSG:4326.
-    raster_path : str
-        Local path to the habitat raster.
-    class_map : dict
-        Maps raster pixel value to habitat name.
-    connectivity : int
-        Passed to ``shapes``. 4 keeps regions meeting at a corner separate; 8
-        merges them into a self-touching ring PostGIS rejects as invalid.
-
-    Returns
-    -------
-        GeoDataFrame in EPSG:4326 with one row per class the country holds,
-        columns ["location", "habitat", "geometry"], or an empty GeoDataFrame
-        with those columns where the country holds none of the habitat.
-    """
-    empty = gpd.GeoDataFrame({"location": [], "habitat": []}, geometry=[], crs="EPSG:4326")
-    location = country_area["location"].iloc[0]
-
-    with rasterio.open(raster_path) as src:
-        raster_crs = src.crs
-        country_geom = robust_unary_union(
-            country_area.to_crs(raster_crs).geometry.apply(make_valid).values
-        )
-        if not country_geom.intersects(box(*src.bounds)):
-            return empty
-
-        window = from_bounds(*country_geom.bounds, transform=src.transform)
-        window = intersection(
-            window.round_offsets().round_lengths(), Window(0, 0, src.width, src.height)
-        )
-        habitat = src.read(1, window=window, masked=True)
-        transform = src.window_transform(window)
+    window = from_bounds(*tile_geom.bounds, transform=src.transform)
+    window = window.round_offsets().round_lengths().crop(src.height, src.width)
+    habitat = src.read(1, window=window, masked=True)
+    transform = src.window_transform(window)
 
     if habitat.size == 0:
         return empty
 
     # clip raster to the boundary on the grid.
     unprotected = ~np.ma.getmaskarray(habitat) & rasterize(
-        [country_geom],
+        [tile_geom],
         out_shape=habitat.shape,
         transform=transform,
         all_touched=False,
         dtype="uint8",
     ).astype(bool)
 
-    if not country_pa.empty:
+    if not pas.empty:
         unprotected &= ~rasterize(
-            country_pa.to_crs(raster_crs).geometry.apply(make_valid).values,
+            pas.to_crs(raster_crs).geometry.apply(make_valid).values,
             out_shape=habitat.shape,
             transform=transform,
             all_touched=False,
@@ -515,6 +464,77 @@ def process_country_raster_habitat(
         return empty
 
     return gpd.GeoDataFrame(rows, geometry="geometry", crs=raster_crs).to_crs("EPSG:4326")
+
+
+def process_country_raster_habitat(
+    country_area: gpd.GeoDataFrame,
+    country_pa: gpd.GeoDataFrame,
+    raster_path: str,
+    class_map: dict,
+    connectivity: int = 4,
+    tile_size_pixels: int = 8192,
+):
+    """
+    Returns the unprotected habitat within a country, polygonized from a raster.
+
+    The raster counterpart of ``process_country_habitat``. The country boundary and
+    its protected areas are burned onto the raster's own grid and removed there
+    rather than differenced as vectors, so the unprotected extent covers the same
+    pixels the published habitat stats are computed over, and the union and
+    difference that dominate the vector path are never run.
+
+    The country is split into tiles first and each is read on its own, since a
+    country whose territories span many longitudes has a bounding box covering most
+    of the raster. Each tile yields its own rows rather than being stitched back
+    together: within a tile the polygons ``shapes`` returns never share an edge, so
+    they assemble into a MultiPolygon directly, but polygons from adjoining tiles do,
+    and a MultiPolygon holding those is invalid. ``update_cb`` subdivides on the way
+    into PostGIS anyway, so nothing downstream wants one geometry per country.
+
+    Parameters
+    ----------
+    country_area : gpd.GeoDataFrame
+        Single-country GeoDataFrame in EPSG:4326 carrying a "location" column.
+    country_pa : gpd.GeoDataFrame
+        The country's protected areas, in EPSG:4326.
+    raster_path : str
+        Local path to the habitat raster.
+    class_map : dict
+        Maps raster pixel value to habitat name.
+    connectivity : int
+        Passed to ``shapes``. 4 keeps regions meeting at a corner separate; 8
+        merges them into a self-touching ring PostGIS rejects as invalid.
+    tile_size_pixels : int
+        Tile edge length in raster pixels, bounding how much is read at once.
+
+    Returns
+    -------
+        GeoDataFrame in EPSG:4326 with one row per class per tile holding that
+        class, columns ["location", "habitat", "geometry"], or an empty
+        GeoDataFrame with those columns where the country holds none of them.
+    """
+    empty = gpd.GeoDataFrame({"location": [], "habitat": []}, geometry=[], crs="EPSG:4326")
+    location = country_area["location"].iloc[0]
+
+    with rasterio.open(raster_path) as src:
+        raster_crs = src.crs
+        country_geom = robust_unary_union(
+            country_area.to_crs(raster_crs).geometry.apply(make_valid).values
+        )
+        tile_geoms = tile_geometry(country_geom, src.transform, tile_size_pixels=tile_size_pixels)
+
+        rows = []
+        for tile_geom in tile_geoms:
+            tile_rows = process_poly_raster_habitat(
+                src, raster_crs, tile_geom, country_pa, empty, location, class_map, connectivity
+            )
+            if not tile_rows.empty:
+                rows.append(tile_rows)
+
+    if not rows:
+        return empty
+
+    return pd.concat(rows).reset_index(drop=True)
 
 
 def generate_raster_habitat_minus_pa(
