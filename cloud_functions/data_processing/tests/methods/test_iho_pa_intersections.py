@@ -232,23 +232,23 @@ def test_geometry_join_keeps_point_features_with_no_geometry(monkeypatch):
 
 
 def test_geometry_join_keeps_every_membership_pair_except_boundary_touches(monkeypatch):
-    """Clipping may only shed the touch artifacts. Anything with area, and every
-    point member, has to survive or the pairs would understate which seas a PA
-    belongs to."""
+    """Clipping may only shed the touch artifacts. Anything with area, and every point
+    member, has to survive or the pairs would understate which seas a PA belongs to."""
     _patch_iho(monkeypatch)
     features = _wdpa_frame(
         [box(1, 1, 2, 2), box(5, 1, 15, 2), box(-5, 0, 0, 10), Point(3, 3)],
         pids=["inside", "straddler", "adjacent", "point"],
     )
 
-    members = intersect_with_iho(features, ["WDPA_PID"], clip=False)
-    geoms = intersect_with_iho(features, ["WDPA_PID"])
+    result = intersect_with_iho(features, ["WDPA_PID"])
 
-    dropped = sorted(
-        set(zip(members["WDPA_PID"], members["location"], strict=True))
-        - set(zip(geoms["WDPA_PID"], geoms["location"], strict=True))
-    )
-    assert dropped == [("adjacent", "1")]
+    # every pair the sjoin finds but ("adjacent", "1"), which only touches Sea A
+    assert sorted(zip(result["WDPA_PID"], result["location"], strict=True)) == [
+        ("inside", "1"),
+        ("point", "1"),
+        ("straddler", "1"),
+        ("straddler", "2"),
+    ]
 
 
 def test_geometry_join_keeps_the_polygonal_part_of_a_mixed_intersection(monkeypatch):

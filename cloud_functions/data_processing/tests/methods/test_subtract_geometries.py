@@ -190,7 +190,7 @@ def habitat_job_mocks(monkeypatch, mock_location_gdf, mock_pa_with_seas_gdf, moc
 
 
 def _run_habitat_job():
-    subtract.generate_habitat_minus_pa(
+    subtract.generate_marine_habitat_minus_pa(
         habitat="mangroves",
         total_area_file="locations.parquet",
         pa_file="pas.parquet",

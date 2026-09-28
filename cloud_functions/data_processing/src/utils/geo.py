@@ -173,15 +173,6 @@ def get_area_km2(poly):
 def robust_unary_union(geometries):
     """``unary_union`` that falls back to validation + coordinate snapping on a
     GEOS robustness failure.
-
-    The common path is a plain ``unary_union`` — fast, and the right answer when
-    inputs are already valid (callers here validate up front). Only on a GEOS
-    ``TopologyException`` ("side location conflict"), which abutting/overlapping
-    EEZ seams warped into EPSG:3857 can still trigger, do we pay to ``make_valid``
-    and snap coordinates to a small grid and retry. The grid is scaled to the
-    coordinate magnitude so it works in any CRS — sub-millimetre in EPSG:3857,
-    micro-degrees in EPSG:4326 — far finer than any habitat raster pixel, so the
-    area impact is negligible.
     """
     geoms = list(geometries)
     try:

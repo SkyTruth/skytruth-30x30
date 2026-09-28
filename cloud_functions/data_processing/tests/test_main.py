@@ -56,7 +56,7 @@ def patched_all(monkeypatch, call_log):
         "upload_locations",
         "generate_total_area_minus_pa",
         "generate_location_minus_fhp_mpa",
-        "generate_habitat_minus_pa",
+        "generate_marine_habitat_minus_pa",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -669,13 +669,7 @@ def _all_enqueued(enqueued):
 
 
 def test_chained_pa_download_still_goes_to_the_job_runner(chained_jobs):
-    """A long-running job keeps its routing when it is a follow-up step.
-
-    download_protected_planet_pas moved out of the monthly fan-out and behind
-    download_mpatlas. Were the chained hop to route through the task queue
-    instead, a multi-hour job would land on Cloud Tasks and time out - and only
-    during a monthly run.
-    """
+    """A long-running job keeps its routing when it is a follow-up step."""
     enqueued = chained_jobs("download_mpatlas")
 
     assert "download_protected_planet_pas" in enqueued["long_running_tasks"]
@@ -687,15 +681,7 @@ def test_chained_pa_download_still_goes_to_the_job_runner(chained_jobs):
     ["generate_marine_protection_level_stats_table", "generate_location_minus_fhp_mpa"],
 )
 def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained_jobs, method):
-    """Everything reading the IHO/PA pairs must follow the step that builds them.
-
-    generate_marine_protection_level_stats_table reads mpatlas_sea_pairs.parquet and
-    generate_location_minus_fhp_mpa the MPAtlas zones with their sea rows appended, so
-    both hang off generate_iho_pa_intersections rather than download_mpatlas -
-    otherwise they would race the writer and publish stale or empty stats. Both
-    routes are checked because the methods are themselves long-running, so asking
-    only about the task queue would pass either way.
-    """
+    """Everything reading the IHO/PA pairs must follow the step that builds them."""
     assert method not in _all_enqueued(chained_jobs("download_mpatlas"))
     assert method in _all_enqueued(chained_jobs("generate_iho_pa_intersections"))
 
@@ -875,12 +861,15 @@ def test_eez_land_union_chains_into_the_near_shore_iho_job(patched_all):
 @pytest.mark.parametrize("habitat", list(HABITAT_PROCESSING_PARAMS))
 def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
     """One method per habitat, each dispatching only its own key, so a Workflow can fan
-    them out unchanged. Everything else is defaulted inside generate_habitat_minus_pa."""
+    them out unchanged. Everything else is defaulted inside
+    generate_marine_habitat_minus_pa."""
     resp = main.run_from_payload({"METHOD": f"generate_{habitat}_minus_pa"})
 
     assert resp == ("OK", 200)
 
-    generated = [kwargs for name, _, kwargs in patched_all if name == "generate_habitat_minus_pa"]
+    generated = [
+        kwargs for name, _, kwargs in patched_all if name == "generate_marine_habitat_minus_pa"
+    ]
     assert len(generated) == 1
     assert generated[0]["habitat"] == habitat
 
