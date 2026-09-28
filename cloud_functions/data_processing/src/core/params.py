@@ -50,7 +50,7 @@ EEZ_PARAMS = {
 }
 EEZ_FILE_NAME = "static/eez_processed.geojson"
 EEZ_MULTIPLE_SOV_FILE_NAME = "static/eez_multi_sov_processed.geojson"
-MARINE_LOCATIONS_FILE_NAME = "static/marine_locations.geojson"
+MARINE_LOCATIONS_FILE_NAME = "static/marine_locations.parquet"
 
 HIGH_SEAS_PARAMS = {
     "name": "World_High_Seas_v2_20241010.zip",
@@ -122,7 +122,7 @@ PROTECTED_SEAS_SITES_URL = "https://map.navigatormap.org/api"
 # ------------------------------------------------------------
 #                 Protected Planet (WDPA)
 # ------------------------------------------------------------
-WDPA_API_URL = "http://api.protectedplanet.net/v3/"
+WDPA_API_URL = "https://api.protectedplanet.net/v4/"
 WDPA_URL = (
     "https://d1gam3xoknrgr2.cloudfront.net/current/"
     f"WDPA_WDOECM_{today_formatted}_Public_all_shp.zip"

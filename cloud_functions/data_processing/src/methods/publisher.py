@@ -412,7 +412,7 @@ def dispatch_publisher(
             download_protected_seas(verbose=verbose)
             step_list = ["generate_fishing_protection_table"]
 
-        case "download_protected_planet_country":
+        case "download_protected_planet":
             download_protected_planet(verbose=verbose)
             step_list = ["generate_protection_coverage_stats_table"]
 
@@ -436,7 +436,7 @@ def dispatch_publisher(
                 "generate_location_minus_mpa",
                 "generate_location_minus_fhp_mpa",
                 "generate_buffered_iho_pa_intersections",
-                "download_protected_planet_country",
+                "download_protected_planet",
             ]
 
         case "generate_buffered_iho_pa_intersections":
