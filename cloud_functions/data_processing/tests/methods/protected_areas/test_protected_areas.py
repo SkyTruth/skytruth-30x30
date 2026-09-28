@@ -28,7 +28,13 @@ def empty_iho_areas():
 
 
 def empty_wdpa_pairs():
-    return pd.DataFrame({"WDPA_PID": pd.Series(dtype=str), "location": pd.Series(dtype=str)})
+    return pd.DataFrame(
+        {
+            "WDPA_PID": pd.Series(dtype=str),
+            "location": pd.Series(dtype=str),
+            "environment": pd.Series(dtype=str),
+        }
+    )
 
 
 def empty_mpa_pairs():
@@ -204,22 +210,24 @@ def mpa_meta():
 
 @pytest.fixture
 def wdpa_pairs():
-    """What intersect_wdpa_with_iho returns: one row per (PA, sea) pair.
+    """The saved WDPA / IHO pairs: one row per (PA, sea) pair.
 
-    The straddler reaches into both seas; the point PA falls inside one.
+    The straddler reaches into both seas; the point PA falls inside one. The
+    file also holds terrestrial PAs, which this table must leave behind.
     """
     return pd.DataFrame(
         {
-            "WDPA_PID": ["100A", "100A", "200A"],
-            "location": [SEA_A, SEA_B, SEA_A],
+            "WDPA_PID": ["100A", "100A", "200A", "300A"],
+            "location": [SEA_A, SEA_B, SEA_A, SEA_A],
+            "environment": ["marine", "marine", "marine", "terrestrial"],
         }
     )
 
 
 @pytest.fixture
 def mpa_pairs():
-    """What intersect_mpatlas_with_iho returns. zone_id is a string, as it is in
-    the join (it comes from the GeoJSON's top-level id)."""
+    """The saved MPAtlas / IHO pairs. zone_id is a string, as it is in the join
+    (it comes from the GeoJSON's top-level id)."""
     return pd.DataFrame({"zone_id": ["10"], "location": [SEA_A]})
 
 
@@ -288,11 +296,13 @@ def run_table(monkeypatch, wdpa_meta, mpa_meta, wdpa_pairs, mpa_pairs, reference
     def fake_read_json_df(bucket, filename, **kwargs):
         return eez.copy() if "eez" in filename else gadm.copy()
 
+    def fake_read_parquet_from_gcs(bucket, filename, **kwargs):
+        return mpa_pairs.copy() if "mpatlas" in filename else wdpa_pairs.copy()
+
     monkeypatch.setattr(pa_module, "read_dataframe", fake_read_dataframe)
     monkeypatch.setattr(pa_module, "read_json_df", fake_read_json_df)
     monkeypatch.setattr(pa_module, "load_iho_regions", lambda: iho.copy())
-    monkeypatch.setattr(pa_module, "intersect_wdpa_with_iho", lambda **_: wdpa_pairs.copy())
-    monkeypatch.setattr(pa_module, "intersect_mpatlas_with_iho", lambda **_: mpa_pairs.copy())
+    monkeypatch.setattr(pa_module, "read_parquet_from_gcs", fake_read_parquet_from_gcs)
     # GADM areas are normally derived from geometry; keep it explicit instead.
     monkeypatch.setattr(
         pa_module,
@@ -678,6 +688,23 @@ def test_marine_pa_gets_a_row_per_sea_it_overlaps(run_table):
     assert pp_locations == [SEA_B, SEA_A, "FRA"]  # 3324, 4279, FRA
 
 
+def test_terrestrial_pairs_do_not_become_sea_rows(run_table):
+    """The saved pairs hold both environments, since the coral stats need the
+    terrestrial ones. An inland park reaching a sea must not be listed as
+    protecting it.
+
+    Two things enforce this: the environment filter where the pairs are read,
+    and — were that filter dropped — the null-coverage filter, since a
+    terrestrial row keyed on an MRGID finds no GADM area. This asserts the
+    outcome, so it holds whichever one is doing the work.
+    """
+    result = run_table()
+
+    inland = result[result["wdpa_p_id"] == "300A"]
+    assert not inland.empty  # it still gets its own country row
+    assert inland["location"].tolist() == ["FRA"]
+
+
 def test_sea_rows_carry_the_pas_own_area(run_table):
     """A PA counts its whole area in every sea it reaches, exactly as it does in
     every country it spans — so a straddler is not divided between the two."""
@@ -800,8 +827,13 @@ def test_generate_protected_areas_table_mpa_rows(
 
     # Sea rows are covered below; keep them out of the field-mapping assertions.
     monkeypatch.setattr(pa_module, "load_iho_regions", lambda: empty_iho_areas())
-    monkeypatch.setattr(pa_module, "intersect_wdpa_with_iho", lambda **_: empty_wdpa_pairs())
-    monkeypatch.setattr(pa_module, "intersect_mpatlas_with_iho", lambda **_: empty_mpa_pairs())
+    monkeypatch.setattr(
+        pa_module,
+        "read_parquet_from_gcs",
+        lambda bucket, filename, **kwargs: (
+            empty_mpa_pairs() if "mpatlas" in filename else empty_wdpa_pairs()
+        ),
+    )
 
     result = pa_module.generate_protected_areas_table(
         wdpa_file_name="wdpa_meta.csv",
