@@ -528,8 +528,8 @@ def dispatch_publisher(
             step_list = ["update_location_minus_fhp_mpa"]
 
         # TODO: one method per habitat rather than a single method looping over
-        # HABITAT_PROCESSING_PARAMS. When we move to Workflows, it is easiest to fan
-        # out to parallel if they are separate tasks without restructuring anything.
+        # HABITAT_PROCESSING_PARAMS. When we move to Workflows (TECH-3777), it is easiest to
+        # fan out to parallel if they are separate tasks without restructuring anything.
         case "generate_mangroves_minus_pa":
             generate_marine_habitat_minus_pa(
                 habitat="mangroves",

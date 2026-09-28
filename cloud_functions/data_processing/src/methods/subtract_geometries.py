@@ -4,7 +4,7 @@ from joblib import Parallel, delayed
 from shapely.geometry import box
 from tqdm.auto import tqdm
 
-from src.core.commons import add_tolerance_suffix
+from src.core.commons import add_tolerance_suffix, polygonal_parts
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     BUCKET,
@@ -83,11 +83,13 @@ def calculate_unprotected_habitat_geom(
     location_area = location_area.copy()
     location_geom = location_area.geometry.union_all()
 
-    habitat_intersections = habitat.geometry.values[habitat.sindex.query(location_geom, predicate="intersects")]
+    habitat_intersections = habitat.geometry.values[
+        habitat.sindex.query(location_geom, predicate="intersects")
+    ]
     if len(habitat_intersections) == 0:
         return location_area.iloc[:0]
 
-    habitat_union = robust_unary_union(habitat_intersections).intersection(location_geom)
+    habitat_union = polygonal_parts(robust_unary_union(habitat_intersections).intersection(location_geom))
 
     if not location_pa.empty:
         habitat_union = habitat_union.difference(robust_unary_union(location_pa.geometry.values))
