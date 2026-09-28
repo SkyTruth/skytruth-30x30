@@ -26,77 +26,77 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
-def process_country(country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame):
+def process_location(location_area: gpd.GeoDataFrame, location_pa: gpd.GeoDataFrame):
     """
-    Subtracts protected areas from total area for a country.
+    Subtracts protected areas from total area for a location.
 
     Parameters
     ----------
-    country_pa : gpd.GeoDataFrame
-        GeoDataFrame with protected areas for a country.
-    country_area : gpd.GeoDataFrame
-        GeoDataFrame with total area for a country.
+    location_pa : gpd.GeoDataFrame
+        GeoDataFrame with protected areas for a location.
+    location_area : gpd.GeoDataFrame
+        GeoDataFrame with total area for a location.
 
     Returns
     -------
-        GeoDataFrame with protected areas subtracted from total area for a country.
+        GeoDataFrame with protected areas subtracted from total area for a location.
     """
-    if country_pa.empty:
+    if location_pa.empty:
         # If no protected areas, return original boundary
-        return country_area
+        return location_area
     else:
         # If protected areas found, return original boundary with protected areas removed
-        pa_union = country_pa.geometry.union_all()
-        country_area.geometry = country_area.geometry.difference(pa_union)
-        return country_area
+        pa_union = location_pa.geometry.union_all()
+        location_area.geometry = location_area.geometry.difference(pa_union)
+        return location_area
 
 
-def process_country_habitat(
-    country_area: gpd.GeoDataFrame, country_pa: gpd.GeoDataFrame, habitat: gpd.GeoDataFrame
+def process_location_habitat(
+    location_area: gpd.GeoDataFrame, location_pa: gpd.GeoDataFrame, habitat: gpd.GeoDataFrame
 ):
     """
-    Returns the unprotected habitat within a country.
+    Returns the unprotected habitat within a location.
 
-    The habitat near the country is dissolved first and clipped to the country
+    The habitat near the location is dissolved first and clipped to the location
     boundary once, rather than clipped feature by feature. Every clip pays for the
-    country's full vertex count, so on a dense archipelagic boundary that ordering,
+    location's full vertex count, so on a dense archipelagic boundary that ordering,
     not the number of habitat features, is what dominates the runtime. The
-    country's protected areas are then subtracted from the clipped result.
+    location's protected areas are then subtracted from the clipped result.
 
     Parameters
     ----------
-    country_area : gpd.GeoDataFrame
-        GeoDataFrame with total area for a country.
-    country_pa : gpd.GeoDataFrame
-        GeoDataFrame with protected areas for a country.
+    location_area : gpd.GeoDataFrame
+        GeoDataFrame with total area for a location.
+    location_pa : gpd.GeoDataFrame
+        GeoDataFrame with protected areas for a location.
     habitat : gpd.GeoDataFrame
-        GeoDataFrame of habitat geometries, in the same CRS as country_area. The
-        spatial index is built on first use, so pass one frame across countries
-        rather than a per-country slice.
+        GeoDataFrame of habitat geometries, in the same CRS as location_area. The
+        spatial index is built on first use, so pass one frame across locations
+        rather than a per-location slice.
 
     Returns
     -------
-        Single-row GeoDataFrame of unprotected habitat carrying country_area's
-        columns, or an empty GeoDataFrame with those columns where the country
+        Single-row GeoDataFrame of unprotected habitat carrying location_area's
+        columns, or an empty GeoDataFrame with those columns where the location
         holds none of the habitat.
     """
-    country_area = country_area.copy()
-    country_geom = country_area.geometry.union_all()
+    location_area = location_area.copy()
+    location_geom = location_area.geometry.union_all()
 
-    nearby = habitat.geometry.values[habitat.sindex.query(country_geom, predicate="intersects")]
+    nearby = habitat.geometry.values[habitat.sindex.query(location_geom, predicate="intersects")]
     if len(nearby) == 0:
-        return country_area.iloc[:0]
+        return location_area.iloc[:0]
 
-    habitat_union = robust_unary_union(nearby).intersection(country_geom)
+    habitat_union = robust_unary_union(nearby).intersection(location_geom)
 
-    if not country_pa.empty:
-        habitat_union = habitat_union.difference(robust_unary_union(country_pa.geometry.values))
+    if not location_pa.empty:
+        habitat_union = habitat_union.difference(robust_unary_union(location_pa.geometry.values))
 
     if habitat_union.is_empty:
-        return country_area.iloc[:0]
+        return location_area.iloc[:0]
 
-    country_area.geometry = [habitat_union]
-    return country_area
+    location_area.geometry = [habitat_union]
+    return location_area
 
 
 def generate_total_area_minus_pa(
@@ -142,8 +142,8 @@ def generate_total_area_minus_pa(
     )
     total_area = total_area[["location", "geometry"]]
 
-    # Get list of unique country codes
-    countries = total_area["location"].unique().tolist()
+    # Get list of unique location codes
+    locations = total_area["location"].unique().tolist()
 
     # Protected areas: PA (terrestrial) or MPA (marine)
     pa_file = add_tolerance_suffix(pa_file, tolerance)
@@ -154,7 +154,7 @@ def generate_total_area_minus_pa(
         verbose=verbose,
     ).pipe(filter_protected_planet)
 
-    # Create one row per country
+    # Create one row per location
     pa["ISO3"] = pa["ISO3"].str.split(";")
     pa = pa.explode("ISO3")
     pa["ISO3"] = pa["ISO3"].str.strip()
@@ -167,11 +167,11 @@ def generate_total_area_minus_pa(
     if verbose:
         logger.info({"message": "Subtracting protected areas from total areas..."})
     results = Parallel(n_jobs=-1, backend="loky")(
-        delayed(process_country)(
-            total_area[total_area["location"] == country].reset_index(),
-            pa[pa["ISO3"] == country].reset_index(),
+        delayed(process_location)(
+            total_area[total_area["location"] == location].reset_index(),
+            pa[pa["ISO3"] == location].reset_index(),
         )
-        for country in tqdm(countries)
+        for location in tqdm(locations)
     )
 
     total_area_minus_pa = pd.concat(results).reset_index(drop=True)
@@ -193,7 +193,7 @@ def generate_total_area_minus_pa(
     )
 
 
-def generate_habitat_minus_pa(
+def generate_marine_habitat_minus_pa(
     habitat: str,
     total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
@@ -203,12 +203,12 @@ def generate_habitat_minus_pa(
     verbose: bool = True,
 ):
     """
-    Subtracts protected areas from the habitat lying inside each country's boundaries;
+    Subtracts protected areas from the habitat lying inside each location's boundaries;
     saves the output to GCS as a Parquet.
 
     The counterpart of ``generate_total_area_minus_pa``: same inputs and the same
-    per-country fan-out, but each row is a country's unprotected *habitat* rather than
-    its unprotected area. Countries holding none of the habitat are dropped rather than
+    per-location fan-out, but each row is a location's unprotected *habitat* rather than
+    its unprotected area. Locations holding none of the habitat are dropped rather than
     written as empty rows, so the output is usually far shorter than the location list.
 
     Parameters
@@ -231,7 +231,7 @@ def generate_habitat_minus_pa(
 
     Returns
     -------
-        GeoDataFrame saved to GCS as a Parquet, one row per country holding habitat.
+        GeoDataFrame saved to GCS as a Parquet, one row per location holding habitat.
     """
 
     habitat_gdf = read_parquet_from_gcs(
@@ -248,8 +248,8 @@ def generate_habitat_minus_pa(
     )
     total_area = total_area[["location", "geometry"]]
 
-    # Get list of unique country codes
-    countries = total_area["location"].unique().tolist()
+    # Get list of unique location codes
+    locations = total_area["location"].unique().tolist()
 
     # Protected areas: the marine and terrestrial protected areas intersecting eezs and
     # buffered IHO seas
@@ -259,7 +259,7 @@ def generate_habitat_minus_pa(
         verbose=verbose,
     ).pipe(filter_protected_planet)
 
-    # Create one row per country
+    # Create one row per location
     pa["ISO3"] = pa["ISO3"].str.split(";")
     pa = pa.explode("ISO3")
     pa["ISO3"] = pa["ISO3"].str.strip()
@@ -268,19 +268,19 @@ def generate_habitat_minus_pa(
     pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
     pa.geometry = pa.geometry.make_valid()
 
-    # Build the habitat index once here rather than once per country inside the workers
+    # Build the habitat index once here rather than once per location inside the workers
     habitat_gdf.sindex.query(box(0, 0, 0, 0))
 
     # Subtract geometries
     if verbose:
         logger.info({"message": "Subtracting protected areas from habitat areas..."})
     results = Parallel(n_jobs=n_jobs, backend="threading")(
-        delayed(process_country_habitat)(
-            total_area[total_area["location"] == country].reset_index(drop=True),
-            pa[pa["ISO3"] == country].reset_index(drop=True),
+        delayed(process_location_habitat)(
+            total_area[total_area["location"] == location].reset_index(drop=True),
+            pa[pa["ISO3"] == location].reset_index(drop=True),
             habitat_gdf,
         )
-        for country in tqdm(countries)
+        for location in tqdm(locations)
     )
 
     populated = [result for result in results if not result.empty]
