@@ -187,7 +187,7 @@ def generate_iho_pa_intersections(
     mpatlas = read_mpatlas_from_gcs(bucket, MPATLAS_FILE_NAME)
     mpatlas_pairs = intersect_mpatlas_with_iho(mpa=mpatlas)
 
-    # TODO: TECH-3773 - update generate_total_area_minus_pa() function use "location" 
+    # TODO: TECH-3773 - update generate_total_area_minus_pa() function use "location"
     # as the location identifier
     wdpa_sea_rows = pairs[pairs.geometry.notna()].rename(columns={"location": "ISO3"})
     wdpa_marine_with_seas = pd.concat([wdpa["marine"], wdpa_sea_rows], ignore_index=True)
