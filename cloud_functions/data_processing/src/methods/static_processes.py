@@ -35,6 +35,7 @@ from src.core.land_cover_params import (
 )
 from src.core.params import (
     BUCKET,
+    BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     CHUNK_SIZE,
     COUNTRY_TERRESTRIAL_HABITATS_FILE_NAME,
     EEZ_FILE_NAME,
@@ -541,18 +542,21 @@ def _clip_and_union_habitat(
 
 def process_near_shore_iho(
     near_shore_iho_file_name: str = NEAR_SHORE_IHO_FILE_NAME,
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    buffered_marine_locations_file_name: str = BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     km: int = NEAR_SHORE_BUFFER_KM,
+    tolerance: float = TOLERANCE,
     bucket: str = BUCKET,
     n_jobs: int = -1,
     verbose: bool = True,
 ):
-    """Build the near-shore IHO layer once and save it for the pipeline to read.
+    """Build the near-shore IHO sea areas, and from them the buffered marine locations.
 
-    Buffering and clipping the sea areas takes minutes and several jobs need the
-    result, so it happens here rather than inside ``load_iho_regions``. The sea
-    areas are read as published — ``load_iho_regions`` is not used, because it
-    stitches in the Mediterranean and casts MRGID to a string, and
-    ``process_buffered_iho`` needs neither.
+    Each IHO sea area is buffered ``km`` inshore, clipped against its neighbours,
+    and saved to ``near_shore_iho_file_name``. Those sea areas are then
+    concatenated with the land/EEZ union — which ``process_eez_land_union`` must
+    already have written — into the buffered marine locations, the location set
+    the marine habitat jobs dissolve by.
     """
     if verbose:
         logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
@@ -568,6 +572,27 @@ def process_near_shore_iho(
         )
 
     upload_gdf(bucket, near_shore, near_shore_iho_file_name, verbose=verbose)
+
+    if verbose:
+        logger.info({"message": "loading eez/land union for the buffered marine locations"})
+    gadm_eez_union = read_json_df(
+        bucket, add_tolerance_suffix(gadm_eez_union_file_name, tolerance), verbose=verbose
+    )
+
+    iho = load_iho_regions(buffer=True)[["location", "geometry"]]
+    if tolerance is not None:
+        if verbose:
+            logger.info({"message": f"simplifying near-shore IHO with tolerance {tolerance}"})
+        iho["geometry"] = iho["geometry"].simplify(tolerance=tolerance)
+
+    buffered_marine_locations = pd.concat(
+        [gadm_eez_union[["location", "geometry"]], iho], ignore_index=True
+    ).pipe(clean_geometries)
+
+    out_fn = add_tolerance_suffix(buffered_marine_locations_file_name, tolerance)
+    if verbose:
+        logger.info({"message": f"uploading buffered marine locations to {out_fn}"})
+    upload_gdf(bucket, buffered_marine_locations, out_fn)
 
     return near_shore
 
