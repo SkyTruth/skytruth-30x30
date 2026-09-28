@@ -51,7 +51,7 @@ def process_location(location_area: gpd.GeoDataFrame, location_pa: gpd.GeoDataFr
         return location_area
 
 
-def process_location_habitat(
+def calculate_unprotected_habitat_geom(
     location_area: gpd.GeoDataFrame, location_pa: gpd.GeoDataFrame, habitat: gpd.GeoDataFrame
 ):
     """
@@ -83,11 +83,11 @@ def process_location_habitat(
     location_area = location_area.copy()
     location_geom = location_area.geometry.union_all()
 
-    nearby = habitat.geometry.values[habitat.sindex.query(location_geom, predicate="intersects")]
-    if len(nearby) == 0:
+    habitat_intersections = habitat.geometry.values[habitat.sindex.query(location_geom, predicate="intersects")]
+    if len(habitat_intersections) == 0:
         return location_area.iloc[:0]
 
-    habitat_union = robust_unary_union(nearby).intersection(location_geom)
+    habitat_union = robust_unary_union(habitat_intersections).intersection(location_geom)
 
     if not location_pa.empty:
         habitat_union = habitat_union.difference(robust_unary_union(location_pa.geometry.values))
@@ -275,7 +275,7 @@ def generate_marine_habitat_minus_pa(
     if verbose:
         logger.info({"message": "Subtracting protected areas from habitat areas..."})
     results = Parallel(n_jobs=n_jobs, backend="threading")(
-        delayed(process_location_habitat)(
+        delayed(calculate_unprotected_habitat_geom)(
             total_area[total_area["location"] == location].reset_index(drop=True),
             pa[pa["ISO3"] == location].reset_index(drop=True),
             habitat_gdf,
