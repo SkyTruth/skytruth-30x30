@@ -45,8 +45,7 @@ def intersect_with_iho(
     features: gpd.GeoDataFrame,
     keep_cols: list[str],
     buffer: bool = False,
-    with_geometry: bool = True,
-) -> gpd.GeoDataFrame | pd.DataFrame:
+) -> gpd.GeoDataFrame:
     """One row per (feature, IHO sea area) pair the feature intersects.
 
     Parameters
@@ -61,18 +60,11 @@ def intersect_with_iho(
     buffer : bool
         Join against the near-shore buffered sea areas rather than the
         published IHO boundaries. See ``load_iho_regions``.
-    with_geometry : bool
-        Also return each pair's intersection: the feature clipped to that one
-        sea. A point feature has no area to clip, so it keeps its membership
-        with a null geometry; an areal feature with no polygonal intersection
-        merely touched the sea boundary and that pair is dropped as a clipping
-        artifact. Callers measuring area filter on ``geometry.notna()``, though
-        ``union_all``, ``difference`` and ``dissolve`` all ignore nulls.
 
     Returns
     -------
-    gpd.GeoDataFrame | pd.DataFrame
-        ``[*keep_cols, "location"]``, plus ``geometry`` when ``with_geometry``.
+    gpd.GeoDataFrame
+        ``[*keep_cols, "location", "geometry"]``.
     """
 
     # load IHO sea areas, optionally buffered to catch near-shore features
@@ -86,10 +78,6 @@ def intersect_with_iho(
     logger.info({"message": f"matching {len(features)} features to {len(iho)} IHO sea areas"})
     pairs = features.sjoin(iho, predicate="intersects").reset_index(drop=True)
     logger.info({"message": f"found {len(pairs)} feature / IHO sea overlaps"})
-
-    # If clipped geometry is not needed, skip computing the intersections.
-    if not with_geometry:
-        return pd.DataFrame(pairs[[*keep_cols, "location"]])
 
     # Identify the point PAs so they are not dropped when they have no polygonal
     # intersection with the sea. Taken before clipping replaces the geometry.
@@ -122,7 +110,6 @@ def intersect_wdpa_with_iho(
     tolerance: float = TOLERANCE,
     pa_file_name: str = WDPA_MARINE_FILE_NAME,
     buffer: bool = False,
-    with_geometry: bool = True,
     pas: gpd.GeoDataFrame | None = None,
 ) -> pd.DataFrame:
     """One row per (PA, IHO sea) pair the PA overlaps, keyed on WDPA_PID.
@@ -142,16 +129,13 @@ def intersect_wdpa_with_iho(
 
     keep_cols = ["WDPA_PID", "WDPAID", "PA_DEF", "STATUS", "DESIG_ENG"]
 
-    return intersect_with_iho(
-        pas[[*keep_cols, "geometry"]], keep_cols, buffer=buffer, with_geometry=with_geometry
-    )
+    return intersect_with_iho(pas[[*keep_cols, "geometry"]], keep_cols, buffer=buffer)
 
 
 def intersect_mpatlas_with_iho(
     bucket: str = BUCKET,
     mpa_file_name: str = MPATLAS_FILE_NAME,
     buffer: bool = False,
-    with_geometry: bool = True,
     mpa: gpd.GeoDataFrame | None = None,
 ) -> pd.DataFrame:
     """One row per (MPAtlas zone, IHO sea) pair the zone overlaps, keyed on zone_id.
@@ -165,9 +149,7 @@ def intersect_mpatlas_with_iho(
 
     keep_cols = ["zone_id", "protection_mpaguide_level"]
 
-    return intersect_with_iho(
-        mpa[[*keep_cols, "geometry"]], keep_cols, buffer=buffer, with_geometry=with_geometry
-    )
+    return intersect_with_iho(mpa[[*keep_cols, "geometry"]], keep_cols, buffer=buffer)
 
 
 def generate_iho_pa_intersections(
@@ -181,7 +163,7 @@ def generate_iho_pa_intersections(
         """The PAs of each environment in WDPA_ENVIRONMENTS, labelled with it."""
         return pd.concat(
             [
-                intersect_wdpa_with_iho(pas=pas, with_geometry=True).assign(environment=environment)
+                intersect_wdpa_with_iho(pas=pas).assign(environment=environment)
                 for environment, pas in wdpa.items()
             ],
             ignore_index=True,
@@ -203,7 +185,7 @@ def generate_iho_pa_intersections(
     pairs = wdpa_pairs(wdpa)
 
     mpa = read_mpatlas_from_gcs(bucket, MPATLAS_FILE_NAME)
-    mpa_pairs = intersect_mpatlas_with_iho(mpa=mpa, with_geometry=True)
+    mpa_pairs = intersect_mpatlas_with_iho(mpa=mpa)
 
     # TODO: I don't love that I'm renaming "location" to "ISO3" or "country" since the
     # IHO areas do not have these codes, but this is the simplest way to use it in
