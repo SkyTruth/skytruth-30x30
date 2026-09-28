@@ -184,23 +184,22 @@ def generate_iho_pa_intersections(
     }
     pairs = wdpa_pairs(wdpa)
 
-    mpa = read_mpatlas_from_gcs(bucket, MPATLAS_FILE_NAME)
-    mpa_pairs = intersect_mpatlas_with_iho(mpa=mpa)
+    mpatlas = read_mpatlas_from_gcs(bucket, MPATLAS_FILE_NAME)
+    mpatlas_pairs = intersect_mpatlas_with_iho(mpa=mpatlas)
 
-    # TODO: I don't love that I'm renaming "location" to "ISO3" or "country" since the
-    # IHO areas do not have these codes, but this is the simplest way to use it in
-    # generate_total_area_minus_pa() without changing that function's signature.
-    # Maybe later we rename "ISO3" and "country" to "location", but that has more
-    # downstream implications.
+    # TODO: TECH-3773 - update generate_total_area_minus_pa() function use "location" 
+    # as the location identifier
     wdpa_sea_rows = pairs[pairs.geometry.notna()].rename(columns={"location": "ISO3"})
     wdpa_marine_with_seas = pd.concat([wdpa["marine"], wdpa_sea_rows], ignore_index=True)
 
-    mpa_sea_rows = mpa_pairs[mpa_pairs.geometry.notna()].rename(columns={"location": "country"})
-    mpatlas_with_seas = pd.concat([mpa, mpa_sea_rows], ignore_index=True)
+    mpatlas_sea_rows = mpatlas_pairs[mpatlas_pairs.geometry.notna()].rename(
+        columns={"location": "country"}
+    )
+    mpatlas_with_seas = pd.concat([mpatlas, mpatlas_sea_rows], ignore_index=True)
 
     # The WDPA names take a tolerance because the PAs they were built from were
     # simplified to it. MPAtlas is read as published, so its name does not.
     save(pairs, add_tolerance_suffix(WDPA_SEA_PAIRS_FILE_NAME, tolerance))
     save(wdpa_marine_with_seas, add_tolerance_suffix(WDPA_MARINE_WITH_SEAS_FILE_NAME, tolerance))
-    save(mpa_pairs, MPATLAS_SEA_PAIRS_FILE_NAME)
+    save(mpatlas_pairs, MPATLAS_SEA_PAIRS_FILE_NAME)
     save(mpatlas_with_seas, MPATLAS_WITH_SEAS_FILE_NAME)
