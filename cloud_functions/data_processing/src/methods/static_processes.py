@@ -50,6 +50,7 @@ from src.core.params import (
     HABITAT_PROCESSING_PARAMS,
     HIGH_SEAS_PARAMS,
     MARINE_HABITAT_PARAMS,
+    MARINE_LOCATIONS_FILE_NAME,
     NEAR_SHORE_BUFFER_KM,
     NEAR_SHORE_IHO_FILE_NAME,
     PROCESSED_BIOME_RASTER_PATH,
@@ -235,6 +236,21 @@ def process_eez_geoms(
     if verbose:
         logger.info({"message": f"uploading eez by sovereign file to {out_fn}"})
     upload_gdf(bucket, eez_by_sov, out_fn)
+
+    iho = load_iho_regions()[["location", "geometry"]]
+    if tolerance is not None:
+        if verbose:
+            logger.info({"message": f"simplifying iho sea areas with tolerance {tolerance}"})
+        iho["geometry"] = iho["geometry"].simplify(tolerance=tolerance)
+
+    marine_locations = pd.concat(
+        [eez_by_sov[["location", "geometry"]], iho], ignore_index=True
+    ).pipe(clean_geometries)
+
+    marine_locations_fn = add_tolerance_suffix(MARINE_LOCATIONS_FILE_NAME, tolerance)
+    if verbose:
+        logger.info({"message": f"uploading marine locations file to {marine_locations_fn}"})
+    upload_gdf(bucket, marine_locations, marine_locations_fn)
 
     if verbose:
         logger.info(

@@ -156,7 +156,7 @@ def test_protected_planet_pas_receives_the_tolerance(patched_all):
     "method",
     [
         "generate_gadm_minus_pa",
-        "generate_eez_minus_mpa",
+        "generate_location_minus_mpa",
         "generate_location_minus_fhp_mpa",
     ],
 )
@@ -675,14 +675,14 @@ def test_chained_pa_download_still_goes_to_the_job_runner(chained_jobs):
     assert "download_protected_planet_pas" not in enqueued["create_task"]
 
 
-def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained_jobs):
+@pytest.mark.parametrize(
+    "method",
+    ["generate_marine_protection_level_stats_table", "generate_location_minus_fhp_mpa"],
+)
+def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained_jobs, method):
     """Everything reading the IHO/PA pairs must follow the step that builds them."""
-    assert "generate_marine_protection_level_stats_table" not in _all_enqueued(
-        chained_jobs("download_mpatlas")
-    )
-    assert "generate_marine_protection_level_stats_table" in _all_enqueued(
-        chained_jobs("generate_iho_pa_intersections")
-    )
+    assert method not in _all_enqueued(chained_jobs("download_mpatlas"))
+    assert method in _all_enqueued(chained_jobs("generate_iho_pa_intersections"))
 
 
 # Non-invoking / generic flows

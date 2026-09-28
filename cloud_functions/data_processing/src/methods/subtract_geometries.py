@@ -8,6 +8,7 @@ from src.core.params import BUCKET
 from src.core.processors import filter_protected_planet
 from src.utils.gcp import (
     read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
+    read_parquet_from_gcs,  # Reads a .parquet file from GCS and returns a GeoDataFrame
     upload_gdf,  # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
 )
 from src.utils.logger import Logger
@@ -87,9 +88,11 @@ def generate_total_area_minus_pa(
     countries = total_area["location"].unique().tolist()
 
     # Protected areas: PA (terrestrial) or MPA (marine)
-    pa = read_json_df(
+    pa_file = add_tolerance_suffix(pa_file, tolerance)
+    read_pa = read_parquet_from_gcs if pa_file.endswith(".parquet") else read_json_df
+    pa = read_pa(
         bucket_name=bucket,
-        filename=add_tolerance_suffix(pa_file, tolerance),
+        filename=pa_file,
         verbose=verbose,
     ).pipe(filter_protected_planet)
 
@@ -166,7 +169,8 @@ def generate_location_minus_fhp_mpa(
         to GCS as a Parquet file.
     """
 
-    mpa = read_json_df(
+    read_mpa = read_parquet_from_gcs if mpa_file.endswith(".parquet") else read_json_df
+    mpa = read_mpa(
         bucket_name=bucket,
         filename=mpa_file,
         verbose=verbose,
