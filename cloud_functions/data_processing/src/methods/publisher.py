@@ -413,7 +413,7 @@ def dispatch_publisher(
             download_protected_seas(verbose=verbose)
             step_list = ["generate_fishing_protection_table"]
 
-        case "download_protected_planet_country":
+        case "download_protected_planet":
             download_protected_planet(verbose=verbose)
             step_list = ["generate_protection_coverage_stats_table"]
 
@@ -435,7 +435,7 @@ def dispatch_publisher(
                 "generate_protected_areas_table",
                 "generate_terrestrial_biome_stats",
                 "generate_eez_minus_mpa",
-                "download_protected_planet_country",
+                "download_protected_planet",
             ]
 
         # ------------------
