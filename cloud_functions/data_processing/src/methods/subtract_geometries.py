@@ -89,7 +89,9 @@ def calculate_unprotected_habitat_geom(
     if len(habitat_intersections) == 0:
         return location_area.iloc[:0]
 
-    habitat_union = polygonal_parts(robust_unary_union(habitat_intersections).intersection(location_geom))
+    habitat_union = polygonal_parts(
+        robust_unary_union(habitat_intersections).intersection(location_geom)
+    )
 
     if not location_pa.empty:
         habitat_union = habitat_union.difference(robust_unary_union(location_pa.geometry.values))
