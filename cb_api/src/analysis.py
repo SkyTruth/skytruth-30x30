@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import Any
 
@@ -46,31 +46,33 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
         raise ValueError("Input geometry must be a Polygon or MultiPolygon")
 
 
-def serialize_response(data: Sequence[Any]) -> dict:
+def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
     """Converts the data from the database into a Dict
     {locations_area: [{"code": <location_iso>, "protected_area": <area>}],
     "total_area": <total_area>, "total_protected_area": <area>} response
     """
-    if not data or len(data) == 0:
+    if not data:
         return {
             "locations_area": [],
             "total_area": 0,
             "total_protected_area": 0,
         }
 
-    result = {"total_area": data[0][2]}
+    result = {"total_area": data[0]["user_area_km2"]}
     sub_result = {}
     total_protected_area = 0
     for row in data:
-        for iso in filter(lambda item: item is not None, [row[0]]):
-            total_protected_area += row[1]
-            if iso not in sub_result:
-                sub_result[iso] = {
-                    "code": iso,
-                    "protected_area": row[1],
-                }
-            else:
-                sub_result[iso]["protected_area"] += row[1]
+        iso = row["location"]
+        if iso is None:
+            continue
+        total_protected_area += row["portion_area_km2"]
+        if iso not in sub_result:
+            sub_result[iso] = {
+                "code": iso,
+                "protected_area": row["portion_area_km2"],
+            }
+        else:
+            sub_result[iso]["protected_area"] += row["portion_area_km2"]
 
     result.update(
         {
@@ -133,7 +135,7 @@ def get_locations_stats(
                 GROUP BY location
                 """
             )
-            data_response = conn.execute(stmt, parameters={"geometry": geometry}).all()
+            data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
     except ValueError:
         raise
     except Exception as excep:
