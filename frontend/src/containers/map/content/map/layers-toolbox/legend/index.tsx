@@ -45,7 +45,6 @@ const Legend: FCWithMessages = () => {
       // @ts-ignore
       fields: ['title', 'params_config', 'slug'],
 
-      // @ts-ignore
       populate: {
         legend_config: {
           populate: {
