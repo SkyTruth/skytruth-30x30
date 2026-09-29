@@ -152,7 +152,8 @@ SEAMOUNTS_URL = (
 )
 SEAMOUNTS_ZIPFILE_NAME = "habitats/seamounts.zip"
 SEAMOUNTS_SHAPEFILE_NAME = (
-    "DownloadPack-14_001_ZSL002_ModelledSeamounts2011_v1/01_Data/Seamounts/Seamounts.shp"
+    "DownloadPack-14_001_ZSL002_ModelledSeamounts2011_v1/01_Data/"
+    "SeamountsBaseArea/SeamountsBaseArea.shp"
 )
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
