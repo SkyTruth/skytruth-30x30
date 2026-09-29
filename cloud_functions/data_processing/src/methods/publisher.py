@@ -390,7 +390,7 @@ def dispatch_publisher(
 
             process_marine_habitat_geoms(habitats=current, verbose=verbose)
 
-            # TODO: When we move to Workflows (TECH-3777), we can fan out to parallel 
+            # TODO: When we move to Workflows (TECH-3777), we can fan out to parallel
             # rather than sequentially. For now, we process one habitat at a time.
             if remaining:
                 task_config["HABITAT"] = remaining
@@ -460,9 +460,8 @@ def dispatch_publisher(
             step_list = ["generate_habitat_protection_table"]
 
         case "generate_habitat_protection_table":
-
             # TODO: When we move to Workflows (TECH-3777), we can fan out each
-            # terrestrial biome and marine habitat to parallel rather than sequentially. 
+            # terrestrial biome and marine habitat to parallel rather than sequentially.
             _ = generate_habitat_protection_table(verbose=verbose)
             step_list = ["update_habitat_protection_stats"]
 
