@@ -862,18 +862,11 @@ def test_eez_land_union_chains_into_the_near_shore_iho_job(patched_all):
     ]
 
 
-MINUS_PA_HABITATS = [habitat for habitat in HABITAT_PROCESSING_PARAMS if habitat != "seamounts"]
-
-
-@pytest.mark.parametrize("habitat", MINUS_PA_HABITATS)
+@pytest.mark.parametrize("habitat", list(HABITAT_PROCESSING_PARAMS))
 def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
     """One method per habitat, each dispatching only its own key, so a Workflow can fan
     them out unchanged. Everything else is defaulted inside
-    generate_marine_habitat_minus_pa.
-
-    Seamounts go through the same stats processing as the rest but have no minus-PA
-    method yet, so they are left out here.
-    """
+    generate_marine_habitat_minus_pa."""
     resp = main.run_from_payload({"METHOD": f"generate_{habitat}_minus_pa"})
 
     assert resp == ("OK", 200)
@@ -908,6 +901,6 @@ def test_buffered_iho_pa_intersections_launches_every_habitat_minus_pa_job(patch
 
     launched = [payload["METHOD"] for payload in _next_step_payloads(patched_all)]
 
-    assert [f"generate_{habitat}_minus_pa" for habitat in MINUS_PA_HABITATS] == [
+    assert [f"generate_{habitat}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS] == [
         method for method in launched if method.endswith("_minus_pa") and "location" not in method
     ]
