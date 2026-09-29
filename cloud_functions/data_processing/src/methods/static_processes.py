@@ -79,6 +79,7 @@ from src.utils.geo import (
     fast_union_area_km2,
     get_area_km2,
     tile_geometry,
+    unwrap_antimeridian,
 )
 from src.utils.logger import Logger
 
@@ -662,6 +663,8 @@ def _load_habitat_geometry(
     """Read one habitat's source and return a single frame ready to dissolve.
 
     * gpkg: a single gzipped GeoPackage of polygons (Global Mangrove Watch).
+    * shapefile: one polygon shapefile inside a zip, named by ``shapefile_name``
+      (ZSL seamounts). Its antimeridian crossings are split before dissolving.
     * wcmc: a UNEP-WCMC zip holding a point and a polygon shapefile. The points are
       buffered into polygons (see _buffer_unep_points) and merged with the polygon
       layer.
@@ -672,6 +675,15 @@ def _load_habitat_geometry(
         if verbose:
             logger.info({"message": f"loading {habitat} from {file_name}"})
         return read_gzipped_gpkg_from_gcs(bucket, file_name, columns=[], verbose=verbose)
+
+    if params["source"] == "shapefile":
+        if verbose:
+            logger.info({"message": f"loading {habitat} from {file_name}"})
+        geometry = load_zipped_shapefile_from_gcs(
+            file_name, bucket, internal_shapefile_path=params["shapefile_name"]
+        ).pipe(clean_geometries)
+        geometry["geometry"] = geometry.geometry.apply(unwrap_antimeridian)
+        return geometry[["geometry"]]
 
     if verbose:
         logger.info({"message": f"locating {habitat} layers in {file_name}"})

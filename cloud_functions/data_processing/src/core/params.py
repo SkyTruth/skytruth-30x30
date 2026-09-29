@@ -183,7 +183,10 @@ MARINE_HABITAT_PARAMS = {
         "url": SEAMOUNTS_URL,
         "file_name": SEAMOUNTS_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_SEAMOUNTS_FILE_NAME,
-        "needs_processing": False,
+        "shapefile_name": SEAMOUNTS_SHAPEFILE_NAME,
+        "needs_processing": True,
+        "source": "shapefile",
+        "overlaps": True,
     },
     "coldwatercorals": {
         "url": COLD_WATER_CORALS_URL,

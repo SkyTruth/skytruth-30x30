@@ -13,13 +13,10 @@ from src.core.commons import add_tolerance_suffix, load_iho_regions, polygonal_p
 from src.core.params import (
     BUCKET,
     CLIMATE_RES_CORAL_SOURCE_FILE,
-    EEZ_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_HABITAT_AREA_FILE_PATTERN,
     HABITAT_BY_LOCATION_FILE_PATTERN,
     HABITAT_PROCESSING_PARAMS,
-    SEAMOUNTS_SHAPEFILE_NAME,
-    SEAMOUNTS_ZIPFILE_NAME,
     TOLERANCE,
     WDPA_MARINE_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
@@ -28,7 +25,6 @@ from src.core.processors import clean_geometries, filter_protected_planet
 from src.core.raster_pa_stats import compute_class_areas_by_location, compute_location_class_areas
 from src.utils.gcp import (
     download_file_from_gcs,
-    load_zipped_shapefile_from_gcs,
     read_json_df,
     read_json_from_gcs,
     read_parquet_from_gcs,
@@ -41,112 +37,6 @@ CLIMATE_RESILIENT_CORALS_CLASS_MAP = {0: "other-corals", 1: "climate-resilient-c
 CLIMATE_RESILIENT_CORALS_HABITATS = ("climate-resilient-corals", "other-corals")
 
 logger = Logger()
-
-
-def create_seamounts_subtable(
-    marine_protected_areas,
-    combined_regions,
-    seamounts_zipfile_name: str = SEAMOUNTS_ZIPFILE_NAME,
-    seamounts_shapefile_name: str = SEAMOUNTS_SHAPEFILE_NAME,
-    eez_file_name: str = EEZ_FILE_NAME,
-    tolerance: float = TOLERANCE,
-    bucket: str = BUCKET,
-    verbose: bool = True,
-):
-    """Compute seamount protection stats per country/region from the ZSL seamounts layer."""
-
-    def get_group_stats(df_eez, df_pa, loc, relations, global_seamount_area):
-        if loc == "GLOB":
-            df_pa_group = df_pa[["PEAKID", "AREA2D"]].drop_duplicates()
-            total_area = global_seamount_area
-        else:
-            df_pa_group = df_pa[df_pa["location"].isin(relations[loc])][
-                ["PEAKID", "AREA2D"]
-            ].drop_duplicates()
-
-            df_eez_group = df_eez[df_eez["location"].isin(relations[loc])][
-                ["PEAKID", "AREA2D"]
-            ].drop_duplicates()
-            total_area = df_eez_group["AREA2D"].sum()
-
-        protected_area = min(df_pa_group["AREA2D"].sum(), total_area)
-
-        return {
-            "location": loc,
-            "habitat": "seamounts",
-            "environment": "marine",
-            "protected_area": protected_area,
-            "total_area": total_area,
-        }
-
-    if verbose:
-        logger.info({"message": "loading seamounts"})
-
-    seamounts = load_zipped_shapefile_from_gcs(
-        seamounts_zipfile_name, bucket, internal_shapefile_path=seamounts_shapefile_name
-    )
-
-    if verbose:
-        logger.info({"message": "loading eezs"})
-    eez = read_json_df(bucket, add_tolerance_suffix(eez_file_name, tolerance), verbose)
-
-    if verbose:
-        logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions()
-
-    if verbose:
-        logger.info({"message": "spatially joining seamounts with eezs, IHO regions, and PAs"})
-
-    eez_joined = gpd.sjoin(
-        seamounts[["PEAKID", "AREA2D", "geometry"]],
-        eez[["location", "geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-    eez_seamounts = eez_joined[eez_joined["index_right"].notna()]
-
-    iho_joined = gpd.sjoin(
-        seamounts[["PEAKID", "AREA2D", "geometry"]],
-        iho[["location", "geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-    iho_seamounts = iho_joined[iho_joined["index_right"].notna()]
-
-    marine_pa_joined = gpd.sjoin(
-        seamounts[["PEAKID", "AREA2D", "geometry"]],
-        marine_protected_areas[["wdpa_id", "location", "geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-    marine_pa_seamounts = marine_pa_joined[marine_pa_joined["index_right"].notna()]
-
-    iho_pa_joined = gpd.sjoin(
-        marine_pa_seamounts[["PEAKID", "AREA2D", "geometry"]],
-        iho[["location", "geometry"]],
-        how="left",
-        predicate="intersects",
-    )
-    iho_pa_seamounts = iho_pa_joined[iho_pa_joined["index_right"].notna()]
-
-    all_seamounts = pd.concat([eez_seamounts, iho_seamounts], ignore_index=True)
-    all_pa_seamounts = pd.concat([marine_pa_seamounts, iho_pa_seamounts], ignore_index=True)
-    combined_regions = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
-
-    global_seamount_area = seamounts["AREA2D"].sum()
-
-    return pd.DataFrame(
-        [
-            get_group_stats(
-                all_seamounts,
-                all_pa_seamounts,
-                cnt,
-                combined_regions,
-                global_seamount_area,
-            )
-            for cnt in combined_regions
-        ]
-    )
 
 
 def _keep_polygonal(geom):
@@ -270,7 +160,7 @@ def create_habitat_subtable(
 
     Uses the per-location geometries written by process_marine_habitat_geoms, and
     returns a subtable with one row per habitat per location. Habitats include
-    mangroves, saltmarshes, seagrasses, and cold-water corals.
+    mangroves, saltmarshes, seagrasses, cold-water corals, and seamounts.
 
     Locations overlap each other, so the GLOB row takes both its total and its protected
     area from deduplicated global geometries (see _protected_habitat_all_locations).
@@ -686,16 +576,6 @@ def process_marine_habitats(
         verbose=verbose,
     )
 
-    if verbose:
-        logger.info({"message": "getting seamounts subtable"})
-    seamounts_subtable = create_seamounts_subtable(
-        marine_protected_areas,
-        combined_regions,
-        tolerance=tolerance,
-        bucket=bucket,
-        verbose=verbose,
-    )
-
     del all_protected_areas
     gc.collect()
 
@@ -713,6 +593,6 @@ def process_marine_habitats(
         verbose=verbose,
     )
 
-    marine_habitats = pd.concat((habitat_subtable, seamounts_subtable, corals_subtable), axis=0)
+    marine_habitats = pd.concat((habitat_subtable, corals_subtable), axis=0)
 
     return marine_habitats
