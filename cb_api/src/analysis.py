@@ -4,6 +4,8 @@ from typing import Any
 
 import sqlalchemy
 
+from src.errors import BadRequestError
+
 type JSON = dict[str, JSON] | list[JSON] | str | int | float | bool | None
 
 
@@ -37,13 +39,13 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
     try:
         validation = conn.execute(stmt, parameters={"geometry": geometry}).mappings().one()
     except sqlalchemy.exc.SQLAlchemyError as exc:
-        raise ValueError("Unable to parse input geometry") from exc
+        raise BadRequestError("Unable to parse input geometry") from exc
 
     if validation["is_empty"]:
-        raise ValueError("Input geometry is empty")
+        raise BadRequestError("Input geometry is empty")
 
     if validation["geom_type"] not in {"ST_Polygon", "ST_MultiPolygon"}:
-        raise ValueError("Input geometry must be a Polygon or MultiPolygon")
+        raise BadRequestError("Input geometry must be a Polygon or MultiPolygon")
 
 
 def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
@@ -136,9 +138,9 @@ def get_locations_stats(
                 """
             )
             data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
-    except ValueError:
+    except BadRequestError:
         raise
     except Exception as excep:
-        raise ValueError("Invalid geometry") from excep
+        raise BadRequestError("Invalid geometry") from excep
 
     return serialize_response(data_response)

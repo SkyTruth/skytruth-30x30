@@ -8,6 +8,7 @@ from src.analysis import (
     serialize_response,
     validate_geometry_topology,
 )
+from src.errors import BadRequestError
 
 POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 
@@ -131,21 +132,21 @@ def test_polygons_pass_validation(geom_type: str):
 def test_empty_geometry_is_rejected():
     conn = FakeConnection({"geom_type": "ST_Polygon", "is_empty": True})
 
-    with pytest.raises(ValueError, match="Input geometry is empty"):
+    with pytest.raises(BadRequestError, match="Input geometry is empty"):
         validate_geometry_topology(conn, POLYGON)
 
 
 def test_non_polygon_geometry_is_rejected():
     conn = FakeConnection({"geom_type": "ST_LineString", "is_empty": False})
 
-    with pytest.raises(ValueError, match="must be a Polygon or MultiPolygon"):
+    with pytest.raises(BadRequestError, match="must be a Polygon or MultiPolygon"):
         validate_geometry_topology(conn, POLYGON)
 
 
 def test_unparseable_geometry_is_rejected():
     conn = FakeConnection(error=sqlalchemy.exc.DataError("stmt", None, Exception("bad")))
 
-    with pytest.raises(ValueError, match="Unable to parse input geometry"):
+    with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
         validate_geometry_topology(conn, POLYGON)
 
 
@@ -231,7 +232,7 @@ class ExplodingEngine(RecordingEngine):
 
 
 def test_postgis_failures_surface_as_the_invalid_geometry_message():
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(BadRequestError) as excinfo:
         get_locations_stats(ExplodingEngine(), POLYGON, AnalysisTable.MARINE)
 
     assert str(excinfo.value) == "Invalid geometry"

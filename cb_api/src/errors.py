@@ -7,30 +7,27 @@ from fastapi.responses import JSONResponse
 logger = logging.getLogger(__name__)
 
 
-def describe_validation_error(exc: RequestValidationError) -> str:
-    """Missing fields read '<field> is required'."""
-    error = exc.errors()[0]
-    field = ".".join(str(part) for part in error["loc"] if part != "body") or "body"
-    if error["type"] == "missing":
-        return f"{field} is required"
-    return f"{field}: {error['msg']}"
+class BadRequestError(Exception):
+    """The caller sent a request they can fix.
+    """
 
 
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Answer 400 with the standard error body rather than FastAPI's 422."""
-    return JSONResponse(status_code=400, content={"error": describe_validation_error(exc)})
+    logger.warning("Rejected request body: %s", exc.errors())
+    return JSONResponse(status_code=400, content={"error": "Invalid request body"})
 
 
-async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
-    logger.warning("Rejected request: %s", exc)
+async def handle_bad_request_error(request: Request, exc: BadRequestError) -> JSONResponse:
+    logger.warning("Rejected request", exc_info=exc)
     return JSONResponse(status_code=400, content={"error": str(exc)})
 
 
 async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
-    logger.exception("Unhandled error")
+    logger.error("Unhandled error", exc_info=exc)
     return JSONResponse(
         status_code=500,
-        content={"error": str(exc)},
+        content={"error": "Internal server error"},
         headers={"Access-Control-Allow-Origin": "*"},
     )
 
@@ -40,5 +37,5 @@ def register_error_handlers(app: FastAPI) -> None:
     when the caller can fix it and 500 when they cannot.
     """
     app.add_exception_handler(RequestValidationError, handle_validation_error)
-    app.add_exception_handler(ValueError, handle_value_error)
+    app.add_exception_handler(BadRequestError, handle_bad_request_error)
     app.add_exception_handler(Exception, handle_unexpected_error)

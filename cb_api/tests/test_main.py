@@ -5,15 +5,21 @@ from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
 
 from src.config import get_settings
+from src.errors import BadRequestError
 from src.main import app, get_engine
 from src.schemas import AnalysisRequest
 
 client = TestClient(app)
 
 
+@app.get("/_test/bad-request", include_in_schema=False)
+def _raise_bad_request():
+    raise BadRequestError("Input geometry is empty")
+
+
 @app.get("/_test/value-error", include_in_schema=False)
 def _raise_value_error():
-    raise ValueError("Input geometry is empty")
+    raise ValueError("invalid literal for int() with base 10: 's3cret'")
 
 
 @app.get("/_test/lookup-error", include_in_schema=False)
@@ -77,25 +83,35 @@ def test_lifespan_builds_and_disposes_the_engine(monkeypatch: pytest.MonkeyPatch
 # --- error contract ----------------------------------------------------------------
 
 
-def test_value_error_becomes_a_400_with_its_message():
-    response = client.get("/_test/value-error")
+def test_bad_request_error_becomes_a_400_with_its_message():
+    response = client.get("/_test/bad-request")
 
     assert response.status_code == 400
     assert response.json() == {"error": "Input geometry is empty"}
 
 
-def test_unexpected_errors_become_a_500_with_the_message():
+def test_a_plain_value_error_is_a_server_error(caplog: pytest.LogCaptureFixture):
+    response = error_client.get("/_test/value-error")
+
+    assert response.status_code == 500
+    assert response.json() == {"error": "Internal server error"}
+    assert "s3cret" in caplog.text
+
+
+def test_unexpected_errors_become_a_500_without_the_message(caplog: pytest.LogCaptureFixture):
     response = error_client.get("/_test/boom")
 
     assert response.status_code == 500
-    assert response.json() == {"error": "connection reset"}
+    assert response.json() == {"error": "Internal server error"}
+    assert "connection reset" in caplog.text
 
 
-def test_a_missing_geometry_is_reported_as_required():
+def test_a_missing_geometry_is_logged_but_not_returned(caplog: pytest.LogCaptureFixture):
     response = client.post("/_test/validate", json={})
 
     assert response.status_code == 400
-    assert response.json() == {"error": "geometry is required"}
+    assert response.json() == {"error": "Invalid request body"}
+    assert "geometry" in caplog.text
 
 
 def test_validation_failures_are_400_not_422():
@@ -103,7 +119,7 @@ def test_validation_failures_are_400_not_422():
     response = client.post("/_test/validate", json={"geometry": POLYGON, "environment": "lunar"})
 
     assert response.status_code == 400
-    assert "environment" in response.json()["error"]
+    assert response.json() == {"error": "Invalid request body"}
 
 
 # --- CORS --------------------------------------------------------------------------
