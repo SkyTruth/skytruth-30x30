@@ -38,6 +38,21 @@ def test_feature_collection_unwraps_its_first_feature():
     assert get_geojson(collection) == POLYGON
 
 
+@pytest.mark.parametrize(
+    "geojson",
+    [
+        {"type": "FeatureCollection", "features": []},
+        {"type": "FeatureCollection"},
+        {"type": "FeatureCollection", "features": {"type": "Feature"}},
+        {"type": "FeatureCollection", "features": ["x"]},
+        "not an object",
+    ],
+)
+def test_malformed_wrappers_are_rejected(geojson):
+    with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
+        get_geojson(geojson)
+
+
 # --- serialize_response ------------------------------------------------------------
 
 
@@ -144,9 +159,19 @@ def test_non_polygon_geometry_is_rejected():
 
 
 def test_unparseable_geometry_is_rejected():
-    conn = FakeConnection(error=sqlalchemy.exc.DataError("stmt", None, Exception("bad")))
+    conn = FakeConnection(error=sqlalchemy.exc.ProgrammingError("stmt", None, Exception("bad")))
 
     with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
+        validate_geometry_topology(conn, POLYGON)
+
+
+def test_a_lost_connection_during_validation_is_not_blamed_on_the_caller():
+    error = sqlalchemy.exc.InterfaceError(
+        "stmt", None, Exception("network error"), connection_invalidated=True
+    )
+    conn = FakeConnection(error=error)
+
+    with pytest.raises(sqlalchemy.exc.InterfaceError):
         validate_geometry_topology(conn, POLYGON)
 
 
@@ -222,17 +247,30 @@ def test_unknown_table_names_never_reach_the_database(table_name: str):
 
 
 class ExplodingEngine(RecordingEngine):
-    """Passes topology validation, then fails the way PostGIS would on a bad geometry."""
+    """Passes topology validation, then raises the given error from the analysis query."""
+
+    def __init__(self, error: Exception):
+        super().__init__()
+        self._error = error
 
     def execute(self, statement, parameters=None):
         self.statements.append(str(statement))
         if len(self.statements) > 1:
-            raise sqlalchemy.exc.InternalError("stmt", None, Exception("GEOSIntersection"))
+            raise self._error
         return self
 
 
-def test_postgis_failures_surface_as_the_invalid_geometry_message():
-    with pytest.raises(BadRequestError) as excinfo:
-        get_locations_stats(ExplodingEngine(), POLYGON, AnalysisTable.MARINE)
-
-    assert str(excinfo.value) == "Invalid geometry"
+@pytest.mark.parametrize(
+    "error",
+    [
+        sqlalchemy.exc.ProgrammingError("stmt", None, Exception("GEOSIntersection")),
+        sqlalchemy.exc.ProgrammingError("stmt", None, Exception("canceling statement")),
+        sqlalchemy.exc.InterfaceError("stmt", None, Exception("network error")),
+    ],
+)
+def test_analysis_query_failures_are_not_blamed_on_the_caller(
+    error: sqlalchemy.exc.DBAPIError,
+):
+    """The geometry has already passed validation, so anything the query raises is ours."""
+    with pytest.raises(type(error)):
+        get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)

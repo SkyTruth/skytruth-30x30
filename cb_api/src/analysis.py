@@ -16,8 +16,14 @@ class AnalysisTable(StrEnum):
 
 
 def get_geojson(geojson: JSON) -> dict:
+    if not isinstance(geojson, dict):
+        raise BadRequestError("Unable to parse input geometry")
+
     if geojson.get("type") == "FeatureCollection":
-        return get_geojson(geojson.get("features")[0])
+        features = geojson.get("features")
+        if not isinstance(features, list) or not features:
+            raise BadRequestError("Unable to parse input geometry")
+        return get_geojson(features[0])
     elif geojson.get("type") == "Feature":
         return geojson.get("geometry")
     else:
@@ -38,7 +44,11 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
     )
     try:
         validation = conn.execute(stmt, parameters={"geometry": geometry}).mappings().one()
-    except sqlalchemy.exc.SQLAlchemyError as exc:
+    except sqlalchemy.exc.DBAPIError as exc:
+        # This statement only parses the geometry, so any error the database returns
+        # is caused by the input. A lost connection is the exception.
+        if exc.connection_invalidated:
+            raise
         raise BadRequestError("Unable to parse input geometry") from exc
 
     if validation["is_empty"]:
@@ -97,11 +107,10 @@ def get_locations_stats(
         raise LookupError(f"Unknown analysis table: {table_name!r}") from exc
 
     geometry = get_geojson(geojson)
-    try:
-        with engine.connect() as conn:
-            validate_geometry_topology(conn, geometry)
-            stmt = sqlalchemy.text(
-                f"""
+    with engine.connect() as conn:
+        validate_geometry_topology(conn, geometry)
+        stmt = sqlalchemy.text(
+            f"""
                 WITH
                     user_data AS (
                         SELECT ST_MakeValid(ST_UnaryUnion(ST_GeomFromGeoJSON(:geometry))) AS geom
@@ -136,11 +145,7 @@ def get_locations_stats(
                 FROM stats
                 GROUP BY location
                 """
-            )
-            data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
-    except BadRequestError:
-        raise
-    except Exception as excep:
-        raise BadRequestError("Invalid geometry") from excep
+        )
+        data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
 
     return serialize_response(data_response)

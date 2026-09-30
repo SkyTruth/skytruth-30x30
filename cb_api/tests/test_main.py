@@ -175,8 +175,18 @@ def test_responses_to_an_unknown_origin_carry_no_allow_origin():
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_server_errors_carry_the_wildcard_origin():
+@pytest.mark.parametrize("origin", ALLOWED_ORIGINS)
+def test_server_errors_carry_an_allowed_origin(origin: str):
     """The 500 handler runs outside CORSMiddleware, so it sets the header itself."""
+    response = error_client.get("/_test/boom", headers={"Origin": origin})
+
+    assert response.status_code == 500
+    assert response.headers["access-control-allow-origin"] == origin
+    assert response.headers["vary"] == "Origin"
+
+
+def test_server_errors_to_an_unknown_origin_carry_no_allow_origin():
     response = error_client.get("/_test/boom", headers={"Origin": "https://example.org"})
 
-    assert response.headers["access-control-allow-origin"] == "*"
+    assert response.status_code == 500
+    assert "access-control-allow-origin" not in response.headers

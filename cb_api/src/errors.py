@@ -4,6 +4,8 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from src.config import ALLOWED_ORIGINS
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,11 +25,16 @@ async def handle_bad_request_error(request: Request, exc: BadRequestError) -> JS
 
 
 async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+    """Runs outside CORSMiddleware, so it sets the CORS header itself."""
     logger.error("Unhandled error", exc_info=exc)
+    headers = {"Vary": "Origin"}
+    origin = request.headers.get("origin")
+    if origin in ALLOWED_ORIGINS:
+        headers["Access-Control-Allow-Origin"] = origin
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error"},
-        headers={"Access-Control-Allow-Origin": "*"},
+        headers=headers,
     )
 
 

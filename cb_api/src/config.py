@@ -3,6 +3,12 @@ from functools import lru_cache
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://30x30-dev.skytruth.org",
+    "https://30x30.skytruth.org",
+]
+
 
 class Settings(BaseSettings):
     """Cloud SQL connection and pool settings."""
