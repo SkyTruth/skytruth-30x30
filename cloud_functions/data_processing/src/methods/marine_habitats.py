@@ -9,14 +9,10 @@ from shapely.geometry import box
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import (
-    add_tolerance_suffix,
-    load_iho_regions,
-    load_marine_locations,
-    polygonal_parts,
-)
+from src.core.commons import add_tolerance_suffix, load_iho_regions, polygonal_parts
 from src.core.params import (
     BUCKET,
+    BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     CLIMATE_RES_CORAL_SOURCE_FILE,
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_HABITAT_AREA_FILE_PATTERN,
@@ -154,7 +150,7 @@ def create_habitat_subtable(
     all_protected_areas,
     combined_regions,
     habitats: dict = HABITAT_PROCESSING_PARAMS,
-    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    marine_locations_file_name: str = BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
     tolerance: float = TOLERANCE,
@@ -191,11 +187,10 @@ def create_habitat_subtable(
             "total_area": df_group["total_habitat_area_km2"].sum(),
         }
 
-    locations = load_marine_locations(
-        gadm_eez_union_file_name=gadm_eez_union_file_name,
-        tolerance=tolerance,
-        bucket=bucket,
-        verbose=verbose,
+    if verbose:
+        logger.info({"message": "loading marine locations"})
+    locations = read_parquet_from_gcs(
+        bucket, add_tolerance_suffix(marine_locations_file_name, tolerance), verbose=verbose
     )
 
     combined_locations = {
@@ -567,7 +562,6 @@ def process_marine_habitats(
     habitat_subtable = create_habitat_subtable(
         all_protected_areas,
         combined_regions,
-        gadm_eez_union_file_name=gadm_eez_union_file_name,
         tolerance=tolerance,
         bucket=bucket,
         verbose=verbose,
