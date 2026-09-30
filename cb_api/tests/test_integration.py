@@ -1,5 +1,4 @@
-"""End-to-end checks of the spatial query against a PostGIS database.
-"""
+"""End-to-end checks of the spatial query against a PostGIS database."""
 
 import pytest
 from sqlalchemy.engine import Engine

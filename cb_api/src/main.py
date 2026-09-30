@@ -28,7 +28,11 @@ app = FastAPI(title="Conservation Builder API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://30x30-dev.skytruth.org/", "https://30x30.skytruth.org/"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://30x30-dev.skytruth.org",
+        "https://30x30.skytruth.org",
+    ],
     allow_methods=["GET", "PUT", "POST", "HEAD"],
     allow_headers=["Content-Type"],
     max_age=3600,

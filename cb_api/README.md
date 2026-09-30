@@ -16,6 +16,7 @@ Create a `.env` (copy `example.env` and fill it in).
 
 ```ini
 DATABASE_HOST=127.0.0.1
+# The local PostGIS in docker-compose.yml is created with these same values
 DATABASE_NAME=skytruth_test
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=postgres
@@ -37,33 +38,25 @@ In GCP, these are set by Terraform, with the password coming from Secret Manager
 
 ## Running locally
 
-Install dependencies:
+`docker-compose.yml` defines the API and a local test Postgres database.
+
+### Everything in Docker
+
+```bash
+docker compose up --build
+curl localhost:8080/health
+```
+
+### API on your machine, with reload
+
+Start a local Postgres database with PostGIS in Docker, without the API container (published on host port **5434** so it will not interfere with a database already running on 5432).
 
 ```bash
 poetry install
-```
-
-Start a local PostGIS. It listens on host port **5434**, so it will not collide with a Postgres already running on 5432:
-
-```bash
-docker compose up -d
-```
-
-Run the service with reload:
-
-```bash
+docker compose up -d postgis
 poetry run uvicorn src.main:app --reload
 curl localhost:8000/health
 ```
-
-### In Docker
-
-```bash
-docker build -t cb-api .
-docker run --rm -p 8080:8080 --env-file .env cb-api
-```
-
-Use `host.docker.internal` when the API runs in Docker and the database runs beside it.
 
 ## Tests
 
@@ -71,6 +64,8 @@ Use `host.docker.internal` when the API runs in Docker and the database runs bes
 poetry run pytest                        # everything
 poetry run pytest -m "not integration"   # unit tests only, no database needed
 ```
+
+Integration tests start their own PostGIS container with [Testcontainers](https://testcontainers.com/), so they need Docker running but not `docker compose`. They never connect to any other database. Without Docker they are skipped, except when `CI` is set, where they fail instead.
 
 ## Code quality
 

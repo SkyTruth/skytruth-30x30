@@ -1,73 +1,38 @@
 import os
 from collections.abc import Iterator
-from pathlib import Path
-from urllib.parse import urlparse
 
 import pytest
 import sqlalchemy
-import yaml
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from testcontainers.community.postgres import PostgresContainer
 
 from src.analysis import AnalysisTable
 
-
-def compose_database_url() -> str:
-    """Build the connection URL to a local PostGIS database
-    from the credentials in docker-compose.yml.
-    """
-    compose_file = Path(__file__).resolve().parents[1] / "docker-compose.yml"
-    compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
-
-    try:
-        service = compose["services"]["postgis"]
-        environment = service["environment"]
-        published_port = str(service["ports"][0]).split(":")[0].strip('"')
-        user = environment["POSTGRES_USER"]
-        password = environment["POSTGRES_PASSWORD"]
-        database = environment["POSTGRES_DB"]
-    except (KeyError, IndexError) as exc:
-        raise RuntimeError(
-            f"cannot read the postgis service from {compose_file}."
-        ) from exc
-
-    return f"postgresql+pg8000://{user}:{password}@127.0.0.1:{published_port}/{database}"
+POSTGIS_IMAGE = "postgis/postgis:14-3.4"
 
 
 @pytest.fixture(scope="session")
-def database_url() -> str:
-    return os.environ.get("TEST_DATABASE_URL") or compose_database_url()
-
-
-@pytest.fixture(scope="session")
-def postgis(database_url: str) -> Iterator[Engine]:
-    """A connected engine, or a skip if the database is not up."""
-    engine = sqlalchemy.create_engine(database_url, connect_args={"timeout": 3})
+def postgis() -> Iterator[Engine]:
+    """Start a PostGIS container for the test session."""
     try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        container = PostgresContainer(POSTGIS_IMAGE, driver="pg8000").start()
     except Exception as exc:
-        engine.dispose()
-        pytest.skip(f"no PostGIS at {database_url} — run `docker compose up -d` ({exc})")
+        if os.environ.get("CI"):
+            raise
+        pytest.skip(f"cannot start a PostGIS container; check if Docker is running ({exc})")
 
+    engine = sqlalchemy.create_engine(container.get_connection_url())
     try:
         yield engine
     finally:
         engine.dispose()
+        container.stop()
 
 
 @pytest.fixture
-def analysis_tables(postgis: Engine, database_url: str) -> Iterator[Engine]:
-    """Create analysis tables with example data, and drop them after the test.
-    Only runs against a local database.
-    """
-    host = urlparse(database_url).hostname
-    if host not in {"127.0.0.1", "::1", "localhost", "postgis"}:
-        pytest.fail(
-            f"this test only runs against a local database, not {host!r}.",
-            pytrace=False,
-        )
-
+def analysis_tables(postgis: Engine) -> Iterator[Engine]:
+    """Create analysis tables with example data, and drop them after the test."""
     with postgis.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS data"))

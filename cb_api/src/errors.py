@@ -8,8 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class BadRequestError(Exception):
-    """The caller sent a request they can fix.
-    """
+    """The caller sent a request they can fix."""
 
 
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:

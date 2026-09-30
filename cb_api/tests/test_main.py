@@ -125,29 +125,54 @@ def test_validation_failures_are_400_not_422():
 # --- CORS --------------------------------------------------------------------------
 
 
-def test_the_post_preflight_is_allowed():
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://30x30-dev.skytruth.org",
+    "https://30x30.skytruth.org",
+]
+
+
+@pytest.mark.parametrize("origin", ALLOWED_ORIGINS)
+def test_the_post_preflight_is_allowed(origin: str):
     """Browsers send an OPTIONS request before a JSON POST to ask
-    permission for the method and header.'"""
+    permission for the method and header."""
     response = client.options(
         "/_test/validate",
         headers={
-            "Origin": "https://example.org",
+            "Origin": origin,
             "Access-Control-Request-Method": "POST",
             "Access-Control-Request-Headers": "content-type",
         },
     )
 
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "*"
+    assert response.headers["access-control-allow-origin"] == origin
     assert "POST" in response.headers["access-control-allow-methods"]
     assert "content-type" in response.headers["access-control-allow-headers"].lower()
     assert response.headers["access-control-max-age"] == "3600"
 
 
-def test_responses_carry_the_wildcard_origin():
+def test_a_preflight_from_an_unknown_origin_is_refused():
+    response = client.options(
+        "/_test/validate",
+        headers={"Origin": "https://example.org", "Access-Control-Request-Method": "POST"},
+    )
+
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
+
+
+@pytest.mark.parametrize("origin", ALLOWED_ORIGINS)
+def test_responses_carry_an_allowed_origin(origin: str):
+    response = client.get("/health", headers={"Origin": origin})
+
+    assert response.headers["access-control-allow-origin"] == origin
+
+
+def test_responses_to_an_unknown_origin_carry_no_allow_origin():
     response = client.get("/health", headers={"Origin": "https://example.org"})
 
-    assert response.headers["access-control-allow-origin"] == "*"
+    assert "access-control-allow-origin" not in response.headers
 
 
 def test_server_errors_carry_the_wildcard_origin():
