@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import React from 'react';
 
-import { JSONConfiguration, JSONConverter } from '@deck.gl/json/typed';
+import { JSONConfiguration, JSONConverter } from '@deck.gl/json';
 
 // import {
 //   LegendTypeBasic,
@@ -165,5 +165,5 @@ export const parseConfig = async <T>({
     },
   });
 
-  return JSON_CONVERTER.convert(config);
+  return JSON_CONVERTER.convert(config) as T;
 };
