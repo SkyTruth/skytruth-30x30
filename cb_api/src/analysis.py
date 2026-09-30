@@ -1,8 +1,10 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import Any
 
 import sqlalchemy
+
+from src.errors import BadRequestError
 
 type JSON = dict[str, JSON] | list[JSON] | str | int | float | bool | None
 
@@ -14,8 +16,14 @@ class AnalysisTable(StrEnum):
 
 
 def get_geojson(geojson: JSON) -> dict:
+    if not isinstance(geojson, dict):
+        raise BadRequestError("Unable to parse input geometry")
+
     if geojson.get("type") == "FeatureCollection":
-        return get_geojson(geojson.get("features")[0])
+        features = geojson.get("features")
+        if not isinstance(features, list) or not features:
+            raise BadRequestError("Unable to parse input geometry")
+        return get_geojson(features[0])
     elif geojson.get("type") == "Feature":
         return geojson.get("geometry")
     else:
@@ -36,41 +44,47 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
     )
     try:
         validation = conn.execute(stmt, parameters={"geometry": geometry}).mappings().one()
-    except sqlalchemy.exc.SQLAlchemyError as exc:
-        raise ValueError("Unable to parse input geometry") from exc
+    except sqlalchemy.exc.DBAPIError as exc:
+        # This statement only parses the geometry, so any error the database returns
+        # is caused by the input. A lost connection is the exception.
+        if exc.connection_invalidated:
+            raise
+        raise BadRequestError("Unable to parse input geometry") from exc
 
     if validation["is_empty"]:
-        raise ValueError("Input geometry is empty")
+        raise BadRequestError("Input geometry is empty")
 
     if validation["geom_type"] not in {"ST_Polygon", "ST_MultiPolygon"}:
-        raise ValueError("Input geometry must be a Polygon or MultiPolygon")
+        raise BadRequestError("Input geometry must be a Polygon or MultiPolygon")
 
 
-def serialize_response(data: Sequence[Any]) -> dict:
+def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
     """Converts the data from the database into a Dict
     {locations_area: [{"code": <location_iso>, "protected_area": <area>}],
     "total_area": <total_area>, "total_protected_area": <area>} response
     """
-    if not data or len(data) == 0:
+    if not data:
         return {
             "locations_area": [],
             "total_area": 0,
             "total_protected_area": 0,
         }
 
-    result = {"total_area": data[0][2]}
+    result = {"total_area": data[0]["user_area_km2"]}
     sub_result = {}
     total_protected_area = 0
     for row in data:
-        for iso in filter(lambda item: item is not None, [row[0]]):
-            total_protected_area += row[1]
-            if iso not in sub_result:
-                sub_result[iso] = {
-                    "code": iso,
-                    "protected_area": row[1],
-                }
-            else:
-                sub_result[iso]["protected_area"] += row[1]
+        iso = row["location"]
+        if iso is None:
+            continue
+        total_protected_area += row["portion_area_km2"]
+        if iso not in sub_result:
+            sub_result[iso] = {
+                "code": iso,
+                "protected_area": row["portion_area_km2"],
+            }
+        else:
+            sub_result[iso]["protected_area"] += row["portion_area_km2"]
 
     result.update(
         {
@@ -93,11 +107,10 @@ def get_locations_stats(
         raise LookupError(f"Unknown analysis table: {table_name!r}") from exc
 
     geometry = get_geojson(geojson)
-    try:
-        with engine.connect() as conn:
-            validate_geometry_topology(conn, geometry)
-            stmt = sqlalchemy.text(
-                f"""
+    with engine.connect() as conn:
+        validate_geometry_topology(conn, geometry)
+        stmt = sqlalchemy.text(
+            f"""
                 WITH
                     user_data AS (
                         SELECT ST_MakeValid(ST_UnaryUnion(ST_GeomFromGeoJSON(:geometry))) AS geom
@@ -132,11 +145,7 @@ def get_locations_stats(
                 FROM stats
                 GROUP BY location
                 """
-            )
-            data_response = conn.execute(stmt, parameters={"geometry": geometry}).all()
-    except ValueError:
-        raise
-    except Exception as excep:
-        raise ValueError("Invalid geometry") from excep
+        )
+        data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
 
     return serialize_response(data_response)

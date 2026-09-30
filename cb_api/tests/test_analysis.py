@@ -8,6 +8,7 @@ from src.analysis import (
     serialize_response,
     validate_geometry_topology,
 )
+from src.errors import BadRequestError
 
 POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 
@@ -37,6 +38,21 @@ def test_feature_collection_unwraps_its_first_feature():
     assert get_geojson(collection) == POLYGON
 
 
+@pytest.mark.parametrize(
+    "geojson",
+    [
+        {"type": "FeatureCollection", "features": []},
+        {"type": "FeatureCollection"},
+        {"type": "FeatureCollection", "features": {"type": "Feature"}},
+        {"type": "FeatureCollection", "features": ["x"]},
+        "not an object",
+    ],
+)
+def test_malformed_wrappers_are_rejected(geojson):
+    with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
+        get_geojson(geojson)
+
+
 # --- serialize_response ------------------------------------------------------------
 
 
@@ -49,8 +65,9 @@ def test_no_rows_produces_a_zeroed_response():
 
 
 def test_single_row_reports_the_user_area_and_one_location():
-    # (location, portion_area_km2, user_area_km2)
-    assert serialize_response([("ESP", 30, 100)]) == {
+    assert serialize_response(
+        [{"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100}]
+    ) == {
         "total_area": 100,
         "locations_area": [{"code": "ESP", "protected_area": 30}],
         "total_protected_area": 30,
@@ -58,7 +75,12 @@ def test_single_row_reports_the_user_area_and_one_location():
 
 
 def test_distinct_locations_are_listed_separately():
-    result = serialize_response([("ESP", 30, 100), ("PRT", 20, 100)])
+    result = serialize_response(
+        [
+            {"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100},
+            {"location": "PRT", "portion_area_km2": 20, "user_area_km2": 100},
+        ]
+    )
 
     assert result["locations_area"] == [
         {"code": "ESP", "protected_area": 30},
@@ -68,7 +90,12 @@ def test_distinct_locations_are_listed_separately():
 
 
 def test_repeated_locations_accumulate():
-    result = serialize_response([("ESP", 30, 100), ("ESP", 20, 100)])
+    result = serialize_response(
+        [
+            {"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100},
+            {"location": "ESP", "portion_area_km2": 20, "user_area_km2": 100},
+        ]
+    )
 
     assert result["locations_area"] == [{"code": "ESP", "protected_area": 50}]
     assert result["total_protected_area"] == 50
@@ -76,7 +103,12 @@ def test_repeated_locations_accumulate():
 
 def test_rows_without_a_location_contribute_nothing():
     """A null location is skipped entirely — it adds no entry *and* no protected area."""
-    result = serialize_response([("ESP", 30, 100), (None, 999, 100)])
+    result = serialize_response(
+        [
+            {"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100},
+            {"location": None, "portion_area_km2": 999, "user_area_km2": 100},
+        ]
+    )
 
     assert result["locations_area"] == [{"code": "ESP", "protected_area": 30}]
     assert result["total_protected_area"] == 30
@@ -115,21 +147,31 @@ def test_polygons_pass_validation(geom_type: str):
 def test_empty_geometry_is_rejected():
     conn = FakeConnection({"geom_type": "ST_Polygon", "is_empty": True})
 
-    with pytest.raises(ValueError, match="Input geometry is empty"):
+    with pytest.raises(BadRequestError, match="Input geometry is empty"):
         validate_geometry_topology(conn, POLYGON)
 
 
 def test_non_polygon_geometry_is_rejected():
     conn = FakeConnection({"geom_type": "ST_LineString", "is_empty": False})
 
-    with pytest.raises(ValueError, match="must be a Polygon or MultiPolygon"):
+    with pytest.raises(BadRequestError, match="must be a Polygon or MultiPolygon"):
         validate_geometry_topology(conn, POLYGON)
 
 
 def test_unparseable_geometry_is_rejected():
-    conn = FakeConnection(error=sqlalchemy.exc.DataError("stmt", None, Exception("bad")))
+    conn = FakeConnection(error=sqlalchemy.exc.ProgrammingError("stmt", None, Exception("bad")))
 
-    with pytest.raises(ValueError, match="Unable to parse input geometry"):
+    with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
+        validate_geometry_topology(conn, POLYGON)
+
+
+def test_a_lost_connection_during_validation_is_not_blamed_on_the_caller():
+    error = sqlalchemy.exc.InterfaceError(
+        "stmt", None, Exception("network error"), connection_invalidated=True
+    )
+    conn = FakeConnection(error=error)
+
+    with pytest.raises(sqlalchemy.exc.InterfaceError):
         validate_geometry_topology(conn, POLYGON)
 
 
@@ -205,17 +247,30 @@ def test_unknown_table_names_never_reach_the_database(table_name: str):
 
 
 class ExplodingEngine(RecordingEngine):
-    """Passes topology validation, then fails the way PostGIS would on a bad geometry."""
+    """Passes topology validation, then raises the given error from the analysis query."""
+
+    def __init__(self, error: Exception):
+        super().__init__()
+        self._error = error
 
     def execute(self, statement, parameters=None):
         self.statements.append(str(statement))
         if len(self.statements) > 1:
-            raise sqlalchemy.exc.InternalError("stmt", None, Exception("GEOSIntersection"))
+            raise self._error
         return self
 
 
-def test_postgis_failures_surface_as_the_invalid_geometry_message():
-    with pytest.raises(ValueError) as excinfo:
-        get_locations_stats(ExplodingEngine(), POLYGON, AnalysisTable.MARINE)
-
-    assert str(excinfo.value) == "Invalid geometry"
+@pytest.mark.parametrize(
+    "error",
+    [
+        sqlalchemy.exc.ProgrammingError("stmt", None, Exception("GEOSIntersection")),
+        sqlalchemy.exc.ProgrammingError("stmt", None, Exception("canceling statement")),
+        sqlalchemy.exc.InterfaceError("stmt", None, Exception("network error")),
+    ],
+)
+def test_analysis_query_failures_are_not_blamed_on_the_caller(
+    error: sqlalchemy.exc.DBAPIError,
+):
+    """The geometry has already passed validation, so anything the query raises is ours."""
+    with pytest.raises(type(error)):
+        get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)

@@ -1,10 +1,10 @@
-"""End-to-end checks of the spatial query against a PostGIS database.
-"""
+"""End-to-end checks of the spatial query against a PostGIS database."""
 
 import pytest
 from sqlalchemy.engine import Engine
 
 from src.analysis import AnalysisTable, get_locations_stats
+from src.errors import BadRequestError
 
 pytestmark = pytest.mark.integration
 
@@ -102,17 +102,17 @@ def test_a_self_intersecting_polygon_is_repaired(analysis_tables: Engine):
 def test_a_line_is_rejected(analysis_tables: Engine):
     line = {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}
 
-    with pytest.raises(ValueError, match="must be a Polygon or MultiPolygon"):
+    with pytest.raises(BadRequestError, match="must be a Polygon or MultiPolygon"):
         get_locations_stats(analysis_tables, line, AnalysisTable.MARINE)
 
 
 def test_an_empty_polygon_is_rejected(analysis_tables: Engine):
-    with pytest.raises(ValueError, match="Input geometry is empty"):
+    with pytest.raises(BadRequestError, match="Input geometry is empty"):
         get_locations_stats(
             analysis_tables, {"type": "Polygon", "coordinates": []}, AnalysisTable.MARINE
         )
 
 
 def test_unparseable_geojson_is_rejected(analysis_tables: Engine):
-    with pytest.raises(ValueError, match="Unable to parse input geometry"):
+    with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
         get_locations_stats(analysis_tables, {"type": "Nonsense"}, AnalysisTable.MARINE)

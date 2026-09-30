@@ -13,3 +13,18 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  api:
+    build: .
+    container_name: cb_api
+    environment:
+      DATABASE_HOST: postgis
+      DATABASE_PORT: 5432
+      DATABASE_NAME: skytruth_test
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: postgres
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgis:
+        condition: service_healthy
