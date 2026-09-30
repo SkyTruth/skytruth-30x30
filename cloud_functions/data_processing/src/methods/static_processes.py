@@ -23,6 +23,7 @@ from src.core.commons import (
     add_tolerance_suffix,
     download_and_duplicate_zipfile,
     get_cover_areas,
+    load_high_seas,
     load_iho_regions,
     load_marine_regions,
     process_buffered_iho,
@@ -789,9 +790,17 @@ def process_marine_habitat_geoms(
         logger.info({"message": "loading IHO sea areas"})
     iho = load_iho_regions(buffer=True)
 
+    if verbose:
+        logger.info({"message": "loading high seas"})
+    high_seas = load_high_seas(bucket)
+
     regions = gpd.GeoDataFrame(
         pd.concat(
-            [gadm_eez_union[["location", "geometry"]], iho[["location", "geometry"]]],
+            [
+                gadm_eez_union[["location", "geometry"]],
+                iho[["location", "geometry"]],
+                high_seas[["location", "geometry"]],
+            ],
             ignore_index=True,
         ),
         geometry="geometry",

@@ -931,6 +931,7 @@ def mangrove_extent():
             box(0.5, 0.5, 1.5, 1.5),  # wholly inside AAA
             box(1.8, 0.5, 2.2, 1.5),  # straddles the AAA/BBB boundary
             box(10.0, 10.0, 10.5, 10.5),  # only the IHO sea area holds this one
+            box(20.5, 20.5, 21.0, 21.0),  # only the high seas hold this one
         ],
         crs="EPSG:4326",
     )
@@ -938,9 +939,11 @@ def mangrove_extent():
 
 @pytest.fixture
 def mangrove_regions():
-    """The land/EEZ union and IHO sea areas process_marine_habitat_geoms dissolves by.
+    """The locations process_marine_habitat_geoms dissolves by: the land/EEZ union, the
+    IHO sea areas, and the high seas.
 
-    AAA and BBB are adjacent; the IHO sea area sits away from both.
+    AAA and BBB are adjacent; the IHO sea area and the high seas sit away from both and
+    from each other.
     """
     gadm_eez_union = gpd.GeoDataFrame(
         {"location": ["AAA", "BBB"], "geometry": [box(0, 0, 2, 2), box(2, 0, 4, 2)]},
@@ -949,13 +952,16 @@ def mangrove_regions():
     iho = gpd.GeoDataFrame(
         {"MRGID": [999], "location": ["999"], "geometry": [box(9, 9, 11, 11)]}, crs="EPSG:4326"
     )
-    return gadm_eez_union, iho
+    high_seas = gpd.GeoDataFrame(
+        {"location": ["ABNJ"], "geometry": [box(20, 20, 22, 22)]}, crs="EPSG:4326"
+    )
+    return gadm_eez_union, iho, high_seas
 
 
 @pytest.fixture
 def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
     """Wire process_marine_habitat_geoms up to in-memory inputs and record what it writes."""
-    gadm_eez_union, iho = mangrove_regions
+    gadm_eez_union, iho, high_seas = mangrove_regions
     uploads = []
     saved_json = []
 
@@ -968,6 +974,9 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
     def _load_iho_regions(buffer=False):
         return iho.copy()
 
+    def _load_high_seas(bucket=None):
+        return high_seas.copy()
+
     def _save_json_to_gcs(bucket, data, blob_name, project=None, verbose=True):
         saved_json.append({"bucket": bucket, "data": data, "blob_name": blob_name})
 
@@ -977,6 +986,7 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
     monkeypatch.setattr(static_processes, "read_gzipped_gpkg_from_gcs", _read_gpkg, raising=True)
     monkeypatch.setattr(static_processes, "read_json_df", _read_json_df, raising=True)
     monkeypatch.setattr(static_processes, "load_iho_regions", _load_iho_regions, raising=True)
+    monkeypatch.setattr(static_processes, "load_high_seas", _load_high_seas, raising=True)
     monkeypatch.setattr(static_processes, "save_json_to_gcs", _save_json_to_gcs, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", _upload_gdf, raising=True)
 
@@ -984,7 +994,7 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
 
 
 def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_recorders):
-    """One row per location holding mangroves, IHO sea areas included."""
+    """One row per location holding mangroves, IHO sea areas and the high seas included."""
     uploads, _ = mangrove_recorders
 
     static_processes.process_marine_habitat_geoms(
@@ -1004,7 +1014,7 @@ def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_r
 
     df = out["df"]
     assert isinstance(df, gpd.GeoDataFrame)
-    assert set(df["location"]) == {"AAA", "BBB", "999"}
+    assert set(df["location"]) == {"AAA", "BBB", "999", "ABNJ"}
     # The schema every habitat's by-location layer shares
     assert list(df.columns) == [
         "location",
@@ -1015,7 +1025,7 @@ def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_r
         "habitat",
     ]
     assert set(df["habitat"]) == {"mangroves"}
-    assert len(df) == 3
+    assert len(df) == 4
 
 
 # ---------------------------------------------------------------------------

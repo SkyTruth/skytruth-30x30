@@ -9,7 +9,12 @@ from shapely.geometry import box
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import add_tolerance_suffix, load_iho_regions, polygonal_parts
+from src.core.commons import (
+    add_tolerance_suffix,
+    load_high_seas,
+    load_iho_regions,
+    polygonal_parts,
+)
 from src.core.params import (
     BUCKET,
     CLIMATE_RES_CORAL_SOURCE_FILE,
@@ -195,9 +200,17 @@ def create_habitat_subtable(
         logger.info({"message": "loading IHO sea areas"})
     iho = load_iho_regions(buffer=True)
 
+    if verbose:
+        logger.info({"message": "loading high seas"})
+    high_seas = load_high_seas(bucket)
+
     locations = gpd.GeoDataFrame(
         pd.concat(
-            [country_union[["location", "geometry"]], iho[["location", "geometry"]]],
+            [
+                country_union[["location", "geometry"]],
+                iho[["location", "geometry"]],
+                high_seas[["location", "geometry"]],
+            ],
             ignore_index=True,
         ),
         geometry="geometry",
