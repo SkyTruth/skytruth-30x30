@@ -968,14 +968,21 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
     def _read_gpkg(bucket, blob_name, layer=None, columns=None, verbose=True):
         return mangrove_extent.copy()
 
-    def _read_json_df(bucket, blob_name, verbose=True):
-        return gadm_eez_union.copy()
-
-    def _load_iho_regions(buffer=False):
-        return iho.copy()
-
-    def _load_high_seas(bucket=None):
-        return high_seas.copy()
+    def _load_marine_locations(
+        gadm_eez_union_file_name=None, tolerance=None, bucket=None, verbose=True
+    ):
+        return gpd.GeoDataFrame(
+            pd.concat(
+                [
+                    gadm_eez_union[["location", "geometry"]],
+                    iho[["location", "geometry"]],
+                    high_seas[["location", "geometry"]],
+                ],
+                ignore_index=True,
+            ),
+            geometry="geometry",
+            crs=gadm_eez_union.crs,
+        )
 
     def _save_json_to_gcs(bucket, data, blob_name, project=None, verbose=True):
         saved_json.append({"bucket": bucket, "data": data, "blob_name": blob_name})
@@ -984,9 +991,9 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
         uploads.append({"bucket": bucket, "df": df, "destination_blob": destination_blob})
 
     monkeypatch.setattr(static_processes, "read_gzipped_gpkg_from_gcs", _read_gpkg, raising=True)
-    monkeypatch.setattr(static_processes, "read_json_df", _read_json_df, raising=True)
-    monkeypatch.setattr(static_processes, "load_iho_regions", _load_iho_regions, raising=True)
-    monkeypatch.setattr(static_processes, "load_high_seas", _load_high_seas, raising=True)
+    monkeypatch.setattr(
+        static_processes, "load_marine_locations", _load_marine_locations, raising=True
+    )
     monkeypatch.setattr(static_processes, "save_json_to_gcs", _save_json_to_gcs, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", _upload_gdf, raising=True)
 

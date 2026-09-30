@@ -23,8 +23,8 @@ from src.core.commons import (
     add_tolerance_suffix,
     download_and_duplicate_zipfile,
     get_cover_areas,
-    load_high_seas,
     load_iho_regions,
+    load_marine_locations,
     load_marine_regions,
     process_buffered_iho,
     safe_union,
@@ -780,31 +780,11 @@ def process_marine_habitat_geoms(
     if unknown:
         raise ValueError(f"unknown marine habitat(s): {sorted(unknown, key=repr)}")
 
-    if verbose:
-        logger.info({"message": "loading eezs/gadm union"})
-    gadm_eez_union = read_json_df(
-        bucket, add_tolerance_suffix(gadm_eez_union_file_name, tolerance), verbose=verbose
-    )
-
-    if verbose:
-        logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions(buffer=True)
-
-    if verbose:
-        logger.info({"message": "loading high seas"})
-    high_seas = load_high_seas(bucket)
-
-    regions = gpd.GeoDataFrame(
-        pd.concat(
-            [
-                gadm_eez_union[["location", "geometry"]],
-                iho[["location", "geometry"]],
-                high_seas[["location", "geometry"]],
-            ],
-            ignore_index=True,
-        ),
-        geometry="geometry",
-        crs=gadm_eez_union.crs,
+    regions = load_marine_locations(
+        gadm_eez_union_file_name=gadm_eez_union_file_name,
+        tolerance=tolerance,
+        bucket=bucket,
+        verbose=verbose,
     )
     location_geoms = (
         regions.dropna(subset=["location"])

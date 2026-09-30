@@ -26,6 +26,7 @@ from tqdm.auto import tqdm
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
+    GADM_EEZ_UNION_FILE_NAME,
     HIGH_SEAS_PARAMS,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
@@ -34,6 +35,7 @@ from src.core.params import (
     NEAR_SHORE_IHO_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
+    TOLERANCE,
     WDPA_GLOBAL_LEVEL_FILE_NAME,
 )
 from src.core.processors import clean_geometries
@@ -41,6 +43,7 @@ from src.utils.gcp import (
     download_zip_to_gcs,
     duplicate_blob,
     read_dataframe,
+    read_json_df,
     read_json_from_gcs,
     read_parquet_from_gcs,
 )
@@ -221,6 +224,57 @@ def load_high_seas(bucket: str = BUCKET):
     high_seas = load_marine_regions(HIGH_SEAS_PARAMS, bucket)
     high_seas["location"] = "ABNJ"
     return high_seas[["location", "geometry"]].dissolve(by="location", as_index=False)
+
+
+def load_marine_locations(
+    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    tolerance: float = TOLERANCE,
+    bucket: str = BUCKET,
+    verbose: bool = True,
+) -> gpd.GeoDataFrame:
+    """Load the locations the marine stats are computed over: the land/EEZ union, the
+    near-shore IHO sea areas, and the high seas.
+
+    The locations overlap - a seamount lies in both its EEZ and the IHO sea area holding
+    it - so callers that need a deduplicated total compute it separately.
+
+    Parameters
+    ----------
+    gadm_eez_union_file_name : str
+        GCS blob of the land/EEZ union, read at the given tolerance.
+    tolerance : float
+        Which simplification of the land/EEZ union to read (file suffix only).
+    bucket : str
+        GCS bucket to read from.
+    verbose : bool
+        If True, logs progress.
+    """
+    if verbose:
+        logger.info({"message": "loading eez/land union"})
+    union = read_json_df(
+        bucket, add_tolerance_suffix(gadm_eez_union_file_name, tolerance), verbose=verbose
+    )
+
+    if verbose:
+        logger.info({"message": "loading IHO sea areas"})
+    iho = load_iho_regions(buffer=True)
+
+    if verbose:
+        logger.info({"message": "loading high seas"})
+    high_seas = load_high_seas(bucket)
+
+    return gpd.GeoDataFrame(
+        pd.concat(
+            [
+                union[["location", "geometry"]],
+                iho[["location", "geometry"]],
+                high_seas[["location", "geometry"]],
+            ],
+            ignore_index=True,
+        ),
+        geometry="geometry",
+        crs=union.crs,
+    )
 
 
 def load_regions(

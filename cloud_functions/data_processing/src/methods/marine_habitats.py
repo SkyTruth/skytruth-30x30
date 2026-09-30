@@ -11,8 +11,8 @@ from tqdm.auto import tqdm
 
 from src.core.commons import (
     add_tolerance_suffix,
-    load_high_seas,
     load_iho_regions,
+    load_marine_locations,
     polygonal_parts,
 )
 from src.core.params import (
@@ -191,33 +191,17 @@ def create_habitat_subtable(
             "total_area": df_group["total_habitat_area_km2"].sum(),
         }
 
-    if verbose:
-        logger.info({"message": "loading eez/land union"})
-    gadm_eez_union_file_name = add_tolerance_suffix(gadm_eez_union_file_name, tolerance)
-    country_union = read_json_df(bucket, gadm_eez_union_file_name, verbose=verbose)
-
-    if verbose:
-        logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions(buffer=True)
-
-    if verbose:
-        logger.info({"message": "loading high seas"})
-    high_seas = load_high_seas(bucket)
-
-    locations = gpd.GeoDataFrame(
-        pd.concat(
-            [
-                country_union[["location", "geometry"]],
-                iho[["location", "geometry"]],
-                high_seas[["location", "geometry"]],
-            ],
-            ignore_index=True,
-        ),
-        geometry="geometry",
-        crs=country_union.crs,
+    locations = load_marine_locations(
+        gadm_eez_union_file_name=gadm_eez_union_file_name,
+        tolerance=tolerance,
+        bucket=bucket,
+        verbose=verbose,
     )
 
-    combined_locations = {**combined_regions, **{loc: [loc] for loc in iho["location"]}}
+    combined_locations = {
+        **combined_regions,
+        **{loc: [loc] for loc in locations["location"] if loc not in combined_regions},
+    }
 
     subtables = []
     for habitat in habitats:
