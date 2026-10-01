@@ -12,15 +12,14 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 
 ## Configuration
 
-Create a `.env` (copy `example.env` and fill it in). 
+Create a `.env` (copy `example.env` and fill it in) with the details of a local postgres database.
 
 ```ini
-DATABASE_HOST=127.0.0.1
-# The local PostGIS in docker-compose.yml is created with these same values
-DATABASE_NAME=skytruth_test
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=postgres
-DATABASE_PORT=5434
+DATABASE_HOST=host.docker.internal
+DATABASE_NAME={database name}
+DATABASE_USERNAME={database username}
+DATABASE_PASSWORD={database password}
+DATABASE_PORT=5432
 ```
 
 In GCP, these are set by Terraform, with the password coming from Secret Manager.
@@ -38,29 +37,17 @@ In GCP, these are set by Terraform, with the password coming from Secret Manager
 
 ## Running locally
 
-`docker-compose.yml` defines the API and a local test Postgres database.
-
-### Everything in Docker
-
 ```bash
 docker compose up --build
 curl localhost:8080/health
 ```
 
-### API on your machine, with reload
-
-Start a local Postgres database with PostGIS in Docker, without the API container (published on host port **5434** so it will not interfere with a database already running on 5432).
-
-```bash
-poetry install
-docker compose up -d postgis
-poetry run uvicorn src.main:app --reload
-curl localhost:8000/health
-```
+The API container reads `.env` and reloads when files in `src/` change.
 
 ## Tests
 
 ```bash
+poetry install
 poetry run pytest                        # everything
 poetry run pytest -m "not integration"   # unit tests only, no database needed
 ```
