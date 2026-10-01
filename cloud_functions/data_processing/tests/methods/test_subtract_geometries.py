@@ -4,6 +4,7 @@ import pytest
 from shapely.geometry import MultiPolygon, box
 
 import src.methods.subtract_geometries as subtract
+import src.utils.gcp as gcp
 from src.core.commons import add_tolerance_suffix
 from src.core.params import ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN
 
@@ -69,8 +70,8 @@ def test_pa_file_is_read_by_its_format(
 
         return read
 
-    monkeypatch.setattr(subtract, "read_json_df", reader("read_json_df"))
-    monkeypatch.setattr(subtract, "read_parquet_from_gcs", reader("read_parquet_from_gcs"))
+    monkeypatch.setattr(gcp, "read_json_df", reader("read_json_df"))
+    monkeypatch.setattr(gcp, "read_parquet_from_gcs", reader("read_parquet_from_gcs"))
     monkeypatch.setattr(subtract, "upload_gdf", lambda **kwargs: None)
 
     subtract.generate_total_area_minus_pa(
@@ -91,7 +92,7 @@ def test_multi_country_zone_subtracted_from_all_its_locations(
 ):
     reads = {"raw/mpa.geojson": mock_mpa_gdf, "locations_0.001.geojson": mock_location_gdf}
     monkeypatch.setattr(
-        subtract, "read_json_df", lambda bucket_name, filename, verbose: reads[filename].copy()
+        gcp, "read_json_df", lambda bucket_name, filename, verbose: reads[filename].copy()
     )
 
     uploads = {}
@@ -249,7 +250,7 @@ def test_each_input_is_read_once_through_the_parquet_reader(
 
         return read
 
-    monkeypatch.setattr(subtract, "read_json_df", reader("read_json_df"))
+    monkeypatch.setattr(gcp, "read_json_df", reader("read_json_df"))
     monkeypatch.setattr(subtract, "read_parquet_from_gcs", reader("read_parquet_from_gcs"))
     monkeypatch.setattr(subtract, "upload_gdf", lambda **kwargs: None)
 

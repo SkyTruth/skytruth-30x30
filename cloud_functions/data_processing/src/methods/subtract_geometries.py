@@ -16,7 +16,7 @@ from src.core.params import (
 )
 from src.core.processors import filter_protected_planet
 from src.utils.gcp import (
-    read_json_df,  # Reads a .json or .geojson file from GCS and returns a DataFrame or GeoDataFrame
+    read_geo_df,  # Reads a .parquet, .json or .geojson file from GCS and returns a GeoDataFrame
     read_parquet_from_gcs,  # Reads a .parquet file from GCS and returns a GeoDataFrame
     upload_gdf,  # Saves a GeoDataFrame to GCS as a GeoJSON or Parquet
 )
@@ -139,7 +139,7 @@ def generate_total_area_minus_pa(
     """
 
     # Total areas: GADM (terrestrial) or EEZ (marine)
-    total_area = read_json_df(
+    total_area = read_geo_df(
         bucket_name=bucket,
         filename=add_tolerance_suffix(total_area_file, tolerance),
         verbose=verbose,
@@ -150,11 +150,9 @@ def generate_total_area_minus_pa(
     locations = total_area["location"].unique().tolist()
 
     # Protected areas: PA (terrestrial) or MPA (marine)
-    pa_file = add_tolerance_suffix(pa_file, tolerance)
-    read_pa = read_parquet_from_gcs if pa_file.endswith(".parquet") else read_json_df
-    pa = read_pa(
+    pa = read_geo_df(
         bucket_name=bucket,
-        filename=pa_file,
+        filename=add_tolerance_suffix(pa_file, tolerance),
         verbose=verbose,
     ).pipe(filter_protected_planet)
 
@@ -345,14 +343,13 @@ def generate_location_minus_fhp_mpa(
         to GCS as a Parquet file.
     """
 
-    read_mpa = read_parquet_from_gcs if mpa_file.endswith(".parquet") else read_json_df
-    mpa = read_mpa(
+    mpa = read_geo_df(
         bucket_name=bucket,
         filename=mpa_file,
         verbose=verbose,
     )
 
-    location = read_json_df(
+    location = read_geo_df(
         bucket_name=bucket,
         filename=add_tolerance_suffix(loc_file, tolerance),
         verbose=verbose,
