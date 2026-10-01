@@ -818,6 +818,32 @@ def read_parquet_from_gcs(bucket_name: str, filename: str, verbose: bool = True)
     return gdf
 
 
+def read_geo_df(bucket_name: str, filename: str, verbose: bool = True):
+    """
+    Loads a geometry file from GCS, choosing the reader from the file extension.
+
+    Parameters:
+    ----------
+    bucket_name : str
+        Name of the GCS bucket to read from.
+    filename : str
+        Name of the blob in the GCS bucket. A .parquet suffix selects the parquet
+        reader; anything else is read as .json or .geojson.
+    verbose : bool
+        If True, prints progress messages.
+
+    Returns:
+    -------
+    gpd.GeoDataFrame
+        A GeoDataFrame containing the file's features and attributes.
+    """
+
+    if filename.lower().endswith(".parquet"):
+        return read_parquet_from_gcs(bucket_name, filename, verbose=verbose)
+
+    return read_json_df(bucket_name, filename, verbose=verbose)
+
+
 def download_zipfile_from_gcs(bucket_name: str, zip_filename: str, verbose: bool = True) -> Path:
     """
     Downloads a ZIP file from GCS into a temporary directory and extracts it,
