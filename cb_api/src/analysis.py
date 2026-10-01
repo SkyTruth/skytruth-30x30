@@ -17,12 +17,12 @@ class AnalysisTable(StrEnum):
 
 def get_geojson(geojson: JSON) -> dict:
     if not isinstance(geojson, dict):
-        raise BadRequestError("Unable to parse input geometry")
+        raise BadRequestError("Invalid geometry: unable to parse input geometry")
 
     if geojson.get("type") == "FeatureCollection":
         features = geojson.get("features")
         if not isinstance(features, list) or not features:
-            raise BadRequestError("Unable to parse input geometry")
+            raise BadRequestError("Invalid geometry: unable to parse input geometry")
         return get_geojson(features[0])
     elif geojson.get("type") == "Feature":
         return geojson.get("geometry")
@@ -49,13 +49,13 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
         # is caused by the input. A lost connection is the exception.
         if exc.connection_invalidated:
             raise
-        raise BadRequestError("Unable to parse input geometry") from exc
+        raise BadRequestError("Invalid geometry: unable to parse input geometry") from exc
 
     if validation["is_empty"]:
-        raise BadRequestError("Input geometry is empty")
+        raise BadRequestError("Invalid geometry: input geometry is empty")
 
     if validation["geom_type"] not in {"ST_Polygon", "ST_MultiPolygon"}:
-        raise BadRequestError("Input geometry must be a Polygon or MultiPolygon")
+        raise BadRequestError("Invalid geometry: input geometry must be a Polygon or MultiPolygon")
 
 
 def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:

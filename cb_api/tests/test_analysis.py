@@ -49,7 +49,7 @@ def test_feature_collection_unwraps_its_first_feature():
     ],
 )
 def test_malformed_wrappers_are_rejected(geojson):
-    with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
+    with pytest.raises(BadRequestError, match="Invalid geometry: unable to parse input geometry"):
         get_geojson(geojson)
 
 
@@ -147,21 +147,23 @@ def test_polygons_pass_validation(geom_type: str):
 def test_empty_geometry_is_rejected():
     conn = FakeConnection({"geom_type": "ST_Polygon", "is_empty": True})
 
-    with pytest.raises(BadRequestError, match="Input geometry is empty"):
+    with pytest.raises(BadRequestError, match="Invalid geometry: input geometry is empty"):
         validate_geometry_topology(conn, POLYGON)
 
 
 def test_non_polygon_geometry_is_rejected():
     conn = FakeConnection({"geom_type": "ST_LineString", "is_empty": False})
 
-    with pytest.raises(BadRequestError, match="must be a Polygon or MultiPolygon"):
+    with pytest.raises(
+        BadRequestError, match="Invalid geometry: input geometry must be a Polygon or MultiPolygon"
+    ):
         validate_geometry_topology(conn, POLYGON)
 
 
 def test_unparseable_geometry_is_rejected():
     conn = FakeConnection(error=sqlalchemy.exc.ProgrammingError("stmt", None, Exception("bad")))
 
-    with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
+    with pytest.raises(BadRequestError, match="Invalid geometry: unable to parse input geometry"):
         validate_geometry_topology(conn, POLYGON)
 
 
