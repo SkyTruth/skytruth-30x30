@@ -102,17 +102,19 @@ def test_a_self_intersecting_polygon_is_repaired(analysis_tables: Engine):
 def test_a_line_is_rejected(analysis_tables: Engine):
     line = {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}
 
-    with pytest.raises(BadRequestError, match="must be a Polygon or MultiPolygon"):
+    with pytest.raises(
+        BadRequestError, match="Invalid geometry: input geometry must be a Polygon or MultiPolygon"
+    ):
         get_locations_stats(analysis_tables, line, AnalysisTable.MARINE)
 
 
 def test_an_empty_polygon_is_rejected(analysis_tables: Engine):
-    with pytest.raises(BadRequestError, match="Input geometry is empty"):
+    with pytest.raises(BadRequestError, match="Invalid geometry: input geometry is empty"):
         get_locations_stats(
             analysis_tables, {"type": "Polygon", "coordinates": []}, AnalysisTable.MARINE
         )
 
 
 def test_unparseable_geojson_is_rejected(analysis_tables: Engine):
-    with pytest.raises(BadRequestError, match="Unable to parse input geometry"):
+    with pytest.raises(BadRequestError, match="Invalid geometry: unable to parse input geometry"):
         get_locations_stats(analysis_tables, {"type": "Nonsense"}, AnalysisTable.MARINE)

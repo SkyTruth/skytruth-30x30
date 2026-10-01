@@ -14,7 +14,7 @@ client = TestClient(app)
 
 @app.get("/_test/bad-request", include_in_schema=False)
 def _raise_bad_request():
-    raise BadRequestError("Input geometry is empty")
+    raise BadRequestError("Invalid geometry: input geometry is empty")
 
 
 @app.get("/_test/value-error", include_in_schema=False)
@@ -87,7 +87,7 @@ def test_bad_request_error_becomes_a_400_with_its_message():
     response = client.get("/_test/bad-request")
 
     assert response.status_code == 400
-    assert response.json() == {"error": "Input geometry is empty"}
+    assert response.json() == {"error": "Invalid geometry: input geometry is empty"}
 
 
 def test_a_plain_value_error_is_a_server_error(caplog: pytest.LogCaptureFixture):
