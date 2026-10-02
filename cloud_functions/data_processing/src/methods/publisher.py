@@ -390,6 +390,8 @@ def dispatch_publisher(
 
             process_marine_habitat_geoms(habitats=current, verbose=verbose)
 
+            # TODO: When we move to Workflows (TECH-3777), we can fan out to parallel
+            # rather than sequentially. For now, we process one habitat at a time.
             if remaining:
                 task_config["HABITAT"] = remaining
                 step_list = ["process_marine_habitat_geoms"]
@@ -443,6 +445,7 @@ def dispatch_publisher(
             generate_iho_pa_intersections(buffer=True, clip=False, verbose=verbose)
             step_list = [
                 "generate_mangroves_minus_pa",
+                "generate_seamounts_minus_pa",
                 "generate_coldwatercorals_minus_pa",
                 "generate_saltmarshes_minus_pa",
                 "generate_seagrasses_minus_pa",
@@ -457,6 +460,8 @@ def dispatch_publisher(
             step_list = ["generate_habitat_protection_table"]
 
         case "generate_habitat_protection_table":
+            # TODO: When we move to Workflows (TECH-3777), we can fan out each
+            # terrestrial biome and marine habitat to parallel rather than sequentially.
             _ = generate_habitat_protection_table(verbose=verbose)
             step_list = ["update_habitat_protection_stats"]
 
@@ -534,6 +539,12 @@ def dispatch_publisher(
             generate_marine_habitat_minus_pa(
                 habitat="mangroves",
                 n_jobs=2,
+                verbose=verbose,
+            )
+
+        case "generate_seamounts_minus_pa":
+            generate_marine_habitat_minus_pa(
+                habitat="seamounts",
                 verbose=verbose,
             )
 

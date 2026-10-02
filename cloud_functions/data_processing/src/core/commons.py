@@ -26,6 +26,7 @@ from tqdm.auto import tqdm
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
+    HIGH_SEAS_PARAMS,
     MPATLAS_COUNTRY_LEVEL_FILE_NAME,
     MPATLAS_FILE_NAME,
     MPATLAS_GLOBAL_FILE_NAME,
@@ -208,6 +209,18 @@ def load_marine_regions(params: dict, bucket: str = BUCKET):
             gdf = gpd.read_file(zip_path).pipe(clean_geometries)
 
     return gdf
+
+
+def load_high_seas(bucket: str = BUCKET):
+    """Load the high seas as the single ABNJ location.
+
+    The marine location layers are built from the land/EEZ union and the IHO sea areas,
+    neither of which carries a high-seas feature, so areas beyond national jurisdiction
+    come from here. Dissolved to one row because callers key locations by first match.
+    """
+    high_seas = load_marine_regions(HIGH_SEAS_PARAMS, bucket)
+    high_seas["location"] = "ABNJ"
+    return high_seas[["location", "geometry"]].dissolve(by="location", as_index=False)
 
 
 def load_regions(

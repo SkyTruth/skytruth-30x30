@@ -23,6 +23,7 @@ from src.core.commons import (
     add_tolerance_suffix,
     download_and_duplicate_zipfile,
     get_cover_areas,
+    load_high_seas,
     load_iho_regions,
     load_marine_regions,
     process_buffered_iho,
@@ -68,6 +69,7 @@ from src.utils.gcp import (
     read_gzipped_gpkg_from_gcs,
     read_json_df,
     read_json_from_gcs,
+    read_parquet_from_gcs,
     read_zipped_gpkg_from_gcs,
     save_json_to_gcs,
     upload_dataframe,
@@ -79,6 +81,7 @@ from src.utils.geo import (
     fast_union_area_km2,
     get_area_km2,
     tile_geometry,
+    unwrap_antimeridian,
 )
 from src.utils.logger import Logger
 
@@ -416,8 +419,8 @@ def process_eez_land_union(
     ISO_TER/ISO_SOV entries is attributed to every claimant (intentional, and
     consistent with how shared marine areas are over-attributed elsewhere). The
     result is exploded to one row per location, dissolved, and written to
-    ``gadm_eez_union_file_name`` - the file consumed by the mangrove and
-    climate-resilient-coral subtables.
+    ``gadm_eez_union_file_name`` - the file ``process_near_shore_iho`` builds the
+    buffered marine locations from, and the climate-resilient-coral subtable reads.
     """
     if verbose:
         logger.info(
@@ -555,8 +558,9 @@ def process_near_shore_iho(
     Each IHO sea area is buffered ``km`` inshore, clipped against its neighbours,
     and saved to ``near_shore_iho_file_name``. Those sea areas are then
     concatenated with the land/EEZ union — which ``process_eez_land_union`` must
-    already have written — into the buffered marine locations, the location set
-    the marine habitat jobs dissolve by.
+    already have written — and the high seas into the buffered marine locations,
+    the location set the marine habitat stats and the unprotected-habitat layers
+    are both built over.
     """
     if verbose:
         logger.info({"message": "fetching iho-world-seas from SkyTruth shared-datasets"})
@@ -580,13 +584,17 @@ def process_near_shore_iho(
     )
 
     iho = load_iho_regions(buffer=True)[["location", "geometry"]]
+    high_seas = load_high_seas(bucket)[["location", "geometry"]]
     if tolerance is not None:
         if verbose:
-            logger.info({"message": f"simplifying near-shore IHO with tolerance {tolerance}"})
+            logger.info(
+                {"message": f"simplifying near-shore IHO and high seas with tolerance {tolerance}"}
+            )
         iho["geometry"] = iho["geometry"].simplify(tolerance=tolerance)
+        high_seas["geometry"] = high_seas["geometry"].simplify(tolerance=tolerance)
 
     buffered_marine_locations = pd.concat(
-        [gadm_eez_union[["location", "geometry"]], iho], ignore_index=True
+        [gadm_eez_union[["location", "geometry"]], iho, high_seas], ignore_index=True
     ).pipe(clean_geometries)
 
     out_fn = add_tolerance_suffix(buffered_marine_locations_file_name, tolerance)
@@ -662,6 +670,8 @@ def _load_habitat_geometry(
     """Read one habitat's source and return a single frame ready to dissolve.
 
     * gpkg: a single gzipped GeoPackage of polygons (Global Mangrove Watch).
+    * shapefile: one polygon shapefile inside a zip, named by ``shapefile_name``
+      (ZSL seamounts). Its antimeridian crossings are split before dissolving.
     * wcmc: a UNEP-WCMC zip holding a point and a polygon shapefile. The points are
       buffered into polygons (see _buffer_unep_points) and merged with the polygon
       layer.
@@ -672,6 +682,15 @@ def _load_habitat_geometry(
         if verbose:
             logger.info({"message": f"loading {habitat} from {file_name}"})
         return read_gzipped_gpkg_from_gcs(bucket, file_name, columns=[], verbose=verbose)
+
+    if params["source"] == "shapefile":
+        if verbose:
+            logger.info({"message": f"loading {habitat} from {file_name}"})
+        geometry = load_zipped_shapefile_from_gcs(
+            file_name, bucket, internal_shapefile_path=params["shapefile_name"]
+        ).pipe(clean_geometries)
+        geometry["geometry"] = geometry.geometry.apply(unwrap_antimeridian)
+        return geometry[["geometry"]]
 
     if verbose:
         logger.info({"message": f"locating {habitat} layers in {file_name}"})
@@ -713,7 +732,7 @@ def _load_habitat_geometry(
 def process_marine_habitat_geoms(
     habitats: str | list[str] | None = None,
     habitat_params: dict = HABITAT_PROCESSING_PARAMS,
-    gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
+    marine_locations_file_name: str = BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     by_location_file_pattern: str = HABITAT_BY_LOCATION_FILE_PATTERN,
     global_area_file_pattern: str = GLOBAL_HABITAT_AREA_FILE_PATTERN,
     fallback_area_km2: float = UNEP_POINT_AREA_KM2,
@@ -734,9 +753,9 @@ def process_marine_habitat_geoms(
         Habitat key(s) from habitat_params to process. None processes all of them.
     habitat_params : dict
         Habitat key -> {"file_name", "source", "overlaps", ...} config.
-    gadm_eez_union_file_name : str
-        GCS blob of the land/EEZ union, used with the near-shore IHO sea areas as the
-        set of locations to dissolve by.
+    marine_locations_file_name : str
+        GCS blob of the buffered marine locations - the land/EEZ union, the near-shore
+        IHO sea areas and the high seas - to dissolve by.
     by_location_file_pattern : str
         Template for the dissolved per-location blob name.
     global_area_file_pattern : str
@@ -768,22 +787,9 @@ def process_marine_habitat_geoms(
         raise ValueError(f"unknown marine habitat(s): {sorted(unknown, key=repr)}")
 
     if verbose:
-        logger.info({"message": "loading eezs/gadm union"})
-    gadm_eez_union = read_json_df(
-        bucket, add_tolerance_suffix(gadm_eez_union_file_name, tolerance), verbose=verbose
-    )
-
-    if verbose:
-        logger.info({"message": "loading IHO sea areas"})
-    iho = load_iho_regions(buffer=True)
-
-    regions = gpd.GeoDataFrame(
-        pd.concat(
-            [gadm_eez_union[["location", "geometry"]], iho[["location", "geometry"]]],
-            ignore_index=True,
-        ),
-        geometry="geometry",
-        crs=gadm_eez_union.crs,
+        logger.info({"message": "loading marine locations"})
+    regions = read_parquet_from_gcs(
+        bucket, add_tolerance_suffix(marine_locations_file_name, tolerance), verbose=verbose
     )
     location_geoms = (
         regions.dropna(subset=["location"])

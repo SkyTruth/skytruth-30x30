@@ -226,15 +226,19 @@ def test_download_marine_habitats_without_habitat_downloads_everything(patched_a
             ["process_marine_habitat_geoms"],
             ["mangroves", "seagrasses"],
         ),
-        (["seamounts", "saltmarshes"], ["process_marine_habitat_geoms"], ["saltmarshes"]),
-        ("seamounts", [], None),
+        (
+            ["seamounts", "saltmarshes"],
+            ["process_marine_habitat_geoms"],
+            ["seamounts", "saltmarshes"],
+        ),
+        ("seamounts", ["process_marine_habitat_geoms"], ["seamounts"]),
     ],
     ids=["all", "mangroves", "one_unep", "mangroves_and_unep", "seamounts_and_unep", "seamounts"],
 )
 def test_download_marine_habitats_launches_the_step_that_processes_each_habitat(
     patched_all, habitat, expected_steps, expected_habitat
 ):
-    """Mangroves and the UNEP-WCMC habitats share a processing step; seamounts have none.
+    """Every marine habitat shares one processing step.
 
     An empty HABITAT downloads everything and forwards every processable habitat.
     """

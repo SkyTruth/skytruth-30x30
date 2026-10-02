@@ -931,6 +931,7 @@ def mangrove_extent():
             box(0.5, 0.5, 1.5, 1.5),  # wholly inside AAA
             box(1.8, 0.5, 2.2, 1.5),  # straddles the AAA/BBB boundary
             box(10.0, 10.0, 10.5, 10.5),  # only the IHO sea area holds this one
+            box(20.5, 20.5, 21.0, 21.0),  # only the high seas hold this one
         ],
         crs="EPSG:4326",
     )
@@ -938,35 +939,37 @@ def mangrove_extent():
 
 @pytest.fixture
 def mangrove_regions():
-    """The land/EEZ union and IHO sea areas process_marine_habitat_geoms dissolves by.
+    """The buffered marine locations process_marine_habitat_geoms dissolves by: the
+    land/EEZ union, the near-shore IHO sea areas, and the high seas, in one layer.
 
-    AAA and BBB are adjacent; the IHO sea area sits away from both.
+    AAA and BBB are adjacent; the IHO sea area and the high seas sit away from both and
+    from each other.
     """
-    gadm_eez_union = gpd.GeoDataFrame(
-        {"location": ["AAA", "BBB"], "geometry": [box(0, 0, 2, 2), box(2, 0, 4, 2)]},
+    return gpd.GeoDataFrame(
+        {
+            "location": ["AAA", "BBB", "999", "ABNJ"],
+            "geometry": [
+                box(0, 0, 2, 2),
+                box(2, 0, 4, 2),
+                box(9, 9, 11, 11),
+                box(20, 20, 22, 22),
+            ],
+        },
         crs="EPSG:4326",
     )
-    iho = gpd.GeoDataFrame(
-        {"MRGID": [999], "location": ["999"], "geometry": [box(9, 9, 11, 11)]}, crs="EPSG:4326"
-    )
-    return gadm_eez_union, iho
 
 
 @pytest.fixture
 def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
     """Wire process_marine_habitat_geoms up to in-memory inputs and record what it writes."""
-    gadm_eez_union, iho = mangrove_regions
     uploads = []
     saved_json = []
 
     def _read_gpkg(bucket, blob_name, layer=None, columns=None, verbose=True):
         return mangrove_extent.copy()
 
-    def _read_json_df(bucket, blob_name, verbose=True):
-        return gadm_eez_union.copy()
-
-    def _load_iho_regions(buffer=False):
-        return iho.copy()
+    def _read_parquet(bucket, blob_name, verbose=True):
+        return mangrove_regions.copy()
 
     def _save_json_to_gcs(bucket, data, blob_name, project=None, verbose=True):
         saved_json.append({"bucket": bucket, "data": data, "blob_name": blob_name})
@@ -975,8 +978,7 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
         uploads.append({"bucket": bucket, "df": df, "destination_blob": destination_blob})
 
     monkeypatch.setattr(static_processes, "read_gzipped_gpkg_from_gcs", _read_gpkg, raising=True)
-    monkeypatch.setattr(static_processes, "read_json_df", _read_json_df, raising=True)
-    monkeypatch.setattr(static_processes, "load_iho_regions", _load_iho_regions, raising=True)
+    monkeypatch.setattr(static_processes, "read_parquet_from_gcs", _read_parquet, raising=True)
     monkeypatch.setattr(static_processes, "save_json_to_gcs", _save_json_to_gcs, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", _upload_gdf, raising=True)
 
@@ -984,12 +986,12 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
 
 
 def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_recorders):
-    """One row per location holding mangroves, IHO sea areas included."""
+    """One row per location holding mangroves, IHO sea areas and the high seas included."""
     uploads, _ = mangrove_recorders
 
     static_processes.process_marine_habitat_geoms(
         habitats="mangroves",
-        gadm_eez_union_file_name="GADM_eez_union.geojson",
+        marine_locations_file_name="buffered_marine_locations.parquet",
         by_location_file_pattern="static/{habitat}_by_location.parquet",
         global_area_file_pattern="intermediates/global_{habitat}_area.json",
         bucket="test-bucket",
@@ -1004,7 +1006,7 @@ def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_r
 
     df = out["df"]
     assert isinstance(df, gpd.GeoDataFrame)
-    assert set(df["location"]) == {"AAA", "BBB", "999"}
+    assert set(df["location"]) == {"AAA", "BBB", "999", "ABNJ"}
     # The schema every habitat's by-location layer shares
     assert list(df.columns) == [
         "location",
@@ -1015,7 +1017,7 @@ def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_r
         "habitat",
     ]
     assert set(df["habitat"]) == {"mangroves"}
-    assert len(df) == 3
+    assert len(df) == 4
 
 
 # ---------------------------------------------------------------------------
@@ -1049,6 +1051,9 @@ def near_shore_mocks(monkeypatch):
         {"location": ["AAA", "BBB"], "geometry": [box(0, 0, 2, 2), box(8, 8, 9, 9)]},
         crs="EPSG:4326",
     )
+    high_seas = gpd.GeoDataFrame(
+        {"location": ["ABNJ"], "geometry": [box(20, 20, 22, 22)]}, crs="EPSG:4326"
+    )
 
     reads = []
     uploads = []
@@ -1067,6 +1072,9 @@ def near_shore_mocks(monkeypatch):
     )
     monkeypatch.setattr(
         static_processes, "load_iho_regions", lambda buffer=False: buffered_iho.copy(), raising=True
+    )
+    monkeypatch.setattr(
+        static_processes, "load_high_seas", lambda bucket=None: high_seas.copy(), raising=True
     )
     monkeypatch.setattr(static_processes, "read_json_df", mock_read_json_df, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", mock_upload_gdf, raising=True)
@@ -1096,7 +1104,7 @@ def test_process_near_shore_iho_writes_the_buffered_marine_locations(near_shore_
     # The union is read at the same tolerance the combined layer is written at.
     assert reads == ["GADM_eez_union_0.7.geojson"]
 
-    # Both halves are present: ISO3 codes from the land/EEZ union, MRGID strings
-    # from the near-shore sea areas.
+    # All three parts are present: ISO3 codes from the land/EEZ union, MRGID strings
+    # from the near-shore sea areas, and ABNJ from the high seas.
     locations = set(uploads[1]["df"]["location"])
-    assert locations == {"AAA", "BBB", "1", "2"}
+    assert locations == {"AAA", "BBB", "1", "2", "ABNJ"}
