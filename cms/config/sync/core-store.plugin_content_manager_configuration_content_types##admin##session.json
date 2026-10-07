@@ -146,20 +146,6 @@
           "sortable": true
         }
       },
-      "metadata": {
-        "edit": {
-          "label": "metadata",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true
-        },
-        "list": {
-          "label": "metadata",
-          "searchable": false,
-          "sortable": false
-        }
-      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -279,12 +265,6 @@
           {
             "name": "type",
             "size": 6
-          }
-        ],
-        [
-          {
-            "name": "metadata",
-            "size": 12
           }
         ]
       ]

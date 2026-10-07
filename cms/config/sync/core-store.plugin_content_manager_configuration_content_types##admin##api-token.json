@@ -48,20 +48,6 @@
           "sortable": true
         }
       },
-      "kind": {
-        "edit": {
-          "label": "kind",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true
-        },
-        "list": {
-          "label": "kind",
-          "searchable": true,
-          "sortable": true
-        }
-      },
       "type": {
         "edit": {
           "label": "type",
@@ -131,36 +117,6 @@
           "label": "permissions",
           "searchable": false,
           "sortable": false
-        }
-      },
-      "adminPermissions": {
-        "edit": {
-          "label": "adminPermissions",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true,
-          "mainField": "action"
-        },
-        "list": {
-          "label": "adminPermissions",
-          "searchable": false,
-          "sortable": false
-        }
-      },
-      "adminUserOwner": {
-        "edit": {
-          "label": "adminUserOwner",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true,
-          "mainField": "firstname"
-        },
-        "list": {
-          "label": "adminUserOwner",
-          "searchable": true,
-          "sortable": true
         }
       },
       "expiresAt": {
@@ -309,20 +265,6 @@
         [
           {
             "name": "encryptedKey",
-            "size": 6
-          },
-          {
-            "name": "kind",
-            "size": 6
-          }
-        ],
-        [
-          {
-            "name": "adminPermissions",
-            "size": 6
-          },
-          {
-            "name": "adminUserOwner",
             "size": 6
           }
         ]

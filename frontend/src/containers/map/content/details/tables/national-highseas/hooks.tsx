@@ -610,13 +610,15 @@ export const useData = (
 
         const reversePathItems = key.split('.').reverse();
 
-        return reversePathItems.reduce((res, pathItem, index) => {
+        const filter = reversePathItems.reduce((res, pathItem, index) => {
           if (index === 0) {
             return { [pathItem]: { $in: values } };
           }
 
           return { [pathItem]: res };
         }, {});
+
+        return { ...res, ...filter };
       }, {}),
     }),
     [environment, filters, locationCode]

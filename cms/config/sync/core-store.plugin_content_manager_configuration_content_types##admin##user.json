@@ -104,20 +104,6 @@
           "sortable": true
         }
       },
-      "resetPasswordTokenExpiresAt": {
-        "edit": {
-          "label": "resetPasswordTokenExpiresAt",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true
-        },
-        "list": {
-          "label": "resetPasswordTokenExpiresAt",
-          "searchable": true,
-          "sortable": true
-        }
-      },
       "registrationToken": {
         "edit": {
           "label": "registrationToken",
@@ -157,21 +143,6 @@
         },
         "list": {
           "label": "roles",
-          "searchable": false,
-          "sortable": false
-        }
-      },
-      "apiTokens": {
-        "edit": {
-          "label": "apiTokens",
-          "description": "",
-          "placeholder": "",
-          "visible": true,
-          "editable": true,
-          "mainField": "name"
-        },
-        "list": {
-          "label": "apiTokens",
           "searchable": false,
           "sortable": false
         }
@@ -322,16 +293,6 @@
         [
           {
             "name": "preferedLanguage",
-            "size": 6
-          },
-          {
-            "name": "resetPasswordTokenExpiresAt",
-            "size": 6
-          }
-        ],
-        [
-          {
-            "name": "apiTokens",
             "size": 6
           }
         ]
