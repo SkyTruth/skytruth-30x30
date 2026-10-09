@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { Popup } from 'react-map-gl';
+import { Popup, useMap } from 'react-map-gl';
 
 import { useAtomValue, useSetAtom } from 'jotai';
+import type { Popup as MapboxPopup, PopupOptions } from 'mapbox-gl';
 import { useLocale, useTranslations } from 'next-intl';
 import { useKey } from 'rooks';
 
@@ -38,6 +39,36 @@ const PopupContainer: FCWithMessages = () => {
   const [selectedLayerSlug, setSelectedLayerSlug] = useState<string | null>(null);
 
   const setPopup = useSetAtom(popupAtom);
+
+  const { default: mapRef } = useMap();
+  const popupRef = useRef<MapboxPopup>(null);
+  const [anchor, setAnchor] = useState<PopupOptions['anchor']>();
+
+  // Anchor popups so they are not hidden behind a panel
+  useLayoutEffect(() => {
+    const map = mapRef?.getMap();
+    if (!map || !popup?.lngLat) return;
+
+    const updateAnchor = () => {
+      const element = popupRef.current?.getElement();
+      const { x, y } = map.project(popup.lngLat);
+      const mapRect = map.getContainer().getBoundingClientRect();
+      const panelsRight = Array.from(document.querySelectorAll('[data-map-overlay-panel]'))
+        .map((panel) => panel.getBoundingClientRect())
+        .filter(({ top, bottom }) => top < mapRect.bottom && bottom > mapRect.top)
+        .reduce((right, rect) => Math.max(right, rect.right - mapRect.left), 0);
+      const height = element?.offsetHeight ?? 0;
+
+      if (x - panelsRight >= (element?.offsetWidth || 250) / 2) setAnchor(undefined);
+      else if (y - 10 < height) setAnchor('top-left');
+      else if (y > mapRect.height - height) setAnchor('bottom-left');
+      else setAnchor('left');
+    };
+
+    updateAnchor();
+    map.on('move', updateAnchor);
+    return () => void map.off('move', updateAnchor);
+  }, [mapRef, popup]);
 
   const getLocationName = useLocationName();
 
@@ -147,8 +178,10 @@ const PopupContainer: FCWithMessages = () => {
 
   return (
     <Popup
+      ref={popupRef}
       latitude={popup.lngLat.lat}
       longitude={popup.lngLat.lng}
+      anchor={anchor}
       offset={10}
       closeOnClick={false}
       closeButton={false}
