@@ -22,7 +22,7 @@ DATABASE_PASSWORD={database password}
 DATABASE_PORT=5432
 ```
 
-In GCP, these are set by Terraform, with the password coming from Secret Manager.
+In GCP, these are set by Terraform, with the password coming from Secret Manager. This differs from the other services on purpose to reduce potential secret exposure. Other deploy workflows write `.env` files from GitHub secrets into the image at build time, while Cloud Run gets cb_api's password from Secret Manager when the container starts, so it never enters the image, the registry, or GitHub.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
