@@ -379,8 +379,9 @@ export const useData = (
     },
     {
       query: {
-        // Country groups (like ARG* for Argentina and Territories) are stored with type
-        // 'country' but are filtered like regions, with one row per member location
+        // Type used to choose the table filter:
+        // Country groups (like ARG* for Argentina and Territories) are stored as
+        // 'country' but filtered like regions (one row per member location)
         select: ({ data }) =>
           data[0]?.type === 'country' && locationCode.endsWith('*') ? 'region' : data[0]?.type,
       },

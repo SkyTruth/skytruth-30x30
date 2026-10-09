@@ -109,8 +109,9 @@ const MapDetails: FCWithMessages = () => {
   );
 
   const table = useMemo(() => {
-    // Country groups (like ARG* for Argentina and Territories) are stored with type
-    // 'country' but are shown like regions, with one row per member location
+    // Type used to choose the table display format:
+    // Country groups (like ARG* for Argentina and Territories) are stored as
+    // 'country' but displayed like regions (one row per member location)
     const type =
       locationsQuery.data?.type === 'country' && locationsQuery.data?.code?.endsWith('*')
         ? 'region'
