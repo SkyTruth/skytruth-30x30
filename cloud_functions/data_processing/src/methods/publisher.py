@@ -18,7 +18,6 @@ from src.core.params import (
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
-    EEZ_FILE_NAME,
     EEZ_LAND_UNION_PARAMS,
     EEZ_PARAMS,
     FISHING_PROTECTION_FILE_NAME,
@@ -30,14 +29,16 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     LONG_RUNNING_TASKS,
     MARINE_HABITAT_PARAMS,
+    MARINE_LOCATIONS_FILE_NAME,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
-    MPATLAS_FILE_NAME,
+    MPATLAS_WITH_SEAS_FILE_NAME,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCE,
     WDPA_MARINE_FILE_NAME,
+    WDPA_MARINE_WITH_SEAS_FILE_NAME,
     WDPA_TERRESTRIAL_FILE_NAME,
 )
 from src.core.retry_params import DEFAULT_RETRY_CONFIG, ScheduleRetry
@@ -61,6 +62,7 @@ from src.methods.generate_tables import (
     generate_protected_areas_diff_table,
     generate_protection_coverage_stats_table,
 )
+from src.methods.iho_pa_intersections import generate_iho_pa_intersections
 from src.methods.static_processes import (
     download_marine_habitats,
     generate_terrestrial_biome_stats_country,
@@ -73,6 +75,7 @@ from src.methods.static_processes import (
 )
 from src.methods.subtract_geometries import (
     generate_location_minus_fhp_mpa,
+    generate_marine_habitat_minus_pa,
     generate_total_area_minus_pa,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
@@ -202,10 +205,6 @@ def monthly_job_publisher(task_config, long_running_task_list=None, verbose=True
         },
         {
             "METHOD": "download_protected_seas",
-            **task_config,
-        },
-        {
-            "METHOD": "download_protected_planet_pas",
             **task_config,
         },
     ]
@@ -356,7 +355,7 @@ def dispatch_publisher(
 
         case "process_eez_land_union":
             process_eez_land_union(verbose=verbose)
-            step_list = ["process_marine_habitat_geoms"]
+            step_list = ["process_near_shore_iho"]
 
         case "download_marine_habitats":
             requested = data.get("HABITAT") or list(MARINE_HABITAT_PARAMS)
@@ -407,16 +406,13 @@ def dispatch_publisher(
         # ------------------
         case "download_mpatlas":
             download_mpatlas(verbose=verbose)
-            step_list = [
-                "generate_marine_protection_level_stats_table",
-                "generate_location_minus_fhp_mpa",
-            ]
+            step_list = ["download_protected_planet_pas"]
 
         case "download_protected_seas":
             download_protected_seas(verbose=verbose)
             step_list = ["generate_fishing_protection_table"]
 
-        case "download_protected_planet_country":
+        case "download_protected_planet":
             download_protected_planet(verbose=verbose)
             step_list = ["generate_protection_coverage_stats_table"]
 
@@ -427,11 +423,29 @@ def dispatch_publisher(
                 batch_size=1000,
             )
             step_list = [
+                "generate_iho_pa_intersections",
+                "generate_gadm_minus_pa",
+            ]
+
+        case "generate_iho_pa_intersections":
+            generate_iho_pa_intersections(verbose=verbose)
+            step_list = [
+                "generate_marine_protection_level_stats_table",
                 "generate_protected_areas_table",
                 "generate_terrestrial_biome_stats",
-                "generate_eez_minus_mpa",
-                "generate_gadm_minus_pa",
-                "download_protected_planet_country",
+                "generate_location_minus_mpa",
+                "generate_location_minus_fhp_mpa",
+                "generate_buffered_iho_pa_intersections",
+                "download_protected_planet",
+            ]
+
+        case "generate_buffered_iho_pa_intersections":
+            generate_iho_pa_intersections(buffer=True, clip=False, verbose=verbose)
+            step_list = [
+                "generate_mangroves_minus_pa",
+                "generate_coldwatercorals_minus_pa",
+                "generate_saltmarshes_minus_pa",
+                "generate_seagrasses_minus_pa",
             ]
 
         # ------------------
@@ -491,27 +505,55 @@ def dispatch_publisher(
             )
             step_list = ["update_gadm_minus_pa"]
 
-        case "generate_eez_minus_mpa":
+        case "generate_location_minus_mpa":
             generate_total_area_minus_pa(
-                total_area_file=EEZ_FILE_NAME,
-                pa_file=WDPA_MARINE_FILE_NAME,
+                total_area_file=MARINE_LOCATIONS_FILE_NAME,
+                pa_file=WDPA_MARINE_WITH_SEAS_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
                 tolerance=TOLERANCE,
                 verbose=verbose,
             )
-            step_list = ["update_eez_minus_mpa"]
+            step_list = ["update_location_minus_mpa"]
 
         case "generate_location_minus_fhp_mpa":
             generate_location_minus_fhp_mpa(
-                mpa_file=MPATLAS_FILE_NAME,
-                loc_file=EEZ_FILE_NAME,
+                mpa_file=MPATLAS_WITH_SEAS_FILE_NAME,
+                loc_file=MARINE_LOCATIONS_FILE_NAME,
                 out_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 archive_out_file=ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 tolerance=TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_location_minus_fhp_mpa"]
+
+        # TODO: one method per habitat rather than a single method looping over
+        # HABITAT_PROCESSING_PARAMS. When we move to Workflows (TECH-3777), it is easiest to
+        # fan out to parallel if they are separate tasks without restructuring anything.
+        case "generate_mangroves_minus_pa":
+            generate_marine_habitat_minus_pa(
+                habitat="mangroves",
+                n_jobs=2,
+                verbose=verbose,
+            )
+
+        case "generate_coldwatercorals_minus_pa":
+            generate_marine_habitat_minus_pa(
+                habitat="coldwatercorals",
+                verbose=verbose,
+            )
+
+        case "generate_saltmarshes_minus_pa":
+            generate_marine_habitat_minus_pa(
+                habitat="saltmarshes",
+                verbose=verbose,
+            )
+
+        case "generate_seagrasses_minus_pa":
+            generate_marine_habitat_minus_pa(
+                habitat="seagrasses",
+                verbose=verbose,
+            )
 
         # ------------------
         #   Database updates
@@ -563,7 +605,7 @@ def dispatch_publisher(
                 verbose=verbose,
             )
 
-        case "update_eez_minus_mpa":
+        case "update_location_minus_mpa":
             update_cb(
                 table_name="eez_minus_mpa_v2",
                 gcs_file=CONSERVATION_BUILDER_MARINE_DATA,
