@@ -50,6 +50,7 @@ EEZ_PARAMS = {
 }
 EEZ_FILE_NAME = "static/eez_processed.geojson"
 EEZ_MULTIPLE_SOV_FILE_NAME = "static/eez_multi_sov_processed.geojson"
+MARINE_LOCATIONS_FILE_NAME = "static/marine_locations.parquet"
 
 HIGH_SEAS_PARAMS = {
     "name": "World_High_Seas_v2_20241010.zip",
@@ -121,7 +122,7 @@ PROTECTED_SEAS_SITES_URL = "https://map.navigatormap.org/api"
 # ------------------------------------------------------------
 #                 Protected Planet (WDPA)
 # ------------------------------------------------------------
-WDPA_API_URL = "http://api.protectedplanet.net/v3/"
+WDPA_API_URL = "https://api.protectedplanet.net/v4/"
 WDPA_URL = (
     "https://d1gam3xoknrgr2.cloudfront.net/current/"
     f"WDPA_WDOECM_{today_formatted}_Public_all_shp.zip"
@@ -254,6 +255,17 @@ RELATED_COUNTRIES_FILE_NAME = "processing/related_countries.json"
 REGIONS_FILE_NAME = "processing/regions_with_territories.json"
 NEAR_SHORE_BUFFER_KM = 10
 NEAR_SHORE_IHO_FILE_NAME = f"static/iho_near_shore_{NEAR_SHORE_BUFFER_KM}km.parquet"
+BUFFERED_MARINE_LOCATIONS_FILE_NAME = "static/buffered_marine_locations.parquet"
+
+# PA/IHO sea area pairs
+SEA_PAIRS_DIR = "intermediates/sea_pairs"
+WDPA_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_sea_pairs_{today_formatted}.parquet"
+MPATLAS_SEA_PAIRS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_sea_pairs_{today_formatted}.parquet"
+WDPA_MARINE_WITH_SEAS_FILE_NAME = f"{SEA_PAIRS_DIR}/wdpa_marine_with_seas_{today_formatted}.parquet"
+WDPA_WITH_BUFFERED_SEAS_FILE_NAME = (
+    f"{SEA_PAIRS_DIR}/wdpa_with_buffered_seas_{today_formatted}.parquet"
+)
+MPATLAS_WITH_SEAS_FILE_NAME = f"{SEA_PAIRS_DIR}/mpatlas_with_seas_{today_formatted}.parquet"
 
 # ------------------------------------------------------------
 #                     Conservation Builder
@@ -273,6 +285,10 @@ ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA = (
 ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA = (
     f"archive/conservation_builder/gadm_minus_pa_{today_formatted}.parquet"
 )
+CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = "conservation_builder/{habitat}_minus_pa.parquet"
+ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = (
+    f"archive/conservation_builder/{{habitat}}_minus_pa_{today_formatted}.parquet"
+)
 
 # ------------------------------------------------------------
 #                     Raster Data Sources
@@ -284,6 +300,10 @@ CLIMATE_RES_CORAL_SOURCE_FILE = "raw/climate_resilient_corals.tif"
 # ------------------------------------------------------------
 LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
+    "generate_mangroves_minus_pa",
+    "generate_coldwatercorals_minus_pa",
+    "generate_saltmarshes_minus_pa",
+    "generate_seagrasses_minus_pa",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",
@@ -295,12 +315,14 @@ LONG_RUNNING_TASKS = [
     "generate_protection_coverage_stats_table",
     "download_protected_seas",
     "generate_terrestrial_biome_stats_country",
-    "generate_eez_minus_mpa",
+    "generate_location_minus_mpa",
     "generate_location_minus_fhp_mpa",
-    "update_eez_minus_mpa",
+    "update_location_minus_mpa",
     "update_location_minus_fhp_mpa",
     "generate_locations_table",
     "generate_marine_protection_level_stats_table",
     "update_marine_protected_areas_tileset",
     "update_terrestrial_protected_areas_tileset",
+    "generate_iho_pa_intersections",
+    "generate_buffered_iho_pa_intersections",
 ]
