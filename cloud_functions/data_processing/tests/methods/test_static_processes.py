@@ -187,6 +187,15 @@ def _mock_load_marine_regions(eez_gdf, hs_gdf):
     return _loader
 
 
+def _mock_load_iho_regions(buffer=False):
+    """Two IHO sea areas, keyed on MRGID like the real loader."""
+    return gpd.GeoDataFrame(
+        {"MRGID": ["1", "2"], "location": ["1", "2"]},
+        geometry=[Point(30, 30).buffer(1.0), Point(40, 40).buffer(1.0)],
+        crs="EPSG:4326",
+    )
+
+
 def _mock_read_dataframe(translations_df):
     def _reader(bucket, blob_name):
         return translations_df.copy()
@@ -532,10 +541,14 @@ def test_process_eez_geoms_happy_path(
     )
     monkeypatch.setattr(static_processes, "clean_geometries", _mock_clean_geometries, raising=True)
     monkeypatch.setattr(static_processes, "upload_gdf", upload_gdf_mock, raising=True)
+    monkeypatch.setattr(static_processes, "load_iho_regions", _mock_load_iho_regions, raising=True)
     monkeypatch.setattr(static_processes, "TOLERANCE", 0.7, raising=True)
     monkeypatch.setattr(static_processes, "EEZ_FILE_NAME", "eez.geojson", raising=True)
     monkeypatch.setattr(
         static_processes, "EEZ_MULTIPLE_SOV_FILE_NAME", "eez_multi.geojson", raising=True
+    )
+    monkeypatch.setattr(
+        static_processes, "MARINE_LOCATIONS_FILE_NAME", "marine_locations.geojson", raising=True
     )
     # Ensure gc exists
     monkeypatch.setitem(globals(), "gc", gc)
@@ -551,11 +564,17 @@ def test_process_eez_geoms_happy_path(
     # Function returns None; uploads recorded via our mock
     assert resp is None
 
-    # One eez_by_sov upload + one final multi-sov upload
-    assert len(calls) == 2
+    # One eez_by_sov upload + the eez/IHO locations + one final multi-sov upload
+    assert len(calls) == 3
 
     assert calls[0]["destination_blob"] == f"eez_{static_processes.TOLERANCE}.geojson"
-    assert calls[1]["destination_blob"] == f"eez_multi_{static_processes.TOLERANCE}.geojson"
+    assert calls[1]["destination_blob"] == f"marine_locations_{static_processes.TOLERANCE}.geojson"
+    assert calls[2]["destination_blob"] == f"eez_multi_{static_processes.TOLERANCE}.geojson"
+
+    # The locations file carries both the EEZs and the IHO sea areas
+    marine_locations = calls[1]["df"]
+    assert {"AAA", "PRI", "ABNJ"}.issubset(set(marine_locations["location"]))
+    assert {"1", "2"}.issubset(set(marine_locations["location"]))
 
     # Basic structure of uploaded frames
     for c in calls:
@@ -997,3 +1016,87 @@ def test_process_marine_habitat_geoms_dissolves_mangroves_by_location(mangrove_r
     ]
     assert set(df["habitat"]) == {"mangroves"}
     assert len(df) == 3
+
+
+# ---------------------------------------------------------------------------
+# Tests for process_near_shore_iho
+# ---------------------------------------------------------------------------
+
+
+class _FakeCatalogRef:
+    cache_path = "unused.fgb"
+
+
+class _FakeCatalog:
+    @staticmethod
+    def load():
+        return _FakeCatalog()
+
+    def fetch(self, *args, **kwargs):
+        return _FakeCatalogRef()
+
+
+@pytest.fixture
+def near_shore_mocks(monkeypatch):
+    """Stub out the shared-datasets fetch and the minutes-long buffering pass."""
+    near_shore = gpd.GeoDataFrame(
+        {"MRGID": [1, 2], "geometry": [box(0, 0, 1, 1), box(5, 5, 6, 6)]}, crs="EPSG:4326"
+    )
+    buffered_iho = gpd.GeoDataFrame(
+        {"location": ["1", "2"], "geometry": [box(0, 0, 1, 1), box(5, 5, 6, 6)]}, crs="EPSG:4326"
+    )
+    gadm_eez_union = gpd.GeoDataFrame(
+        {"location": ["AAA", "BBB"], "geometry": [box(0, 0, 2, 2), box(8, 8, 9, 9)]},
+        crs="EPSG:4326",
+    )
+
+    reads = []
+    uploads = []
+
+    def mock_read_json_df(bucket, filename, verbose=True):
+        reads.append(filename)
+        return gadm_eez_union.copy()
+
+    def mock_upload_gdf(bucket, df, destination_blob, **_):
+        uploads.append({"df": df.copy(), "destination_blob": destination_blob})
+
+    monkeypatch.setattr(static_processes, "Catalog", _FakeCatalog, raising=True)
+    monkeypatch.setattr(static_processes.gpd, "read_file", lambda *a, **k: near_shore.copy())
+    monkeypatch.setattr(
+        static_processes, "process_buffered_iho", lambda *a, **k: near_shore.copy(), raising=True
+    )
+    monkeypatch.setattr(
+        static_processes, "load_iho_regions", lambda buffer=False: buffered_iho.copy(), raising=True
+    )
+    monkeypatch.setattr(static_processes, "read_json_df", mock_read_json_df, raising=True)
+    monkeypatch.setattr(static_processes, "upload_gdf", mock_upload_gdf, raising=True)
+
+    return reads, uploads
+
+
+def test_process_near_shore_iho_writes_the_buffered_marine_locations(near_shore_mocks):
+    reads, uploads = near_shore_mocks
+
+    static_processes.process_near_shore_iho(
+        near_shore_iho_file_name="iho_near_shore.parquet",
+        gadm_eez_union_file_name="GADM_eez_union.geojson",
+        buffered_marine_locations_file_name="buffered_marine_locations.parquet",
+        tolerance=0.7,
+        bucket="test-bucket",
+        verbose=False,
+    )
+
+    # The near-shore layer is saved first, because the combined layer reads it back
+    # through load_iho_regions(buffer=True).
+    assert [upload["destination_blob"] for upload in uploads] == [
+        "iho_near_shore.parquet",
+        "buffered_marine_locations_0.7.parquet",
+    ]
+
+    # The union is read at the same tolerance the combined layer is written at.
+    assert reads == ["GADM_eez_union_0.7.geojson"]
+
+    # Both halves are present: ISO3 codes from the land/EEZ union, MRGID strings
+    # from the near-shore sea areas.
+    locations = set(uploads[1]["df"]["location"])
+    assert locations == {"AAA", "BBB", "1", "2"}
