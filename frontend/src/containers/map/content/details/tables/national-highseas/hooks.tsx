@@ -71,6 +71,18 @@ const TOOLTIP_MAPPING = {
   iucnCategory: 'details-iucn-category',
 };
 
+const IUCN_CATEGORY_LABELS = {
+  Ia: 'iucn-category-ia',
+  Ib: 'iucn-category-ib',
+  II: 'iucn-category-ii',
+  III: 'iucn-category-iii',
+  IV: 'iucn-category-iv',
+  V: 'iucn-category-v',
+  VI: 'iucn-category-vi',
+};
+
+const IUCN_CATEGORY_ORDER = Object.keys(IUCN_CATEGORY_LABELS);
+
 const useTooltips = () => {
   const locale = useLocale();
 
@@ -110,6 +122,7 @@ const useTooltips = () => {
 };
 
 const useFiltersOptions = () => {
+  const t = useTranslations('containers.map');
   const locale = useLocale();
 
   const { data: environmentOptions } = useGetEnvironments<{ name: string; value: string }[]>(
@@ -183,11 +196,22 @@ const useFiltersOptions = () => {
     },
     {
       query: {
-        select: ({ data }) =>
-          data.map((iucnCategory) => ({
-            name: iucnCategory.name,
-            value: iucnCategory.slug,
-          })),
+        select: ({ data }) => {
+          // Show IUCN categories in order
+          const getRank = (slug: string) => {
+            const index = IUCN_CATEGORY_ORDER.indexOf(slug);
+            return index === -1 ? IUCN_CATEGORY_ORDER.length : index;
+          };
+          return [...data]
+            .sort((a, b) => getRank(a.slug) - getRank(b.slug))
+            .map((iucnCategory) => ({
+              name:
+                iucnCategory.slug in IUCN_CATEGORY_LABELS
+                  ? t(IUCN_CATEGORY_LABELS[iucnCategory.slug])
+                  : iucnCategory.name,
+              value: iucnCategory.slug,
+            }));
+        },
         placeholderData: { data: [] },
       },
     }
@@ -610,13 +634,15 @@ export const useData = (
 
         const reversePathItems = key.split('.').reverse();
 
-        return reversePathItems.reduce((res, pathItem, index) => {
+        const filter = reversePathItems.reduce((res, pathItem, index) => {
           if (index === 0) {
             return { [pathItem]: { $in: values } };
           }
 
           return { [pathItem]: res };
         }, {});
+
+        return { ...res, ...filter };
       }, {}),
     }),
     [environment, filters, locationCode]

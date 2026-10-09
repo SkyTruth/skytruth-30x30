@@ -195,6 +195,13 @@
       "area": "Area",
       "data-source": "Data Source",
       "iucn-category": "IUCN Category",
+      "iucn-category-ia": "Ia: Strict nature reserve",
+      "iucn-category-ib": "Ib: Wilderness area",
+      "iucn-category-ii": "II: National park",
+      "iucn-category-iii": "III: Natural monument/feature",
+      "iucn-category-iv": "IV: Habitat/species management area",
+      "iucn-category-v": "V: Protected land/seascape",
+      "iucn-category-vi": "VI: Protected area with sustainable use",
       "pas": "PAs",
       "n-a": "N/A",
       "not-assessed": "Not assessed",
@@ -239,7 +246,7 @@
     "filters-button": {
       "filter": "Filter",
       "select-all": "Select all",
-      "clear-all": "Clear all (None selected)",
+      "clear-all": "Clear all",
       "error-no-filters": "Please, select at least one option"
     },
     "widget": {
