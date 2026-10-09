@@ -114,7 +114,10 @@ def test_fhp_is_skipped_for_terrestrial_even_when_asked_for():
 
 
 def test_the_analysis_layer_output_validates():
-    rows = [("ESP", 30.0, 100.0), ("PRT", 20.0, 100.0)]
+    rows = [
+        {"location": "ESP", "portion_area_km2": 30.0, "user_area_km2": 100.0},
+        {"location": "PRT", "portion_area_km2": 20.0, "user_area_km2": 100.0},
+    ]
 
     response = AnalysisResponse.model_validate(serialize_response(rows))
 
@@ -131,15 +134,21 @@ def test_an_empty_result_validates():
 
 
 def test_fully_highly_protected_is_absent_by_default():
-    response = AnalysisResponse.model_validate(serialize_response([("ESP", 30.0, 100.0)]))
+    response = AnalysisResponse.model_validate(
+        serialize_response([{"location": "ESP", "portion_area_km2": 30.0, "user_area_km2": 100.0}])
+    )
 
     assert response.fully_highly_protected is None
     assert "fully_highly_protected" not in response.model_dump(exclude_none=True)
 
 
 def test_fully_highly_protected_survives_serialization():
-    payload = serialize_response([("ESP", 30.0, 100.0)])
-    payload["fully_highly_protected"] = serialize_response([("ESP", 10.0, 100.0)])
+    payload = serialize_response(
+        [{"location": "ESP", "portion_area_km2": 30.0, "user_area_km2": 100.0}]
+    )
+    payload["fully_highly_protected"] = serialize_response(
+        [{"location": "ESP", "portion_area_km2": 10.0, "user_area_km2": 100.0}]
+    )
 
     response = AnalysisResponse.model_validate(payload)
 

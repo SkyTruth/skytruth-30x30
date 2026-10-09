@@ -12,17 +12,17 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 
 ## Configuration
 
-Create a `.env` (copy `example.env` and fill it in). 
+Create a `.env` (copy `example.env` and fill it in) with the details of a local postgres database.
 
 ```ini
-DATABASE_HOST=127.0.0.1
-DATABASE_NAME=skytruth_test
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=postgres
-DATABASE_PORT=5434
+DATABASE_HOST=host.docker.internal
+DATABASE_NAME={database name}
+DATABASE_USERNAME={database username}
+DATABASE_PASSWORD={database password}
+DATABASE_PORT=5432
 ```
 
-In GCP, these are set by Terraform, with the password coming from Secret Manager.
+In GCP, these are set by Terraform, with the password coming from Secret Manager. This differs from the other services on purpose to reduce potential secret exposure. Other deploy workflows write `.env` files from GitHub secrets into the image at build time, while Cloud Run gets cb_api's password from Secret Manager when the container starts, so it never enters the image, the registry, or GitHub.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
@@ -37,40 +37,22 @@ In GCP, these are set by Terraform, with the password coming from Secret Manager
 
 ## Running locally
 
-Install dependencies:
-
 ```bash
-poetry install
+docker compose up --build
+curl localhost:8080/health
 ```
 
-Start a local PostGIS. It listens on host port **5434**, so it will not collide with a Postgres already running on 5432:
-
-```bash
-docker compose up -d
-```
-
-Run the service with reload:
-
-```bash
-poetry run uvicorn src.main:app --reload
-curl localhost:8000/health
-```
-
-### In Docker
-
-```bash
-docker build -t cb-api .
-docker run --rm -p 8080:8080 --env-file .env cb-api
-```
-
-Use `host.docker.internal` when the API runs in Docker and the database runs beside it.
+The API container reads `.env` and reloads when files in `src/` change.
 
 ## Tests
 
 ```bash
+poetry install
 poetry run pytest                        # everything
 poetry run pytest -m "not integration"   # unit tests only, no database needed
 ```
+
+Integration tests start their own PostGIS container with [Testcontainers](https://testcontainers.com/), so they need Docker running but not `docker compose`. They never connect to any other database. Without Docker they are skipped, except when `CI` is set, where they fail instead.
 
 ## Code quality
 

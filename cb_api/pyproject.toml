@@ -20,6 +20,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 package-mode = false
+# Dockerfile also reads this line to get the correct poetry version
 requires-poetry = "==2.4.1"
 
 [dependency-groups]
@@ -28,13 +29,13 @@ dev = [
     "httpx2 (>=2.12.0,<3.0.0)",
     "ruff (>=0.16.6,<0.17.0)",
     "httpx (>=0.28.1,<0.29.0)",
-    "pyyaml (>=6.0.3,<7.0.0)"
+    "testcontainers[postgres] (>=4.15.0,<5.0.0)",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
 markers = [
-    "integration: needs a live PostGIS; start one with `docker compose up -d`",
+    "integration: runs against a throwaway PostGIS container; needs Docker",
 ]
 
 [tool.ruff]
