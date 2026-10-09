@@ -58,11 +58,20 @@ const PopupContainer: FCWithMessages = () => {
         .filter(({ top, bottom }) => top < mapRect.bottom && bottom > mapRect.top)
         .reduce((right, rect) => Math.max(right, rect.right - mapRect.left), 0);
       const height = element?.offsetHeight ?? 0;
+      const halfWidth = (element?.offsetWidth || 250) / 2;
+      const legend = document.querySelector('[data-screenshot="legend"]')?.getBoundingClientRect();
+      const isBehindLegend =
+        !!legend?.width &&
+        x + halfWidth > legend.left - mapRect.left &&
+        y - 10 > legend.top - mapRect.top;
 
-      if (x - panelsRight >= (element?.offsetWidth || 250) / 2) setAnchor(undefined);
-      else if (y - 10 < height) setAnchor('top-left');
-      else if (y > mapRect.height - height) setAnchor('bottom-left');
-      else setAnchor('left');
+      if (x - panelsRight < halfWidth) {
+        if (y - 10 < height) setAnchor('top-left');
+        else if (y > mapRect.height - height) setAnchor('bottom-left');
+        else setAnchor('left');
+      } else if (isBehindLegend) {
+        setAnchor(y > mapRect.height - height ? 'bottom-right' : 'right');
+      } else setAnchor(undefined);
     };
 
     updateAnchor();
