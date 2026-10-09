@@ -22,7 +22,9 @@
   box-shadow: 0 0px 0px 1px rgba(26, 28, 34, 0.1), 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
   @apply !border-b-black
 }
 
@@ -30,7 +32,9 @@
   @apply !border-l-black
 }
 
-.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
   @apply !border-t-black
 }
 
