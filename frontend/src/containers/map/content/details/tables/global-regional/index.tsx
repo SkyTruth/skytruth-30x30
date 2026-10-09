@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
-import { SortingState, PaginationState } from '@tanstack/react-table';
+import { OnChangeFn, SortingState, PaginationState } from '@tanstack/react-table';
 import { usePreviousImmediate } from 'rooks';
 
 import FiltersButton from '@/components/filters-button';
@@ -25,11 +25,27 @@ const GlobalRegionalTable: FCWithMessages = () => {
   const previousTab = usePreviousImmediate(tab);
 
   const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 100,
+  });
+
+  const resetPageIndex = useCallback(() => {
+    setPagination((prevPagination) => ({ ...prevPagination, pageIndex: 0 }));
+  }, []);
+
+  const onFiltersChange = useCallback(
+    (newFilters: Record<string, string[]>) => {
+      setFilters(newFilters);
+      resetPageIndex();
+    },
+    [resetPageIndex]
+  );
 
   const columns = useColumns(
     tab === 'marine' || tab === 'terrestrial' ? tab : null,
     filters,
-    setFilters
+    onFiltersChange
   );
 
   const defaultSorting = useMemo(
@@ -43,10 +59,14 @@ const GlobalRegionalTable: FCWithMessages = () => {
   );
 
   const [sorting, setSorting] = useState<SortingState>(defaultSorting);
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 100,
-  });
+
+  const onSortingChange: OnChangeFn<SortingState> = useCallback(
+    (updater) => {
+      setSorting(updater);
+      resetPageIndex();
+    },
+    [resetPageIndex]
+  );
 
   const {
     data: [data, { total }],
@@ -60,18 +80,14 @@ const GlobalRegionalTable: FCWithMessages = () => {
     pagination
   );
 
-  // When the tab changes, we reset the filters and the sorting
+  // When the tab changes, reset the filters, sorting, and page number
   useEffect(() => {
     if (tab !== previousTab) {
       setFilters({});
       setSorting(defaultSorting);
+      resetPageIndex();
     }
-  }, [tab, previousTab, defaultSorting]);
-
-  // When the filters or the sorting changes, the page number is reset
-  useEffect(() => {
-    setPagination((prevPagination) => ({ ...prevPagination, pageIndex: 0 }));
-  }, [filters, sorting]);
+  }, [tab, previousTab, defaultSorting, resetPageIndex]);
 
   // While the data is loading, we're showing a table with skeletons
   if (isLoading || isFetching) {
@@ -92,7 +108,7 @@ const GlobalRegionalTable: FCWithMessages = () => {
         columns={newColumns}
         data={newData}
         sorting={sorting}
-        onSortingChange={setSorting}
+        onSortingChange={onSortingChange}
         pagination={pagination}
         onPaginationChange={setPagination}
         rowCount={total ?? 0}
@@ -106,7 +122,7 @@ const GlobalRegionalTable: FCWithMessages = () => {
       columns={columns}
       data={data}
       sorting={sorting}
-      onSortingChange={setSorting}
+      onSortingChange={onSortingChange}
       pagination={pagination}
       onPaginationChange={setPagination}
       rowCount={total ?? 0}
