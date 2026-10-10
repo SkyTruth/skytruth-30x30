@@ -49,11 +49,13 @@ const PopupContainer: FCWithMessages = () => {
     const map = mapRef?.getMap();
     if (!map || !popup?.lngLat) return;
 
+    const panels = Array.from(document.querySelectorAll('[data-map-overlay-panel]'));
+
     const updateAnchor = () => {
       const element = popupRef.current?.getElement();
       const { x, y } = map.project(popup.lngLat);
       const mapRect = map.getContainer().getBoundingClientRect();
-      const panelsRight = Array.from(document.querySelectorAll('[data-map-overlay-panel]'))
+      const panelsRight = panels
         .map((panel) => panel.getBoundingClientRect())
         .filter(({ top, bottom }) => top < mapRect.bottom && bottom > mapRect.top)
         .reduce((right, rect) => Math.max(right, rect.right - mapRect.left), 0);
@@ -76,7 +78,13 @@ const PopupContainer: FCWithMessages = () => {
 
     updateAnchor();
     map.on('move', updateAnchor);
-    return () => void map.off('move', updateAnchor);
+    // Re-anchor as the panels open and close over the map
+    const resizeObserver = new ResizeObserver(updateAnchor);
+    panels.forEach((panel) => resizeObserver.observe(panel));
+    return () => {
+      map.off('move', updateAnchor);
+      resizeObserver.disconnect();
+    };
   }, [mapRef, popup]);
 
   const getLocationName = useLocationName();
