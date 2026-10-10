@@ -40,7 +40,6 @@ export default function useMapBounds() {
 
   const previousBboxLocationRef = useRef(bboxLocation);
   const previousIsSidebarOpenRef = useRef(isSidebarOpen);
-  const previousIsLayersPanelOpenRef = useRef(isLayersPanelOpen);
 
   // If `bboxLocation` changes, then we provide new bounds
   useEffect(() => {
@@ -59,16 +58,13 @@ export default function useMapBounds() {
     previousBboxLocationRef.current = bboxLocation;
   }, [setBounds, bboxLocation, isSidebarOpen, isLayersPanelOpen]);
 
-  // If one of the sidebar is expanded/collapse, then we provide updated bounds
+  // If the sidebar is expanded/collapsed, provide updated bounds
   useEffect(() => {
     const hasIsSidebarOpenChanged =
       isSidebarOpen !== previousIsSidebarOpenRef.current &&
       previousIsSidebarOpenRef.current !== null;
-    const hasIsLayersPanelOpenChanged =
-      isLayersPanelOpen !== previousIsLayersPanelOpenRef.current &&
-      previousIsLayersPanelOpenRef.current !== null;
 
-    if (hasIsSidebarOpenChanged || hasIsLayersPanelOpenChanged) {
+    if (hasIsSidebarOpenChanged) {
       setBounds({
         bbox: URLBbox as [number, number, number, number],
         options: {
@@ -78,7 +74,6 @@ export default function useMapBounds() {
     }
 
     previousIsSidebarOpenRef.current = isSidebarOpen;
-    previousIsLayersPanelOpenRef.current = isLayersPanelOpen;
   }, [URLBbox, setBounds, isSidebarOpen, isLayersPanelOpen]);
 
   return bounds;
