@@ -627,9 +627,7 @@ def dispatch_publisher(
         case "update_mangroves_minus_pa":
             update_cb(
                 table_name="mangroves_minus_pa",
-                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(
-                    habitat="mangroves"
-                ),
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="mangroves"),
                 verbose=verbose,
             )
 
@@ -645,18 +643,14 @@ def dispatch_publisher(
         case "update_saltmarshes_minus_pa":
             update_cb(
                 table_name="saltmarshes_minus_pa",
-                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(
-                    habitat="saltmarshes"
-                ),
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="saltmarshes"),
                 verbose=verbose,
             )
 
         case "update_seagrasses_minus_pa":
             update_cb(
                 table_name="seagrasses_minus_pa",
-                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(
-                    habitat="seagrasses"
-                ),
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="seagrasses"),
                 verbose=verbose,
             )
 
