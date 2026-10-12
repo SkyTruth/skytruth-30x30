@@ -177,3 +177,23 @@ def test_a_line_is_a_400_over_http(api: TestClient, path: str):
 
     assert response.status_code == 400
     assert "Invalid geometry" in response.json()["error"]
+
+
+def test_protection_level_reads_its_own_table(api: TestClient, analysis_tables: Engine):
+    geometry = box(0, 0, 3, 1)
+
+    response = api.post("/protection-level", json={"geometry": geometry})
+
+    assert response.status_code == 200
+    assert response.json() == get_locations_stats(
+        analysis_tables, geometry, AnalysisTable.FULLY_HIGHLY_PROTECTED
+    )
+
+
+def test_protection_level_refuses_terrestrial_before_touching_the_database(api: TestClient):
+    response = api.post(
+        "/protection-level", json={"geometry": box(0, 0, 3, 1), "environment": "terrestrial"}
+    )
+
+    assert response.status_code == 400
+    assert "fully-highly-protected" in response.json()["error"]

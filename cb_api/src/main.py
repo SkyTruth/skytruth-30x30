@@ -10,8 +10,8 @@ from sqlalchemy.engine import Engine
 from src.analysis import get_locations_stats
 from src.config import ALLOWED_ORIGINS, get_settings
 from src.db import create_db_engine
-from src.errors import register_error_handlers
-from src.schemas import AnalysisRequest, LocationStats
+from src.errors import BadRequestError, register_error_handlers
+from src.schemas import AnalysisRequest, Environment, LocationStats, ProtectionLevelRequest
 
 logging.basicConfig(level=logging.INFO)
 
@@ -56,6 +56,15 @@ def health() -> dict[str, str]:
 @app.post("/coverage", response_model=LocationStats)
 @app.post("/", response_model=LocationStats, deprecated=True)
 def coverage(body: AnalysisRequest, engine: PooledEngine) -> dict:
-    """How much of the given area is already protected, broken down by location.
-    """
+    """How much of the given area is already protected, broken down by location."""
     return get_locations_stats(engine, body.geometry, body.environment.table)
+
+
+@app.post("/protection-level", response_model=LocationStats)
+def protection_level(body: ProtectionLevelRequest, engine: PooledEngine) -> dict:
+    """How much of the given area is protected at `level`, broken down by location."""
+    if body.level.marine_only and body.environment is not Environment.MARINE:
+        raise BadRequestError(
+            f"{body.level} is not available for the {body.environment} environment"
+        )
+    return get_locations_stats(engine, body.geometry, body.level.table)
