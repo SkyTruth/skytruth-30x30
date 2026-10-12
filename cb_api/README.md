@@ -9,6 +9,40 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
+| `POST` | `/coverage` | How much of a drawn area is already protected, by location |
+| `POST` | `/` | Deprecated alias for `/coverage` |
+
+### `POST /coverage`
+
+`geometry` is required and takes a GeoJSON Feature, FeatureCollection or bare geometry;
+it must resolve to a Polygon or MultiPolygon. `environment` is optional and selects the
+table the area is compared against (`marine` by default or `terrestrial`).
+
+```bash
+curl -X POST localhost:8080/coverage \
+  -H 'Content-Type: application/json' \
+  -d '{"environment": "marine", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
+```
+
+```json
+{
+  "locations_area": [{ "code": "ESP", "protected_area": 30 }],
+  "total_area": 100,
+  "total_protected_area": 30
+}
+```
+
+Areas are square kilometres, computed in a Mollweide equal-area projection and rounded.
+`total_area` is the drawn area; `total_protected_area` is the part of it already
+protected; `locations_area` breaks that down by location code.
+
+Unrecognised fields in the body are ignored.
+
+### `POST /` is temporary
+
+The load balancer rewrites the public path to the service root, so the same handler is
+registered at `/` as well and is marked deprecated in the schema. It will be removed
+once nothing posts to it. New callers should use `/coverage`.
 
 ## Configuration
 
