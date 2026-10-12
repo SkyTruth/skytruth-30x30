@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.analysis import AnalysisTable, serialize_response
-from src.schemas import AnalysisRequest, AnalysisResponse, Environment, LocationStats, Stat
+from src.schemas import AnalysisRequest, Environment, LocationStats
 
 POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 
@@ -50,67 +50,16 @@ def test_unknown_environment_is_rejected():
         AnalysisRequest(geometry=POLYGON, environment="lunar")
 
 
-def test_stats_defaults_to_empty():
-    assert AnalysisRequest(geometry=POLYGON).stats == []
-
-
-def test_stats_accepts_a_list():
-    request = AnalysisRequest(geometry=POLYGON, stats=["fully-highly-protected"])
-
-    assert request.stats == ["fully-highly-protected"]
-
-
-def test_stats_accepts_a_comma_separated_string():
+def test_unknown_fields_are_ignored():
+    """`stats` is no longer an input. A caller still sending it gets a normal result
+    rather than a rejection, which is what the field's absence should mean."""
     request = AnalysisRequest(geometry=POLYGON, stats="fully-highly-protected")
 
-    assert request.stats == [Stat.FULLY_HIGHLY_PROTECTED]
+    assert not hasattr(request, "stats")
+    assert request.geometry == POLYGON
 
 
-def test_an_empty_stats_string_yields_no_stats():
-    assert AnalysisRequest(geometry=POLYGON, stats="").stats == []
-
-
-def test_empty_segments_in_a_comma_string_are_dropped():
-    request = AnalysisRequest(geometry=POLYGON, stats="fully-highly-protected,,")
-
-    assert request.stats == [Stat.FULLY_HIGHLY_PROTECTED]
-
-
-def test_unrecognised_stats_are_rejected():
-    """A typo would otherwise return a normal 200 with the stat silently missing."""
-    with pytest.raises(ValidationError):
-        AnalysisRequest(geometry=POLYGON, stats=["something-new"])
-
-
-def test_a_comma_string_is_split_before_each_entry_is_validated():
-    with pytest.raises(ValidationError) as excinfo:
-        AnalysisRequest(geometry=POLYGON, stats="fully-highly-protected,habitat")
-
-    assert [error["loc"] for error in excinfo.value.errors()] == [("stats", 1)]
-
-
-# --- fully-highly-protected ------------------------------------------
-
-
-def test_fhp_is_included_for_marine_when_asked_for():
-    request = AnalysisRequest(geometry=POLYGON, stats=["fully-highly-protected"])
-
-    assert request.include_fully_highly_protected
-
-
-def test_fhp_is_skipped_when_not_asked_for():
-    assert not AnalysisRequest(geometry=POLYGON).include_fully_highly_protected
-
-
-def test_fhp_is_skipped_for_terrestrial_even_when_asked_for():
-    request = AnalysisRequest(
-        geometry=POLYGON, environment="terrestrial", stats=["fully-highly-protected"]
-    )
-
-    assert not request.include_fully_highly_protected
-
-
-# --- AnalysisResponse --------------------------------------------------------------
+# --- LocationStats -----------------------------------------------------------------
 
 
 def test_the_analysis_layer_output_validates():
@@ -119,7 +68,7 @@ def test_the_analysis_layer_output_validates():
         {"location": "PRT", "portion_area_km2": 20.0, "user_area_km2": 100.0},
     ]
 
-    response = AnalysisResponse.model_validate(serialize_response(rows))
+    response = LocationStats.model_validate(serialize_response(rows))
 
     assert response.total_area == 100.0
     assert response.total_protected_area == 50.0
@@ -127,35 +76,7 @@ def test_the_analysis_layer_output_validates():
 
 
 def test_an_empty_result_validates():
-    response = AnalysisResponse.model_validate(serialize_response([]))
+    response = LocationStats.model_validate(serialize_response([]))
 
     assert response.locations_area == []
     assert response.total_area == 0
-
-
-def test_fully_highly_protected_is_absent_by_default():
-    response = AnalysisResponse.model_validate(
-        serialize_response([{"location": "ESP", "portion_area_km2": 30.0, "user_area_km2": 100.0}])
-    )
-
-    assert response.fully_highly_protected is None
-    assert "fully_highly_protected" not in response.model_dump(exclude_none=True)
-
-
-def test_fully_highly_protected_survives_serialization():
-    payload = serialize_response(
-        [{"location": "ESP", "portion_area_km2": 30.0, "user_area_km2": 100.0}]
-    )
-    payload["fully_highly_protected"] = serialize_response(
-        [{"location": "ESP", "portion_area_km2": 10.0, "user_area_km2": 100.0}]
-    )
-
-    response = AnalysisResponse.model_validate(payload)
-
-    assert isinstance(response.fully_highly_protected, LocationStats)
-    assert response.fully_highly_protected.total_protected_area == 10.0
-    assert response.model_dump(exclude_none=True)["fully_highly_protected"] == {
-        "locations_area": [{"code": "ESP", "protected_area": 10.0}],
-        "total_area": 100.0,
-        "total_protected_area": 10.0,
-    }
