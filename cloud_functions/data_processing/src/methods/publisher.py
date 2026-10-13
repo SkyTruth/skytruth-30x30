@@ -574,6 +574,7 @@ def dispatch_publisher(
                 n_jobs=-1,
                 verbose=verbose,
             )
+            step_list = ["update_climate_resilient_corals_minus_pa"]
 
         # ------------------
         #   Database updates
@@ -668,6 +669,15 @@ def dispatch_publisher(
                 gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="seagrasses"),
                 verbose=verbose,
             )
+
+        case "update_climate_resilient_corals_minus_pa":
+            # One table per raster class
+            for habitat in CLIMATE_RESILIENT_CORALS_HABITATS:
+                update_cb(
+                    table_name=f"{habitat.replace('-', '_')}_minus_pa",
+                    gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat),
+                    verbose=verbose,
+                )
 
         # ------------------
         #   Map Tilesets Updates

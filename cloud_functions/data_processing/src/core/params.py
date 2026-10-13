@@ -322,6 +322,7 @@ LONG_RUNNING_TASKS = [
     "update_location_minus_mpa",
     "update_location_minus_fhp_mpa",
     "update_mangroves_minus_pa",
+    "update_climate_resilient_corals_minus_pa",
     "generate_locations_table",
     "generate_marine_protection_level_stats_table",
     "update_marine_protected_areas_tileset",
