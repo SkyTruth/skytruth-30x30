@@ -15,7 +15,6 @@ const MissingCountriesList: FCWithMessages<MissingCountriesListProps> = ({ count
 
   const { data: locations, isFetching } = useGetLocations<Location[]>(
     {
-      //@ts-ignore
       populate: {
         fields: ['code', 'type'],
       },

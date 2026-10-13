@@ -2,7 +2,7 @@ import { createContext, PropsWithChildren, useCallback, useContext, useMemo, use
 
 import { useControl } from 'react-map-gl';
 
-import { MapboxOverlay, MapboxOverlayProps } from '@deck.gl/mapbox/typed';
+import { MapboxOverlay, MapboxOverlayProps } from '@deck.gl/mapbox';
 
 import { CustomMapProps } from '@/components/map/types';
 

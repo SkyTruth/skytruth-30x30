@@ -43,7 +43,7 @@ export interface LegendLegendItems extends Struct.ComponentSchema {
 }
 
 declare module '@strapi/strapi' {
-  export module Public {
+  export namespace Public {
     export interface ComponentSchemas {
       'documentation.metadata': DocumentationMetadata;
       'legend.legend': LegendLegend;

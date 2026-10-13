@@ -8,11 +8,7 @@ import Map from '@/components/map';
 import { useSyncMapSettings } from '@/containers/map/content/map/sync-settings';
 import { bboxLocationAtom, layersAtom, sidebarAtom } from '@/containers/map/store';
 
-const getBoundsPadding = (
-  isSidebarOpen: boolean,
-  isLayersPanelOpen: boolean,
-  operation: 'plus' | 'minus' = 'plus'
-) => {
+const getBoundsPadding = (isSidebarOpen: boolean, isLayersPanelOpen: boolean) => {
   const padding = {
     top: 20,
     right: 20,
@@ -22,19 +18,11 @@ const getBoundsPadding = (
 
   if (window.innerWidth > 430) {
     if (isSidebarOpen) {
-      if (operation === 'plus') {
-        padding.left += 460;
-      } else {
-        padding.left -= 460;
-      }
+      padding.left += 460;
     }
 
     if (isLayersPanelOpen) {
-      if (operation === 'plus') {
-        padding.left += 280;
-      } else {
-        padding.left -= 280;
-      }
+      padding.left += 280;
     }
   }
 
@@ -81,16 +69,10 @@ export default function useMapBounds() {
       previousIsLayersPanelOpenRef.current !== null;
 
     if (hasIsSidebarOpenChanged || hasIsLayersPanelOpenChanged) {
-      const operation =
-        (previousIsSidebarOpenRef.current && !isSidebarOpen) ||
-        (previousIsLayersPanelOpenRef.current && !isLayersPanelOpen)
-          ? 'minus'
-          : 'plus';
-
       setBounds({
         bbox: URLBbox as [number, number, number, number],
         options: {
-          padding: getBoundsPadding(isSidebarOpen, isLayersPanelOpen, operation),
+          padding: getBoundsPadding(isSidebarOpen, isLayersPanelOpen),
         },
       });
     }

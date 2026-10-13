@@ -9,10 +9,11 @@ from shapely.geometry import box
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-from src.core.commons import add_tolerance_suffix, extract_polygons, load_iho_regions
+from src.core.commons import add_tolerance_suffix, load_iho_regions, polygonal_parts
 from src.core.params import (
     BUCKET,
     CLIMATE_RES_CORAL_SOURCE_FILE,
+    CLIMATE_RESILIENT_CORALS_HABITATS,
     EEZ_FILE_NAME,
     GADM_EEZ_UNION_FILE_NAME,
     GLOBAL_HABITAT_AREA_FILE_PATTERN,
@@ -36,9 +37,7 @@ from src.utils.gcp import (
 from src.utils.geo import fast_union_area_km2, get_area_km2, robust_unary_union
 from src.utils.logger import Logger
 
-# Climate-resilient corals raster: 1 = climate-resilient corals, 0 = other corals.
-CLIMATE_RESILIENT_CORALS_CLASS_MAP = {0: "other-corals", 1: "climate-resilient-corals"}
-CLIMATE_RESILIENT_CORALS_HABITATS = ("climate-resilient-corals", "other-corals")
+CLIMATE_RESILIENT_CORALS_CLASS_MAP = dict(enumerate(CLIMATE_RESILIENT_CORALS_HABITATS))
 
 logger = Logger()
 
@@ -151,9 +150,7 @@ def create_seamounts_subtable(
 
 def _keep_polygonal(geom):
     """Drop line/point slivers an intersection can leave behind, so unions stay robust."""
-    if geom is None or geom.is_empty:
-        return None
-    polygonal = extract_polygons(geom)
+    polygonal = polygonal_parts(geom)
     if polygonal is None or polygonal.is_empty:
         return None
     return make_valid(polygonal)

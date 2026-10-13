@@ -62,7 +62,6 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
           $eq: layerSlug,
         },
       },
-      // @ts-ignore
       populate: {
         environment: {
           fields: ['slug'],

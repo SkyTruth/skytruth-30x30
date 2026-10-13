@@ -4,8 +4,6 @@ from tqdm.auto import tqdm
 
 from src.core.commons import (
     add_tolerance_suffix,
-    intersect_mpatlas_with_iho,
-    intersect_wdpa_with_iho,
     load_iho_regions,
 )
 from src.core.params import (
@@ -13,8 +11,10 @@ from src.core.params import (
     EEZ_FILE_NAME,
     GADM_FILE_NAME,
     MPATLAS_META_FILE_NAME,
+    MPATLAS_SEA_PAIRS_FILE_NAME,
     TOLERANCE,
     WDPA_META_FILE_NAME,
+    WDPA_SEA_PAIRS_FILE_NAME,
 )
 from src.core.processors import (
     add_constants,
@@ -40,6 +40,7 @@ from src.methods.protected_areas.pa_processors import (
 from src.utils.gcp import (
     read_dataframe,
     read_json_df,
+    read_parquet_from_gcs,
 )
 from src.utils.logger import Logger
 
@@ -54,6 +55,8 @@ def generate_protected_areas_table(
     mpatlas_file_name: str = MPATLAS_META_FILE_NAME,
     eez_file_name: str = EEZ_FILE_NAME,
     gadm_file_name: str = GADM_FILE_NAME,
+    wdpa_sea_pairs_file_name: str = WDPA_SEA_PAIRS_FILE_NAME,
+    mpatlas_sea_pairs_file_name: str = MPATLAS_SEA_PAIRS_FILE_NAME,
     bucket: str = BUCKET,
     tolerance: float = TOLERANCE,
     verbose: bool = True,
@@ -221,7 +224,11 @@ def generate_protected_areas_table(
         logger.info({"message": "loading PA metadata"})
     mpatlas = read_dataframe(bucket, mpatlas_file_name)
     wdpa = read_dataframe(bucket, wdpa_file_name)
-    mpa_pairs = intersect_mpatlas_with_iho(bucket=bucket)
+
+    # Load the MPA and WDPA pairs with IHO sea areas.
+    mpa_pairs = read_parquet_from_gcs(bucket, mpatlas_sea_pairs_file_name, verbose=verbose)[
+        ["zone_id", "location"]
+    ]
 
     mpa_pairs["zone_id"] = mpa_pairs["zone_id"].astype(mpatlas["zone_id"].dtype)
     mpa_pairs = mpa_pairs.merge(
@@ -229,7 +236,10 @@ def generate_protected_areas_table(
     ).rename(columns={"location": "country"})
     mpatlas = pd.concat([mpatlas, mpa_pairs], axis=0, ignore_index=True)
 
-    wdpa_pairs = intersect_wdpa_with_iho(bucket=bucket)
+    wdpa_pairs = read_parquet_from_gcs(
+        bucket, add_tolerance_suffix(wdpa_sea_pairs_file_name, tolerance), verbose=verbose
+    )
+    wdpa_pairs = wdpa_pairs.loc[wdpa_pairs["environment"] == "marine", ["WDPA_PID", "location"]]
     wdpa_pairs = wdpa_pairs.merge(wdpa.drop(columns=["ISO3"]), on="WDPA_PID", how="inner").rename(
         columns={"location": "ISO3"}
     )

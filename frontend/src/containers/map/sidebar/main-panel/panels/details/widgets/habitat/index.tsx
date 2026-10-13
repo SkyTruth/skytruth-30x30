@@ -62,7 +62,6 @@ const HabitatWidget: React.FC<HabitatWidgetProps> = ({ location }) => {
       filters: {
         slug: Object.keys(HABITAT_CHART_COLORS),
       },
-      // @ts-expect-error
       populate: {
         data_sources: {
           fields: ['title', 'url'],
