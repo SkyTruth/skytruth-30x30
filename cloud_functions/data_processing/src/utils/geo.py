@@ -143,7 +143,7 @@ def tile_geometry(geom, transform, tile_size_pixels=1000):
             tile = box(x, y, x + res_x * tile_size_pixels, y + res_y * tile_size_pixels)
             clipped = geom.intersection(tile)
             if not clipped.is_empty:
-                tiles.append(clipped)
+                tiles.append(make_valid(clipped))
             y += res_y * tile_size_pixels
         x += res_x * tile_size_pixels
 
