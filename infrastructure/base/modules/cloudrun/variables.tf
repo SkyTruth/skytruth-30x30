@@ -55,6 +55,12 @@ variable "secrets" {
   default     = []
 }
 
+variable "container_concurrency" {
+  type        = number
+  description = "Requests one container handles at once. Leave null to keep Cloud Run's default of 80."
+  default     = null
+}
+
 variable "vpc_connector_name" {
   type        = string
   description = "Name of the VPC Access Connector"

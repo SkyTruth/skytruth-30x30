@@ -23,6 +23,13 @@ module "backend_gcr" {
   name       = "${var.project_name}-backend"
 }
 
+module "cb_api_gcr" {
+  source     = "../gcr"
+  project_id = var.gcp_project_id
+  region     = var.gcp_region
+  name       = "${var.project_name}-cb-api"
+}
+
 module "postgres_application_user_password" {
   source           = "../secret_value"
   region           = var.gcp_region
@@ -200,6 +207,8 @@ locals {
   client_service    = "${upper(var.environment)}_CLIENT_SERVICE"
   analysis_cf_name  = "${upper(var.environment)}_ANALYSIS_CF_NAME"
   data_cf_name      = "${upper(var.environment)}_DATA_CF_NAME"
+  cb_api_repository = "${upper(var.environment)}_CB_API_REPOSITORY"
+  cb_api_service    = "${upper(var.environment)}_CB_API_SERVICE"
 }
 
 module "github_values" {
@@ -214,6 +223,8 @@ module "github_values" {
     (local.client_service)    = module.frontend_cloudrun.name
     (local.analysis_cf_name)  = module.analysis_cloud_function.function_name
     (local.data_cf_name)      = module.data_pipes_cloud_function.function_name
+    (local.cb_api_repository) = module.cb_api_gcr.repository_name
+    (local.cb_api_service)    = module.cb_api_cloudrun.name
     (local.cms_env_file)      = join("\n", [for key, value in local.cms_env : "${key}=${value}"])
     (local.client_env_file)   = join("\n", [for key, value in local.client_env : "${key}=${value}"])
   }
@@ -288,6 +299,44 @@ module "analysis_cloud_function" {
   available_cpu                    = var.analysis_function_available_cpu
   max_instance_count               = var.analysis_function_max_instance_count
   max_instance_request_concurrency = var.analysis_function_max_instance_request_concurrency
+
+  depends_on = [module.postgres_application_user_password]
+}
+
+locals {
+  cb_api_env = [
+    { name = "DATABASE_HOST", value = module.database.database_host },
+    { name = "DATABASE_NAME", value = module.database.database_name },
+    { name = "DATABASE_USERNAME", value = module.database.database_user },
+  ]
+
+  cb_api_secrets = [{
+    name        = "DATABASE_PASSWORD"
+    secret_name = module.postgres_application_user_password.secret_name
+  }]
+}
+
+module "cb_api_cloudrun" {
+  source     = "../cloudrun"
+  name       = "${var.project_name}-cb-api"
+  region     = var.gcp_region
+  project_id = var.gcp_project_id
+  repository = module.cb_api_gcr.repository_name
+  tag        = var.environment
+
+  container_port     = 8080
+  vpc_connector_name = module.network.vpc_access_connector_name
+  database           = module.database.database
+  env_vars           = local.cb_api_env
+  secrets            = local.cb_api_secrets
+
+  container_concurrency = 10
+  max_scale             = 2
+  memory                = "512Mi"
+  timeout_seconds       = 600
+
+  # Set this to false once an image exists
+  use_hello_world_image = true
 
   depends_on = [module.postgres_application_user_password]
 }
