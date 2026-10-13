@@ -8,6 +8,7 @@ import Widget from '@/components/widget';
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
 import { useSyncCustomRegion } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useChangeMapTab } from '@/hooks/use-map-default-layers';
 import { formatKM, formatPercentage } from '@/lib/utils/formats';
 import { FCWithMessages } from '@/types';
 import { useGetAggregatedStats } from '@/types/generated/aggregated-stats';
@@ -30,7 +31,8 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
 
-  const [{ tab }, setSettings] = useSyncMapContentSettings();
+  const [{ tab }] = useSyncMapContentSettings();
+  const changeTab = useChangeMapTab();
   const [customRegionLocations] = useSyncCustomRegion();
 
   const locations =
@@ -154,7 +156,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
           variant="white"
           size="full"
           className="mt-5 flex h-10 px-5 md:px-8"
-          onClick={() => setSettings((settings) => ({ ...settings, tab: 'terrestrial' }))}
+          onClick={() => changeTab('terrestrial')}
         >
           <span className="font-mono text-xs font-semibold normal-case">
             {t('explore-terrestrial-conservation')}
