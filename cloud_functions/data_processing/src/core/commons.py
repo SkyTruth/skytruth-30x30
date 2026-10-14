@@ -183,8 +183,7 @@ def _load_iho_regions_cached(buffer=False):
 def load_iho_regions(buffer=False):
     """Load IHO regions, or the saved near-shore layer when ``buffer`` is True."""
     regions = _load_iho_regions_cached(buffer=buffer).copy()
-    if not buffer:
-        record_dataset_use("iho-world-seas")
+    record_dataset_use("iho-world-seas")
     return regions
 
 

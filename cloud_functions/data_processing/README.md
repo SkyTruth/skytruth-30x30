@@ -23,9 +23,10 @@ Some helpful commands while developing:
 ### Daily shared-dataset activity
 
 The shared IHO loader reports after a successful return, including its in-process
-cache, and near-shore processing reports after successfully reading the canonical
-IHO input. Loading a locally derived near-shore artifact alone does not count as
-a new use of the shared input. Failed dataset operations do not report use.
+cache and the materialized near-shore IHO representation in application storage.
+Near-shore processing also reports after successfully reading the canonical IHO
+input. The reporter coalesces these accesses into one active day; failed dataset
+operations do not report use.
 
 Cloud Run supplies `K_SERVICE`: `x30-prod-data` selects the production producer
 and `x30-dev-data` selects development. Other runtimes do not report. Set

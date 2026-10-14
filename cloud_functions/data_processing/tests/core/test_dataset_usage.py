@@ -13,19 +13,17 @@ def test_cached_dataset_use_reports_after_each_successful_return(monkeypatch):
     monkeypatch.setattr(commons, "record_dataset_use", recorder)
     assert commons.load_iho_regions() is frame
     assert commons.load_iho_regions() is frame
-    assert recorder.call_args_list == [(("iho-world-seas",),)] * 2
+    assert commons.load_iho_regions(buffer=True) is frame
+    assert recorder.call_args_list == [(("iho-world-seas",),)] * 3
 
 
-def test_failed_or_derived_dataset_access_does_not_report_shared_use(monkeypatch):
+def test_failed_dataset_access_does_not_report_shared_use(monkeypatch):
     loader = Mock(side_effect=RuntimeError("unavailable"))
     recorder = Mock()
     monkeypatch.setattr(commons, "_load_iho_regions_cached", loader)
     monkeypatch.setattr(commons, "record_dataset_use", recorder)
     with pytest.raises(RuntimeError):
         commons.load_iho_regions()
-    loader.side_effect = None
-    loader.return_value = Mock()
-    commons.load_iho_regions(buffer=True)
     recorder.assert_not_called()
 
 
