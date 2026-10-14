@@ -96,7 +96,7 @@ from src.methods.tileset_processes import (
 from src.utils.database import update_cb
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
-from src.utils.resource_handling import release_memory
+from src.utils.resource_handling import exhaust_memory, release_memory
 
 logger = Logger()
 
@@ -282,6 +282,9 @@ def dispatch_publisher(
 
         case "test_long_running_tasks":
             logger.info({"message": "Long Tasks Dry Run Complete!"})
+
+        case "test_oom":
+            exhaust_memory()
 
         case "publisher":
             monthly_job_publisher(
