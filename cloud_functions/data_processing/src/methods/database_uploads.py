@@ -1,6 +1,7 @@
 from ast import literal_eval
 
 import pandas as pd
+import time
 from tqdm import tqdm
 
 from src.core.commons import retry_and_alert
@@ -139,7 +140,7 @@ def upload_protected_areas(
             logger.info({"message": f"upserting {len(upserted)} entries"})
 
         wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
-        chunk_size = 10000
+        chunk_size = 2000
         total_chunks = (len(wdpaids) + chunk_size - 1) // chunk_size
         for chunk_idx, i in enumerate(
             tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"),
@@ -150,6 +151,7 @@ def upload_protected_areas(
             try:
                 logger.info({"message": f"upserting chunk {chunk_idx} of {total_chunks}"})
                 upsert_response = strapi.upsert_pas(chunk)
+                time.sleep(60)
 
                 if verbose:
                     logger.info({"message": f"upsert response: {upsert_response}"})
