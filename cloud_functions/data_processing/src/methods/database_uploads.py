@@ -140,7 +140,7 @@ def upload_protected_areas(
             logger.info({"message": f"upserting {len(upserted)} entries"})
 
         wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
-        chunk_size = 2000
+        chunk_size = 5000
         total_chunks = (len(wdpaids) + chunk_size - 1) // chunk_size
         for chunk_idx, i in enumerate(
             tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"),
