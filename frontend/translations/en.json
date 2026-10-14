@@ -239,7 +239,7 @@
     "filters-button": {
       "filter": "Filter",
       "select-all": "Select all",
-      "clear-all": "Clear all (None selected)",
+      "clear-all": "Clear all",
       "error-no-filters": "Please, select at least one option"
     },
     "widget": {
