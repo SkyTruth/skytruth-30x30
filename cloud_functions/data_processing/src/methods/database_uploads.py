@@ -143,7 +143,7 @@ def upload_protected_areas(
         chunk_size = 5000
         total_chunks = (len(wdpaids) + chunk_size - 1) // chunk_size
         for chunk_idx, i in enumerate(
-            tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"),
+            tqdm(range(0, chunk_size, chunk_size), desc="Upserting to Strapi"),
             start=1,
         ):
             ids = wdpaids[i : i + chunk_size]
