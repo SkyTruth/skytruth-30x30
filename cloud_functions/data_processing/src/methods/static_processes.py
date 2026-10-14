@@ -28,6 +28,7 @@ from src.core.commons import (
     process_buffered_iho,
     safe_union,
 )
+from src.core.dataset_usage import record_dataset_use
 from src.core.land_cover_params import (
     BIOME_RASTER_PATH,
     LAND_COVER_CLASSES,
@@ -563,6 +564,7 @@ def process_near_shore_iho(
 
     ref = Catalog.load().fetch("iho-world-seas", "fgb", access="public")
     water_bodies = gpd.read_file(ref.cache_path)
+    record_dataset_use("iho-world-seas")
 
     near_shore = process_buffered_iho(water_bodies, km=km, n_jobs=n_jobs)
 

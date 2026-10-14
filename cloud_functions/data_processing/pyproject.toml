@@ -38,7 +38,7 @@ dependencies = [
 ]
 
 [tool.poetry.dependencies]
-skytruth-shared-datasets = { git = "https://github.com/SkyTruth/shared-datasets-1.git", branch = "main", subdirectory = "api/python" }
+skytruth-shared-datasets = { git = "https://github.com/SkyTruth/shared-datasets-1.git", rev = "26d45efda800da9e9d95a627be032e71b0dd5c97", subdirectory = "api/python" }
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.14.3"

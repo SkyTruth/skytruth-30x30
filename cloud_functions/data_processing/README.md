@@ -20,6 +20,26 @@ Some helpful commands while developing:
 * Formatting: `poetry run ruff format`
 * Testing: `poetry run pytest`
 
+### Daily shared-dataset activity
+
+The shared IHO loader reports after a successful return, including its in-process
+cache, and near-shore processing reports after successfully reading the canonical
+IHO input. Loading a locally derived near-shore artifact alone does not count as
+a new use of the shared input. Failed dataset operations do not report use.
+
+Cloud Run supplies `K_SERVICE`: `x30-prod-data` selects the production producer
+and `x30-dev-data` selects development. Other runtimes do not report. Set
+`DATASET_USAGE_ENABLED=false` to pause reporting. The SDK uses managed credentials,
+coalesces observations by dataset/activity/UTC day and explicitly flushes before
+the operation returns. Bounded reporting failures emit diagnostics without failing
+the processing operation; no persistent upload queue is created.
+
+The tracking project's reviewed grants allow each runtime identity to create
+receipts only inside its registered prefix, without tracking-data read access or
+canonical shared-dataset write access. Release requires the new immutable SDK
+archive and refreshed Poetry lock/export. Verify production/development receipts,
+cached use and reporting outages before marking these producers connected.
+
 ### Running the Function Locally
 
 The function could can be run locally for testing either natively or via docker.

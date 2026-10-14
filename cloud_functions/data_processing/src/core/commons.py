@@ -23,6 +23,7 @@ from shapely.validation import make_valid
 from skytruth_shared_datasets import Catalog
 from tqdm.auto import tqdm
 
+from src.core.dataset_usage import record_dataset_use
 from src.core.params import (
     BUCKET,
     CHUNK_SIZE,
@@ -181,7 +182,10 @@ def _load_iho_regions_cached(buffer=False):
 
 def load_iho_regions(buffer=False):
     """Load IHO regions, or the saved near-shore layer when ``buffer`` is True."""
-    return _load_iho_regions_cached(buffer=buffer).copy()
+    regions = _load_iho_regions_cached(buffer=buffer).copy()
+    if not buffer:
+        record_dataset_use("iho-world-seas")
+    return regions
 
 
 def load_marine_regions(params: dict, bucket: str = BUCKET):
