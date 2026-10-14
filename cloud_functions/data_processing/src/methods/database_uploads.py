@@ -1,7 +1,7 @@
+import time
 from ast import literal_eval
 
 import pandas as pd
-import time
 from tqdm import tqdm
 
 from src.core.commons import retry_and_alert
