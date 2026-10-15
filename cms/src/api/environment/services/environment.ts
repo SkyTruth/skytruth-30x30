@@ -4,19 +4,11 @@
 
 import { factories } from '@strapi/strapi';
 
+import { getLookupMap, type LookupIdField } from '../../../utils/lookup-map';
 
-export default factories.createCoreService('api::environment.environment', ({ strapi }) => ({
-  async getEnvironmentMap(): Promise<IDMap> {
-    const environments = await strapi.db.query('api::environment.environment').findMany({
-      select: ['documentId', 'slug'],
-      where: {locale: 'en'}
-    }) as { documentId: string; slug: string }[];
 
-    const environmentMap: IDMap = {};
-    environments.forEach((environment) => {
-      environmentMap[environment.slug] = environment.documentId;
-    }
-    );
-    return environmentMap;
+export default factories.createCoreService('api::environment.environment', () => ({
+  getEnvironmentMap(idField: LookupIdField = 'documentId') {
+    return getLookupMap('api::environment.environment', 'slug', idField, true);
   }
 }));

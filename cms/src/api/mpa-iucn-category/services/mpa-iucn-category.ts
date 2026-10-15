@@ -4,18 +4,11 @@
 
 import { factories } from '@strapi/strapi';
 
-export default factories.createCoreService('api::mpa-iucn-category.mpa-iucn-category', ({ strapi }) => ({
-  async getMpaaIucnCategoryMap(): Promise<IDMap> {
-    const categories = await strapi.db.query('api::mpa-iucn-category.mpa-iucn-category').findMany({
-      select: ['documentId', 'slug'],
-    });
+import { getLookupMap, type LookupIdField } from '../../../utils/lookup-map';
 
-    const mpaaIucnCategoryMap: IDMap = {};
-    categories.forEach((category) => {
-      mpaaIucnCategoryMap[category.slug] = category.documentId;
-    });
-
-    return mpaaIucnCategoryMap;
+export default factories.createCoreService('api::mpa-iucn-category.mpa-iucn-category', () => ({
+  getMpaaIucnCategoryMap(idField: LookupIdField = 'documentId') {
+    return getLookupMap('api::mpa-iucn-category.mpa-iucn-category', 'slug', idField, true);
   }
 }));
 

@@ -4,18 +4,11 @@
 
 import { factories } from '@strapi/strapi';
 
+import { getLookupMap, type LookupIdField } from '../../../utils/lookup-map';
+
 export default factories.createCoreService('api::protection-status.protection-status', 
-  ({ strapi }) => ({
-  async getProtectionStatusMap(): Promise<IDMap> {
-    const statuses = await strapi.db.query('api::protection-status.protection-status').findMany({
-      select: ['documentId', 'slug'],
-    });
-
-    const protectionStatusMap: IDMap = {};
-    statuses.forEach((status) => {
-      protectionStatusMap[status.slug] = status.documentId;
-    });
-
-    return protectionStatusMap;
+  () => ({
+  getProtectionStatusMap(idField: LookupIdField = 'documentId') {
+    return getLookupMap('api::protection-status.protection-status', 'slug', idField, true);
   }
 }));
