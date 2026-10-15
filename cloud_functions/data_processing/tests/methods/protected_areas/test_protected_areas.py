@@ -349,6 +349,18 @@ def test_detect_new_entry(base_entry):
     assert result["new"][0]["wdpaid"] == 999
 
 
+def test_empty_db_marks_everything_new(base_entry):
+    """A fresh database (get_pas returns []) yields only new entries."""
+    new_entry = deepcopy(base_entry)
+    strip_db_ids(new_entry)
+
+    result = make_pa_updates(make_df([]), make_df([new_entry]), verbose=False)[0]
+
+    assert len(result["new"]) == 1
+    assert result["changed"] == []
+    assert result["deleted"] == []
+
+
 def test_detect_deleted_entry(base_entry):
     """Detects when a record in current_db is missing from updated_pas."""
     current_db = make_df([base_entry])
@@ -361,6 +373,23 @@ def test_detect_deleted_entry(base_entry):
     assert len(result["deleted"]) == 1
     assert len(result["new"]) == 0
     assert len(result["changed"]) == 0
+
+
+def test_duplicates_keep_newest_id(base_entry):
+    """Of duplicate DB rows, the highest id survives regardless of documentId ordering."""
+    older = {**base_entry, "id": 1, "documentId": "z-older"}
+    newer = {**base_entry, "id": 7, "documentId": "a-newer"}
+    current_db = make_df([older, newer])
+
+    updated_entry = deepcopy(base_entry)
+    updated_entry["designation"] = "International"
+    strip_db_ids(updated_entry)
+    updated_pas = make_df([updated_entry])
+
+    result = make_pa_updates(current_db, updated_pas, verbose=False)[0]
+
+    assert result["deleted"] == ["z-older"]
+    assert [pa["id"] for pa in result["changed"]] == [7]
 
 
 def test_detect_changed_string(base_entry):

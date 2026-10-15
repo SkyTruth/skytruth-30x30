@@ -323,12 +323,14 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
             lambda x: get_unique_identifier(x, cols_for_id), axis=1
         )
 
-    # remove duplicate entries if they exist
-    last_entry = current_db.groupby("identifier")["documentId"].transform("max")
-    dups = list(current_db[current_db["documentId"] != last_entry]["documentId"])
-    current_db = current_db[current_db["documentId"] == last_entry]
-    if verbose and len(dups) > 0:
-        logger.warning({"message": f"identified {len(dups)} duplicate entries in DB for removal"})
+        # remove duplicate entries if they exist
+        last_entry = current_db.groupby("identifier")["id"].transform("max")
+        dups = list(current_db[current_db["id"] != last_entry]["documentId"])
+        current_db = current_db[current_db["id"] == last_entry]
+        if verbose and len(dups) > 0:
+            logger.warning(
+                {"message": f"identified {len(dups)} duplicate entries in DB for removal"}
+            )
 
     # Add identifier to parent/children
     if verbose:
