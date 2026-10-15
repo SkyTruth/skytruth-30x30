@@ -68,15 +68,18 @@ class Strapi:
           Parameters
         -----------
             pas: list[dict]
-                list of PAs to either create or update. If the dict has a ``documentId``
-                field the PA with that Strapi documentId will be updated with the new data,
-                otherwise a new PA will be created.
+                list of PAs to either create or update. If the dict has an integer ``id``
+                field the PA with that Strapi row id will be updated with the new data,
+                otherwise a new PA will be created. Parent and children reference existing
+                PAs by ``id``, or by their identifying fields with ``id`` null when the PA is
+                created in the same request. Do not send ``documentId``: it is ignored, so
+                the PA would be created again instead of updated.
 
                 Sample data, required fields marked with *
 
             [
                 {
-                    "documentId": "abc123xyz",
+                    "id": 1234,
                     "name": "aba", *
                     "area": 54819.04, *
                     "year": 2022,
@@ -100,17 +103,21 @@ class Strapi:
                     "mpaa_establishment_stage": null,
                     "children": [
                         {
+                            "id": null,
                             "wdpaid": 162,
                             "wdpa_p_id": "162_a",
                             "zone_id": 3,
-                            "environment": "terrestrial"
+                            "environment": "terrestrial",
+                            "location": "CRI"
                     }
                     ],
                     "parent": {
+                        "id": 5678,
                         "wdpaid": 170,
                         "wdpa_p_id": "2_a",
                         "zone_id": 3,
-                        "environment": "terrestrial"
+                        "environment": "terrestrial",
+                        "location": "CRI"
                     }
                 },
                 ...

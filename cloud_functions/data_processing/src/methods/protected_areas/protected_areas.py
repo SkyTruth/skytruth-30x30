@@ -365,10 +365,10 @@ def make_pa_updates(current_db, updated_pas, verbose=True):
         static_updated = updated_pas[updated_pas["identifier"].isin(static)].sort_values(
             by="identifier"
         )
-        # Add DB documentId to static updated table
+        # Add DB id to static updated table
         static_updated = pd.merge(
             static_updated,
-            current_db[["identifier", "documentId"]],
+            current_db[["identifier", "id"]],
             on="identifier",
             how="left",
         ).reset_index(drop=True)
