@@ -68,10 +68,10 @@ const getRelatedIds = (pa: InputPA) =>
 // A link to a missing PA fails the link table's foreign key and rolls back the whole request.
 const dropMissingRelations = (
   pa: InputPA,
-  existingIds: Set<number>,
+  existingRelatedIds: Set<number>,
   errors: {msg: string, err: string}[]
 ) => {
-  if (pa?.parent?.id != null && !existingIds.has(pa.parent.id)) {
+  if (pa?.parent?.id != null && !existingRelatedIds.has(pa.parent.id)) {
     errors.push({
       msg: `Dropped parent of PA, name: ${pa?.name}`,
       err: `No PA found with id ${pa.parent.id}`
@@ -80,7 +80,7 @@ const dropMissingRelations = (
   }
   if (pa?.children) {
     const missingChildren = pa.children.filter(
-      (child) => child?.id != null && !existingIds.has(child.id)
+      (child) => child?.id != null && !existingRelatedIds.has(child.id)
     );
     missingChildren.forEach((child) => {
       errors.push({
@@ -190,7 +190,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
           where: { id: { $in: relatedIds } },
         })
         : [];
-      const existingIds = new Set<number>(existingRelatedRows.map((row) => row.id));
+      const existingRelatedIds = new Set<number>(existingRelatedRows.map((row) => row.id));
 
       let updated = 0;
       let created = 0;
@@ -200,8 +200,6 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
       const newIdMap: RowIdMap = {};
       const publishedAt = new Date();
 
-      // Query Engine, not Document Service: the latter queues a fully populated lookup per row
-      // after commit, which exhausts the connection pool on large upserts.
       await strapi.db.transaction(async () => {
         for (const pa of data) {
           const areRelationsValid = strapi.service('api::pa.pa')
@@ -211,7 +209,7 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             continue;
           }
 
-          dropMissingRelations(pa, existingIds, errors);
+          dropMissingRelations(pa, existingRelatedIds, errors);
 
           const updatedPA = strapi.service('api::pa.pa')
             .checkParentChild(pa, toUpdateRelations)
@@ -243,6 +241,8 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
 
           // Record exists, update in place
           if (id) {
+            // Query Engine, not Document Service: the latter queues a fully populated lookup per row
+            // after commit, which exhausts the connection pool on large upserts.
             const updatedRow = await strapi.db.query('api::pa.pa').update({
               where: { id },
               data: paData,
