@@ -200,7 +200,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                                 documentId: documentId,
                                 data: { is_last_year: true }
                             });
-                        } else if (prevLastYear[0].year < year) {
+                        } else if (prevLastYear.length === 1 && prevLastYear[0].year < year) {
                             // If the new record is the most recent set is_last_year to true and unset it for the previous last year
                             await strapi.documents(PROTECTION_COVERAGE_STAT_NAMESPACE).update({
                                 documentId: prevLastYear[0].documentId,
