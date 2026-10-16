@@ -8,7 +8,7 @@ import { getLookupMap, type LookupIdField } from '../../../utils/lookup-map';
 
 export default factories.createCoreService('api::mpaa-establishment-stage.mpaa-establishment-stage',
   () => ({
-  getMpaaEstablishmentStageMap(idField: LookupIdField = 'documentId') {
+  getMpaaEstablishmentStageMap(idField: LookupIdField) {
     return getLookupMap('api::mpaa-establishment-stage.mpaa-establishment-stage', 'slug', idField, true);
   }
   }));
