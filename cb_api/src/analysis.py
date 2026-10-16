@@ -17,6 +17,8 @@ class AnalysisTable(StrEnum):
     SALTMARSHES = "saltmarshes_minus_pa"
     SEAGRASSES = "seagrasses_minus_pa"
     COLDWATERCORALS = "coldwatercorals_minus_pa"
+    CLIMATE_RESILIENT_CORALS = "climate_resilient_corals_minus_pa"
+    OTHER_CORALS = "other_corals_minus_pa"
 
 
 def get_geojson(geojson: JSON) -> dict:

@@ -66,7 +66,7 @@ def test_each_habitat_reads_its_own_table(api: Harness, habitat: Habitat):
     assert table is habitat.table
 
 
-def test_the_habitats_read_four_distinct_tables(api: Harness):
+def test_the_habitats_read_distinct_tables():
     """A copy-paste slip in the enum would quietly serve one habitat's numbers
     for another."""
     tables = {habitat.table for habitat in Habitat}

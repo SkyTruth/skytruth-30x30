@@ -34,6 +34,8 @@ class Habitat(StrEnum):
     SALTMARSHES = "saltmarshes"
     SEAGRASSES = "seagrasses"
     COLDWATERCORALS = "coldwatercorals"
+    CLIMATE_RESILIENT_CORALS = "climate-resilient-corals"
+    OTHER_CORALS = "other-corals"
 
     @property
     def table(self) -> AnalysisTable:

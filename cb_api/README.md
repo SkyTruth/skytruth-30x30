@@ -56,8 +56,9 @@ The response is shaped like the one for `/coverage`.
 ### `POST /habitats`
 
 Area protected for a type of habitat. Takes `geometry` and a **required**
-`habitat` (one of `mangroves`, `saltmarshes`, `seagrasses`, `coldwatercorals`). There is
-no default, and no `environment`: each habitat has exactly one table.
+`habitat` (one of `mangroves`, `saltmarshes`, `seagrasses`, `coldwatercorals`,
+`climate-resilient-corals`, `other-corals`). There is no default, and no `environment`:
+each habitat has exactly one table.
 
 ```bash
 curl -X POST localhost:8080/habitats \
