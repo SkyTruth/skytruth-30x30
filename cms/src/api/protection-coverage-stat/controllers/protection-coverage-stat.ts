@@ -136,7 +136,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                         if (!locationMap) {
                             locationMap = await strapi
                                 .service('api::location.location')
-                                .getLocationMap();
+                                .getLocationMap('documentId');
                         }
                         if (!locationMap[location]) {
                             errors.push({
@@ -147,7 +147,7 @@ export default factories.createCoreController(PROTECTION_COVERAGE_STAT_NAMESPACE
                         if (!environmentMap) {
                             environmentMap = await strapi
                                 .service('api::environment.environment')
-                                .getEnvironmentMap();
+                                .getEnvironmentMap('documentId');
                         }
                         if (!environmentMap[environment]) {
                             errors.push({

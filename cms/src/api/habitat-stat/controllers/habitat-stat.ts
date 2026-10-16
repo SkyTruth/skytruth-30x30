@@ -36,7 +36,7 @@ export default factories.createCoreController(HABITAT_STATS_NAMESPACE, ({ strapi
                         if (!locationMap) {
                             locationMap = await strapi
                                 .service('api::location.location')
-                                .getLocationMap();
+                                .getLocationMap('documentId');
                         }
                         if (!locationMap[stat.location]) {
                             errors.push({
@@ -60,7 +60,7 @@ export default factories.createCoreController(HABITAT_STATS_NAMESPACE, ({ strapi
                         if (!environmentMap) {
                             environmentMap = await strapi
                                 .service('api::environment.environment')
-                                .getEnvironmentMap();
+                                .getEnvironmentMap('documentId');
                         }
                         if (!environmentMap[stat.environment]) {
                             errors.push({

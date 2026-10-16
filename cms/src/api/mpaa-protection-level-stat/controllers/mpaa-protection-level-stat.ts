@@ -32,7 +32,7 @@ export default factories
               if (!locationMap) {
                 locationMap = await strapi
                   .service('api::location.location')
-                  .getLocationMap();
+                  .getLocationMap('documentId');
               }
               if (!locationMap[stat.location]) {
                 errors.push({
@@ -43,7 +43,7 @@ export default factories
               if (!MpaaProtectionLevelMap) {
                 MpaaProtectionLevelMap = await strapi
                   .service('api::mpaa-protection-level.mpaa-protection-level')
-                  .getMpaaProtectionLevelMap();
+                  .getMpaaProtectionLevelMap('documentId');
               }
               if (!MpaaProtectionLevelMap[stat.mpaa_protection_level]) {
                 errors.push({
