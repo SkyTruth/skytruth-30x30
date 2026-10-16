@@ -11,7 +11,13 @@ from src.analysis import get_locations_stats
 from src.config import ALLOWED_ORIGINS, get_settings
 from src.db import create_db_engine
 from src.errors import BadRequestError, register_error_handlers
-from src.schemas import AnalysisRequest, Environment, LocationStats, ProtectionLevelRequest
+from src.schemas import (
+    AnalysisRequest,
+    Environment,
+    HabitatRequest,
+    LocationStats,
+    ProtectionLevelRequest,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -68,3 +74,9 @@ def protection_level(body: ProtectionLevelRequest, engine: PooledEngine) -> dict
             f"{body.level} is not available for the {body.environment} environment"
         )
     return get_locations_stats(engine, body.geometry, body.level.table)
+
+
+@app.post("/habitats", response_model=LocationStats)
+def habitats(body: HabitatRequest, engine: PooledEngine) -> dict:
+    """How much of the given area's `habitat` is protected, broken down by location."""
+    return get_locations_stats(engine, body.geometry, body.habitat.table)

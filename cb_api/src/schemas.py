@@ -29,10 +29,26 @@ class ProtectionLevel(StrEnum):
         return True
 
 
-class AnalysisRequest(BaseModel):
-    """Request body for POST /coverage."""
+class Habitat(StrEnum):
+    MANGROVES = "mangroves"
+    SALTMARSHES = "saltmarshes"
+    SEAGRASSES = "seagrasses"
+    COLDWATERCORALS = "coldwatercorals"
+
+    @property
+    def table(self) -> AnalysisTable:
+        return AnalysisTable[self.name]
+
+
+class GeometryRequest(BaseModel):
+    """The area to analyse, shared by every endpoint."""
 
     geometry: dict
+
+
+class AnalysisRequest(GeometryRequest):
+    """Request body for POST /coverage."""
+
     environment: Environment = Environment.MARINE
 
 
@@ -40,6 +56,15 @@ class ProtectionLevelRequest(AnalysisRequest):
     """Request body for POST /protection-level."""
 
     level: ProtectionLevel = ProtectionLevel.FULLY_HIGHLY_PROTECTED
+
+
+class HabitatRequest(GeometryRequest):
+    """Request body for POST /habitats.
+
+    No environment: each habitat has exactly one table.
+    """
+
+    habitat: Habitat
 
 
 class LocationArea(BaseModel):

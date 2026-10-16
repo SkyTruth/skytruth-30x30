@@ -11,6 +11,7 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
 | `POST` | `/coverage` | How much of a drawn area is already protected, by location |
 | `POST` | `/protection-level` | The same, counting only areas at a given protection level |
+| `POST` | `/habitats` | The same, counting only one habitat |
 | `POST` | `/` | Deprecated alias for `/coverage` |
 
 ### `POST /coverage`
@@ -51,6 +52,18 @@ curl -X POST localhost:8080/protection-level \
 ```
 
 The response is shaped like the one for `/coverage`.
+
+### `POST /habitats`
+
+Area protected for a type of habitat. Takes `geometry` and a **required**
+`habitat` (one of `mangroves`, `saltmarshes`, `seagrasses`, `coldwatercorals`). There is
+no default, and no `environment`: each habitat has exactly one table.
+
+```bash
+curl -X POST localhost:8080/habitats \
+  -H 'Content-Type: application/json' \
+  -d '{"habitat": "seagrasses", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
+```
 
 ### `POST /` is temporary
 

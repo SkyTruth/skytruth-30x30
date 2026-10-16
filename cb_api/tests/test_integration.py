@@ -9,6 +9,7 @@ from sqlalchemy.engine import Engine
 from src.analysis import AnalysisTable, get_locations_stats
 from src.errors import BadRequestError
 from src.main import app, get_engine
+from src.schemas import Habitat
 
 pytestmark = pytest.mark.integration
 
@@ -197,3 +198,28 @@ def test_protection_level_refuses_terrestrial_before_touching_the_database(api: 
 
     assert response.status_code == 400
     assert "fully-highly-protected" in response.json()["error"]
+
+
+@pytest.mark.parametrize("habitat", list(Habitat))
+def test_each_habitat_reads_its_own_table(
+    api: TestClient, analysis_tables: Engine, habitat: Habitat
+):
+    geometry = box(0, 0, 3, 1)
+
+    response = api.post("/habitats", json={"geometry": geometry, "habitat": habitat.value})
+
+    assert response.status_code == 200
+    assert response.json() == get_locations_stats(analysis_tables, geometry, habitat.table)
+
+
+def test_a_habitat_line_is_a_400_over_http(api: TestClient):
+    response = api.post(
+        "/habitats",
+        json={
+            "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+            "habitat": "mangroves",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Invalid geometry" in response.json()["error"]
