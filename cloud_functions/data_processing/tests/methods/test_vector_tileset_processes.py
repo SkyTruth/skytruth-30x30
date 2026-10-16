@@ -84,34 +84,6 @@ def mock_add_translations(df, translations_df, key_col, code_col):
             "_5.geojson",
             tp.terrestrial_regions_process,
         ),
-        (
-            "protected",
-            {
-                "bucket": "bkt",
-                "source_file": "pas.geojson",
-                "tileset_file": "pas.mbtiles",
-                "tileset_id": "pas.id",
-                "display_name": "Protected Areas",
-                "tolerance": 3.2,
-                "method": "update_marine_protected_areas_tileset",
-            },
-            "pas.id.geojson",
-            "_3.2.geojson",
-            tp.protected_area_process,
-        ),
-        (
-            "mpatlas",
-            {
-                "bucket": "bkt",
-                "source_file": "mpa.geojson",
-                "tileset_file": "mpa.mbtiles",
-                "tileset_id": "mpa.id",
-                "display_name": "MPAtlas",
-            },
-            "mpa.id.geojson",
-            ".geojson",
-            tp.mpatlas_process,
-        ),
     ],
 )
 def test_wrappers_call_pipeline_with_expected_config(
@@ -136,10 +108,6 @@ def test_wrappers_call_pipeline_with_expected_config(
         tp.create_and_update_country_tileset(**kwargs)
     elif which == "terrestrial":
         tp.create_and_update_terrestrial_regions_tileset(**kwargs)
-    elif which == "protected":
-        tp.create_and_update_protected_area_tileset(**kwargs)
-    elif which == "mpatlas":
-        tp.create_and_update_mpatlas_tileset(**kwargs)
     else:
         raise AssertionError("Unknown case")
 
@@ -151,6 +119,65 @@ def test_wrappers_call_pipeline_with_expected_config(
     assert cfg.source_file.endswith(expected_source_suffix)
     assert cfg.tileset_blob_name == kwargs["tileset_file"]
     assert cfg.bucket == kwargs["bucket"]
+
+
+PMTILES_KWARGS = {
+    "source_bucket": "data-bkt",
+    "output_bucket": "pmtiles-bkt",
+    "output_blob": "layer.pmtiles",
+    "archive_bucket": "archive-bkt",
+    "archive_blob": "maps/layer/layer_Oct2026.pmtiles",
+    "layer_name": "layer",
+    "display_name": "Layer",
+}
+
+
+@pytest.mark.parametrize(
+    "create_tileset, kwargs, expected_source_file, expected_process",
+    [
+        (
+            tp.create_and_update_protected_area_tileset,
+            {
+                **PMTILES_KWARGS,
+                "source_file": "pas.geojson",
+                "tolerance": 3.2,
+                "method": "update_marine_protected_areas_tileset",
+            },
+            "pas_3.2.geojson",
+            tp.protected_area_process,
+        ),
+        (
+            tp.create_and_update_mpatlas_tileset,
+            {**PMTILES_KWARGS, "source_file": "mpa.geojson"},
+            "mpa.geojson",
+            tp.mpatlas_process,
+        ),
+    ],
+)
+def test_pmtiles_wrappers_call_pipeline_with_expected_config(
+    create_tileset, kwargs, expected_source_file, expected_process, monkeypatch
+):
+    calls = {}
+
+    def mock_run_vector_pmtiles_pipeline(config, *, process):
+        calls["config"] = config
+        calls["process"] = process
+
+    monkeypatch.setattr(
+        vtp, "run_vector_pmtiles_pipeline", mock_run_vector_pmtiles_pipeline, raising=True
+    )
+
+    create_tileset(**kwargs)
+
+    config = calls["config"]
+    assert calls["process"] is expected_process
+    assert config.source_bucket == "data-bkt"
+    assert config.source_file == expected_source_file
+    assert config.output_bucket == "pmtiles-bkt"
+    assert config.output_blob == "layer.pmtiles"
+    assert config.archive_bucket == "archive-bkt"
+    assert config.archive_blob == "maps/layer/layer_Oct2026.pmtiles"
+    assert config.layer_name == "layer"
 
 
 def test_mpatlas_process():
@@ -327,20 +354,17 @@ def test_terrestrial_regions_process(monkeypatch):
     ],
 )
 def test_protected_area_tileset_raises_schedule_retry_on_failure(method, monkeypatch):
-    def mock_run_vector_tileset_pipeline(cfg, *, process):
-        raise RuntimeError("auth error")
+    def mock_run_vector_pmtiles_pipeline(config, *, process):
+        raise RuntimeError("upload error")
 
     monkeypatch.setattr(
-        vtp, "run_vector_tileset_pipeline", mock_run_vector_tileset_pipeline, raising=True
+        vtp, "run_vector_pmtiles_pipeline", mock_run_vector_pmtiles_pipeline, raising=True
     )
 
     with pytest.raises(ScheduleRetry) as exc_info:
         tp.create_and_update_protected_area_tileset(
-            bucket="bkt",
+            **PMTILES_KWARGS,
             source_file="pas.geojson",
-            tileset_file="pas.mbtiles",
-            tileset_id="pas.id",
-            display_name="Protected Areas",
             tolerance=3.2,
             method=method,
         )

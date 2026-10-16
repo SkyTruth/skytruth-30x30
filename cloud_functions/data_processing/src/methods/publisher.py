@@ -652,10 +652,10 @@ def dispatch_publisher(
 
         case "update_marine_protected_areas_tileset":
             create_and_update_protected_area_tileset(
-                bucket=BUCKET,
                 source_file=WDPA_MARINE_FILE_NAME,
-                tileset_file=map_params.MARINE_PA_TILESET_FILE,
-                tileset_id=map_params.MARINE_PA_TILESET_ID,
+                output_blob=map_params.MARINE_PA_TILESET_FILE,
+                archive_blob=map_params.MARINE_PA_TILESET_ARCHIVE_FILE,
+                layer_name=map_params.MARINE_PA_TILESET_ID,
                 display_name=map_params.MARINE_PA_TILESET_NAME,
                 tolerance=TOLERANCE,
                 method="update_marine_protected_areas_tileset",
@@ -664,10 +664,10 @@ def dispatch_publisher(
 
         case "update_terrestrial_protected_areas_tileset":
             create_and_update_protected_area_tileset(
-                bucket=BUCKET,
                 source_file=WDPA_TERRESTRIAL_FILE_NAME,
-                tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
-                tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
+                output_blob=map_params.TERRESTRIAL_PA_TILESET_FILE,
+                archive_blob=map_params.TERRESTRIAL_PA_TILESET_ARCHIVE_FILE,
+                layer_name=map_params.TERRESTRIAL_PA_TILESET_ID,
                 display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
                 tolerance=TOLERANCE,
                 method="update_terrestrial_protected_areas_tileset",
