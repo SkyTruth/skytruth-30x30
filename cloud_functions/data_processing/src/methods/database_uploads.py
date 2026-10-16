@@ -141,8 +141,9 @@ def upload_protected_areas(
         wdpaids = sorted(set([u["wdpaid"] for u in upserted]))
         chunk_size = 10000
         total_chunks = (len(wdpaids) + chunk_size - 1) // chunk_size
+        # TEST RUN ONLY: upserts just the first 2 chunks. Do not commit.
         for chunk_idx, i in enumerate(
-            tqdm(range(0, len(wdpaids), chunk_size), desc="Upserting to Strapi"),
+            tqdm(range(0, len(wdpaids), chunk_size)[:2], desc="Upserting to Strapi"),
             start=1,
         ):
             ids = wdpaids[i : i + chunk_size]
