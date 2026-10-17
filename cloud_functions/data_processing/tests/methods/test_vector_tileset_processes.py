@@ -204,6 +204,7 @@ def test_mpatlas_process():
             "protection_mpaguide_level": ["high", "full", "low", "high"],
             "name": ["A", "B", "C", "D"],
             "wdpa_id": ["1", "2", "3", "4"],
+            "wdpa_pid": ["1", "2_A", "3", "4"],
             "year": ["2017", "2018", "2019", "2020"],
         },
         geometry=gpd.GeoSeries.from_wkt(
@@ -222,6 +223,7 @@ def test_mpatlas_process():
         "protection",
         "protecti_1",
         "wdpa_id",
+        "wdpa_pid",
         "year",
         "geometry",
     }
@@ -391,6 +393,7 @@ def test_protected_area_process():
             "PA_DEF": [1],
             "ISO3": ["AAA"],
             "WDPAID": [123],
+            "WDPA_PID": ["123_A"],
             "EXTRA1": [999],
             "EXTRA2": ["dropme"],
         },
@@ -399,5 +402,5 @@ def test_protected_area_process():
     )
 
     out = tp.protected_area_process(gdf.copy(), {"verbose": False})
-    expected = {"GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "geometry"}
+    expected = {"GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "WDPA_PID", "geometry"}
     assert set(out.columns) == expected

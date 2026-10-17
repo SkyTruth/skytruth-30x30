@@ -78,6 +78,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
         "protection",
         "protecti_1",
         "wdpa_id",
+        "wdpa_pid",
         "year",
         "geometry",
     ]
@@ -440,7 +441,7 @@ def create_and_update_protected_area_tileset(
 
 
 def protected_area_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
-    properties = ["GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "geometry"]
+    properties = ["GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "WDPA_PID", "geometry"]
     gdf.drop(columns=list(set(gdf.columns) - set(properties)), inplace=True)
 
     return gdf
