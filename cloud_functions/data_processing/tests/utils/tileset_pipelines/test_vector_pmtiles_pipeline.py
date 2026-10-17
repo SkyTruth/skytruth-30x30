@@ -93,6 +93,22 @@ def test_process_output_is_tiled(config, mock_read, mock_uploads, monkeypatch):
     assert built["columns"] == {"WDPAID", "source", "geometry"}
 
 
+def test_read_source_replaces_default_reader(config, mock_gdf, mock_uploads, monkeypatch):
+    monkeypatch.setattr(vpp, "generate_vector_tiles", mock_generate_vector_tiles, raising=True)
+    monkeypatch.setattr(
+        vpp, "read_json_df", lambda *a, **k: pytest.fail("default reader used"), raising=True
+    )
+    read_calls = []
+
+    def mock_read_source(bucket, filename):
+        read_calls.append((bucket, filename))
+        return mock_gdf.copy()
+
+    run_vector_pmtiles_pipeline(config, read_source=mock_read_source)
+
+    assert read_calls == [("source-bucket", "intermediates/pas.geojson")]
+
+
 def test_raises_when_pmtiles_missing(config, mock_read, mock_uploads, monkeypatch):
     monkeypatch.setattr(
         vpp, "generate_vector_tiles", lambda input_file, output_file, verbose=False: None

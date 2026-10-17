@@ -133,7 +133,7 @@ PMTILES_KWARGS = {
 
 
 @pytest.mark.parametrize(
-    "create_tileset, kwargs, expected_source_file, expected_process",
+    "create_tileset, kwargs, expected_source_file, expected_process, expected_read_source",
     [
         (
             tp.create_and_update_protected_area_tileset,
@@ -145,23 +145,31 @@ PMTILES_KWARGS = {
             },
             "pas_3.2.geojson",
             tp.protected_area_process,
+            None,
         ),
         (
             tp.create_and_update_mpatlas_tileset,
             {**PMTILES_KWARGS, "source_file": "mpa.geojson"},
             "mpa.geojson",
             tp.mpatlas_process,
+            vtp.read_mpatlas_from_gcs,
         ),
     ],
 )
 def test_pmtiles_wrappers_call_pipeline_with_expected_config(
-    create_tileset, kwargs, expected_source_file, expected_process, monkeypatch
+    create_tileset,
+    kwargs,
+    expected_source_file,
+    expected_process,
+    expected_read_source,
+    monkeypatch,
 ):
     calls = {}
 
-    def mock_run_vector_pmtiles_pipeline(config, *, process):
+    def mock_run_vector_pmtiles_pipeline(config, *, process, read_source=None):
         calls["config"] = config
         calls["process"] = process
+        calls["read_source"] = read_source
 
     monkeypatch.setattr(
         vtp, "run_vector_pmtiles_pipeline", mock_run_vector_pmtiles_pipeline, raising=True
@@ -171,6 +179,7 @@ def test_pmtiles_wrappers_call_pipeline_with_expected_config(
 
     config = calls["config"]
     assert calls["process"] is expected_process
+    assert calls["read_source"] is expected_read_source
     assert config.source_bucket == "data-bkt"
     assert config.source_file == expected_source_file
     assert config.output_bucket == "pmtiles-bkt"

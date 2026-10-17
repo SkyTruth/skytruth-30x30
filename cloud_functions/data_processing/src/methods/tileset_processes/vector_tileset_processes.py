@@ -3,7 +3,7 @@ from typing import Any
 import geopandas as gpd
 import pandas as pd
 
-from src.core.commons import add_tolerance_suffix
+from src.core.commons import add_tolerance_suffix, read_mpatlas_from_gcs
 from src.core.map_params import (
     COUNTRIES_TILESET_FILE,
     COUNTRIES_TILESET_ID,
@@ -122,7 +122,9 @@ def create_and_update_mpatlas_tileset(
             keep_temp=keep_temp,
         )
 
-        return run_vector_pmtiles_pipeline(config, process=mpatlas_process)
+        return run_vector_pmtiles_pipeline(
+            config, process=mpatlas_process, read_source=read_mpatlas_from_gcs
+        )
     except Exception as e:
         logger.error(
             {

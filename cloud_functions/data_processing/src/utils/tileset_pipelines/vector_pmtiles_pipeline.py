@@ -33,12 +33,14 @@ class VectorPMTilesetConfig:
 
 
 Process = Callable[[gpd.GeoDataFrame, dict[str, Any]], gpd.GeoDataFrame]
+ReadSource = Callable[[str, str], gpd.GeoDataFrame]
 
 
 def run_vector_pmtiles_pipeline(
     config: VectorPMTilesetConfig,
     *,
     process: Process | None = None,
+    read_source: ReadSource | None = None,
 ) -> dict[str, Any]:
     """
     Run the full pipeline: read GeoJSON → process → PMTiles → upload latest and dated archive.
@@ -53,7 +55,10 @@ def run_vector_pmtiles_pipeline(
         geojson_local = temp_dir / f"{config.layer_name}.geojson"
         pmtiles_local = temp_dir / f"{config.layer_name}.pmtiles"
 
-        gdf = read_json_df(config.source_bucket, config.source_file, verbose=config.verbose)
+        if read_source:
+            gdf = read_source(config.source_bucket, config.source_file)
+        else:
+            gdf = read_json_df(config.source_bucket, config.source_file, verbose=config.verbose)
 
         if process:
             ctx = {
