@@ -294,6 +294,7 @@ ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = (
 #                     Raster Data Sources
 # ------------------------------------------------------------
 CLIMATE_RES_CORAL_SOURCE_FILE = "raw/climate_resilient_corals.tif"
+CLIMATE_RESILIENT_CORALS_HABITATS = ("other-corals", "climate-resilient-corals")
 
 # ------------------------------------------------------------
 #                     Workflow Parameters
@@ -304,6 +305,7 @@ LONG_RUNNING_TASKS = [
     "generate_coldwatercorals_minus_pa",
     "generate_saltmarshes_minus_pa",
     "generate_seagrasses_minus_pa",
+    "generate_climate_resilient_corals_minus_pa",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",

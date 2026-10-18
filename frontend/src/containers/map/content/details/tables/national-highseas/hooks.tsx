@@ -71,17 +71,8 @@ const TOOLTIP_MAPPING = {
   iucnCategory: 'details-iucn-category',
 };
 
-const IUCN_CATEGORY_LABELS = {
-  Ia: 'iucn-category-ia',
-  Ib: 'iucn-category-ib',
-  II: 'iucn-category-ii',
-  III: 'iucn-category-iii',
-  IV: 'iucn-category-iv',
-  V: 'iucn-category-v',
-  VI: 'iucn-category-vi',
-};
-
-const IUCN_CATEGORY_ORDER = Object.keys(IUCN_CATEGORY_LABELS);
+// IUCN categories by slug, from most to least strictly protected
+const IUCN_CATEGORY_ORDER = ['Ia', 'Ib', 'II', 'III', 'IV', 'V', 'VI'];
 
 const useTooltips = () => {
   const locale = useLocale();
@@ -122,7 +113,6 @@ const useTooltips = () => {
 };
 
 const useFiltersOptions = () => {
-  const t = useTranslations('containers.map');
   const locale = useLocale();
 
   const { data: environmentOptions } = useGetEnvironments<{ name: string; value: string }[]>(
@@ -205,10 +195,7 @@ const useFiltersOptions = () => {
           return [...data]
             .sort((a, b) => getRank(a.slug) - getRank(b.slug))
             .map((iucnCategory) => ({
-              name:
-                iucnCategory.slug in IUCN_CATEGORY_LABELS
-                  ? t(IUCN_CATEGORY_LABELS[iucnCategory.slug])
-                  : iucnCategory.name,
+              name: iucnCategory.name,
               value: iucnCategory.slug,
             }));
         },

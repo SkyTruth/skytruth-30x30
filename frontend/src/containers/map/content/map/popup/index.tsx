@@ -44,44 +44,71 @@ const PopupContainer: FCWithMessages = () => {
   const popupRef = useRef<MapboxPopup>(null);
   const [anchor, setAnchor] = useState<PopupOptions['anchor']>();
 
-  // Anchor popups so they are not hidden behind a panel
+  // Change popup direction to minimize overlaps from panels
   useLayoutEffect(() => {
     const map = mapRef?.getMap();
-    if (!map || !popup?.lngLat) return;
-
-    const panels = Array.from(document.querySelectorAll('[data-map-overlay-panel]'));
+    const mapboxPopup = popupRef.current;
+    if (!map || !mapboxPopup) return;
 
     const updateAnchor = () => {
-      const element = popupRef.current?.getElement();
-      const { x, y } = map.project(popup.lngLat);
       const mapRect = map.getContainer().getBoundingClientRect();
-      const panelsRight = panels
-        .map((panel) => panel.getBoundingClientRect())
-        .filter(({ top, bottom }) => top < mapRect.bottom && bottom > mapRect.top)
-        .reduce((right, rect) => Math.max(right, rect.right - mapRect.left), 0);
-      const height = element?.offsetHeight ?? 0;
-      const halfWidth = (element?.offsetWidth || 250) / 2;
-      const legend = document.querySelector('[data-screenshot="legend"]')?.getBoundingClientRect();
-      const isBehindLegend =
-        !!legend?.width &&
-        x + halfWidth > legend.left - mapRect.left &&
-        y - 10 > legend.top - mapRect.top;
+      const { width, height } = mapboxPopup.getElement()!.getBoundingClientRect();
+      const point = map.project(mapboxPopup.getLngLat());
+      const cursor = { x: mapRect.left + point.x, y: mapRect.top + point.y };
 
-      if (x - panelsRight < halfWidth) {
-        if (y - 10 < height) setAnchor('top-left');
-        else if (y > mapRect.height - height) setAnchor('bottom-left');
-        else setAnchor('left');
-      } else if (isBehindLegend) {
-        setAnchor(y > mapRect.height - height ? 'bottom-right' : 'right');
-      } else setAnchor(undefined);
+      // The popup is above the cursor by default
+      const popupTop = cursor.y - height;
+      const popupBottom = cursor.y;
+
+      // Popup moves around the edges of nearby panels to minimize overlaps
+      const panels = Array.from(document.querySelectorAll('[data-map-overlay-panel]'))
+        .map((panel) => panel.getBoundingClientRect())
+        .filter((panel) => panel.top < popupBottom && panel.bottom > popupTop);
+
+      // The nearest visible edge on each side of the cursor
+      const leftEdge = Math.max(
+        mapRect.left,
+        ...panels.filter((panel) => panel.right <= cursor.x).map((panel) => panel.right)
+      );
+      const rightEdge = Math.min(
+        mapRect.right,
+        ...panels.filter((panel) => panel.left >= cursor.x).map((panel) => panel.left)
+      );
+
+      // A popup centered on the cursor needs half its width free on each side
+      let side: 'left' | 'right' | null = null;
+      if (cursor.x - leftEdge < width / 2) side = 'left';
+      else if (rightEdge - cursor.x < width / 2) side = 'right';
+
+      if (!side) {
+        setAnchor(undefined);
+        return;
+      }
+
+      // A popup needs half its height free above and below;
+      // use a corner instead near the top or bottom of the map
+      let corner = '';
+      if (cursor.y - mapRect.top < height / 2) corner = 'top-';
+      else if (mapRect.bottom - cursor.y < height / 2) corner = 'bottom-';
+
+      setAnchor(`${corner}${side}` as PopupOptions['anchor']);
     };
 
-    updateAnchor();
+    // The popup is added to the map after this component's layout effects run
+    if (mapboxPopup.isOpen()) updateAnchor();
+    else mapboxPopup.once('open', updateAnchor);
     map.on('move', updateAnchor);
+
     // Re-anchor as the panels open and close over the map
-    const resizeObserver = new ResizeObserver(updateAnchor);
-    panels.forEach((panel) => resizeObserver.observe(panel));
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapboxPopup.isOpen()) updateAnchor();
+    });
+    document
+      .querySelectorAll('[data-map-overlay-panel]')
+      .forEach((panel) => resizeObserver.observe(panel));
+
     return () => {
+      mapboxPopup.off('open', updateAnchor);
       map.off('move', updateAnchor);
       resizeObserver.disconnect();
     };
