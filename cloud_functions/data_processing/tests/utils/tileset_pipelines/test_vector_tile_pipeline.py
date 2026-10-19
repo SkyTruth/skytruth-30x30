@@ -41,7 +41,7 @@ def janitor(request):
 
 
 def mock_build_writes_mbtiles(temp_dir: Path, ctx: dict):
-    """Stand-in for generate_mbtiles: write a tiny file as the .mbtiles artifact."""
+    """Stand-in for generate_vector_tiles: write a tiny file as the .mbtiles artifact."""
     (temp_dir / ctx["local_mbtiles"]).write_bytes(b"MBTILES")
 
 

@@ -42,18 +42,23 @@ TERRESTRIAL_REGIONS_TILESET_FILE = f"maps/terrestrial_regions_{today_formatted}.
 # ------------------------
 TERRESTRIAL_PA_TILESET_ID = "terrestrial_pas"
 TERRESTRIAL_PA_TILESET_NAME = "Terrestrial PAs"
-TERRESTRIAL_PA_TILESET_FILE = f"maps/terrestrial_pas_{today_formatted}.mbtiles"
+TERRESTRIAL_PA_TILESET_FILE = "terrestrial_pas.pmtiles"
+TERRESTRIAL_PA_TILESET_ARCHIVE_FILE = (
+    f"maps/terrestrial_pas/terrestrial_pas_{today_formatted}.pmtiles"
+)
 
 MARINE_PA_TILESET_ID = "marine_pas"
 MARINE_PA_TILESET_NAME = "Marine PAs"
-MARINE_PA_TILESET_FILE = f"maps/marine_pas_{today_formatted}.mbtiles"
+MARINE_PA_TILESET_FILE = "marine_pas.pmtiles"
+MARINE_PA_TILESET_ARCHIVE_FILE = f"maps/marine_pas/marine_pas_{today_formatted}.pmtiles"
 
 # ------------------------
 # MPAtlas_New
 # ------------------------
 MPATLAS_TILESET_ID = "mpatlas"
 MPATLAST_TILESET_NAME = "MPATLAS"
-MPATLAS_TILESET_FILE = f"maps/mpatlas_{today_formatted}.mbtiles"
+MPATLAS_TILESET_FILE = "mpatlas.pmtiles"
+MPATLAS_TILESET_ARCHIVE_FILE = f"maps/mpatlas/mpatlas_{today_formatted}.pmtiles"
 
 # ------------------------
 # Cimate Resilient Corals (WCS MERMAID)
