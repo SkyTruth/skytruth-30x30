@@ -51,7 +51,8 @@ def run_vector_pmtiles_pipeline(
     temp_dir = Path(tempfile.mkdtemp())
 
     try:
-        # Tippecanoe names the tile layer after the input file, so this sets the source-layer.
+        # We are using Tippecanoe to name the tile layer after the input file,
+        # so this sets the source-layer name.
         geojson_local = temp_dir / f"{config.layer_name}.geojson"
         pmtiles_local = temp_dir / f"{config.layer_name}.pmtiles"
 
