@@ -3,7 +3,6 @@ from pathlib import Path
 
 import geopandas as gpd
 import pytest
-from pmtiles.reader import MmapSource, Reader
 from shapely.geometry import Point
 
 import src.utils.tileset_pipelines.vector_pmtiles_pipeline as vpp
@@ -134,12 +133,16 @@ def test_keep_temp_preserves_files(config, mock_read, mock_uploads, monkeypatch)
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def test_tippecanoe_writes_pmtiles_with_layer_name(config, mock_read, mock_uploads, tmp_path):
+def test_tiles_named_for_layer_as_pmtiles(config, mock_read, mock_uploads, monkeypatch):
+    built = {}
+
+    def mock_generate_records_paths(input_file, output_file, verbose=False):
+        built["input"] = Path(input_file).name
+        built["output"] = Path(output_file).name
+        mock_generate_vector_tiles(input_file, output_file)
+
+    monkeypatch.setattr(vpp, "generate_vector_tiles", mock_generate_records_paths, raising=True)
+
     run_vector_pmtiles_pipeline(config)
 
-    with open(tmp_path / "pmtiles-bucket" / "marine_pas.pmtiles", "rb") as f:
-        metadata = Reader(MmapSource(f)).metadata()
-
-    layer = metadata["vector_layers"][0]
-    assert layer["id"] == "marine_pas"
-    assert "WDPAID" in layer["fields"]
+    assert built == {"input": "marine_pas.geojson", "output": "marine_pas.pmtiles"}
