@@ -81,6 +81,19 @@ const readClickedPa = (properties: Feature['properties']): ClickedPa => ({
   locationCode: properties.location_i,
 });
 
+// MPAtlas's raw `country` field is a delimited list of ISO3 codes; mirror the
+// pipeline, which splits it and maps Antarctica to the high seas and Åland to Finland.
+const readTileLocations = (raw: string | undefined) =>
+  (raw ?? '')
+    .split(/[;:,]/)
+    .map((code) => code.trim())
+    .filter(Boolean)
+    .map((code) => {
+      if (code === 'ATA') return { code: 'ABNJ', type: 'highseas' };
+      if (code === 'ALA') return { code: 'FIN', type: 'country' };
+      return { code, type: 'country' };
+    });
+
 // `layerSlug` comes from the CMS config; the popup reads every protected-area layer instead.
 const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = () => {
   const t = useTranslations('containers.map');
@@ -282,7 +295,11 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = () => {
               clicked.establishmentStageSlug,
           }
         : undefined,
-      locations: clicked.locationCode ? [getLocationName({ code: clicked.locationCode })] : [],
+      locations: [
+        ...new Set(
+          readTileLocations(clicked.locationCode).map((location) => getLocationName(location))
+        ),
+      ].filter(Boolean),
       zoneId: clicked.zoneId,
       isMarine: true,
     }));
