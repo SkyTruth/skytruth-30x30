@@ -4,8 +4,12 @@
 
 import { factories } from '@strapi/strapi'
 
+export type RowIdMap = {
+  [key: string]: number;
+}
+
 export type PARelations = {
-  documentId?: string;
+  id?: number;
   wdpaid?: number;
   wdpa_p_id?: string;
   zone_id?: number;
@@ -15,14 +19,14 @@ export type PARelations = {
 }
 
 export type ToUpdateRelations = {
-  documentId?: {
-    children: PARelations[]
-    parent: PARelations
+  [paIdentifier: string]: {
+    children?: PARelations[]
+    parent?: PARelations
   }
 }
 
 export type PA = {
-  documentId?: string;
+  id?: number;
   year?: number;
   name?: string;
   area?: number;
@@ -31,7 +35,7 @@ export type PA = {
   wdpa_p_id?: string | null;
   zone_id?: number | null;
   coverage?: number | null;
-  children?: string[] | null;
+  children?: number[] | null;
   data_source?: string | null;
   environment?: string | null;
   protection_status?: string | null;
@@ -39,7 +43,7 @@ export type PA = {
   location?: string | null;
   mpaa_protection_level?: string | null;
   mpaa_establishment_stage?: string | null;
-  parent?: string | null;
+  parent?: number | null;
   created_at?: Date;
   updated_at?: Date;
 };
@@ -49,17 +53,43 @@ export type InputPA = {
   children: PARelations[],
 } & PA
 
-/**
- * Build a relation payload for a localized (i18n-enabled) target content type.
- * Strapi v5 (5.38) does not reliably honor the documented "default locale" fallback
- * when a bare documentId string is passed as a relation value — the link table can
- * end up pointing at an arbitrary locale variant. Passing { documentId, locale }
- * explicitly pins the link to the English row. Returns null for a falsy input so
- * optional relations remain unset.
- */
-const toLocalizedRelation = (map: IDMap, value: string) => {
-  if (!value) return null;
-  return { documentId: map[value], locale: 'en' };
+const toRelationId = (map: RowIdMap, value: string) => (value ? map[value] : null);
+
+const isOptionalInteger = (value: unknown) => value == null || Number.isInteger(value);
+
+const hasIntegerIds = (pa: InputPA) =>
+  isOptionalInteger(pa?.id) &&
+  isOptionalInteger(pa?.parent?.id) &&
+  (pa?.children ?? []).every((child) => isOptionalInteger(child?.id));
+
+const getRelatedIds = (pa: InputPA) =>
+  [pa?.parent?.id, ...(pa?.children ?? []).map((child) => child?.id)].filter((id) => id != null);
+
+// A link to a missing PA fails the link table's foreign key and rolls back the whole request.
+const dropMissingRelations = (
+  pa: InputPA,
+  existingRelatedIds: Set<number>,
+  errors: {msg: string, err: string}[]
+) => {
+  if (pa?.parent?.id != null && !existingRelatedIds.has(pa.parent.id)) {
+    errors.push({
+      msg: `Dropped parent of PA, name: ${pa?.name}`,
+      err: `No PA found with id ${pa.parent.id}`
+    });
+    delete pa.parent;
+  }
+  if (pa?.children) {
+    const missingChildren = pa.children.filter(
+      (child) => child?.id != null && !existingRelatedIds.has(child.id)
+    );
+    missingChildren.forEach((child) => {
+      errors.push({
+        msg: `Dropped child of PA, name: ${pa?.name}`,
+        err: `No PA found with id ${child.id}`
+      });
+      pa.children.splice(pa.children.indexOf(child), 1);
+    });
+  }
 };
 
 
@@ -139,7 +169,10 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
       if (!Array.isArray(data)) {
         return ctx.badRequest('Invalid data format. Expected a body with an array of objects.');
       }
-      const idMaps = await strapi.service('api::pa.pa').getRelationMaps()
+      if (!data.every(hasIntegerIds)) {
+        return ctx.badRequest('Invalid ids. Expected integer ids for PAs, parents, and children.');
+      }
+      const idMaps = await strapi.service('api::pa.pa').getRelationIdMaps()
       const {
         dataSourceMap,
         environmentMap,
@@ -149,13 +182,23 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
         mpaaProtectionLevelMap,
         protectionStatusMap,
       } = idMaps;
-  
+
+      const relatedIds = data.flatMap(getRelatedIds);
+      const existingRelatedRows = relatedIds.length
+        ? await strapi.db.query('api::pa.pa').findMany({
+          select: ['id'],
+          where: { id: { $in: relatedIds } },
+        })
+        : [];
+      const existingRelatedIds = new Set<number>(existingRelatedRows.map((row) => row.id));
+
       let updated = 0;
       let created = 0;
 
       const errors: {msg: string, err: string}[] = [];
       const toUpdateRelations: ToUpdateRelations = {};
-      const newIdMap: IDMap = {};
+      const newIdMap: RowIdMap = {};
+      const publishedAt = new Date();
 
       await strapi.db.transaction(async () => {
         for (const pa of data) {
@@ -166,10 +209,12 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             continue;
           }
 
+          dropMissingRelations(pa, existingRelatedIds, errors);
+
           const updatedPA = strapi.service('api::pa.pa')
             .checkParentChild(pa, toUpdateRelations)
           const {
-            documentId,
+            id,
             data_source,
             environment,
             location,
@@ -180,64 +225,58 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
             ...attributes
           } = updatedPA as PA;
 
+          const paData = {
+            data_source: toRelationId(dataSourceMap, data_source),
+            environment: toRelationId(environmentMap, environment),
+            location: toRelationId(locationMap, location),
+            iucn_category: toRelationId(mpaaIucnCategoryMap, iucn_category),
+            mpaa_establishment_stage: toRelationId(
+              mpaaEstablishmentStageMap, mpaa_establishment_stage
+            ),
+            mpaa_protection_level: toRelationId(mpaaProtectionLevelMap, mpaa_protection_level),
+            protection_status: toRelationId(protectionStatusMap, protection_status),
+            publishedAt,
+            ...attributes
+          };
+
           // Record exists, update in place
-          if (documentId) {
-            await strapi.documents("api::pa.pa").update({
-              documentId: documentId,
-              data: {
-                data_source: toLocalizedRelation(dataSourceMap, data_source),
-                environment: toLocalizedRelation(environmentMap, environment),
-                location: locationMap[location],
-                iucn_category: toLocalizedRelation(mpaaIucnCategoryMap, iucn_category),
-                mpaa_establishment_stage: toLocalizedRelation(
-                  mpaaEstablishmentStageMap, mpaa_establishment_stage
-                ),
-                mpaa_protection_level: toLocalizedRelation(
-                  mpaaProtectionLevelMap, mpaa_protection_level
-                ),
-                protection_status: toLocalizedRelation(protectionStatusMap, protection_status),
-                ...attributes
-              }
-            })
+          if (id) {
+            // Query Engine, not Document Service: the latter queues a fully populated lookup per row
+            // after commit, which exhausts the connection pool on large upserts.
+            const updatedRow = await strapi.db.query('api::pa.pa').update({
+              where: { id },
+              data: paData,
+              select: ['id'],
+            });
+            if (!updatedRow) {
+              errors.push({
+                msg: `Failed to update PA, name: ${pa?.name}, id: ${id}`,
+                err: 'No PA found with this id; its parent/child relations were not updated'
+              });
+              delete toUpdateRelations[id];
+              continue;
+            }
             updated++;
           // No database ID so create a new record
           } else {
-            //Break the required fields out just to keep the type checker happy
-            const { name, area, bbox, coverage, ...optionalAttributes } = attributes;
-            const newPA = await strapi.documents("api::pa.pa").create({
-              data: {
-                area,
-                bbox,
-                coverage,
-                name,
-                data_source: toLocalizedRelation(dataSourceMap, data_source),
-                environment: toLocalizedRelation(environmentMap, environment),
-                location: locationMap[location],
-                iucn_category: toLocalizedRelation(mpaaIucnCategoryMap, iucn_category),
-                mpaa_establishment_stage: toLocalizedRelation(
-                  mpaaEstablishmentStageMap, mpaa_establishment_stage
-                ),
-                mpaa_protection_level: toLocalizedRelation(
-                  mpaaProtectionLevelMap, mpaa_protection_level
-                ),
-                protection_status: toLocalizedRelation(protectionStatusMap, protection_status),
-                ...optionalAttributes
-              }
-            })
+            const newPA = await strapi.db.query('api::pa.pa').create({
+              data: paData,
+              select: ['id'],
+            });
             
             /**
              * Make the identifier key with the original data because the create method doesn't
              * return relational fields
              */ 
             const paKey = strapi.service('api::pa.pa').makePAKey(updatedPA);
-            newIdMap[paKey] = newPA.documentId;
+            newIdMap[paKey] = newPA.id;
 
             /**
              * If the newly created Pa has relations to update later add its 
              * new ID update relations map
              */
             if (toUpdateRelations[paKey]) {
-              toUpdateRelations[newPA.documentId] = toUpdateRelations[paKey];
+              toUpdateRelations[newPA.id] = toUpdateRelations[paKey];
               delete toUpdateRelations[paKey]
             }
             created++;
@@ -251,18 +290,17 @@ export default factories.createCoreController('api::pa.pa', ({ strapi }) => ({
       for (const toUpdate in toUpdateRelations) {
         const relations = toUpdateRelations[toUpdate];
 
-        const children = relations?.children?.map(child => child?.documentId ? 
-          child.documentId : 
-          newIdMap[child.key])
+        const children = relations?.children?.map(child => child?.id ?? newIdMap[child.key])
         
         const parent = relations?.parent?.key ? newIdMap[relations.parent.key] : null;
 
-        await strapi.documents('api::pa.pa').update({
-          documentId: toUpdate,
+        await strapi.db.query('api::pa.pa').update({
+          where: { id: Number(toUpdate) },
           data: {
             ...(children ? { children } : {}),
             ...(parent ? { parent } : null)
-          }
+          },
+          select: ['id'],
         })
 
       }

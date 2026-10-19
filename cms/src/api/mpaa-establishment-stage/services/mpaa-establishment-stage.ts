@@ -4,19 +4,11 @@
 
 import { factories } from '@strapi/strapi';
 
+import { getLookupMap, type LookupIdField } from '../../../utils/lookup-map';
+
 export default factories.createCoreService('api::mpaa-establishment-stage.mpaa-establishment-stage',
-  ({ strapi }) => ({
-  async getMpaaEstablishmentStageMap(): Promise<IDMap> {
-    const stages = await strapi.db.query('api::mpaa-establishment-stage.mpaa-establishment-stage')
-    .findMany({
-      select: ['documentId', 'slug'],
-    });
-
-    const mpaaIucnCategoryMap: IDMap = {};
-    stages.forEach((stage) => {
-      mpaaIucnCategoryMap[stage.slug] = stage.documentId;
-    });
-
-    return mpaaIucnCategoryMap;
+  () => ({
+  getMpaaEstablishmentStageMap(idField: LookupIdField) {
+    return getLookupMap('api::mpaa-establishment-stage.mpaa-establishment-stage', 'slug', idField, true);
   }
   }));
