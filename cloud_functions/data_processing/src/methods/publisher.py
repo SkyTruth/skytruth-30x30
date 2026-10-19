@@ -472,7 +472,7 @@ def dispatch_publisher(
         case "generate_marine_protection_level_stats_table":
             _ = generate_marine_protection_level_stats_table(verbose=verbose)
             step_list = ["update_mpaa_protection_level_stats"]
-            if env == "production":
+            if env in ("staging", "production"):
                 step_list.extend(["update_mpatlas_tileset"])
 
         case "generate_fishing_protection_table":
@@ -487,7 +487,7 @@ def dispatch_publisher(
             updates = generate_protected_areas_diff_table(verbose=verbose)
             if updates:
                 step_list = ["update_protected_areas"]
-                if env == "production":
+                if env in ("staging", "production"):
                     step_list.extend(
                         [
                             "update_marine_protected_areas_tileset",
