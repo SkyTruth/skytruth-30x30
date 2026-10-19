@@ -22,6 +22,7 @@ import { cn } from '@/lib/classnames';
 import CloseIcon from '@/styles/icons/close.svg';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
+import { InteractionConfig } from '@/types/layers';
 
 import { useSyncMapLayers } from '../sync-settings';
 
@@ -133,8 +134,8 @@ const PopupContainer: FCWithMessages = () => {
     {
       query: {
         enabled: layersInteractive.length > 1,
-        select: ({ data }) =>
-          data
+        select: ({ data }) => {
+          const options = data
             .filter(
               ({
                 config: {
@@ -143,13 +144,25 @@ const PopupContainer: FCWithMessages = () => {
                 },
               }) => availableSources?.includes(sourceId)
             )
-            .map(({ title: label, slug: value }) => ({
-              label,
-              value,
+            .map(({ title, slug, interaction_config }) => ({
+              label: title,
+              value: slug,
+              isProtectedArea:
+                (interaction_config as InteractionConfig)?.['@@type'] === 'ProtectedAreaPopup',
             }))
             .sort((a, b) =>
               syncedLayers.indexOf(a.value) > syncedLayers.indexOf(b.value) ? 1 : -1
-            ),
+            );
+
+          // Every protected-area layer renders the same popup, so they share one entry.
+          const firstProtectedArea = options.find((option) => option.isProtectedArea);
+          return options
+            .filter((option) => !option.isProtectedArea || option === firstProtectedArea)
+            .map(({ label, value, isProtectedArea }) => ({
+              label: isProtectedArea ? t('protected-areas') : label,
+              value,
+            }));
+        },
       },
     }
   );
@@ -243,7 +256,7 @@ const PopupContainer: FCWithMessages = () => {
             </button>
           </div>
         )}
-        {isClickedTooltip && availableSources.length > 1 && (
+        {isClickedTooltip && (layersInteractiveData?.length ?? 0) > 1 && (
           <Select
             onValueChange={(layer) => {
               setSelectedLayerSlug(layer);
