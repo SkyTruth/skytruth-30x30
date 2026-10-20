@@ -192,7 +192,8 @@ const PopupContainer: FCWithMessages = () => {
       displayName =
         code && sourceConfig?.locationType
           ? getLocationName({ code, type: sourceConfig.locationType })
-          : null;
+          : // Protected-area tiles carry the site name directly.
+            (properties.name ?? properties.NAME ?? null);
     }
 
     return (
