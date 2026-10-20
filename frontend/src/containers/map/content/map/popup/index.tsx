@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { Popup } from 'react-map-gl';
+import { Popup, useMap } from 'react-map-gl';
 
 import { useAtomValue, useSetAtom } from 'jotai';
+import type { Popup as MapboxPopup, PopupOptions } from 'mapbox-gl';
 import { useLocale, useTranslations } from 'next-intl';
 import { useKey } from 'rooks';
 
@@ -38,6 +39,80 @@ const PopupContainer: FCWithMessages = () => {
   const [selectedLayerSlug, setSelectedLayerSlug] = useState<string | null>(null);
 
   const setPopup = useSetAtom(popupAtom);
+
+  const { default: mapRef } = useMap();
+  const popupRef = useRef<MapboxPopup>(null);
+  const [anchor, setAnchor] = useState<PopupOptions['anchor']>();
+
+  // Change popup direction to minimize overlaps from panels
+  useLayoutEffect(() => {
+    const map = mapRef?.getMap();
+    const mapboxPopup = popupRef.current;
+    if (!map || !mapboxPopup) return;
+
+    const updateAnchor = () => {
+      const mapRect = map.getContainer().getBoundingClientRect();
+      const { width, height } = mapboxPopup.getElement()!.getBoundingClientRect();
+      const point = map.project(mapboxPopup.getLngLat());
+      const cursor = { x: mapRect.left + point.x, y: mapRect.top + point.y };
+
+      // The popup is above the cursor by default
+      const popupTop = cursor.y - height;
+      const popupBottom = cursor.y;
+
+      // Popup moves around the edges of nearby panels to minimize overlaps
+      const panels = Array.from(document.querySelectorAll('[data-map-overlay-panel]'))
+        .map((panel) => panel.getBoundingClientRect())
+        .filter((panel) => panel.top < popupBottom && panel.bottom > popupTop);
+
+      // The nearest visible edge on each side of the cursor
+      const leftEdge = Math.max(
+        mapRect.left,
+        ...panels.filter((panel) => panel.right <= cursor.x).map((panel) => panel.right)
+      );
+      const rightEdge = Math.min(
+        mapRect.right,
+        ...panels.filter((panel) => panel.left >= cursor.x).map((panel) => panel.left)
+      );
+
+      // A popup centered on the cursor needs half its width free on each side
+      let side: 'left' | 'right' | null = null;
+      if (cursor.x - leftEdge < width / 2) side = 'left';
+      else if (rightEdge - cursor.x < width / 2) side = 'right';
+
+      if (!side) {
+        setAnchor(undefined);
+        return;
+      }
+
+      // A popup needs half its height free above and below;
+      // use a corner instead near the top or bottom of the map
+      let corner = '';
+      if (cursor.y - mapRect.top < height / 2) corner = 'top-';
+      else if (mapRect.bottom - cursor.y < height / 2) corner = 'bottom-';
+
+      setAnchor(`${corner}${side}` as PopupOptions['anchor']);
+    };
+
+    // The popup is added to the map after this component's layout effects run
+    if (mapboxPopup.isOpen()) updateAnchor();
+    else mapboxPopup.once('open', updateAnchor);
+    map.on('move', updateAnchor);
+
+    // Re-anchor as the panels open and close over the map
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapboxPopup.isOpen()) updateAnchor();
+    });
+    document
+      .querySelectorAll('[data-map-overlay-panel]')
+      .forEach((panel) => resizeObserver.observe(panel));
+
+    return () => {
+      mapboxPopup.off('open', updateAnchor);
+      map.off('move', updateAnchor);
+      resizeObserver.disconnect();
+    };
+  }, [mapRef, popup]);
 
   const getLocationName = useLocationName();
 
@@ -147,8 +222,10 @@ const PopupContainer: FCWithMessages = () => {
 
   return (
     <Popup
+      ref={popupRef}
       latitude={popup.lngLat.lat}
       longitude={popup.lngLat.lng}
+      anchor={anchor}
       offset={10}
       closeOnClick={false}
       closeButton={false}

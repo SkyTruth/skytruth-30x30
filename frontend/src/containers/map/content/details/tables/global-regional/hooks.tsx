@@ -379,7 +379,11 @@ export const useData = (
     },
     {
       query: {
-        select: ({ data }) => data[0]?.type,
+        // Type used to choose the table filter:
+        // Country groups (like ARG* for Argentina and Territories) are stored as
+        // 'country' but filtered like regions (one row per member location)
+        select: ({ data }) =>
+          data[0]?.type === 'country' && locationCode.endsWith('*') ? 'region' : data[0]?.type,
       },
     }
   );
@@ -455,13 +459,15 @@ export const useData = (
 
           const reversePathItems = key.split('.').reverse();
 
-          return reversePathItems.reduce((res, pathItem, index) => {
+          const filter = reversePathItems.reduce((res, pathItem, index) => {
             if (index === 0) {
               return { [pathItem]: { $in: values } };
             }
 
             return { [pathItem]: res };
           }, {});
+
+          return { ...res, ...filter };
         }, {}),
       },
       'pagination[pageSize]': pagination.pageSize,
