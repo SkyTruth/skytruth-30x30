@@ -35,6 +35,15 @@ const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-ma
   ssr: false,
 });
 
+const HOVER_DELAY_MS = 400;
+
+// Identifies what is under the cursor, so the tooltip only moves when that changes.
+const hoveredFeatureKey = (features: mapboxgl.MapboxGeoJSONFeature[] = []) =>
+  features
+    .map((feature) => `${feature.source}:${feature.id ?? JSON.stringify(feature.properties)}`)
+    .sort()
+    .join('|');
+
 const MainMap: FCWithMessages = () => {
   const locale = useLocale();
 
@@ -55,6 +64,7 @@ const MainMap: FCWithMessages = () => {
   const hoveredPolygonId = useRef<Parameters<typeof map.setFeatureState>[0] | null>(null);
   const mountedRef = useRef(false);
   const previousDefaultLayersRef = useRef(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const { data: layersInteractiveData } = useGetLayers(
     {
@@ -168,6 +178,8 @@ const MainMap: FCWithMessages = () => {
     (e: Parameters<ComponentProps<typeof Map>['onClick']>[0]) => {
       if (drawState.active) return null;
 
+      clearTimeout(hoverTimer.current);
+
       if (popup?.features?.length) {
         safelyResetFeatureState();
         setPopup({});
@@ -196,6 +208,7 @@ const MainMap: FCWithMessages = () => {
   const handleMouseMove = useCallback(
     (e: Parameters<ComponentProps<typeof Map>['onMouseOver']>[0]) => {
       if (!e.features.length) {
+        clearTimeout(hoverTimer.current);
         setPopup({});
       }
 
@@ -205,7 +218,20 @@ const MainMap: FCWithMessages = () => {
         }
 
         if (e.type === 'mousemove') {
-          setPopup({ ...e });
+          const isSameHover =
+            popup?.type === 'mousemove' &&
+            hoveredFeatureKey(popup.features) === hoveredFeatureKey(e.features);
+
+          // Open the tooltip once the cursor dwells, and leave it where it opened
+          // for as long as the same features stay under the cursor.
+          if (!isSameHover) {
+            // react-map-gl strips `features` from the event once the handler
+            // returns, so capture it now rather than when the timer fires.
+            const hovered = { ...e };
+            clearTimeout(hoverTimer.current);
+            if (popup?.type === 'mousemove') setPopup({});
+            hoverTimer.current = setTimeout(() => setPopup(hovered), HOVER_DELAY_MS);
+          }
         }
 
         if (e.features?.[0]) {
@@ -217,10 +243,11 @@ const MainMap: FCWithMessages = () => {
         }
       }
     },
-    [setPopup, drawState.active, safelySetFeatureState]
+    [setPopup, drawState.active, safelySetFeatureState, popup]
   );
 
   const handleMouseOut = useCallback(() => {
+    clearTimeout(hoverTimer.current);
     safelyResetFeatureState();
 
     if (popup?.type !== 'click') {
@@ -248,6 +275,8 @@ const MainMap: FCWithMessages = () => {
   useEffect(() => {
     mountedRef.current = true;
   }, []);
+
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
 
   const disableMouseMove = popup.type === 'click' && popup.features?.length;
 
