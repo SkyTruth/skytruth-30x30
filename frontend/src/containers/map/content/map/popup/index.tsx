@@ -26,7 +26,13 @@ import { InteractionConfig } from '@/types/layers';
 
 import { useSyncMapLayers } from '../sync-settings';
 
-import { EEZ_SOURCE, POPUP_ICON_BY_SOURCE, POPUP_PROPERTIES_BY_SOURCE } from './constants';
+import {
+  EEZ_SOURCE,
+  FISHING_PROTECTION_SOURCE,
+  POPUP_ICON_BY_SOURCE,
+  POPUP_PROPERTIES_BY_SOURCE,
+} from './constants';
+import { readClickedPa } from './protected-area/parse-tile-click';
 
 const PopupContainer: FCWithMessages = () => {
   const locale = useLocale();
@@ -173,11 +179,13 @@ const PopupContainer: FCWithMessages = () => {
       feature.source in POPUP_PROPERTIES_BY_SOURCE;
 
     // Protected-area tiles are the ones carrying a WDPA or MPAtlas id; other
-    // interactive layers (e.g. ProtectedSeas) must not be counted.
+    // interactive layers (e.g. ProtectedSeas) must not be counted. The key is the
+    // same identity the click popup dedupes on, so one zone shown by two layers
+    // counts once.
     const protectedAreaKey = (feature: (typeof features)[number]) => {
-      const { WDPA_PID, wdpa_pid, zone_id, WDPAID, wdpa_id } = feature.properties ?? {};
-      const id = WDPA_PID ?? wdpa_pid ?? zone_id ?? WDPAID ?? wdpa_id;
-      return id == null ? null : `${feature.source}:${id}`;
+      const { wdpaPId, wdpaid, zoneId } = readClickedPa(feature.properties ?? {});
+      const key = [wdpaPId, wdpaid, zoneId].join('|');
+      return key === '||' ? null : key;
     };
 
     // The boundary names the tooltip; protected areas under it are counted per
@@ -186,7 +194,15 @@ const PopupContainer: FCWithMessages = () => {
     const boundary = features.find(isBoundary);
     const protectedAreaCount = new Set(features.map(protectedAreaKey).filter(Boolean)).size;
 
-    const { properties, source } = boundary ?? features[0] ?? {};
+    // Which feature names the tooltip, in priority order; `find` keeps layer
+    // order within a tier, so overlapping boundaries yield the topmost one.
+    const named =
+      boundary ??
+      features.find((feature) => protectedAreaKey(feature)) ??
+      features.find((feature) => feature.source === FISHING_PROTECTION_SOURCE) ??
+      features[0];
+
+    const { properties, source } = named ?? {};
 
     const ids = new Set(['ISO_TER1', 'ISO_TER2', 'ISO_TER3']);
     const propertiesSet = properties ? new Set(Object.keys(properties)) : new Set();

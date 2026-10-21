@@ -3,6 +3,7 @@ import Mountain from '@/styles/icons/mountain.svg';
 import Wave from '@/styles/icons/wave.svg';
 
 export const EEZ_SOURCE = 'eez-countries-source';
+export const FISHING_PROTECTION_SOURCE = 'protected-seas';
 
 export const POPUP_PROPERTIES_BY_SOURCE = {
   [EEZ_SOURCE]: {
