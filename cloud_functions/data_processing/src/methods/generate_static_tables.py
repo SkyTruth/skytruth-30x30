@@ -50,8 +50,8 @@ def process_national_targets(
 
     Returns:
         pd.DataFrame: Targets keyed by location code, one nullable integer column per target
-            and target year, plus marine_target_source naming which dataset supplied the
-            marine target.
+            and target year, the pledge or ORT record backing the target, and
+            marine_target_source naming which dataset supplied the marine target.
     """
     if verbose:
         logger.info({"message": f"Reading national targets from {cbd_filename} in bucket {bucket}"})
@@ -59,23 +59,46 @@ def process_national_targets(
     cbd_national_targets = read_dataframe(
         bucket_name=bucket, filename=cbd_filename, verbose=verbose
     )
+    cbd_national_targets.loc[
+        cbd_national_targets["Marine Confidence"].isin(["Low", "Medium"]),
+        ["% Marine Target", "Marine By Year"],
+    ] = pd.NA
+    cbd_national_targets.loc[
+        cbd_national_targets["Terrestrial Confidence"].isin(["Low", "Medium"]),
+        ["% Terrestrial Target", "Terrestrial By Year"],
+    ] = pd.NA
+    cbd_national_targets = cbd_national_targets.rename(
+        columns={
+            "Iso Code": "code",
+            "% Marine Target": "marine_target",
+            "Marine By Year": "marine_target_year",
+            "% Terrestrial Target": "terrestrial_target",
+            "Terrestrial By Year": "terrestrial_target_year",
+            "ORT Record": "pledge_or_ort_record",
+        }
+    )[
+        [
+            "code",
+            "marine_target",
+            "marine_target_year",
+            "terrestrial_target",
+            "terrestrial_target_year",
+            "pledge_or_ort_record",
+        ]
+    ]
 
     response = requests.get(mpatlas_url)
     response.raise_for_status()
     data = response.json()
-    mpa_national_targets = pd.DataFrame(data)[
-        ["id", "thirty_by_thirty_target", "national_target", "fully_highly_target", "target_year"]
-    ]
-    mpa_national_targets = mpa_national_targets[
-        mpa_national_targets["thirty_by_thirty_target"].notnull()
-    ]
-    mpa_national_targets = mpa_national_targets.rename(
+    mpatlas = pd.DataFrame(data)
+    mpa_national_targets = mpatlas[mpatlas["thirty_by_thirty_target"].notnull()].rename(
         columns={
             "id": "code",
             "national_target": "marine_target",
             "target_year": "marine_target_year",
+            "pledge": "pledge_or_ort_record",
         }
-    )[["code", "marine_target", "marine_target_year"]]
+    )[["code", "marine_target", "marine_target_year", "pledge_or_ort_record"]]
 
     target_cols = [
         "marine_target",
@@ -83,30 +106,37 @@ def process_national_targets(
         "terrestrial_target",
         "terrestrial_target_year",
     ]
-    cbd = (
-        cbd_national_targets.set_index("code")
-        .reindex(columns=target_cols)
-        .apply(pd.to_numeric, errors="coerce")
-    )
-    mpa = mpa_national_targets.set_index("code").apply(pd.to_numeric, errors="coerce")
+    marine_cols = ["marine_target", "marine_target_year"]
+    record_col = "pledge_or_ort_record"
 
-    national_targets = cbd.combine_first(mpa)[target_cols].astype("Int64")
+    # Blanks have to become NA before combining, otherwise an empty cell counts as a CBD value
+    # and suppresses the MPAtlas fallback
+    cbd = cbd_national_targets.set_index("code").reindex(columns=[*target_cols, record_col])
+    cbd[target_cols] = cbd[target_cols].apply(pd.to_numeric, errors="coerce")
+    cbd[record_col] = cbd[record_col].replace("", pd.NA)
+
+    mpa = mpa_national_targets.set_index("code")
+    mpa[marine_cols] = mpa[marine_cols].apply(pd.to_numeric, errors="coerce")
+
+    national_targets = cbd.combine_first(mpa)[[*target_cols, record_col]]
+    national_targets[target_cols] = national_targets[target_cols].astype("Float64")
 
     # Only the marine target has two possible sources; terrestrial targets only come from the CBD
-    from_cbd = national_targets.index.isin(cbd.index[cbd["marine_target"].notna()])
-    national_targets["marine_target_source"] = pd.Series(
-        np.where(from_cbd, "CBD", "MPAtlas"), index=national_targets.index
-    ).where(national_targets["marine_target"].notna())
+    national_targets["marine_target_source"] = np.where(
+        cbd["marine_target"].reindex(national_targets.index).notna(), "CBD", "MPAtlas"
+    )
+    national_targets.loc[national_targets["marine_target"].isna(), "marine_target_source"] = pd.NA
 
     national_targets = national_targets.reset_index()
 
     if verbose:
+        sources = national_targets["marine_target_source"].value_counts()
         logger.info(
             {
                 "message": (
                     f"Resolved national targets for {len(national_targets)} locations"
-                    f" ({len(cbd_national_targets)} from CBD,"
-                    f" {len(mpa_national_targets)} available from MPAtlas)"
+                    f" ({sources.get('CBD', 0)} marine targets from CBD,"
+                    f" {sources.get('MPAtlas', 0)} from MPAtlas)"
                 )
             }
         )
@@ -245,22 +275,13 @@ def generate_locations_table(
         ignore_index=True,
     )
 
-    target_cols = [
-        "marine_target",
-        "marine_target_year",
-        "terrestrial_target",
-        "terrestrial_target_year",
-    ]
-    locs = locs.merge(
-        national_targets[["code", *target_cols, "marine_target_source"]], on="code", how="left"
-    )
+    locs = locs.merge(national_targets, on="code", how="left")
 
     # Typesafe defaults that might be missing after merger
     locs["has_shared_marine_area"] = (
         locs.get("has_shared_marine_area").astype("boolean").fillna(False)
     )
     locs["total_marine_area"] = locs.get("total_marine_area").round(0).fillna(0).astype("Int64")
-    locs[target_cols] = locs[target_cols].apply(pd.to_numeric, errors="coerce").astype("Int64")
 
     upload_dataframe(bucket_name=bucket, df=locs, destination_blob_name=output_file_name)
 

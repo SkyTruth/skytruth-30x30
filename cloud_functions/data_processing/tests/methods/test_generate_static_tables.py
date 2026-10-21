@@ -86,11 +86,14 @@ def mock_national_targets_df():
     """
     return pd.DataFrame(
         {
-            "code": ["USA", "MEX", "ZZZ", "FRA"],
-            "marine_target": ["30", "50", "30", ""],
-            "marine_target_year": ["2030", "2025", "2030", ""],
-            "terrestrial_target": ["30", "", "30", "30"],
-            "terrestrial_target_year": ["2030", "", "2030", "2030"],
+            "Iso Code": ["USA", "MEX", "ZZZ", "FRA", "CAN"],
+            "% Marine Target": ["30", "50", "30", "", "60"],
+            "Marine By Year": ["2030", "2025", "2030", "", "2040"],
+            "Marine Confidence": ["High", "High", "High", "High", "Low"],
+            "% Terrestrial Target": ["30", "", "30", "30", "30"],
+            "Terrestrial By Year": ["2030", "", "2030", "2030", "2030"],
+            "Terrestrial Confidence": ["High", "High", "High", "High", "High"],
+            "ORT Record": ["CBD NBSAP", "", "CBD NBSAP", "CBD NBSAP", "CBD NBSAP"],
         }
     )
 
@@ -108,6 +111,7 @@ def mock_mpatlas_country_targets():
             "national_target": 10,
             "fully_highly_target": None,
             "target_year": 2020,
+            "pledge": "Ocean Panel",
         },
         {
             "id": "CAN",
@@ -115,6 +119,15 @@ def mock_mpatlas_country_targets():
             "national_target": 30,
             "fully_highly_target": None,
             "target_year": 2030,
+            "pledge": "Ocean Panel",
+        },
+        {
+            "id": "JPN",
+            "thirty_by_thirty_target": True,
+            "national_target": 30,
+            "fully_highly_target": None,
+            "target_year": 2030,
+            "pledge": "High Ambition Coalition",
         },
         {
             "id": "BRA",
@@ -122,6 +135,7 @@ def mock_mpatlas_country_targets():
             "national_target": 25,
             "fully_highly_target": None,
             "target_year": 2030,
+            "pledge": "Ocean Panel",
         },
     ]
 
@@ -279,17 +293,28 @@ def test_process_national_targets_prefers_cbd_and_falls_back_to_mpatlas(
     assert (out.loc["USA", "marine_target"], out.loc["USA", "marine_target_year"]) == (30, 2030)
 
     # MPAtlas fills locations the CBD file does not cover
+    assert (out.loc["JPN", "marine_target"], out.loc["JPN", "marine_target_year"]) == (30, 2030)
+
+    # A low confidence CBD marine target is discarded, so MPAtlas fills it instead
     assert (out.loc["CAN", "marine_target"], out.loc["CAN", "marine_target_year"]) == (30, 2030)
 
     # MPAtlas is marine only, so its locations have no terrestrial target
-    assert pd.isna(out.loc["CAN", "terrestrial_target"])
+    assert pd.isna(out.loc["JPN", "terrestrial_target"])
 
     # Rows without a thirty_by_thirty_target are dropped from the MPAtlas side
     assert "BRA" not in out.index
 
     # Each resolved marine target names the dataset it came from
     assert out.loc["USA", "marine_target_source"] == "CBD"
+    assert out.loc["JPN", "marine_target_source"] == "MPAtlas"
     assert out.loc["CAN", "marine_target_source"] == "MPAtlas"
+
+    # The backing record is kept as text rather than coerced away with the numeric columns
+    assert out.loc["USA", "pledge_or_ort_record"] == "CBD NBSAP"
+    assert out.loc["JPN", "pledge_or_ort_record"] == "High Ambition Coalition"
+
+    # A blank record in the CBD file falls back to MPAtlas like any other value
+    assert pd.isna(out.loc["MEX", "pledge_or_ort_record"])
 
     # A location neither source gives a marine target to has a terrestrial target but no source
     assert pd.isna(out.loc["FRA", "marine_target"])
