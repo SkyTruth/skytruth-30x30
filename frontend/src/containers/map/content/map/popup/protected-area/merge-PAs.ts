@@ -2,7 +2,7 @@ import type useLocationName from '@/hooks/use-location-name';
 import { pickLocalized } from '@/lib/utils/pick-localized';
 import { Pa } from '@/types/generated/strapi.schemas';
 
-import { ClickedPa, readTileLocations } from './parse-tile-click';
+import { ClickedPa, normalizeId, readTileLocations } from './parse-tile-click';
 
 /**
  * One protected area, assembled from every `/pas` row sharing its parcel id
@@ -57,7 +57,7 @@ const mergeParcelGroup = (id: string, group: Pa[], context: MergeContext): Merge
   return {
     id,
     wdpaid: String(group[0].wdpaid),
-    wdpaPId: group[0].wdpa_p_id,
+    wdpaPId: normalizeId(group[0].wdpa_p_id),
     name: baseRow.name,
     area: baseRow.area,
     protectionStatus: protectionStatus && {
@@ -71,7 +71,7 @@ const mergeParcelGroup = (id: string, group: Pa[], context: MergeContext): Merge
     },
     iucnCategory: pickLocalized(iucnCategory, locale)?.name,
     locations: [...locationsByCode.values()],
-    zoneId: group.find((row) => row.zone_id)?.zone_id,
+    zoneId: group.map((row) => normalizeId(row.zone_id)).find(Boolean),
     isMarine: baseRow.environment?.slug === 'marine',
   };
 };
@@ -126,11 +126,13 @@ export const mergeProtectedAreas = (
   // Group by parcel when the row has one, else by site.
   const rowsById = new Map<string, Pa[]>();
   rows.forEach((row) => {
-    const id = row.wdpa_p_id || String(row.wdpaid);
+    const id = normalizeId(row.wdpa_p_id) ?? String(row.wdpaid);
     rowsById.set(id, [...(rowsById.get(id) ?? []), row]);
   });
 
-  const knownIds = new Set(rows.flatMap((row) => [row.zone_id, row.wdpa_p_id, row.wdpaid]));
+  const knownIds = new Set(
+    rows.flatMap((row) => [row.zone_id, row.wdpa_p_id, row.wdpaid].map(normalizeId))
+  );
   const unestablishedZones = clicked
     .filter(
       (pa) => pa.zoneId && ![pa.zoneId, pa.wdpaPId, pa.wdpaid].some((id) => id && knownIds.has(id))

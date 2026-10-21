@@ -13,7 +13,12 @@ export type ClickedPa = {
   locationCode?: string;
 };
 
-const normalizeId = (value: unknown) => (value == null || value === '' ? undefined : String(value));
+// The pipeline writes missing ids as the strings pandas prints for nulls, in
+// both the tiles and the database; none of them may ever reach a query.
+const MISSING_IDS = new Set(['', 'None', 'nan', 'NaN', '<NA>', 'null']);
+
+export const normalizeId = (value: unknown) =>
+  value == null || MISSING_IDS.has(String(value)) ? undefined : String(value);
 
 // The pipeline's conversion of MPAtlas's raw establishment stage to the DB slug.
 const ESTABLISHMENT_STAGE_SLUGS: Record<string, string> = {
