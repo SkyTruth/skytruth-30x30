@@ -230,8 +230,12 @@ const MainMap: FCWithMessages = () => {
             hoveredKey.current = key;
             setPopup({ ...e });
           } else {
-            // Same features: follow the pointer; the content is unchanged so it can't resize.
-            setPopup((previous) => ({ ...previous, lngLat: e.lngLat, point: e.point }));
+            // Same features: follow the pointer, unless something else closed the tooltip.
+            setPopup((previous) =>
+              previous?.type === 'mousemove'
+                ? { ...previous, lngLat: e.lngLat, point: e.point }
+                : { ...e }
+            );
           }
         }
 
@@ -247,23 +251,16 @@ const MainMap: FCWithMessages = () => {
     [setPopup, drawState.active, safelySetFeatureState]
   );
 
-  const handleMouseOut = useCallback(
-    (e: Parameters<ComponentProps<typeof Map>['onMouseOut']>[0]) => {
-      // The cursor landing on the tooltip is not leaving the map.
-      const target = e?.originalEvent?.relatedTarget;
-      if (target instanceof Element && target.closest('.mapboxgl-popup')) return;
+  const handleMouseOut = useCallback(() => {
+    hoveredKey.current = '';
+    safelyResetFeatureState();
 
-      hoveredKey.current = '';
-      safelyResetFeatureState();
-
-      if (popup?.type !== 'click') {
-        // If the popup was opened through a click, we keep it open so that the user can eventually
-        // interact with it's content
-        setPopup({});
-      }
-    },
-    [safelyResetFeatureState, popup, setPopup]
-  );
+    if (popup?.type !== 'click') {
+      // If the popup was opened through a click, we keep it open so that the user can eventually
+      // interact with it's content
+      setPopup({});
+    }
+  }, [safelyResetFeatureState, popup, setPopup]);
 
   const initialViewState: ComponentProps<typeof Map>['initialViewState'] = useMemo(() => {
     if (URLBbox) {
