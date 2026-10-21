@@ -168,7 +168,25 @@ const PopupContainer: FCWithMessages = () => {
   );
 
   const hoverTooltipContent = useMemo(() => {
-    const { properties, source } = popup?.features?.[0] ?? {};
+    const features = popup?.features ?? [];
+    const isBoundary = (feature: (typeof features)[number]) =>
+      feature.source in POPUP_PROPERTIES_BY_SOURCE;
+
+    // Protected-area tiles are the ones carrying a WDPA or MPAtlas id; other
+    // interactive layers (e.g. ProtectedSeas) must not be counted.
+    const protectedAreaKey = (feature: (typeof features)[number]) => {
+      const { WDPA_PID, wdpa_pid, zone_id, WDPAID, wdpa_id } = feature.properties ?? {};
+      const id = WDPA_PID ?? wdpa_pid ?? zone_id ?? WDPAID ?? wdpa_id;
+      return id == null ? null : `${feature.source}:${id}`;
+    };
+
+    // The boundary names the tooltip; protected areas under it are counted per
+    // parcel, matching the click popup's cards. Mapbox returns one entry per style
+    // layer and tile hit, so count distinct keys.
+    const boundary = features.find(isBoundary);
+    const protectedAreaCount = new Set(features.map(protectedAreaKey).filter(Boolean)).size;
+
+    const { properties, source } = boundary ?? features[0] ?? {};
 
     const ids = new Set(['ISO_TER1', 'ISO_TER2', 'ISO_TER3']);
     const propertiesSet = properties ? new Set(Object.keys(properties)) : new Set();
@@ -192,8 +210,8 @@ const PopupContainer: FCWithMessages = () => {
       displayName =
         code && sourceConfig?.locationType
           ? getLocationName({ code, type: sourceConfig.locationType })
-          : // Protected-area tiles carry the site name directly.
-            (properties.name ?? properties.NAME ?? null);
+          : // Protected-area and ProtectedSeas tiles carry the site name directly.
+            (properties.name ?? properties.NAME ?? properties.SITE_NAME ?? null);
     }
 
     return (
@@ -202,9 +220,16 @@ const PopupContainer: FCWithMessages = () => {
           <Icon icon={POPUP_ICON_BY_SOURCE[source]} className="mr-2 inline-block w-[14px]" />
         ) : null}
         {displayName}
-        <div className="mt-[0.25rem] text-xs">
-          {isMultiClaimEEZ ? `* ${t('eez-multi-claim')}` : null}
-        </div>
+        {boundary && protectedAreaCount > 0 && (
+          <div className="mt-[0.25rem]">
+            {/* The count sits in the icon column, aligned with the boundary line above. */}
+            <span className="mr-2 inline-block min-w-[14px]">{protectedAreaCount}</span>
+            {t('protected-areas-count', { count: protectedAreaCount })}
+          </div>
+        )}
+        {isMultiClaimEEZ && (
+          <div className="mt-[0.25rem] text-xs">{`* ${t('eez-multi-claim')}`}</div>
+        )}
       </div>
     );
   }, [locale, popup, t, getLocationName]);

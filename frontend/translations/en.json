@@ -198,6 +198,7 @@
       "view-on-protected-planet": "View on Protected Planet",
       "view-on-mpatlas": "View on MPAtlas",
       "protected-areas": "Protected areas",
+      "protected-areas-count": "{count, plural, one {Protected Area} other {Protected Areas}}",
       "mpa-not-implemented": "This MPA is not yet implemented.",
       "designation": "Designation",
       "year": "Year",
