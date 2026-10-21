@@ -1,6 +1,7 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import requests
 from shapely.ops import unary_union
 
 from src.core.commons import add_tolerance_suffix, load_iho_regions
@@ -10,6 +11,8 @@ from src.core.params import (
     GADM_FILE_NAME,
     LOCATIONS_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
+    MPATLAS_COUNTRY_LEVEL_API_URL,
+    NATIONAL_TARGETS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     TOLERANCE,
@@ -25,6 +28,90 @@ from src.utils.geo import get_area_km2
 from src.utils.logger import Logger
 
 logger = Logger()
+
+
+def process_national_targets(
+    bucket: str = BUCKET,
+    cbd_filename: str = NATIONAL_TARGETS_FILE_NAME,
+    mpatlas_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """
+    Prioritizes national targets from the Convention on Biological Diversity and
+    falls back on MPAtlas defined targes if the CBD targets are not available. CBD targets are
+    read from a CSV in GCS, MPAtlas targets from its country-level API. MPAtlas only publishes
+    marine targets, so terrestrial targets come from the CBD alone.
+
+    Args:
+        bucket (str): The GCS bucket name.
+        cbd_filename (str): The name of the CBD national targets CSV file.
+        mpatlas_url (str): The MPAtlas country-level API url.
+        verbose (bool): If True, logs the process.
+
+    Returns:
+        pd.DataFrame: Targets keyed by location code, one nullable integer column per target
+            and target year, plus marine_target_source naming which dataset supplied the
+            marine target.
+    """
+    if verbose:
+        logger.info({"message": f"Reading national targets from {cbd_filename} in bucket {bucket}"})
+
+    cbd_national_targets = read_dataframe(
+        bucket_name=bucket, filename=cbd_filename, verbose=verbose
+    )
+
+    response = requests.get(mpatlas_url)
+    response.raise_for_status()
+    data = response.json()
+    mpa_national_targets = pd.DataFrame(data)[
+        ["id", "thirty_by_thirty_target", "national_target", "fully_highly_target", "target_year"]
+    ]
+    mpa_national_targets = mpa_national_targets[
+        mpa_national_targets["thirty_by_thirty_target"].notnull()
+    ]
+    mpa_national_targets = mpa_national_targets.rename(
+        columns={
+            "id": "code",
+            "national_target": "marine_target",
+            "target_year": "marine_target_year",
+        }
+    )[["code", "marine_target", "marine_target_year"]]
+
+    target_cols = [
+        "marine_target",
+        "marine_target_year",
+        "terrestrial_target",
+        "terrestrial_target_year",
+    ]
+    cbd = (
+        cbd_national_targets.set_index("code")
+        .reindex(columns=target_cols)
+        .apply(pd.to_numeric, errors="coerce")
+    )
+    mpa = mpa_national_targets.set_index("code").apply(pd.to_numeric, errors="coerce")
+
+    national_targets = cbd.combine_first(mpa)[target_cols].astype("Int64")
+
+    # Only the marine target has two possible sources; terrestrial targets only come from the CBD
+    from_cbd = national_targets.index.isin(cbd.index[cbd["marine_target"].notna()])
+    national_targets["marine_target_source"] = pd.Series(
+        np.where(from_cbd, "CBD", "MPAtlas"), index=national_targets.index
+    ).where(national_targets["marine_target"].notna())
+
+    national_targets = national_targets.reset_index()
+
+    if verbose:
+        logger.info(
+            {
+                "message": (
+                    f"Resolved national targets for {len(national_targets)} locations"
+                    f" ({len(cbd_national_targets)} from CBD,"
+                    f" {len(mpa_national_targets)} available from MPAtlas)"
+                )
+            }
+        )
+
+    return national_targets
 
 
 def generate_locations_table(
@@ -55,6 +142,7 @@ def generate_locations_table(
     translations = read_dataframe(
         bucket_name=bucket, filename=translation_file_name, verbose=verbose
     )
+    national_targets = process_national_targets(bucket=bucket, verbose=verbose)
 
     if verbose:
         logger.info({"message": "Processing data to create the locations table"})
@@ -157,11 +245,22 @@ def generate_locations_table(
         ignore_index=True,
     )
 
+    target_cols = [
+        "marine_target",
+        "marine_target_year",
+        "terrestrial_target",
+        "terrestrial_target_year",
+    ]
+    locs = locs.merge(
+        national_targets[["code", *target_cols, "marine_target_source"]], on="code", how="left"
+    )
+
     # Typesafe defaults that might be missing after merger
     locs["has_shared_marine_area"] = (
         locs.get("has_shared_marine_area").astype("boolean").fillna(False)
     )
     locs["total_marine_area"] = locs.get("total_marine_area").round(0).fillna(0).astype("Int64")
+    locs[target_cols] = locs[target_cols].apply(pd.to_numeric, errors="coerce").astype("Int64")
 
     upload_dataframe(bucket_name=bucket, df=locs, destination_blob_name=output_file_name)
 

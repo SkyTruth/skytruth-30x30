@@ -79,6 +79,70 @@ def mock_regions_map():
 
 
 @pytest.fixture
+def mock_national_targets_df():
+    """
+    Minimal national targets table keyed by location code. Values are strings and blanks are
+    empty strings, matching how read_dataframe parses a CSV with keep_default_na=False.
+    """
+    return pd.DataFrame(
+        {
+            "code": ["USA", "MEX", "ZZZ", "FRA"],
+            "marine_target": ["30", "50", "30", ""],
+            "marine_target_year": ["2030", "2025", "2030", ""],
+            "terrestrial_target": ["30", "", "30", "30"],
+            "terrestrial_target_year": ["2030", "", "2030", "2030"],
+        }
+    )
+
+
+@pytest.fixture
+def mock_mpatlas_country_targets():
+    """
+    Minimal MPAtlas country-level API payload. Rows without a thirty_by_thirty_target are
+    dropped, and MPAtlas publishes marine targets only.
+    """
+    return [
+        {
+            "id": "USA",
+            "thirty_by_thirty_target": True,
+            "national_target": 10,
+            "fully_highly_target": None,
+            "target_year": 2020,
+        },
+        {
+            "id": "CAN",
+            "thirty_by_thirty_target": True,
+            "national_target": 30,
+            "fully_highly_target": None,
+            "target_year": 2030,
+        },
+        {
+            "id": "BRA",
+            "thirty_by_thirty_target": None,
+            "national_target": 25,
+            "fully_highly_target": None,
+            "target_year": 2030,
+        },
+    ]
+
+
+@pytest.fixture
+def mock_requests_get(monkeypatch, mock_mpatlas_country_targets):
+    """Patch the MPAtlas API call so no test reaches the network."""
+
+    class _Response:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return mock_mpatlas_country_targets
+
+    monkeypatch.setattr(
+        gen_static_tbl.requests, "get", lambda *args, **kwargs: _Response(), raising=True
+    )
+
+
+@pytest.fixture
 def upload_recorder():
     """
     Record uploads so tests can assert the target blob name and the resulting dataframe shape.
@@ -137,10 +201,13 @@ def _mock_read_json_from_gcs(mock_related_countries_map, mock_regions_map):
     return _reader
 
 
-def _mock_read_dataframe(mock_locs_translations_df):
+def _mock_read_dataframe(mock_locs_translations_df, mock_national_targets_df):
     def _reader(*, bucket_name, filename, verbose=True):
-        assert filename == gen_static_tbl.LOCATIONS_TRANSLATED_FILE_NAME
-        return mock_locs_translations_df.copy()
+        if filename == gen_static_tbl.LOCATIONS_TRANSLATED_FILE_NAME:
+            return mock_locs_translations_df.copy()
+        if filename == gen_static_tbl.NATIONAL_TARGETS_FILE_NAME:
+            return mock_national_targets_df.copy()
+        raise AssertionError(f"Unexpected CSV filename: {filename}")
 
     return _reader
 
@@ -191,6 +258,45 @@ def test__add_groups_creates_group_rows_and_updates_member_lists(crs):
     assert out.loc[out["GID_0"] == "HIG", "groups"].iloc[0] == ["SA"]
 
 
+def test_process_national_targets_prefers_cbd_and_falls_back_to_mpatlas(
+    monkeypatch, mock_locs_translations_df, mock_national_targets_df, mock_requests_get
+):
+    monkeypatch.setattr(
+        gen_static_tbl,
+        "read_dataframe",
+        _mock_read_dataframe(mock_locs_translations_df, mock_national_targets_df),
+        raising=True,
+    )
+
+    out = gen_static_tbl.process_national_targets(bucket="test-bucket", verbose=False).set_index(
+        "code"
+    )
+
+    assert all(str(out[col].dtype) == "Int64" for col in out.columns if col.endswith("target"))
+    assert all(str(out[col].dtype) == "Int64" for col in out.columns if col.endswith("year"))
+
+    # CBD wins where it has a value, even though MPAtlas also publishes one for USA
+    assert (out.loc["USA", "marine_target"], out.loc["USA", "marine_target_year"]) == (30, 2030)
+
+    # MPAtlas fills locations the CBD file does not cover
+    assert (out.loc["CAN", "marine_target"], out.loc["CAN", "marine_target_year"]) == (30, 2030)
+
+    # MPAtlas is marine only, so its locations have no terrestrial target
+    assert pd.isna(out.loc["CAN", "terrestrial_target"])
+
+    # Rows without a thirty_by_thirty_target are dropped from the MPAtlas side
+    assert "BRA" not in out.index
+
+    # Each resolved marine target names the dataset it came from
+    assert out.loc["USA", "marine_target_source"] == "CBD"
+    assert out.loc["CAN", "marine_target_source"] == "MPAtlas"
+
+    # A location neither source gives a marine target to has a terrestrial target but no source
+    assert pd.isna(out.loc["FRA", "marine_target"])
+    assert pd.isna(out.loc["FRA", "marine_target_source"])
+    assert out.loc["FRA", "terrestrial_target"] == 30
+
+
 def test_generate_locations_table_happy(
     monkeypatch,
     mock_eez_by_loc_gdf,
@@ -199,6 +305,8 @@ def test_generate_locations_table_happy(
     mock_related_countries_map,
     mock_regions_map,
     mock_locs_translations_df,
+    mock_national_targets_df,
+    mock_requests_get,
     upload_recorder,
 ):
     calls, upload_mock = upload_recorder
@@ -232,7 +340,7 @@ def test_generate_locations_table_happy(
     monkeypatch.setattr(
         gen_static_tbl,
         "read_dataframe",
-        _mock_read_dataframe(mock_locs_translations_df),
+        _mock_read_dataframe(mock_locs_translations_df, mock_national_targets_df),
         raising=True,
     )
     monkeypatch.setattr(gen_static_tbl, "upload_dataframe", upload_mock, raising=True)
@@ -286,6 +394,36 @@ def test_generate_locations_table_happy(
         & (df["type"] == "sea")
     ).any()
 
+    # National targets merged on code and cast to nullable integers
+    target_cols = [
+        "marine_target",
+        "marine_target_year",
+        "terrestrial_target",
+        "terrestrial_target_year",
+    ]
+    assert set(target_cols).issubset(df.columns)
+    assert all(str(df[col].dtype) == "Int64" for col in target_cols)
+
+    usa = df[df["code"] == "USA"].iloc[0]
+    assert (usa["marine_target"], usa["marine_target_year"]) == (30, 2030)
+    assert (usa["terrestrial_target"], usa["terrestrial_target_year"]) == (30, 2030)
+
+    # Blank cells stay missing rather than becoming zeros
+    mex = df[df["code"] == "MEX"].iloc[0]
+    assert (mex["marine_target"], mex["marine_target_year"]) == (50, 2025)
+    assert pd.isna(mex["terrestrial_target"])
+    assert pd.isna(mex["terrestrial_target_year"])
+
+    # Locations absent from the targets file are left unset
+    assert pd.isna(df.loc[df["code"].astype(str) == "4288", "marine_target"].iloc[0])
+
+    # A target for an unknown code does not add a location
+    assert "ZZZ" not in set(df["code"].astype(str))
+
+    # The source of each marine target travels with it into the locations table
+    assert usa["marine_target_source"] == "CBD"
+    assert pd.isna(df.loc[df["code"].astype(str) == "4288", "marine_target_source"].iloc[0])
+
 
 def test_generate_locations_table_read_failure(
     monkeypatch,
@@ -294,6 +432,8 @@ def test_generate_locations_table_read_failure(
     mock_related_countries_map,
     mock_regions_map,
     mock_locs_translations_df,
+    mock_national_targets_df,
+    mock_requests_get,
     upload_recorder,
 ):
     calls, upload_mock = upload_recorder
@@ -325,7 +465,7 @@ def test_generate_locations_table_read_failure(
     monkeypatch.setattr(
         gen_static_tbl,
         "read_dataframe",
-        _mock_read_dataframe(mock_locs_translations_df),
+        _mock_read_dataframe(mock_locs_translations_df, mock_national_targets_df),
         raising=True,
     )
     monkeypatch.setattr(gen_static_tbl, "upload_dataframe", upload_mock, raising=True)
