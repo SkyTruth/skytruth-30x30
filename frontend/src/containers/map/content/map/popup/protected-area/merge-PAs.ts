@@ -56,7 +56,7 @@ const mergeParcelGroup = (id: string, group: Pa[], context: MergeContext): Merge
 
   return {
     id,
-    wdpaid: String(group[0].wdpaid),
+    wdpaid: normalizeId(group[0].wdpaid) ?? '',
     wdpaPId: normalizeId(group[0].wdpa_p_id),
     name: baseRow.name,
     area: baseRow.area,
@@ -111,7 +111,7 @@ const unestablishedZoneCard = (clicked: ClickedPa, context: MergeContext): Merge
 // Sites without a zone id first, by WDPAID; then MPAtlas zones by zone id.
 const byZoneThenWdpaid = (a: MergedPa, b: MergedPa) => {
   if (!a.zoneId !== !b.zoneId) return a.zoneId ? 1 : -1;
-  if (a.zoneId) return Number(a.zoneId) - Number(b.zoneId);
+  if (a.zoneId) return a.zoneId.localeCompare(b.zoneId ?? '', undefined, { numeric: true });
   return (
     a.wdpaid.localeCompare(b.wdpaid, undefined, { numeric: true }) ||
     a.id.localeCompare(b.id, undefined, { numeric: true })
@@ -126,7 +126,10 @@ export const mergeProtectedAreas = (
   // Group by parcel when the row has one, else by site.
   const rowsById = new Map<string, Pa[]>();
   rows.forEach((row) => {
-    const id = normalizeId(row.wdpa_p_id) ?? String(row.wdpaid);
+    const id =
+      normalizeId(row.wdpa_p_id) ??
+      normalizeId(row.wdpaid) ??
+      `zone-${normalizeId(row.zone_id) ?? row.id}`;
     rowsById.set(id, [...(rowsById.get(id) ?? []), row]);
   });
 

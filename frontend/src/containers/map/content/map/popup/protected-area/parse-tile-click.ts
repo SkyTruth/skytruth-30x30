@@ -42,6 +42,16 @@ export const readClickedPa = (properties: Feature['properties']): ClickedPa => (
   locationCode: properties.location_i,
 });
 
+// Every id a feature carries, so distinct tile features never collapse.
+export const clickedPaKey = (pa: ClickedPa) => {
+  const key = [pa.wdpaPId, pa.wdpaid, pa.zoneId].join('|');
+  return key === '||' ? undefined : key;
+};
+
+// The card a feature will land in: parcel, else site, else zone (mirrors the merge).
+export const clickedCardKey = (pa: ClickedPa) =>
+  pa.wdpaPId ?? pa.wdpaid ?? (pa.zoneId ? `zone-${pa.zoneId}` : undefined);
+
 // MPAtlas's raw `country` field is a delimited list of ISO3 codes; mirror the
 // pipeline, which splits it and maps Antarctica to the high seas and Åland to Finland.
 export const readTileLocations = (raw: string | undefined) =>

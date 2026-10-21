@@ -16,7 +16,7 @@ import { Pa } from '@/types/generated/strapi.schemas';
 import { LayerTyped } from '@/types/layers';
 
 import { MergedPa, mergeProtectedAreas } from './merge-PAs';
-import { ClickedPa, readClickedPa } from './parse-tile-click';
+import { ClickedPa, clickedPaKey, readClickedPa } from './parse-tile-click';
 
 /** The protected areas under the click point, across every protected-area layer. */
 export const useClickedProtectedAreas = (): ClickedPa[] => {
@@ -94,8 +94,8 @@ export const useClickedProtectedAreas = (): ClickedPa[] => {
         .filter((feature) => sources.includes(feature.source))
         .map((feature) => readClickedPa(feature.properties))
         .filter((clicked) => {
-          const key = [clicked.wdpaPId, clicked.wdpaid, clicked.zoneId].join('|');
-          if (key === '||' || seen.has(key)) return false;
+          const key = clickedPaKey(clicked);
+          if (!key || seen.has(key)) return false;
           seen.add(key);
           return true;
         });

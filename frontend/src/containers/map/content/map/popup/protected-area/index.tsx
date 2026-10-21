@@ -19,6 +19,7 @@ import {
   useProtectedAreaRecords,
 } from './hooks';
 import PaCard from './PaCard';
+import { clickedCardKey } from './parse-tile-click';
 
 // `layerSlug` comes from the CMS config; the popup reads every protected-area layer instead.
 const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = () => {
@@ -44,13 +45,14 @@ const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = () => {
 
   if (!clicked.length) return null;
 
+  // Known before the fetch, so the popup's size is settled on first render.
+  const cardCount = new Set(clicked.map(clickedCardKey)).size;
+
   return (
     <div
       ref={scrollRef}
       className={cn(
-        clicked.length > 1
-          ? 'max-h-[30vh] overflow-y-auto overflow-x-hidden'
-          : 'flex flex-col gap-2'
+        cardCount > 1 ? 'max-h-[30vh] overflow-y-auto overflow-x-hidden' : 'flex flex-col gap-2'
       )}
     >
       {isFetching && <div className="my-4 text-center font-mono text-xl">{t('loading')}</div>}

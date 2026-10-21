@@ -32,7 +32,7 @@ import {
   POPUP_ICON_BY_SOURCE,
   POPUP_PROPERTIES_BY_SOURCE,
 } from './constants';
-import { readClickedPa } from './protected-area/parse-tile-click';
+import { clickedCardKey, readClickedPa } from './protected-area/parse-tile-click';
 
 const PopupContainer: FCWithMessages = () => {
   const locale = useLocale();
@@ -139,7 +139,7 @@ const PopupContainer: FCWithMessages = () => {
     },
     {
       query: {
-        enabled: layersInteractive.length > 1,
+        enabled: layersInteractive.length > 0,
         select: ({ data }) => {
           const options = data
             .filter(
@@ -179,14 +179,10 @@ const PopupContainer: FCWithMessages = () => {
       feature.source in POPUP_PROPERTIES_BY_SOURCE;
 
     // Protected-area tiles are the ones carrying a WDPA or MPAtlas id; other
-    // interactive layers (e.g. ProtectedSeas) must not be counted. The key is the
-    // same identity the click popup dedupes on, so one zone shown by two layers
-    // counts once.
-    const protectedAreaKey = (feature: (typeof features)[number]) => {
-      const { wdpaPId, wdpaid, zoneId } = readClickedPa(feature.properties ?? {});
-      const key = [wdpaPId, wdpaid, zoneId].join('|');
-      return key === '||' ? null : key;
-    };
+    // interactive layers (e.g. ProtectedSeas) must not be counted. Keyed by the
+    // card each feature will land in, so the count matches the click popup.
+    const protectedAreaKey = (feature: (typeof features)[number]) =>
+      clickedCardKey(readClickedPa(feature.properties ?? {})) ?? null;
 
     // The boundary names the tooltip; protected areas under it are counted per
     // parcel, matching the click popup's cards. Mapbox returns one entry per style
