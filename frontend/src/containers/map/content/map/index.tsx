@@ -35,12 +35,15 @@ const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-ma
   ssr: false,
 });
 
-const HOVER_DELAY_MS = 400;
-
 // Identifies what is under the cursor, so the tooltip only moves when that changes.
 const hoveredFeatureKey = (features: mapboxgl.MapboxGeoJSONFeature[] = []) =>
-  features
-    .map((feature) => `${feature.source}:${feature.id ?? JSON.stringify(feature.properties)}`)
+  [
+    ...new Set(
+      features.map(
+        (feature) => `${feature.source}:${feature.id ?? JSON.stringify(feature.properties)}`
+      )
+    ),
+  ]
     .sort()
     .join('|');
 
@@ -64,7 +67,8 @@ const MainMap: FCWithMessages = () => {
   const hoveredPolygonId = useRef<Parameters<typeof map.setFeatureState>[0] | null>(null);
   const mountedRef = useRef(false);
   const previousDefaultLayersRef = useRef(null);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout>>();
+  // Key of the features the open hover tooltip describes; empty when none is open.
+  const hoveredKey = useRef('');
 
   const { data: layersInteractiveData } = useGetLayers(
     {
@@ -178,7 +182,7 @@ const MainMap: FCWithMessages = () => {
     (e: Parameters<ComponentProps<typeof Map>['onClick']>[0]) => {
       if (drawState.active) return null;
 
-      clearTimeout(hoverTimer.current);
+      hoveredKey.current = '';
 
       if (popup?.features?.length) {
         safelyResetFeatureState();
@@ -208,7 +212,7 @@ const MainMap: FCWithMessages = () => {
   const handleMouseMove = useCallback(
     (e: Parameters<ComponentProps<typeof Map>['onMouseOver']>[0]) => {
       if (!e.features.length) {
-        clearTimeout(hoverTimer.current);
+        hoveredKey.current = '';
         setPopup({});
       }
 
@@ -218,19 +222,16 @@ const MainMap: FCWithMessages = () => {
         }
 
         if (e.type === 'mousemove') {
-          const isSameHover =
-            popup?.type === 'mousemove' &&
-            hoveredFeatureKey(popup.features) === hoveredFeatureKey(e.features);
+          const key = hoveredFeatureKey(e.features);
 
-          // Open the tooltip once the cursor dwells, and leave it where it opened
-          // for as long as the same features stay under the cursor.
-          if (!isSameHover) {
-            // react-map-gl strips `features` from the event once the handler
-            // returns, so capture it now rather than when the timer fires.
-            const hovered = { ...e };
-            clearTimeout(hoverTimer.current);
-            if (popup?.type === 'mousemove') setPopup({});
-            hoverTimer.current = setTimeout(() => setPopup(hovered), HOVER_DELAY_MS);
+          // Open the tooltip for new features, and keep it open for as long as the
+          // same features stay under the cursor.
+          if (key !== hoveredKey.current) {
+            hoveredKey.current = key;
+            setPopup({ ...e });
+          } else {
+            // Same features: follow the pointer; the content is unchanged so it can't resize.
+            setPopup((previous) => ({ ...previous, lngLat: e.lngLat, point: e.point }));
           }
         }
 
@@ -243,19 +244,26 @@ const MainMap: FCWithMessages = () => {
         }
       }
     },
-    [setPopup, drawState.active, safelySetFeatureState, popup]
+    [setPopup, drawState.active, safelySetFeatureState]
   );
 
-  const handleMouseOut = useCallback(() => {
-    clearTimeout(hoverTimer.current);
-    safelyResetFeatureState();
+  const handleMouseOut = useCallback(
+    (e: Parameters<ComponentProps<typeof Map>['onMouseOut']>[0]) => {
+      // The cursor landing on the tooltip is not leaving the map.
+      const target = e?.originalEvent?.relatedTarget;
+      if (target instanceof Element && target.closest('.mapboxgl-popup')) return;
 
-    if (popup?.type !== 'click') {
-      // If the popup was opened through a click, we keep it open so that the user can eventually
-      // interact with it's content
-      setPopup({});
-    }
-  }, [safelyResetFeatureState, popup, setPopup]);
+      hoveredKey.current = '';
+      safelyResetFeatureState();
+
+      if (popup?.type !== 'click') {
+        // If the popup was opened through a click, we keep it open so that the user can eventually
+        // interact with it's content
+        setPopup({});
+      }
+    },
+    [safelyResetFeatureState, popup, setPopup]
+  );
 
   const initialViewState: ComponentProps<typeof Map>['initialViewState'] = useMemo(() => {
     if (URLBbox) {
@@ -275,8 +283,6 @@ const MainMap: FCWithMessages = () => {
   useEffect(() => {
     mountedRef.current = true;
   }, []);
-
-  useEffect(() => () => clearTimeout(hoverTimer.current), []);
 
   const disableMouseMove = popup.type === 'click' && popup.features?.length;
 
