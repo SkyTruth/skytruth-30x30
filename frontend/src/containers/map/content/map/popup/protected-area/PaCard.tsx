@@ -81,7 +81,7 @@ const PaCard: FCWithMessages<{ pa: MergedPa; showName?: boolean }> = ({ pa, show
           </div>
         )}
       </dl>
-      {pa.mpaaEstablishmentStage?.slug === 'proposed' && (
+      {pa.mpaaEstablishmentStage?.slug === 'proposed-committed' && (
         <p className="text-xs italic">{t('mpa-not-implemented')}</p>
       )}
       {pa.wdpaid && (
@@ -107,9 +107,9 @@ const PaCard: FCWithMessages<{ pa: MergedPa; showName?: boolean }> = ({ pa, show
         </a>
       )}
       {/* Debug only; remove before merging. */}
-      <div className="font-mono text-xs text-gray-300">
+      {/* <div className="font-mono text-xs text-gray-300">
         WDPAID {pa.wdpaid} · WDPA_PID {pa.wdpaPId ?? '-'} · ZONE_ID {pa.zoneId ?? '-'}
-      </div>
+      </div> */}
     </div>
   );
 };

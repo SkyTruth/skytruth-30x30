@@ -15,6 +15,15 @@ export type ClickedPa = {
 
 const normalizeId = (value: unknown) => (value == null || value === '' ? undefined : String(value));
 
+// The pipeline's conversion of MPAtlas's raw establishment stage to the DB slug.
+const ESTABLISHMENT_STAGE_SLUGS: Record<string, string> = {
+  'actively managed': 'actively-managed',
+  designated: 'designated',
+  implemented: 'implemented',
+  unknown: 'unknown',
+  'proposed/committed': 'proposed-committed',
+};
+
 // The WDPA and MPAtlas tilesets spell the same ids differently.
 export const readClickedPa = (properties: Feature['properties']): ClickedPa => ({
   wdpaid: normalizeId(properties.WDPAID ?? properties.wdpa_id),
@@ -22,7 +31,7 @@ export const readClickedPa = (properties: Feature['properties']): ClickedPa => (
   zoneId: normalizeId(properties.zone_id),
   name: properties.name ?? properties.NAME,
   protectionLevelSlug: properties.protection,
-  establishmentStageSlug: properties.establishm,
+  establishmentStageSlug: ESTABLISHMENT_STAGE_SLUGS[properties.establishm] ?? properties.establishm,
   designation: properties.designatio,
   year: properties.year,
   locationCode: properties.location_i,
