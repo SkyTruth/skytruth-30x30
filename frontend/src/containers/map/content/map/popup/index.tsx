@@ -262,7 +262,7 @@ const PopupContainer: FCWithMessages = () => {
             onValueChange={(layer) => {
               setSelectedLayerSlug(layer);
             }}
-            defaultValue={layersInteractiveData?.[0].value}
+            value={selectedLayerSlug ?? undefined}
           >
             <SelectTrigger>
               <SelectValue />
