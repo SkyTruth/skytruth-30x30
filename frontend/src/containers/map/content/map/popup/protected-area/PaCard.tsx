@@ -106,10 +106,6 @@ const PaCard: FCWithMessages<{ pa: MergedPa; showName?: boolean }> = ({ pa, show
           {t('view-on-mpatlas')}
         </a>
       )}
-      {/* Debug only; remove before merging. */}
-      {/* <div className="font-mono text-xs text-gray-300">
-        WDPAID {pa.wdpaid} · WDPA_PID {pa.wdpaPId ?? '-'} · ZONE_ID {pa.zoneId ?? '-'}
-      </div> */}
     </div>
   );
 };
