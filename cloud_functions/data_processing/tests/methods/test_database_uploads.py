@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 import pytest
 
@@ -40,6 +42,44 @@ def test_extract_non_na_values_drops_nulls_keeps_lists():
 
     assert cleaned[0] == {"code": 1, "name": "ok", "groups": ["A", "B"]}
     assert cleaned[1] == {"code": 2, "area": 5}
+
+
+def test_extract_non_na_values_sends_null_for_null_fields():
+    """
+    A field the pipeline owns is sent as None when empty, so Strapi clears it rather than
+    keeping the stored value, while every other empty field is still left off.
+    """
+    df = pd.DataFrame(
+        {
+            "code": ["USA", "ITA"],
+            "marine_target": pd.array([30, None], dtype="Int64"),
+            "marine_target_year": pd.array([2030, None], dtype="Int64"),
+            "total_marine_area": pd.array([1234, None], dtype="Int64"),
+        }
+    )
+
+    cleaned = db_uploads._extract_non_na_values(
+        df, null_fields=["marine_target", "marine_target_year"]
+    )
+
+    assert cleaned[0] == {
+        "code": "USA",
+        "marine_target": 30,
+        "marine_target_year": 2030,
+        "total_marine_area": 1234,
+    }
+
+    # A withdrawn target is cleared, but the missing area is still left untouched
+    assert cleaned[1] == {"code": "ITA", "marine_target": None, "marine_target_year": None}
+
+
+def test_extract_non_na_values_nulls_are_json_serializable():
+    """pd.NA raises on json.dumps, so null_fields have to be converted to None."""
+    df = pd.DataFrame({"code": ["ITA"], "marine_target": pd.array([None], dtype="Int64")})
+
+    cleaned = db_uploads._extract_non_na_values(df, null_fields=["marine_target"])
+
+    assert json.dumps(cleaned) == '[{"code": "ITA", "marine_target": null}]'
 
 
 def test_upload_locations_happy_path(monkeypatch):
@@ -168,9 +208,9 @@ def test_upload_locations_happy_path(monkeypatch):
     assert row2["code"] == "ABNJ"
     assert row2["groups"] == ["OCE"]
 
-    # An unset target is dropped rather than sent as an empty string
-    assert "marine_target" not in row2
-    assert "marine_target_year" not in row2
+    # An unset target is sent as null so a withdrawn target gets cleared, not retained
+    assert row2["marine_target"] is None
+    assert row2["marine_target_year"] is None
     assert row2["total_marine_area"] == 212881389
 
     # Areas are sent as integers, not as the strings a csv with a blank cell reads back as

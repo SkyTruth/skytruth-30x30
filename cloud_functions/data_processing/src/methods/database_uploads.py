@@ -34,14 +34,13 @@ def upload_locations(
     - converting to a dict
     """
     list_fields = ["groups", "members", "terrestrial_bounds", "marine_bounds"]
-    integer_fields = [
-        "total_marine_area",
-        "total_terrestrial_area",
+    target_fields = [
         "marine_target",
         "marine_target_year",
         "terrestrial_target",
         "terrestrial_target_year",
     ]
+    integer_fields = ["total_marine_area", "total_terrestrial_area", *target_fields]
     unsupported_fields = [
         "terrestrial_target",
         "terrestrial_target_year",
@@ -64,8 +63,9 @@ def upload_locations(
     locs_df = locs_df.drop(columns=unsupported_fields)
 
     # Remove keys with NA values, this will allow us ot only upsert data we actually have
-    # rather than stubbing defaults
-    locations = _extract_non_na_values(locs_df)
+    # rather than stubbing defaults. Targets are the exception: the pipeline resolves them for
+    # every location, so an empty one is sent as null to clear a target that has been withdrawn.
+    locations = _extract_non_na_values(locs_df, null_fields=target_fields)
 
     options = request.get("options") if request else None
 
@@ -76,12 +76,30 @@ def upload_locations(
     return client.upsert_locations(locations, options)
 
 
-def _extract_non_na_values(df: pd.DataFrame) -> list[dict]:
-    """Converts a dataframe to a dictionary while leaving off any None/NA/NaN values"""
-    cleaned = [
-        {key: val for key, val in row.items() if isinstance(val, list) or pd.notna(val)}
-        for row in df.to_dict(orient="records")
-    ]
+def _extract_non_na_values(df: pd.DataFrame, null_fields: list[str] | None = None) -> list[dict]:
+    """
+    Converts a dataframe to a dictionary while leaving off any None/NA/NaN values.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to convert, one dictionary per row.
+    null_fields : list[str], optional
+        Fields sent as null when empty instead of being left off, so that a value the pipeline
+        owns can be cleared rather than kept by Strapi's partial update. pd.NA is not JSON
+        serializable, so these are converted to None.
+    """
+    null_fields = set(null_fields or [])
+
+    cleaned = []
+    for row in df.to_dict(orient="records"):
+        kept = {}
+        for key, val in row.items():
+            if isinstance(val, list) or pd.notna(val):
+                kept[key] = val
+            elif key in null_fields:
+                kept[key] = None
+        cleaned.append(kept)
 
     return cleaned
 
