@@ -330,6 +330,9 @@ module "cb_api_cloudrun" {
   env_vars           = local.cb_api_env
   secrets            = local.cb_api_secrets
 
+  ingress         = "internal"
+  invoker_members = ["serviceAccount:${module.frontend_cloudrun.service_account_email}"]
+
   container_concurrency = 10
   max_scale             = 2
   memory                = "512Mi"
