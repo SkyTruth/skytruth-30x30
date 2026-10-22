@@ -36,7 +36,7 @@ const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-ma
 });
 
 // Identifies what is under the cursor, so the tooltip only moves when that changes.
-const hoveredFeatureKey = (features: mapboxgl.MapboxGeoJSONFeature[] = []) =>
+const hoveredFeatureKey = (features: mapboxgl.GeoJSONFeature[] = []) =>
   [
     ...new Set(
       features.map(
@@ -140,7 +140,7 @@ const MainMap: FCWithMessages = () => {
   }, [map]);
 
   const safelySetFeatureState = useCallback(
-    (feature: mapboxgl.MapboxGeoJSONFeature) => {
+    (feature: mapboxgl.GeoJSONFeature) => {
       const isSameId = !hoveredPolygonId.current || hoveredPolygonId.current.id === feature.id;
 
       const isSameSource =
