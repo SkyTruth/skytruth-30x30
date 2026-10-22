@@ -49,9 +49,10 @@ def process_national_targets(
         verbose (bool): If True, logs the process.
 
     Returns:
-        pd.DataFrame: Targets keyed by location code, one nullable integer column per target
-            and target year, the pledge or ORT record backing the target, and
-            marine_target_source naming which dataset supplied the marine target.
+        pd.DataFrame: Targets keyed by location code, one nullable column per target and target
+            year, the pledge or ORT record backing the target, and marine_target_source naming
+            which dataset supplied the marine target. Only the marine columns are carried into
+            the locations table today; the rest are ready for a later schema update.
     """
     if verbose:
         logger.info({"message": f"Reading national targets from {cbd_filename} in bucket {bucket}"})
@@ -275,7 +276,13 @@ def generate_locations_table(
         ignore_index=True,
     )
 
-    locs = locs.merge(national_targets, on="code", how="left")
+    # The rest of the target columns are not on the Strapi location schema yet, and every column
+    # of this table is upserted, so only the marine ones travel for now
+    marine_cols = ["marine_target", "marine_target_year"]
+    locs = locs.merge(national_targets[["code", *marine_cols]], on="code", how="left")
+
+    # Some national targets are fractional, but Strapi stores them as integers
+    locs[marine_cols] = locs[marine_cols].round().astype("Int64")
 
     # Typesafe defaults that might be missing after merger
     locs["has_shared_marine_area"] = (

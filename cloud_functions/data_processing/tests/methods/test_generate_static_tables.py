@@ -87,7 +87,8 @@ def mock_national_targets_df():
     return pd.DataFrame(
         {
             "Iso Code": ["USA", "MEX", "ZZZ", "FRA", "CAN"],
-            "% Marine Target": ["30", "50", "30", "", "60"],
+            # MEX is fractional, so the locations table has to round it
+            "% Marine Target": ["30", "49.6", "30", "", "60"],
             "Marine By Year": ["2030", "2025", "2030", "", "2040"],
             "Marine Confidence": ["High", "High", "High", "High", "Low"],
             "% Terrestrial Target": ["30", "", "30", "30", "30"],
@@ -286,11 +287,14 @@ def test_process_national_targets_prefers_cbd_and_falls_back_to_mpatlas(
         "code"
     )
 
-    assert all(str(out[col].dtype) == "Int64" for col in out.columns if col.endswith("target"))
-    assert all(str(out[col].dtype) == "Int64" for col in out.columns if col.endswith("year"))
+    assert all(str(out[col].dtype) == "Float64" for col in out.columns if col.endswith("target"))
+    assert all(str(out[col].dtype) == "Float64" for col in out.columns if col.endswith("year"))
 
     # CBD wins where it has a value, even though MPAtlas also publishes one for USA
     assert (out.loc["USA", "marine_target"], out.loc["USA", "marine_target_year"]) == (30, 2030)
+
+    # Fractional targets are kept as published here; rounding happens in the locations table
+    assert out.loc["MEX", "marine_target"] == 49.6
 
     # MPAtlas fills locations the CBD file does not cover
     assert (out.loc["JPN", "marine_target"], out.loc["JPN", "marine_target_year"]) == (30, 2030)
@@ -419,35 +423,30 @@ def test_generate_locations_table_happy(
         & (df["type"] == "sea")
     ).any()
 
-    # National targets merged on code and cast to nullable integers
-    target_cols = [
-        "marine_target",
-        "marine_target_year",
+    # Only the marine target columns are carried into the locations table; the rest are held
+    # back until the Strapi location schema defines them
+    marine_cols = ["marine_target", "marine_target_year"]
+    assert set(marine_cols).issubset(df.columns)
+    assert all(str(df[col].dtype) == "Int64" for col in marine_cols)
+    assert not {
         "terrestrial_target",
         "terrestrial_target_year",
-    ]
-    assert set(target_cols).issubset(df.columns)
-    assert all(str(df[col].dtype) == "Int64" for col in target_cols)
+        "pledge_or_ort_record",
+        "marine_target_source",
+    }.intersection(df.columns)
 
     usa = df[df["code"] == "USA"].iloc[0]
     assert (usa["marine_target"], usa["marine_target_year"]) == (30, 2030)
-    assert (usa["terrestrial_target"], usa["terrestrial_target_year"]) == (30, 2030)
 
     # Blank cells stay missing rather than becoming zeros
     mex = df[df["code"] == "MEX"].iloc[0]
     assert (mex["marine_target"], mex["marine_target_year"]) == (50, 2025)
-    assert pd.isna(mex["terrestrial_target"])
-    assert pd.isna(mex["terrestrial_target_year"])
 
     # Locations absent from the targets file are left unset
     assert pd.isna(df.loc[df["code"].astype(str) == "4288", "marine_target"].iloc[0])
 
     # A target for an unknown code does not add a location
     assert "ZZZ" not in set(df["code"].astype(str))
-
-    # The source of each marine target travels with it into the locations table
-    assert usa["marine_target_source"] == "CBD"
-    assert pd.isna(df.loc[df["code"].astype(str) == "4288", "marine_target_source"].iloc[0])
 
 
 def test_generate_locations_table_read_failure(
