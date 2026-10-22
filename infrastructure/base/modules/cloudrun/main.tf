@@ -31,6 +31,17 @@ resource "google_cloud_run_service" "cloud_run" {
   name     = var.name
   location = var.region
 
+  # Declaring service metadata makes Terraform own every service-level
+  # annotation, so services without an ingress leave it unmanaged.
+  dynamic "metadata" {
+    for_each = var.ingress == null ? [] : [var.ingress]
+    content {
+      annotations = {
+        "run.googleapis.com/ingress" = metadata.value
+      }
+    }
+  }
+
   template {
     spec {
       timeout_seconds       = var.timeout_seconds
@@ -109,10 +120,8 @@ resource "google_cloud_run_service" "cloud_run" {
 
 data "google_iam_policy" "noauth" {
   binding {
-    role = "roles/run.invoker"
-    members = [
-      "allUsers",
-    ]
+    role    = "roles/run.invoker"
+    members = var.invoker_members
   }
 }
 
