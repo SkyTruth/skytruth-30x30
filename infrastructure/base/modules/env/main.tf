@@ -37,6 +37,13 @@ module "postgres_application_user_password" {
   use_random_value = true
 }
 
+module "postgres_read_only_user_password" {
+  source           = "../secret_value"
+  region           = var.gcp_region
+  key              = "${var.project_name}_postgres_read_only_user_password"
+  use_random_value = true
+}
+
 module "frontend_cloudrun" {
   source                = "../cloudrun"
   name                  = "${var.project_name}-fe"
@@ -77,6 +84,8 @@ module "database" {
   database_name              = var.database_name
   database_user              = var.database_user
   database_password          = module.postgres_application_user_password.secret_value
+  read_only_user             = "cb_api_read_only"
+  read_only_password         = module.postgres_read_only_user_password.secret_value
   network_id                 = module.network.network_id
   sql-database-instance-tier = "db-custom-2-3840"
 
@@ -308,12 +317,12 @@ locals {
   cb_api_env = [
     { name = "DATABASE_HOST", value = module.database.database_host },
     { name = "DATABASE_NAME", value = module.database.database_name },
-    { name = "DATABASE_USERNAME", value = module.database.database_user },
+    { name = "DATABASE_USERNAME", value = module.database.read_only_user },
   ]
 
   cb_api_secrets = [{
     name        = "DATABASE_PASSWORD"
-    secret_name = module.postgres_application_user_password.secret_name
+    secret_name = module.postgres_read_only_user_password.secret_name
   }]
 }
 
@@ -342,7 +351,7 @@ module "cb_api_cloudrun" {
   # Set this to false once an image exists
   use_hello_world_image = true
 
-  depends_on = [module.postgres_application_user_password]
+  depends_on = [module.postgres_read_only_user_password]
 }
 
 resource "google_storage_bucket" "data_bucket" {

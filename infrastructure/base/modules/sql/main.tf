@@ -68,3 +68,9 @@ resource "google_sql_user" "app-user" {
   instance = google_sql_database_instance.db-main.name
   password = local.postgres_password
 }
+
+resource "google_sql_user" "read-only-user" {
+  name     = var.read_only_user
+  instance = google_sql_database_instance.db-main.name
+  password = var.read_only_password
+}
