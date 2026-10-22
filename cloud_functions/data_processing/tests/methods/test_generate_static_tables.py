@@ -313,6 +313,11 @@ def test_process_national_targets_prefers_cbd_and_falls_back_to_mpatlas(
     assert out.loc["JPN", "marine_target_source"] == "MPAtlas"
     assert out.loc["CAN", "marine_target_source"] == "MPAtlas"
 
+    # Terrestrial targets only come from the CBD, and only where one was resolved
+    assert out.loc["USA", "terrestrial_target_source"] == "CBD"
+    assert out.loc["CAN", "terrestrial_target_source"] == "CBD"
+    assert pd.isna(out.loc["JPN", "terrestrial_target_source"])
+
     # The backing record is kept as text rather than coerced away with the numeric columns
     assert out.loc["USA", "pledge_or_ort_record"] == "CBD NBSAP"
     assert out.loc["JPN", "pledge_or_ort_record"] == "High Ambition Coalition"
@@ -423,24 +428,25 @@ def test_generate_locations_table_happy(
         & (df["type"] == "sea")
     ).any()
 
-    # Only the marine target columns are carried into the locations table; the rest are held
-    # back until the Strapi location schema defines them
-    marine_cols = ["marine_target", "marine_target_year"]
-    assert set(marine_cols).issubset(df.columns)
-    assert all(str(df[col].dtype) == "Int64" for col in marine_cols)
-    assert not {
+    # Every target column reaches the locations table; narrowing to what Strapi accepts is
+    # upload_locations' job
+    assert {
+        "marine_target",
+        "marine_target_year",
         "terrestrial_target",
         "terrestrial_target_year",
         "pledge_or_ort_record",
         "marine_target_source",
-    }.intersection(df.columns)
+        "terrestrial_target_source",
+    }.issubset(df.columns)
 
     usa = df[df["code"] == "USA"].iloc[0]
     assert (usa["marine_target"], usa["marine_target_year"]) == (30, 2030)
+    assert usa["marine_target_source"] == "CBD"
 
-    # Blank cells stay missing rather than becoming zeros
+    # Fractional targets are kept as published; rounding happens at upload
     mex = df[df["code"] == "MEX"].iloc[0]
-    assert (mex["marine_target"], mex["marine_target_year"]) == (50, 2025)
+    assert (mex["marine_target"], mex["marine_target_year"]) == (49.6, 2025)
 
     # Locations absent from the targets file are left unset
     assert pd.isna(df.loc[df["code"].astype(str) == "4288", "marine_target"].iloc[0])

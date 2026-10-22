@@ -50,9 +50,9 @@ def process_national_targets(
 
     Returns:
         pd.DataFrame: Targets keyed by location code, one nullable column per target and target
-            year, the pledge or ORT record backing the target, and marine_target_source naming
-            which dataset supplied the marine target. Only the marine columns are carried into
-            the locations table today; the rest are ready for a later schema update.
+            year, the pledge or ORT record backing the target, and a source column per
+            environment naming which dataset supplied that target. Only the marine target and
+            year are upserted today; the rest are ready for a later schema update.
     """
     if verbose:
         logger.info({"message": f"Reading national targets from {cbd_filename} in bucket {bucket}"})
@@ -61,11 +61,11 @@ def process_national_targets(
         bucket_name=bucket, filename=cbd_filename, verbose=verbose
     )
     cbd_national_targets.loc[
-        cbd_national_targets["Marine Confidence"].isin(["Low", "Medium"]),
+        ~cbd_national_targets["Marine Confidence"].str.lower().isin(["high"]),
         ["% Marine Target", "Marine By Year"],
     ] = pd.NA
     cbd_national_targets.loc[
-        cbd_national_targets["Terrestrial Confidence"].isin(["Low", "Medium"]),
+        ~cbd_national_targets["Terrestrial Confidence"].str.lower().isin(["high"]),
         ["% Terrestrial Target", "Terrestrial By Year"],
     ] = pd.NA
     cbd_national_targets = cbd_national_targets.rename(
@@ -127,6 +127,11 @@ def process_national_targets(
         cbd["marine_target"].reindex(national_targets.index).notna(), "CBD", "MPAtlas"
     )
     national_targets.loc[national_targets["marine_target"].isna(), "marine_target_source"] = pd.NA
+
+    national_targets["terrestrial_target_source"] = pd.NA
+    national_targets.loc[
+        national_targets["terrestrial_target"].notna(), "terrestrial_target_source"
+    ] = "CBD"
 
     national_targets = national_targets.reset_index()
 
@@ -276,13 +281,7 @@ def generate_locations_table(
         ignore_index=True,
     )
 
-    # The rest of the target columns are not on the Strapi location schema yet, and every column
-    # of this table is upserted, so only the marine ones travel for now
-    marine_cols = ["marine_target", "marine_target_year"]
-    locs = locs.merge(national_targets[["code", *marine_cols]], on="code", how="left")
-
-    # Some national targets are fractional, but Strapi stores them as integers
-    locs[marine_cols] = locs[marine_cols].round().astype("Int64")
+    locs = locs.merge(national_targets, on="code", how="left")
 
     # Typesafe defaults that might be missing after merger
     locs["has_shared_marine_area"] = (
