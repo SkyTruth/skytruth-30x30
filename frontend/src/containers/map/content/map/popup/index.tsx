@@ -189,6 +189,11 @@ const PopupContainer: FCWithMessages = () => {
     // layer and tile hit, so count distinct keys.
     const boundary = features.find(isBoundary);
     const protectedAreaCount = new Set(features.map(protectedAreaKey).filter(Boolean)).size;
+    const protectedSeasCount = new Set(
+      features
+        .filter((feature) => feature.source === FISHING_PROTECTION_SOURCE)
+        .map((feature) => feature.properties?.SITE_ID ?? feature.id)
+    ).size;
 
     // Which feature names the tooltip, in priority order; `find` keeps layer
     // order within a tier, so overlapping boundaries yield the topmost one.
@@ -237,6 +242,12 @@ const PopupContainer: FCWithMessages = () => {
             {/* The count sits in the icon column, aligned with the boundary line above. */}
             <span className="mr-2 inline-block min-w-[14px]">{protectedAreaCount}</span>
             {t('protected-areas-count', { count: protectedAreaCount })}
+          </div>
+        )}
+        {boundary && protectedSeasCount > 0 && (
+          <div className="mt-[0.25rem]">
+            <span className="mr-2 inline-block min-w-[14px]">{protectedSeasCount}</span>
+            {t('protected-seas-count', { count: protectedSeasCount })}
           </div>
         )}
         {isMultiClaimEEZ && (
