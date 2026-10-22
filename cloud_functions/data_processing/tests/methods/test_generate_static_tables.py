@@ -308,6 +308,18 @@ def test_process_national_targets_prefers_cbd_and_falls_back_to_mpatlas(
     # Rows without a thirty_by_thirty_target are dropped from the MPAtlas side
     assert "BRA" not in out.index
 
+    # The global target is hardcoded, since neither source publishes a row for it
+    assert (out.loc["GLOB", "marine_target"], out.loc["GLOB", "marine_target_year"]) == (30, 2030)
+    assert (out.loc["GLOB", "terrestrial_target"], out.loc["GLOB", "terrestrial_target_year"]) == (
+        30,
+        2030,
+    )
+    assert (
+        out.loc["GLOB", "marine_target_source"]
+        == out.loc["GLOB", "terrestrial_target_source"]
+        == "Kunming-Montreal Global Biodiversity Framework"
+    )
+
     # Each resolved marine target names the dataset it came from
     assert out.loc["USA", "marine_target_source"] == "CBD"
     assert out.loc["JPN", "marine_target_source"] == "MPAtlas"

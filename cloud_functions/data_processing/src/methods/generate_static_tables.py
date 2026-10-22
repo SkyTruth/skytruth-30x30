@@ -133,6 +133,16 @@ def process_national_targets(
         national_targets["terrestrial_target"].notna(), "terrestrial_target_source"
     ] = "CBD"
 
+    # Hardcode the global target
+    global_framework = "Kunming-Montreal Global Biodiversity Framework"
+    global_pledge = "https://www.cbd.int/article/cop15-final-text-kunming-montreal-gbf-221222"
+    national_targets.loc["GLOB", ["marine_target", "marine_target_year"]] = [30, 2030]
+    national_targets.loc["GLOB", ["terrestrial_target", "terrestrial_target_year"]] = [30, 2030]
+    national_targets.loc["GLOB", ["marine_target_source", "terrestrial_target_source"]] = (
+        global_framework
+    )
+    national_targets.loc["GLOB", "pledge_or_ort_record"] = global_pledge
+
     national_targets = national_targets.reset_index()
 
     if verbose:
