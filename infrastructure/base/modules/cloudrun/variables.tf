@@ -55,6 +55,24 @@ variable "secrets" {
   default     = []
 }
 
+variable "container_concurrency" {
+  type        = number
+  description = "Requests one container handles at once. Leave null to keep Cloud Run's default of 80."
+  default     = null
+}
+
+variable "ingress" {
+  type        = string
+  description = "Which traffic can reach the service: all, internal, or internal-and-cloud-load-balancing. Leave null to keep the service's current setting."
+  default     = null
+}
+
+variable "invoker_members" {
+  type        = list(string)
+  description = "IAM members allowed to invoke the service"
+  default     = ["allUsers"]
+}
+
 variable "vpc_connector_name" {
   type        = string
   description = "Name of the VPC Access Connector"
