@@ -10,7 +10,7 @@ import {
   modellingCustomLayerIdAtom,
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
-import useMapDefaultLayers from '@/hooks/use-map-default-layers';
+import useMapDefaultLayers, { useChangeMapTab } from '@/hooks/use-map-default-layers';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
@@ -28,7 +28,11 @@ const SidebarModelling: FCWithMessages = () => {
   const [{ status: modellingStatus }, setModelling] = useAtom(modellingAtom);
   const [modellingCustomLayerId, setModellingCustomLayerId] = useAtom(modellingCustomLayerIdAtom);
   const customLayers = useAtomValue(customLayersAtom);
-  const [{ tab }, setSettings] = useSyncMapContentSettings();
+  const [{ tab: settingsTab }] = useSyncMapContentSettings();
+  const handleTabChange = useChangeMapTab();
+
+  // Display terrestrial if the tab isn't on CB (terrestrial or marine)
+  const tab = ['terrestrial', 'marine'].includes(settingsTab) ? settingsTab : 'terrestrial';
 
   const showIntro = useMemo(() => modellingStatus === 'idle', [modellingStatus]);
 
@@ -37,27 +41,14 @@ const SidebarModelling: FCWithMessages = () => {
     setModelling({ active: false, status: 'idle', data: null, errorMessage: undefined });
   }, [setModelling, setModellingCustomLayerId]);
 
-  // Keep default map layers in sync with selected tab/environment.
+  // Set the map's default layers on page load
   useMapDefaultLayers();
-
-  const handleTabChange = useCallback(
-    (tab: string) => setSettings((prevSettings) => ({ ...prevSettings, tab })),
-    [setSettings]
-  );
 
   // Scroll to the top when the tab changes (whether that's initiated by clicking on the tab trigger
   // or programmatically via `setSettings` in a different component)
   useEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
   }, [tab]);
-
-  // This page doesn't have a summary tab so we force the user to see the terrestrial tab if the
-  // summary one was active
-  useEffect(() => {
-    if (tab === 'summary') {
-      setSettings((prevSettings) => ({ ...prevSettings, tab: 'terrestrial' }));
-    }
-  }, [setSettings, tab]);
 
   return (
     <Tabs value={tab} onValueChange={handleTabChange} className="flex h-full w-full flex-col">
