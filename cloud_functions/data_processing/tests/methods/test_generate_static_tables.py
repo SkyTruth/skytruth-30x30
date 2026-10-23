@@ -86,15 +86,16 @@ def mock_national_targets_df():
     """
     return pd.DataFrame(
         {
-            "Iso Code": ["USA", "MEX", "ZZZ", "FRA", "CAN"],
+            "Iso Code": ["USA", "MEX", "ZZZ", "FRA", "CAN", "PER"],
             # MEX is fractional, so the locations table has to round it
-            "% Marine Target": ["30", "49.6", "30", "", "60"],
-            "Marine By Year": ["2030", "2025", "2030", "", "2040"],
-            "Marine Confidence": ["High", "High", "High", "High", "Low"],
-            "% Terrestrial Target": ["30", "", "30", "30", "30"],
-            "Terrestrial By Year": ["2030", "", "2030", "2030", "2030"],
-            "Terrestrial Confidence": ["High", "High", "High", "High", "High"],
-            "ORT Record": ["CBD NBSAP", "", "CBD NBSAP", "CBD NBSAP", "CBD NBSAP"],
+            "% Marine Target": ["30", "49.6", "30", "", "60", "30"],
+            # PER has targets but no dates to reach them by
+            "Marine By Year": ["2030", "2025", "2030", "", "2040", ""],
+            "Marine Confidence": ["High", "High", "High", "High", "Low", "High"],
+            "% Terrestrial Target": ["30", "", "30", "30", "30", "25"],
+            "Terrestrial By Year": ["2030", "", "2030", "2030", "2030", ""],
+            "Terrestrial Confidence": ["High", "High", "High", "High", "High", "High"],
+            "ORT Record": ["CBD NBSAP", "", "CBD NBSAP", "CBD NBSAP", "CBD NBSAP", "CBD NBSAP"],
         }
     )
 
@@ -238,6 +239,11 @@ def test_process_national_targets(monkeypatch, mock_locs_translations_df, mock_n
     # A target the review was not confident in is discarded along with its year
     assert pd.isna(out.loc["CAN", "marine_target"])
     assert pd.isna(out.loc["CAN", "marine_target_year"])
+
+    # A target with no date to reach it by is dropped, for both environments
+    assert pd.isna(out.loc["PER", "marine_target"])
+    assert pd.isna(out.loc["PER", "terrestrial_target"])
+    assert pd.isna(out.loc["PER", "terrestrial_target_source"])
 
     # Blank cells stay missing rather than becoming zeros
     assert pd.isna(out.loc["FRA", "marine_target"])

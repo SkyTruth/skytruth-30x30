@@ -35,9 +35,9 @@ def process_national_targets(
 ) -> pd.DataFrame:
     """
     Reads the national targets identified from the Convention on Biological Diversity reports
-    from a CSV in GCS. Targets the review was not confident in are discarded, and the global
-    target is set from the Kunming-Montreal Global Biodiversity Framework rather than from a
-    national commitment.
+    from a CSV in GCS. Targets the review was not confident in, and targets with no date to
+    reach them by, are discarded. The global target is set from the Kunming-Montreal Global
+    Biodiversity Framework rather than from a national commitment.
 
     Args:
         bucket (str): The GCS bucket name.
@@ -97,6 +97,12 @@ def process_national_targets(
         national_targets[target_cols].apply(pd.to_numeric, errors="coerce").astype("Float64")
     )
     national_targets["ort_record"] = national_targets["ort_record"].replace("", pd.NA)
+
+    # Drop rows with no target dates
+    national_targets.loc[national_targets["marine_target_year"].isna(), "marine_target"] = pd.NA
+    national_targets.loc[
+        national_targets["terrestrial_target_year"].isna(), "terrestrial_target"
+    ] = pd.NA
 
     national_targets["terrestrial_target_source"] = pd.NA
     national_targets.loc[
