@@ -1,7 +1,6 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import requests
 from shapely.ops import unary_union
 
 from src.core.commons import add_tolerance_suffix, load_iho_regions
@@ -11,7 +10,6 @@ from src.core.params import (
     GADM_FILE_NAME,
     LOCATIONS_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
-    MPATLAS_COUNTRY_LEVEL_API_URL,
     NATIONAL_TARGETS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
@@ -33,26 +31,24 @@ logger = Logger()
 def process_national_targets(
     bucket: str = BUCKET,
     cbd_filename: str = NATIONAL_TARGETS_FILE_NAME,
-    mpatlas_url: str = MPATLAS_COUNTRY_LEVEL_API_URL,
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Prioritizes national targets from the Convention on Biological Diversity and
-    falls back on MPAtlas defined targes if the CBD targets are not available. CBD targets are
-    read from a CSV in GCS, MPAtlas targets from its country-level API. MPAtlas only publishes
-    marine targets, so terrestrial targets come from the CBD alone.
+    Reads the national targets identified from the Convention on Biological Diversity reports
+    from a CSV in GCS. Targets the review was not confident in are discarded, and the global
+    target is set from the Kunming-Montreal Global Biodiversity Framework rather than from a
+    national commitment.
 
     Args:
         bucket (str): The GCS bucket name.
         cbd_filename (str): The name of the CBD national targets CSV file.
-        mpatlas_url (str): The MPAtlas country-level API url.
         verbose (bool): If True, logs the process.
 
     Returns:
         pd.DataFrame: Targets keyed by location code, one nullable column per target and target
-            year, the pledge or ORT record backing the target, and a source column per
-            environment naming which dataset supplied that target. Only the marine target and
-            year are upserted today; the rest are ready for a later schema update.
+            year, the ORT record backing the target, and terrestrial_target_source. Only the
+            marine target and year are upserted today; the rest are ready for a later schema
+            update.
     """
     if verbose:
         logger.info({"message": f"Reading national targets from {cbd_filename} in bucket {bucket}"})
@@ -75,7 +71,7 @@ def process_national_targets(
             "Marine By Year": "marine_target_year",
             "% Terrestrial Target": "terrestrial_target",
             "Terrestrial By Year": "terrestrial_target_year",
-            "ORT Record": "pledge_or_ort_record",
+            "ORT Record": "ort_record",
         }
     )[
         [
@@ -84,22 +80,9 @@ def process_national_targets(
             "marine_target_year",
             "terrestrial_target",
             "terrestrial_target_year",
-            "pledge_or_ort_record",
+            "ort_record",
         ]
     ]
-
-    response = requests.get(mpatlas_url)
-    response.raise_for_status()
-    data = response.json()
-    mpatlas = pd.DataFrame(data)
-    mpa_national_targets = mpatlas[mpatlas["thirty_by_thirty_target"].notnull()].rename(
-        columns={
-            "id": "code",
-            "national_target": "marine_target",
-            "target_year": "marine_target_year",
-            "pledge": "pledge_or_ort_record",
-        }
-    )[["code", "marine_target", "marine_target_year", "pledge_or_ort_record"]]
 
     target_cols = [
         "marine_target",
@@ -107,26 +90,13 @@ def process_national_targets(
         "terrestrial_target",
         "terrestrial_target_year",
     ]
-    marine_cols = ["marine_target", "marine_target_year"]
-    record_col = "pledge_or_ort_record"
 
-    # Blanks have to become NA before combining, otherwise an empty cell counts as a CBD value
-    # and suppresses the MPAtlas fallback
-    cbd = cbd_national_targets.set_index("code").reindex(columns=[*target_cols, record_col])
-    cbd[target_cols] = cbd[target_cols].apply(pd.to_numeric, errors="coerce")
-    cbd[record_col] = cbd[record_col].replace("", pd.NA)
-
-    mpa = mpa_national_targets.set_index("code")
-    mpa[marine_cols] = mpa[marine_cols].apply(pd.to_numeric, errors="coerce")
-
-    national_targets = cbd.combine_first(mpa)[[*target_cols, record_col]]
-    national_targets[target_cols] = national_targets[target_cols].astype("Float64")
-
-    # Only the marine target has two possible sources; terrestrial targets only come from the CBD
-    national_targets["marine_target_source"] = np.where(
-        cbd["marine_target"].reindex(national_targets.index).notna(), "CBD", "MPAtlas"
+    # Empty cells read back as "" rather than NA, so coerce before anything tests for a value
+    national_targets = cbd_national_targets.set_index("code")
+    national_targets[target_cols] = (
+        national_targets[target_cols].apply(pd.to_numeric, errors="coerce").astype("Float64")
     )
-    national_targets.loc[national_targets["marine_target"].isna(), "marine_target_source"] = pd.NA
+    national_targets["ort_record"] = national_targets["ort_record"].replace("", pd.NA)
 
     national_targets["terrestrial_target_source"] = pd.NA
     national_targets.loc[
@@ -138,24 +108,14 @@ def process_national_targets(
     global_pledge = "https://www.cbd.int/article/cop15-final-text-kunming-montreal-gbf-221222"
     national_targets.loc["GLOB", ["marine_target", "marine_target_year"]] = [30, 2030]
     national_targets.loc["GLOB", ["terrestrial_target", "terrestrial_target_year"]] = [30, 2030]
-    national_targets.loc["GLOB", ["marine_target_source", "terrestrial_target_source"]] = (
-        global_framework
-    )
-    national_targets.loc["GLOB", "pledge_or_ort_record"] = global_pledge
+    national_targets.loc["GLOB", "terrestrial_target_source"] = global_framework
+    national_targets.loc["GLOB", "ort_record"] = global_pledge
 
     national_targets = national_targets.reset_index()
 
     if verbose:
-        sources = national_targets["marine_target_source"].value_counts()
-        logger.info(
-            {
-                "message": (
-                    f"Resolved national targets for {len(national_targets)} locations"
-                    f" ({sources.get('CBD', 0)} marine targets from CBD,"
-                    f" {sources.get('MPAtlas', 0)} from MPAtlas)"
-                )
-            }
-        )
+        resolved = int(national_targets["marine_target"].notna().sum())
+        logger.info({"message": f"Resolved marine targets for {resolved} locations"})
 
     return national_targets
 

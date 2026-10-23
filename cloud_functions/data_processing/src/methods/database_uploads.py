@@ -44,8 +44,7 @@ def upload_locations(
     unsupported_fields = [
         "terrestrial_target",
         "terrestrial_target_year",
-        "pledge_or_ort_record",
-        "marine_target_source",
+        "ort_record",
         "terrestrial_target_source",
     ]
 

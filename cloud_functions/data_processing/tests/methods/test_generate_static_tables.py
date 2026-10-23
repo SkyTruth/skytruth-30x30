@@ -100,64 +100,6 @@ def mock_national_targets_df():
 
 
 @pytest.fixture
-def mock_mpatlas_country_targets():
-    """
-    Minimal MPAtlas country-level API payload. Rows without a thirty_by_thirty_target are
-    dropped, and MPAtlas publishes marine targets only.
-    """
-    return [
-        {
-            "id": "USA",
-            "thirty_by_thirty_target": True,
-            "national_target": 10,
-            "fully_highly_target": None,
-            "target_year": 2020,
-            "pledge": "Ocean Panel",
-        },
-        {
-            "id": "CAN",
-            "thirty_by_thirty_target": True,
-            "national_target": 30,
-            "fully_highly_target": None,
-            "target_year": 2030,
-            "pledge": "Ocean Panel",
-        },
-        {
-            "id": "JPN",
-            "thirty_by_thirty_target": True,
-            "national_target": 30,
-            "fully_highly_target": None,
-            "target_year": 2030,
-            "pledge": "High Ambition Coalition",
-        },
-        {
-            "id": "BRA",
-            "thirty_by_thirty_target": None,
-            "national_target": 25,
-            "fully_highly_target": None,
-            "target_year": 2030,
-            "pledge": "Ocean Panel",
-        },
-    ]
-
-
-@pytest.fixture
-def mock_requests_get(monkeypatch, mock_mpatlas_country_targets):
-    """Patch the MPAtlas API call so no test reaches the network."""
-
-    class _Response:
-        def raise_for_status(self):
-            return None
-
-        def json(self):
-            return mock_mpatlas_country_targets
-
-    monkeypatch.setattr(
-        gen_static_tbl.requests, "get", lambda *args, **kwargs: _Response(), raising=True
-    )
-
-
-@pytest.fixture
 def upload_recorder():
     """
     Record uploads so tests can assert the target blob name and the resulting dataframe shape.
@@ -273,9 +215,7 @@ def test__add_groups_creates_group_rows_and_updates_member_lists(crs):
     assert out.loc[out["GID_0"] == "HIG", "groups"].iloc[0] == ["SA"]
 
 
-def test_process_national_targets_prefers_cbd_and_falls_back_to_mpatlas(
-    monkeypatch, mock_locs_translations_df, mock_national_targets_df, mock_requests_get
-):
+def test_process_national_targets(monkeypatch, mock_locs_translations_df, mock_national_targets_df):
     monkeypatch.setattr(
         gen_static_tbl,
         "read_dataframe",
@@ -290,57 +230,37 @@ def test_process_national_targets_prefers_cbd_and_falls_back_to_mpatlas(
     assert all(str(out[col].dtype) == "Float64" for col in out.columns if col.endswith("target"))
     assert all(str(out[col].dtype) == "Float64" for col in out.columns if col.endswith("year"))
 
-    # CBD wins where it has a value, even though MPAtlas also publishes one for USA
     assert (out.loc["USA", "marine_target"], out.loc["USA", "marine_target_year"]) == (30, 2030)
 
     # Fractional targets are kept as published here; rounding happens in the locations table
     assert out.loc["MEX", "marine_target"] == 49.6
 
-    # MPAtlas fills locations the CBD file does not cover
-    assert (out.loc["JPN", "marine_target"], out.loc["JPN", "marine_target_year"]) == (30, 2030)
+    # A target the review was not confident in is discarded along with its year
+    assert pd.isna(out.loc["CAN", "marine_target"])
+    assert pd.isna(out.loc["CAN", "marine_target_year"])
 
-    # A low confidence CBD marine target is discarded, so MPAtlas fills it instead
-    assert (out.loc["CAN", "marine_target"], out.loc["CAN", "marine_target_year"]) == (30, 2030)
+    # Blank cells stay missing rather than becoming zeros
+    assert pd.isna(out.loc["FRA", "marine_target"])
+    assert out.loc["FRA", "terrestrial_target"] == 30
 
-    # MPAtlas is marine only, so its locations have no terrestrial target
-    assert pd.isna(out.loc["JPN", "terrestrial_target"])
-
-    # Rows without a thirty_by_thirty_target are dropped from the MPAtlas side
-    assert "BRA" not in out.index
-
-    # The global target is hardcoded, since neither source publishes a row for it
+    # The global target is hardcoded, since the CBD file has no row for it
     assert (out.loc["GLOB", "marine_target"], out.loc["GLOB", "marine_target_year"]) == (30, 2030)
     assert (out.loc["GLOB", "terrestrial_target"], out.loc["GLOB", "terrestrial_target_year"]) == (
         30,
         2030,
     )
     assert (
-        out.loc["GLOB", "marine_target_source"]
-        == out.loc["GLOB", "terrestrial_target_source"]
+        out.loc["GLOB", "terrestrial_target_source"]
         == "Kunming-Montreal Global Biodiversity Framework"
     )
 
-    # Each resolved marine target names the dataset it came from
-    assert out.loc["USA", "marine_target_source"] == "CBD"
-    assert out.loc["JPN", "marine_target_source"] == "MPAtlas"
-    assert out.loc["CAN", "marine_target_source"] == "MPAtlas"
-
-    # Terrestrial targets only come from the CBD, and only where one was resolved
+    # Terrestrial targets are attributed to the CBD, and only where one was resolved
     assert out.loc["USA", "terrestrial_target_source"] == "CBD"
-    assert out.loc["CAN", "terrestrial_target_source"] == "CBD"
-    assert pd.isna(out.loc["JPN", "terrestrial_target_source"])
+    assert pd.isna(out.loc["MEX", "terrestrial_target_source"])
 
     # The backing record is kept as text rather than coerced away with the numeric columns
-    assert out.loc["USA", "pledge_or_ort_record"] == "CBD NBSAP"
-    assert out.loc["JPN", "pledge_or_ort_record"] == "High Ambition Coalition"
-
-    # A blank record in the CBD file falls back to MPAtlas like any other value
-    assert pd.isna(out.loc["MEX", "pledge_or_ort_record"])
-
-    # A location neither source gives a marine target to has a terrestrial target but no source
-    assert pd.isna(out.loc["FRA", "marine_target"])
-    assert pd.isna(out.loc["FRA", "marine_target_source"])
-    assert out.loc["FRA", "terrestrial_target"] == 30
+    assert out.loc["USA", "ort_record"] == "CBD NBSAP"
+    assert pd.isna(out.loc["MEX", "ort_record"])
 
 
 def test_generate_locations_table_happy(
@@ -352,7 +272,6 @@ def test_generate_locations_table_happy(
     mock_regions_map,
     mock_locs_translations_df,
     mock_national_targets_df,
-    mock_requests_get,
     upload_recorder,
 ):
     calls, upload_mock = upload_recorder
@@ -447,14 +366,13 @@ def test_generate_locations_table_happy(
         "marine_target_year",
         "terrestrial_target",
         "terrestrial_target_year",
-        "pledge_or_ort_record",
-        "marine_target_source",
+        "ort_record",
         "terrestrial_target_source",
     }.issubset(df.columns)
 
     usa = df[df["code"] == "USA"].iloc[0]
     assert (usa["marine_target"], usa["marine_target_year"]) == (30, 2030)
-    assert usa["marine_target_source"] == "CBD"
+    assert usa["terrestrial_target_source"] == "CBD"
 
     # Fractional targets are kept as published; rounding happens at upload
     mex = df[df["code"] == "MEX"].iloc[0]
@@ -475,7 +393,6 @@ def test_generate_locations_table_read_failure(
     mock_regions_map,
     mock_locs_translations_df,
     mock_national_targets_df,
-    mock_requests_get,
     upload_recorder,
 ):
     calls, upload_mock = upload_recorder

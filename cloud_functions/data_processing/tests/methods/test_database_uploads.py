@@ -108,8 +108,7 @@ def test_upload_locations_happy_path(monkeypatch):
             # Generated into the locations table but not on the Strapi location schema
             "terrestrial_target": ["30", "", "30"],
             "terrestrial_target_year": ["2030", "", "2030"],
-            "pledge_or_ort_record": ["CBD NBSAP", "", "Ocean Panel"],
-            "marine_target_source": ["CBD", "MPAtlas", ""],
+            "ort_record": ["CBD NBSAP", "", "Ocean Panel"],
             "terrestrial_target_source": ["CBD", "", "CBD"],
         }
     )
@@ -198,8 +197,7 @@ def test_upload_locations_happy_path(monkeypatch):
         assert not {
             "terrestrial_target",
             "terrestrial_target_year",
-            "pledge_or_ort_record",
-            "marine_target_source",
+            "ort_record",
             "terrestrial_target_source",
         }.intersection(row)
 
