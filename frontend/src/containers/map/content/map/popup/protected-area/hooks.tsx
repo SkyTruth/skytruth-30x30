@@ -18,9 +18,9 @@ import { LayerTyped } from '@/types/layers';
 import { MergedPa, mergeProtectedAreas } from './merge-PAs';
 import { ClickedPa, clickedPaKey, readClickedPa } from './parse-tile-click';
 
-/** 
+/**
  * The protected areas under the click point, across every protected-area layer.
- * indicated by a popup @@type of ProtectedAreaPopup in the interaction_config 
+ * indicated by a popup @@type of ProtectedAreaPopup in the interaction_config
  * on the layer in the DB
  */
 export const useClickedProtectedAreas = (): ClickedPa[] => {
