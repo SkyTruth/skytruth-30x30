@@ -8,7 +8,7 @@ For architecture, data sources and the high-level data update plan, please see t
 
 ## National Targets
 
-The marine and terrestrial conservation targets shown for each location come from a hand review of Convention for Biological Diversity reports, which produced the national targets CSV in the bucket. We intend to update this with yearly cadence. Where that review could not find a target for a country, the pipeline falls back on MPAtlas's designations from its country-level API. The global target is not a national commitment, so it is set from the Kunming-Montreal Global Biodiversity Framework.
+The marine and terrestrial conservation targets shown for each location come from a hand review of Convention on Biological Diversity reports, which produced the national targets CSV in the bucket. Targets the review was not confident in, and targets with no date to reach them by, are discarded. The global target is not a national commitment, so it is set from the Kunming-Montreal Global Biodiversity Framework.
 
 ## Development
 

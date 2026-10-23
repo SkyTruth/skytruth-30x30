@@ -109,7 +109,6 @@ def test_upload_locations_happy_path(monkeypatch):
             "terrestrial_target": ["30", "", "30"],
             "terrestrial_target_year": ["2030", "", "2030"],
             "ort_record": ["CBD NBSAP", "", "Ocean Panel"],
-            "terrestrial_target_source": ["CBD", "", "CBD"],
         }
     )
 
@@ -198,7 +197,6 @@ def test_upload_locations_happy_path(monkeypatch):
             "terrestrial_target",
             "terrestrial_target_year",
             "ort_record",
-            "terrestrial_target_source",
         }.intersection(row)
 
     # Row 2: both lists parsed/kept where provided

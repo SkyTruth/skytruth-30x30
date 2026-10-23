@@ -46,9 +46,8 @@ def process_national_targets(
 
     Returns:
         pd.DataFrame: Targets keyed by location code, one nullable column per target and target
-            year, the ORT record backing the target, and terrestrial_target_source. Only the
-            marine target and year are upserted today; the rest are ready for a later schema
-            update.
+            year, and the ORT record backing the target. Only the marine target and year are
+            upserted today; the rest are ready for a later schema update.
     """
     if verbose:
         logger.info({"message": f"Reading national targets from {cbd_filename} in bucket {bucket}"})
@@ -104,17 +103,10 @@ def process_national_targets(
         national_targets["terrestrial_target_year"].isna(), "terrestrial_target"
     ] = pd.NA
 
-    national_targets["terrestrial_target_source"] = pd.NA
-    national_targets.loc[
-        national_targets["terrestrial_target"].notna(), "terrestrial_target_source"
-    ] = "CBD"
-
     # Hardcode the global target
-    global_framework = "Kunming-Montreal Global Biodiversity Framework"
     global_pledge = "https://www.cbd.int/article/cop15-final-text-kunming-montreal-gbf-221222"
     national_targets.loc["GLOB", ["marine_target", "marine_target_year"]] = [30, 2030]
     national_targets.loc["GLOB", ["terrestrial_target", "terrestrial_target_year"]] = [30, 2030]
-    national_targets.loc["GLOB", "terrestrial_target_source"] = global_framework
     national_targets.loc["GLOB", "ort_record"] = global_pledge
 
     national_targets = national_targets.reset_index()

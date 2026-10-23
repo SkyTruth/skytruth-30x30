@@ -243,7 +243,6 @@ def test_process_national_targets(monkeypatch, mock_locs_translations_df, mock_n
     # A target with no date to reach it by is dropped, for both environments
     assert pd.isna(out.loc["PER", "marine_target"])
     assert pd.isna(out.loc["PER", "terrestrial_target"])
-    assert pd.isna(out.loc["PER", "terrestrial_target_source"])
 
     # Blank cells stay missing rather than becoming zeros
     assert pd.isna(out.loc["FRA", "marine_target"])
@@ -255,14 +254,7 @@ def test_process_national_targets(monkeypatch, mock_locs_translations_df, mock_n
         30,
         2030,
     )
-    assert (
-        out.loc["GLOB", "terrestrial_target_source"]
-        == "Kunming-Montreal Global Biodiversity Framework"
-    )
-
-    # Terrestrial targets are attributed to the CBD, and only where one was resolved
-    assert out.loc["USA", "terrestrial_target_source"] == "CBD"
-    assert pd.isna(out.loc["MEX", "terrestrial_target_source"])
+    assert out.loc["GLOB", "ort_record"].startswith("https://www.cbd.int/")
 
     # The backing record is kept as text rather than coerced away with the numeric columns
     assert out.loc["USA", "ort_record"] == "CBD NBSAP"
@@ -373,12 +365,10 @@ def test_generate_locations_table_happy(
         "terrestrial_target",
         "terrestrial_target_year",
         "ort_record",
-        "terrestrial_target_source",
     }.issubset(df.columns)
 
     usa = df[df["code"] == "USA"].iloc[0]
     assert (usa["marine_target"], usa["marine_target_year"]) == (30, 2030)
-    assert usa["terrestrial_target_source"] == "CBD"
 
     # Fractional targets are kept as published; rounding happens at upload
     mex = df[df["code"] == "MEX"].iloc[0]

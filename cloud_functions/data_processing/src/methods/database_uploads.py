@@ -45,7 +45,6 @@ def upload_locations(
         "terrestrial_target",
         "terrestrial_target_year",
         "ort_record",
-        "terrestrial_target_source",
     ]
 
     converters = {field: _parse_list_or_na for field in list_fields}
