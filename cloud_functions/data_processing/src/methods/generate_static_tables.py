@@ -102,6 +102,7 @@ def process_national_targets(
     national_targets.loc[
         national_targets["terrestrial_target_year"].isna(), "terrestrial_target"
     ] = pd.NA
+    national_targets = national_targets.dropna(subset=target_cols, how="all")
 
     # Hardcode the global target
     global_pledge = "https://www.cbd.int/article/cop15-final-text-kunming-montreal-gbf-221222"

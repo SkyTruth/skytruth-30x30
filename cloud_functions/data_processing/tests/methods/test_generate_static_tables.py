@@ -236,13 +236,14 @@ def test_process_national_targets(monkeypatch, mock_locs_translations_df, mock_n
     # Fractional targets are kept as published here; rounding happens in the locations table
     assert out.loc["MEX", "marine_target"] == 49.6
 
-    # A target the review was not confident in is discarded along with its year
+    # A target the review was not confident in is discarded along with its year, but the row
+    # stays because its terrestrial target survived
     assert pd.isna(out.loc["CAN", "marine_target"])
     assert pd.isna(out.loc["CAN", "marine_target_year"])
+    assert out.loc["CAN", "terrestrial_target"] == 30
 
-    # A target with no date to reach it by is dropped, for both environments
-    assert pd.isna(out.loc["PER", "marine_target"])
-    assert pd.isna(out.loc["PER", "terrestrial_target"])
+    # PER's targets both lack a date, so nothing is left and the row is dropped entirely
+    assert "PER" not in out.index
 
     # Blank cells stay missing rather than becoming zeros
     assert pd.isna(out.loc["FRA", "marine_target"])
