@@ -206,10 +206,6 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
             </span>
           </div>
         )}
-        {/* TODO: determine how we want to handle targets without dates: default to 2030 or drop
-            the display. A location can have a target with no year, and passing targetYear as
-            undefined falls through to ConservationChart's 2030 default, so the legend reads as
-            though the deadline were known. */}
         <ConservationChart
           className="-ml-8 aspect-[16/10]"
           tooltipSlug="30x30-marine-target"
