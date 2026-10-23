@@ -5,7 +5,6 @@ import { ComponentProps, useEffect, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
 
 import Map from '@/components/map';
-import { useSyncMapSettings } from '@/containers/map/content/map/sync-settings';
 import { bboxLocationAtom, layersAtom, sidebarAtom } from '@/containers/map/store';
 
 const getBoundsPadding = (isSidebarOpen: boolean, isLayersPanelOpen: boolean) => {
@@ -32,17 +31,13 @@ const getBoundsPadding = (isSidebarOpen: boolean, isLayersPanelOpen: boolean) =>
 export default function useMapBounds() {
   const [bounds, setBounds] = useState<ComponentProps<typeof Map>['bounds']>(null);
 
-  const [{ bbox: URLBbox }] = useSyncMapSettings();
-
   const bboxLocation = useAtomValue(bboxLocationAtom);
   const isSidebarOpen = useAtomValue(sidebarAtom);
   const isLayersPanelOpen = useAtomValue(layersAtom);
 
   const previousBboxLocationRef = useRef(bboxLocation);
-  const previousIsSidebarOpenRef = useRef(isSidebarOpen);
-  const previousIsLayersPanelOpenRef = useRef(isLayersPanelOpen);
 
-  // If `bboxLocation` changes, then we provide new bounds
+  // Fit the map to the selected location, leaving room for any open panels
   useEffect(() => {
     const hasBboxLocationChanged =
       bboxLocation !== previousBboxLocationRef.current && !!previousBboxLocationRef.current;
@@ -58,28 +53,6 @@ export default function useMapBounds() {
 
     previousBboxLocationRef.current = bboxLocation;
   }, [setBounds, bboxLocation, isSidebarOpen, isLayersPanelOpen]);
-
-  // If one of the sidebar is expanded/collapse, then we provide updated bounds
-  useEffect(() => {
-    const hasIsSidebarOpenChanged =
-      isSidebarOpen !== previousIsSidebarOpenRef.current &&
-      previousIsSidebarOpenRef.current !== null;
-    const hasIsLayersPanelOpenChanged =
-      isLayersPanelOpen !== previousIsLayersPanelOpenRef.current &&
-      previousIsLayersPanelOpenRef.current !== null;
-
-    if (hasIsSidebarOpenChanged || hasIsLayersPanelOpenChanged) {
-      setBounds({
-        bbox: URLBbox as [number, number, number, number],
-        options: {
-          padding: getBoundsPadding(isSidebarOpen, isLayersPanelOpen),
-        },
-      });
-    }
-
-    previousIsSidebarOpenRef.current = isSidebarOpen;
-    previousIsLayersPanelOpenRef.current = isLayersPanelOpen;
-  }, [URLBbox, setBounds, isSidebarOpen, isLayersPanelOpen]);
 
   return bounds;
 }

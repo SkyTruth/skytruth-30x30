@@ -109,7 +109,14 @@ const MapDetails: FCWithMessages = () => {
   );
 
   const table = useMemo(() => {
-    const type = locationsQuery.data?.type;
+    // Type used to choose the table display format:
+    // Country groups (like ARG* for Argentina and Territories) are stored as
+    // 'country' but displayed like regions (one row per member location)
+    const type =
+      locationsQuery.data?.type === 'country' && locationsQuery.data?.code?.endsWith('*')
+        ? 'region'
+        : locationsQuery.data?.type;
+
     let selectedTable = tablesSettings.worldwideRegion;
 
     for (const table in tablesSettings) {
@@ -121,7 +128,7 @@ const MapDetails: FCWithMessages = () => {
     const locationName = getLocationName(locationsQuery.data);
 
     const parsedTitle =
-      selectedTable.title[tab][locationsQuery.data?.type]?.replace('{location}', locationName) ||
+      selectedTable.title[tab][type]?.replace('{location}', locationName) ||
       selectedTable.title[tab].fallback;
 
     return {

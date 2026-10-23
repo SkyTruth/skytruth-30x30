@@ -45,6 +45,7 @@ def current_db_rows():
     """Minimal 'current DB' rows as returned by get_pas()."""
     return [
         {
+            "id": 10,
             "documentId": "doc-10",
             "wdpaid": "1",
             "wdpa_p_id": "1",
@@ -323,8 +324,8 @@ def test_current_db_area_and_coverage_converted_to_float(
         gen_tables,
         "get_pas",
         lambda: [
-            {"documentId": "doc-1", "area": "123.5", "coverage": "45.6", "name": "A"},
-            {"documentId": "doc-2", "area": "7.25", "coverage": None, "name": "B"},
+            {"id": 1, "documentId": "doc-1", "area": "123.5", "coverage": "45.6", "name": "A"},
+            {"id": 2, "documentId": "doc-2", "area": "7.25", "coverage": None, "name": "B"},
         ],
     )
     monkeypatch.setattr(gen_tables, "make_pa_updates", _mock_spy_make_pa_updates)
@@ -338,8 +339,8 @@ def test_current_db_area_and_coverage_converted_to_float(
     assert df["coverage"].iloc[0] == 45.6
     # None passes through the lambda but pandas stores it as NaN in a float column
     assert pd.isna(df["coverage"].iloc[1])
-    # documentId should be preserved as a string and `id` must not be injected
-    assert "id" not in df.columns
+    # ids pass through untouched: id for upserts, documentId for deletes
+    assert df["id"].tolist() == [1, 2]
     assert df["documentId"].tolist() == ["doc-1", "doc-2"]
     assert all(isinstance(v, str) for v in df["documentId"])
 
@@ -407,7 +408,7 @@ def test_verbose_logs_per_changed_column(
         tmp_path,
         updated_pas=updated_pas_df,
         current_db=current_db_rows,
-        db_changes={"new": [], "changed": [{"documentId": "doc-1"}], "deleted": []},
+        db_changes={"new": [], "changed": [{"id": 1}], "deleted": []},
         change_cols=change_cols,
     )
 

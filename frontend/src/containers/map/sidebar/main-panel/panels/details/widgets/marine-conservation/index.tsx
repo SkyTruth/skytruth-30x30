@@ -139,6 +139,8 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
     const data = aggregatedData.reduce((acc, entry) => {
       if (entry.locations.length < mostLocsByYear.length) return acc;
+      // TODO: Remove once region coverage history before 2025 is fixed
+      if (location.type === 'region' && entry.year < 2025) return acc;
 
       const { year, protectedArea, coverage } = entry;
       const percentage = coverage ?? (protectedArea * 100) / Number(entry.totalArea);
@@ -158,7 +160,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       data[data.length - 1].active = true;
     }
     return data;
-  }, [aggregatedData, mostLocsByYear]);
+  }, [aggregatedData, mostLocsByYear, location.type]);
 
   const noData = useMemo(() => {
     if (!chartData.length) {
