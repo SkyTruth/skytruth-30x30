@@ -5,7 +5,7 @@ import Wave from '@/styles/icons/wave.svg';
 export const EEZ_SOURCE = 'eez-countries-source';
 export const FISHING_PROTECTION_SOURCE = 'protected-seas';
 
-export const POPUP_PROPERTIES_BY_SOURCE = {
+export const BOUNDARY_POPUP_PROPERTIES_BY_SOURCE = {
   [EEZ_SOURCE]: {
     ids: ['ISO_TER1', 'ISO_TER2', 'ISO_TER3', 'ISO_SOV1', 'ISO_SOV2', 'ISO_SOV3'],
     // EEZ joint zones need a per-locale tile property to render their name —

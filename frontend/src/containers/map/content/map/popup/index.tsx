@@ -30,7 +30,7 @@ import {
   EEZ_SOURCE,
   FISHING_PROTECTION_SOURCE,
   POPUP_ICON_BY_SOURCE,
-  POPUP_PROPERTIES_BY_SOURCE,
+  BOUNDARY_POPUP_PROPERTIES_BY_SOURCE,
 } from './constants';
 import { clickedCardKey, readClickedPa } from './protected-area/parse-tile-click';
 
@@ -176,17 +176,12 @@ const PopupContainer: FCWithMessages = () => {
   const hoverTooltipContent = useMemo(() => {
     const features = popup?.features ?? [];
     const isBoundary = (feature: (typeof features)[number]) =>
-      feature.source in POPUP_PROPERTIES_BY_SOURCE;
+      feature.source in BOUNDARY_POPUP_PROPERTIES_BY_SOURCE;
 
-    // Protected-area tiles are the ones carrying a WDPA or MPAtlas id; other
-    // interactive layers (e.g. ProtectedSeas) must not be counted. Keyed by the
-    // card each feature will land in, so the count matches the click popup.
+    // Protected-area tiles are the ones carrying a WDPA or MPAtlas id
     const protectedAreaKey = (feature: (typeof features)[number]) =>
       clickedCardKey(readClickedPa(feature.properties ?? {})) ?? null;
 
-    // The boundary names the tooltip; protected areas under it are counted per
-    // parcel, matching the click popup's cards. Mapbox returns one entry per style
-    // layer and tile hit, so count distinct keys.
     const boundary = features.find(isBoundary);
     const protectedAreaCount = new Set(features.map(protectedAreaKey).filter(Boolean)).size;
     const protectedSeasCount = new Set(
@@ -218,9 +213,9 @@ const PopupContainer: FCWithMessages = () => {
     // terrestrial/marine regions share the app-wide `useLocationName` resolver.
     let displayName: string | null = null;
     if (source === EEZ_SOURCE) {
-      displayName = properties[POPUP_PROPERTIES_BY_SOURCE[source]?.name[locale]] ?? null;
+      displayName = properties[BOUNDARY_POPUP_PROPERTIES_BY_SOURCE[source]?.name[locale]] ?? null;
     } else {
-      const sourceConfig = POPUP_PROPERTIES_BY_SOURCE[source];
+      const sourceConfig = BOUNDARY_POPUP_PROPERTIES_BY_SOURCE[source];
       const codeKey = sourceConfig?.ids?.find((k: string) => !!properties[k]);
       const code = codeKey ? properties[codeKey] : null;
 
@@ -239,7 +234,6 @@ const PopupContainer: FCWithMessages = () => {
         {displayName}
         {boundary && protectedAreaCount > 0 && (
           <div className="mt-[0.25rem]">
-            {/* The count sits in the icon column, aligned with the boundary line above. */}
             <span className="mr-2 inline-block min-w-[14px]">{protectedAreaCount}</span>
             {t('protected-areas-count', { count: protectedAreaCount })}
           </div>

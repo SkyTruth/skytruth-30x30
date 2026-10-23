@@ -11,7 +11,6 @@ import {
 } from './hooks';
 import PaCard from './PaCard';
 
-// `layerSlug` comes from the CMS config; the popup reads every protected-area layer instead.
 const ProtectedAreaPopup: FCWithMessages<{ layerSlug: string }> = () => {
   const t = useTranslations('containers.map');
 

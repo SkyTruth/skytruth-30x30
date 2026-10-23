@@ -8,6 +8,17 @@ import { MergedPa } from './merge-PAs';
 
 const TERMS_CLASSES = 'font-mono font-bold uppercase';
 
+const UTM_ORIGIN = 'skytruth_progress_tracker';
+
+const protectedPlanetUrl = (pa: MergedPa) => {
+  const params = new URLSearchParams({ utm_origin: UTM_ORIGIN });
+  if (pa.wdpaPId) params.set('site_pid', pa.wdpaPId);
+  return `https://www.protectedplanet.net/${pa.wdpaid}?${params}`;
+};
+
+const mpatlasUrl = (pa: MergedPa) =>
+  `https://mpatlas.org/zones/${pa.zoneId}/?utm_origin=${UTM_ORIGIN}`;
+
 const PaCard: FCWithMessages<{ pa: MergedPa; showName?: boolean }> = ({ pa, showName = false }) => {
   const t = useTranslations('containers.map');
   const locale = useLocale();
@@ -86,9 +97,7 @@ const PaCard: FCWithMessages<{ pa: MergedPa; showName?: boolean }> = ({ pa, show
       )}
       {pa.wdpaid && (
         <a
-          href={`https://www.protectedplanet.net/${pa.wdpaid}${
-            pa.wdpaPId ? `?site_pid=${pa.wdpaPId}` : ''
-          }`}
+          href={protectedPlanetUrl(pa)}
           target="_blank"
           rel="noopener noreferrer"
           className="block font-semibold underline"
@@ -98,7 +107,7 @@ const PaCard: FCWithMessages<{ pa: MergedPa; showName?: boolean }> = ({ pa, show
       )}
       {pa.zoneId && (
         <a
-          href={`https://mpatlas.org/zones/${pa.zoneId}/`}
+          href={mpatlasUrl(pa)}
           target="_blank"
           rel="noopener noreferrer"
           className="block font-semibold underline"

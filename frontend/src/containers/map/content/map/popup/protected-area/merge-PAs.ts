@@ -30,7 +30,7 @@ export type MergedPa = {
 export type MergeContext = {
   locale: string;
   getLocationName: ReturnType<typeof useLocationName>;
-  isIhoActive: boolean;
+  isIhoActive: boolean; // TECH-3764: Clean up iho flag
   protectionLevelNames?: Record<string, string>;
   establishmentStageNames?: Record<string, string>;
 };
