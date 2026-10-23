@@ -50,9 +50,6 @@ def upload_locations(
     converters = {field: _parse_list_or_na for field in list_fields}
     locs_df = read_dataframe(bucket_name=bucket, filename=filename, converters=converters)
 
-    # Strapi stores these as integers while some targets are published as fractions. Empty cells,
-    # such as the marine area of a land locked country, read back as "" rather than NA, which
-    # _extract_non_na_values would otherwise keep.
     locs_df[integer_fields] = (
         locs_df[integer_fields].apply(pd.to_numeric, errors="coerce").round().astype("Int64")
     )
