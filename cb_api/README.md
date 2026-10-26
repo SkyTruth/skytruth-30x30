@@ -21,22 +21,24 @@ table the area is compared against (`marine` by default or `terrestrial`).
 ```bash
 curl -X POST localhost:8080/coverage \
   -H 'Content-Type: application/json' \
-  -d '{"environment": "marine", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
+  -d '{"environment": "marine", "geometry": {"type": "Polygon", "coordinates": [[[146.9,-39.2],[147,-39.2],[147,-39.1],[146.9,-39.1],[146.9,-39.2]]]}}'
 ```
 
 ```json
 {
-  "locations_area": [{ "code": "ESP", "protected_area": 30 }],
-  "total_area": 100,
-  "total_protected_area": 30
+  "locations_area": [{ "code": "AUS", "protected_area": 34.0 }],
+  "total_area": 96.0,
+  "total_protected_area": 34.0
 }
 ```
 
-Areas are square kilometres, computed in a Mollweide equal-area projection and rounded.
-`total_area` is the drawn area; `total_protected_area` is the part of it already
-protected; `locations_area` breaks that down by location code.
+Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `locations_area` breaks it down by location code, and `total_protected_area` is their sum.
 
-Unrecognised fields in the body are ignored.
+`protected_area` and `total_protected_area` are the protected area that would be *added* by the drawn polygon because they're not *currently* protected.
+
+An area that intersects nothing (e.g., a marine request over land) returns zeroes, including `total_area`.
+
+Unrecognized fields in the body are ignored.
 
 ### `POST /` is temporary
 
