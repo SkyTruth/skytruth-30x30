@@ -45,7 +45,7 @@ const MapSidebar: FCWithMessages = () => {
             open={isSidebarOpen}
             onOpenChange={setSidebarOpen}
           >
-            <CollapsibleContent className="relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
+            <CollapsibleContent className="pointer-events-auto relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
               <div className="h-full md:w-[460px]">
                 <MainPanel />
               </div>
@@ -67,7 +67,7 @@ const MapSidebar: FCWithMessages = () => {
             open={isLayersOpen}
             onOpenChange={setLayersOpen}
           >
-            <CollapsibleContent className="relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
+            <CollapsibleContent className="pointer-events-auto relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
               <div className="h-full md:w-[280px]">
                 <LayersPanel />
               </div>
