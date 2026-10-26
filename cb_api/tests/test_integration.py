@@ -35,7 +35,7 @@ def by_code(result: dict) -> dict[str, float]:
     return {area["code"]: area["protected_area"] for area in result["locations_area"]}
 
 
-def test_areas_are_square_kilometres(analysis_tables: Engine):
+def test_areas_are_square_kilometers(analysis_tables: Engine):
     """A wrong projection or a missing /1e6 would be out by orders of magnitude."""
     result = get_locations_stats(analysis_tables, box(1, 0, 2, 1), AnalysisTable.MARINE)
 
