@@ -452,7 +452,7 @@ def dispatch_publisher(
             step_list = [
                 "generate_mangroves_minus_pa",
                 "generate_seamounts_minus_pa",
-                "generate_coldwatercorals_minus_pa",
+                "generate_cold_water_corals_minus_pa",
                 "generate_saltmarshes_minus_pa",
                 "generate_seagrasses_minus_pa",
             ]
@@ -556,12 +556,12 @@ def dispatch_publisher(
             )
             step_list = ["update_seamounts_minus_pa"]
 
-        case "generate_coldwatercorals_minus_pa":
+        case "generate_cold_water_corals_minus_pa":
             generate_marine_habitat_minus_pa(
-                habitat="coldwatercorals",
+                habitat="cold-water-corals",
                 verbose=verbose,
             )
-            step_list = ["update_coldwatercorals_minus_pa"]
+            step_list = ["update_cold_water_corals_minus_pa"]
 
         case "generate_saltmarshes_minus_pa":
             generate_marine_habitat_minus_pa(
@@ -666,11 +666,11 @@ def dispatch_publisher(
                 verbose=verbose,
             )
 
-        case "update_coldwatercorals_minus_pa":
+        case "update_cold_water_corals_minus_pa":
             update_cb(
-                table_name="coldwatercorals_minus_pa",
+                table_name="cold_water_corals_minus_pa",
                 gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(
-                    habitat="coldwatercorals"
+                    habitat="cold-water-corals"
                 ),
                 verbose=verbose,
             )

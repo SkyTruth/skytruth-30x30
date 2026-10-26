@@ -188,7 +188,7 @@ MARINE_HABITAT_PARAMS = {
         "source": "shapefile",
         "overlaps": True,
     },
-    "coldwatercorals": {
+    "cold-water-corals": {
         "url": COLD_WATER_CORALS_URL,
         "file_name": COLD_WATER_CORALS_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
@@ -306,7 +306,7 @@ CLIMATE_RESILIENT_CORALS_HABITATS = ("other-corals", "climate-resilient-corals")
 LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
     "generate_mangroves_minus_pa",
-    "generate_coldwatercorals_minus_pa",
+    "generate_cold_water_corals_minus_pa",
     "generate_saltmarshes_minus_pa",
     "generate_seagrasses_minus_pa",
     "generate_climate_resilient_corals_minus_pa",
