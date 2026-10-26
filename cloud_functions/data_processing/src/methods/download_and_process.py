@@ -2,7 +2,6 @@ import gc
 import glob
 import json
 import os
-import shutil
 import subprocess
 import sys
 import textwrap
@@ -25,6 +24,7 @@ from src.core.commons import (
     RetryFailed,
     add_tolerance_suffix,
     download_file_with_progress,
+    remove_file_or_folder,
     retry_and_alert,
     unzip_file,
 )
@@ -438,24 +438,6 @@ def download_and_process_protected_planet_pas(
 
                 # Delete zipped files
                 os.remove(zip_path)
-
-    def remove_file_or_folder(path, verbose=True):
-        """Delete a file or folder (recursively) if it exists."""
-        try:
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-                if verbose:
-                    logger.info({"message": f"Deleted folder and its contents: {path}"})
-            elif os.path.exists(path):
-                os.remove(path)
-                if verbose:
-                    logger.info({"message": f"Deleted file: {path}"})
-            else:
-                return
-        except FileNotFoundError:
-            pass
-        except Exception as e:
-            logger.warning({"message": f"Warning: could not delete {path}: {e}"})
 
     def process_protected_area_geoms(pa_dir, tolerance, batch_size=1000, n_jobs=-1, verbose=True):
         def stream_parquet_chunks(paths, batch_size=1000):
