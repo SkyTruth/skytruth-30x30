@@ -554,6 +554,7 @@ def dispatch_publisher(
                 habitat="seamounts",
                 verbose=verbose,
             )
+            step_list = ["update_seamounts_minus_pa"]
 
         case "generate_coldwatercorals_minus_pa":
             generate_marine_habitat_minus_pa(
@@ -655,6 +656,13 @@ def dispatch_publisher(
             update_cb(
                 table_name="mangroves_minus_pa",
                 gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="mangroves"),
+                verbose=verbose,
+            )
+
+        case "update_seamounts_minus_pa":
+            update_cb(
+                table_name="seamounts_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="seamounts"),
                 verbose=verbose,
             )
 
