@@ -34,6 +34,7 @@ resource "google_sql_database_instance" "db-main" {
 
   settings {
     tier                        = var.sql-database-instance-tier
+    edition                     = "ENTERPRISE"
     deletion_protection_enabled = true
 
     ip_configuration {
@@ -66,4 +67,10 @@ resource "google_sql_user" "app-user" {
   name     = local.postgres_user
   instance = google_sql_database_instance.db-main.name
   password = local.postgres_password
+}
+
+resource "google_sql_user" "read-only-user" {
+  name     = var.read_only_user
+  instance = google_sql_database_instance.db-main.name
+  password = var.read_only_password
 }
