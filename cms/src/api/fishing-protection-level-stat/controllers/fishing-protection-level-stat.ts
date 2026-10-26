@@ -31,7 +31,7 @@ export default factories
             if (!locationMap) {
               locationMap = await strapi
                 .service('api::location.location')
-                .getLocationMap();
+                .getLocationMap('documentId');
             }
             if (!locationMap[stat.location]) {
               errors.push({

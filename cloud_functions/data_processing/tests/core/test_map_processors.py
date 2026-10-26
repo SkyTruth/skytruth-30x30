@@ -35,24 +35,26 @@ def patch_boto3(monkeypatch):
     return uploaded
 
 
-def test_mbtile_generation_happy_path(monkeypatch, patch_subprocess, capsys):
+def test_vector_tile_generation_happy_path(monkeypatch, patch_subprocess):
     monkeypatch.setattr(mp, "tqdm", MockBar, raising=True)
-    mp.generate_mbtiles("in.geojson", "out.mbtiles", verbose=True)
+    logged = []
+    monkeypatch.setattr(mp.logger, "info", lambda m: logged.append(m["message"]), raising=True)
+
+    mp.generate_vector_tiles("in.geojson", "out.mbtiles", verbose=True)
     calls = patch_subprocess
     assert "tippecanoe" in calls["cmd"]
     assert "in.geojson" in calls["cmd"]
     assert "out.mbtiles" in calls["cmd"]
     assert calls["shell"] is True and calls["check"] is True
 
-    out = capsys.readouterr().out
-    assert "Creating mbtiles file" in out
-    assert "mbtiles file created" in out
+    assert any("Creating vector tiles" in m for m in logged)
+    assert any("Vector tiles created" in m for m in logged)
 
 
 # ----------------------------
-# generate_mbtiles
+# generate_vector_tiles
 # ----------------------------
-def test_mbtile_generation_errors(monkeypatch):
+def test_vector_tile_generation_errors(monkeypatch):
     monkeypatch.setattr(
         mp.subprocess, "run", lambda *a, **k: (_ for _ in ()).throw(ValueError("bad")), raising=True
     )
@@ -61,8 +63,8 @@ def test_mbtile_generation_errors(monkeypatch):
     monkeypatch.setattr(mp.logger, "error", lambda m: captured.setdefault("log", m), raising=True)
 
     with pytest.raises(ValueError, match="bad"):
-        mp.generate_mbtiles("input", "output")
-    assert "Error generating mbtiles file from input" in captured["log"]["message"]
+        mp.generate_vector_tiles("input", "output")
+    assert "Error generating vector tiles from input" in captured["log"]["message"]
     assert "bad" in captured["log"]["error"]
 
 

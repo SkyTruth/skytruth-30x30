@@ -29,6 +29,7 @@ export type LegendConfig = {
 };
 
 export type InteractionConfig = {
+  '@@type'?: string;
   enabled: boolean;
   events: {
     type: 'click' | 'hover';

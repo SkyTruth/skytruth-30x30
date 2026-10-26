@@ -12,12 +12,42 @@ import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped, InteractionConfig } from '@/types/layers';
 
+import CardAccordion from '../CardAccordion';
+
+type ClickValue = InteractionConfig['events'][number]['values'][number];
+type Properties = NonNullable<Feature['properties']>;
+
+const formatLabel = (label: string) =>
+  label
+    .toLowerCase()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.substring(1))
+    .join(' ');
+
+const GenericCard = ({ properties, values }: { properties: Properties; values: ClickValue[] }) => {
+  const locale = useLocale();
+
+  return (
+    <dl className="space-y-2">
+      {values.map(({ key, label, format: customFormat }) => (
+        <div key={key}>
+          <dt className="mt-4 font-mono">{formatLabel(label)}</dt>
+          <dd className="font-mono first-letter:uppercase">
+            {customFormat && format({ locale, value: properties[key], ...customFormat })}
+            {!customFormat && properties[key]}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+};
+
 const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = ({
   layerSlug,
   ...restConfig
 }) => {
   const [rendered, setRendered] = useState(false);
-  const DATA_REF = useRef<Feature['properties'] | undefined>();
+  const DATA_REF = useRef<Properties[]>([]);
   const { default: map } = useMap();
   const { events } = restConfig;
 
@@ -59,6 +89,8 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
     source = layerQuery?.source;
   }
 
+  // Every feature of this source under the click. Mapbox returns one entry per
+  // style layer and tile hit, so the same feature is kept once.
   const DATA = useMemo(() => {
     if (source?.type === 'vector' && rendered && popup && map) {
       const point = map.project(popup.lngLat);
@@ -77,15 +109,14 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
         layers: layersInteractiveIds,
       });
 
-      const d = query.find((d) => {
-        return d.source === source.id;
-      })?.properties;
+      const byKey = new Map<string, Properties>();
+      query
+        .filter((feature) => feature.source === source.id)
+        .forEach((feature) => {
+          byKey.set(String(feature.id ?? JSON.stringify(feature.properties)), feature.properties);
+        });
 
-      DATA_REF.current = d;
-
-      if (d) {
-        return DATA_REF.current;
-      }
+      DATA_REF.current = Array.from(byKey.values());
     }
 
     return DATA_REF.current;
@@ -95,13 +126,6 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
   const handleMapRender = useCallback(() => {
     setRendered(map?.loaded() && map?.areTilesLoaded());
   }, [map]);
-
-  const formatLabel = (label) =>
-    label
-      .toLowerCase()
-      .split(' ')
-      .map((s) => s.charAt(0).toUpperCase() + s.substring(1))
-      .join(' ');
 
   useEffect(() => {
     map?.on('render', handleMapRender);
@@ -113,34 +137,29 @@ const GenericPopup: FCWithMessages<InteractionConfig & { layerSlug: string }> = 
     };
   }, [map, handleMapRender]);
 
-  if (!DATA) return null;
+  if (!DATA.length) return null;
 
-  const values = events.find((ev) => ev.type === 'click')?.values;
-  const name = values?.find((v) => v.label === 'Name');
-  const restValues = (values?.filter((v) => v.label !== 'Name') ?? []).map(
-    ({ label, ...rest }) => ({
-      label: formatLabel(label),
-      ...rest,
-    })
-  );
+  const values = events.find((ev) => ev.type === 'click')?.values ?? [];
+  const nameKey = values.find((value) => value.label === 'Name')?.key;
+  const restValues = values.filter((value) => value.label !== 'Name');
+
+  if (DATA.length === 1) {
+    return (
+      <div className="space-y-2">
+        {nameKey && <h3 className="line-clamp-2 text-xl font-semibold">{DATA[0][nameKey]}</h3>}
+        <GenericCard properties={DATA[0]} values={restValues} />
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div className="space-y-2">
-        {name && <h3 className="line-clamp-2 text-xl font-semibold">{DATA?.[name.key]}</h3>}
-        <dl className="space-y-2">
-          {restValues.map(({ key, label, format: customFormat }) => (
-            <div key={key}>
-              <dt className="mt-4 font-mono">{label}</dt>
-              <dd className="font-mono first-letter:uppercase">
-                {customFormat && format({ locale, value: DATA[key], ...customFormat })}
-                {!customFormat && DATA[key]}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </>
+    <CardAccordion
+      items={DATA.map((properties, index) => ({
+        id: String(index),
+        title: nameKey ? properties[nameKey] : null,
+        content: <GenericCard properties={properties} values={restValues} />,
+      }))}
+    />
   );
 };
 
