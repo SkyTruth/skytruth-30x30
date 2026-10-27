@@ -59,6 +59,27 @@ def show_container_mem(label: str = ""):
     logger.info({"message": f"[{label}] Container memory: {usage_gb:.1f} GB"})
 
 
+def exhaust_memory(chunk_gb: int = 1, max_gb: int = 64):
+    """
+    Allocate memory in chunks until the container exceeds its memory limit and
+    the kernel kills it.
+
+    The chunks are filled with non-zero bytes so that every page is faulted in.
+    Zero-filled allocations are backed by the shared zero page and do not count
+    against the cgroup until written to.
+
+    Args:
+        chunk_gb (int): Size of each allocation, in GB.
+        max_gb (int): Give up after allocating this much, in GB.
+    """
+    held = []
+    for allocated_gb in range(chunk_gb, max_gb + 1, chunk_gb):
+        held.append(b"\xff" * (chunk_gb * 1024**3))
+        show_container_mem(f"test_oom allocated {allocated_gb} GB")
+
+    logger.error({"message": f"test_oom reached {max_gb} GB without being killed"})
+
+
 def print_peak_memory_allocation(func, *args, **kwargs):
     tracemalloc.start()
     try:
@@ -100,7 +121,8 @@ def handle_sigterm(signum, frame):
     )
 
     webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
-    send_slack_alert(webhook_url, "TIMEOUT ERROR - SIGTERM signal received")
+    env = os.environ.get("ENVIRONMENT", "")
+    send_slack_alert(webhook_url, f"TIMEOUT ERROR - SIGTERM signal received on {env.upper()}")
 
     # Free up memory
     release_memory()
