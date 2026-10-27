@@ -35,6 +35,18 @@ const LayerManager = dynamic(() => import('@/containers/map/content/map/layer-ma
   ssr: false,
 });
 
+// Identifies what is under the cursor, so the tooltip only moves when that changes.
+const hoveredFeatureKey = (features: mapboxgl.GeoJSONFeature[] = []) =>
+  [
+    ...new Set(
+      features.map(
+        (feature) => `${feature.source}:${feature.id ?? JSON.stringify(feature.properties)}`
+      )
+    ),
+  ]
+    .sort()
+    .join('|');
+
 const MainMap: FCWithMessages = () => {
   const locale = useLocale();
 
@@ -55,6 +67,8 @@ const MainMap: FCWithMessages = () => {
   const hoveredPolygonId = useRef<Parameters<typeof map.setFeatureState>[0] | null>(null);
   const mountedRef = useRef(false);
   const previousDefaultLayersRef = useRef(null);
+  // Key of the features the open hover tooltip describes; empty when none is open.
+  const hoveredKey = useRef('');
 
   const { data: layersInteractiveData } = useGetLayers(
     {
@@ -126,7 +140,7 @@ const MainMap: FCWithMessages = () => {
   }, [map]);
 
   const safelySetFeatureState = useCallback(
-    (feature: mapboxgl.MapboxGeoJSONFeature) => {
+    (feature: mapboxgl.GeoJSONFeature) => {
       const isSameId = !hoveredPolygonId.current || hoveredPolygonId.current.id === feature.id;
 
       const isSameSource =
@@ -168,6 +182,8 @@ const MainMap: FCWithMessages = () => {
     (e: Parameters<ComponentProps<typeof Map>['onClick']>[0]) => {
       if (drawState.active) return null;
 
+      hoveredKey.current = '';
+
       if (popup?.features?.length) {
         safelyResetFeatureState();
         setPopup({});
@@ -196,6 +212,7 @@ const MainMap: FCWithMessages = () => {
   const handleMouseMove = useCallback(
     (e: Parameters<ComponentProps<typeof Map>['onMouseOver']>[0]) => {
       if (!e.features.length) {
+        hoveredKey.current = '';
         setPopup({});
       }
 
@@ -205,7 +222,21 @@ const MainMap: FCWithMessages = () => {
         }
 
         if (e.type === 'mousemove') {
-          setPopup({ ...e });
+          const key = hoveredFeatureKey(e.features);
+
+          // Open the tooltip for new features, and keep it open for as long as the
+          // same features stay under the cursor.
+          if (key !== hoveredKey.current) {
+            hoveredKey.current = key;
+            setPopup({ ...e });
+          } else {
+            // Same features: follow the pointer, unless something else closed the tooltip.
+            setPopup((previous) =>
+              previous?.type === 'mousemove'
+                ? { ...previous, lngLat: e.lngLat, point: e.point }
+                : { ...e }
+            );
+          }
         }
 
         if (e.features?.[0]) {
@@ -221,6 +252,7 @@ const MainMap: FCWithMessages = () => {
   );
 
   const handleMouseOut = useCallback(() => {
+    hoveredKey.current = '';
     safelyResetFeatureState();
 
     if (popup?.type !== 'click') {

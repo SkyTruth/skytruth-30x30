@@ -22,10 +22,17 @@ import { cn } from '@/lib/classnames';
 import CloseIcon from '@/styles/icons/close.svg';
 import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
+import { InteractionConfig } from '@/types/layers';
 
 import { useSyncMapLayers } from '../sync-settings';
 
-import { EEZ_SOURCE, POPUP_ICON_BY_SOURCE, POPUP_PROPERTIES_BY_SOURCE } from './constants';
+import {
+  EEZ_SOURCE,
+  FISHING_PROTECTION_SOURCE,
+  POPUP_ICON_BY_SOURCE,
+  BOUNDARY_POPUP_PROPERTIES_BY_SOURCE,
+} from './constants';
+import { clickedCardKey, readClickedPa } from './protected-area/parse-tile-click';
 
 const PopupContainer: FCWithMessages = () => {
   const locale = useLocale();
@@ -132,9 +139,9 @@ const PopupContainer: FCWithMessages = () => {
     },
     {
       query: {
-        enabled: layersInteractive.length > 1,
-        select: ({ data }) =>
-          data
+        enabled: layersInteractive.length > 0,
+        select: ({ data }) => {
+          const options = data
             .filter(
               ({
                 config: {
@@ -143,19 +150,55 @@ const PopupContainer: FCWithMessages = () => {
                 },
               }) => availableSources?.includes(sourceId)
             )
-            .map(({ title: label, slug: value }) => ({
-              label,
-              value,
+            .map(({ title, slug, interaction_config }) => ({
+              label: title,
+              value: slug,
+              isProtectedArea:
+                (interaction_config as InteractionConfig)?.['@@type'] === 'ProtectedAreaPopup',
             }))
             .sort((a, b) =>
               syncedLayers.indexOf(a.value) > syncedLayers.indexOf(b.value) ? 1 : -1
-            ),
+            );
+
+          // Every protected-area layer renders the same popup, so they share one entry.
+          const firstProtectedArea = options.find((option) => option.isProtectedArea);
+          return options
+            .filter((option) => !option.isProtectedArea || option === firstProtectedArea)
+            .map(({ label, value, isProtectedArea }) => ({
+              label: isProtectedArea ? t('protected-areas') : label,
+              value,
+            }));
+        },
       },
     }
   );
 
   const hoverTooltipContent = useMemo(() => {
-    const { properties, source } = popup?.features?.[0] ?? {};
+    const features = popup?.features ?? [];
+    const isBoundary = (feature: (typeof features)[number]) =>
+      feature.source in BOUNDARY_POPUP_PROPERTIES_BY_SOURCE;
+
+    // Protected-area tiles are the ones carrying a WDPA or MPAtlas id
+    const protectedAreaKey = (feature: (typeof features)[number]) =>
+      clickedCardKey(readClickedPa(feature.properties ?? {})) ?? null;
+
+    const boundary = features.find(isBoundary);
+    const protectedAreaCount = new Set(features.map(protectedAreaKey).filter(Boolean)).size;
+    const protectedSeasCount = new Set(
+      features
+        .filter((feature) => feature.source === FISHING_PROTECTION_SOURCE)
+        .map((feature) => feature.properties?.SITE_ID ?? feature.id)
+    ).size;
+
+    // Which feature names the tooltip, in priority order; `find` keeps layer
+    // order within a tier, so overlapping boundaries yield the topmost one.
+    const named =
+      boundary ??
+      features.find((feature) => protectedAreaKey(feature)) ??
+      features.find((feature) => feature.source === FISHING_PROTECTION_SOURCE) ??
+      features[0];
+
+    const { properties, source } = named ?? {};
 
     const ids = new Set(['ISO_TER1', 'ISO_TER2', 'ISO_TER3']);
     const propertiesSet = properties ? new Set(Object.keys(properties)) : new Set();
@@ -170,16 +213,17 @@ const PopupContainer: FCWithMessages = () => {
     // terrestrial/marine regions share the app-wide `useLocationName` resolver.
     let displayName: string | null = null;
     if (source === EEZ_SOURCE) {
-      displayName = properties[POPUP_PROPERTIES_BY_SOURCE[source]?.name[locale]] ?? null;
+      displayName = properties[BOUNDARY_POPUP_PROPERTIES_BY_SOURCE[source]?.name[locale]] ?? null;
     } else {
-      const sourceConfig = POPUP_PROPERTIES_BY_SOURCE[source];
+      const sourceConfig = BOUNDARY_POPUP_PROPERTIES_BY_SOURCE[source];
       const codeKey = sourceConfig?.ids?.find((k: string) => !!properties[k]);
       const code = codeKey ? properties[codeKey] : null;
 
       displayName =
         code && sourceConfig?.locationType
           ? getLocationName({ code, type: sourceConfig.locationType })
-          : null;
+          : // Protected-area and ProtectedSeas tiles carry the site name directly.
+            (properties.name ?? properties.NAME ?? properties.SITE_NAME ?? null);
     }
 
     return (
@@ -188,9 +232,21 @@ const PopupContainer: FCWithMessages = () => {
           <Icon icon={POPUP_ICON_BY_SOURCE[source]} className="mr-2 inline-block w-[14px]" />
         ) : null}
         {displayName}
-        <div className="mt-[0.25rem] text-xs">
-          {isMultiClaimEEZ ? `* ${t('eez-multi-claim')}` : null}
-        </div>
+        {boundary && protectedAreaCount > 0 && (
+          <div className="mt-[0.25rem]">
+            <span className="mr-2 inline-block min-w-[14px]">{protectedAreaCount}</span>
+            {t('protected-areas-count', { count: protectedAreaCount })}
+          </div>
+        )}
+        {boundary && protectedSeasCount > 0 && (
+          <div className="mt-[0.25rem]">
+            <span className="mr-2 inline-block min-w-[14px]">{protectedSeasCount}</span>
+            {t('protected-seas-count', { count: protectedSeasCount })}
+          </div>
+        )}
+        {isMultiClaimEEZ && (
+          <div className="mt-[0.25rem] text-xs">{`* ${t('eez-multi-claim')}`}</div>
+        )}
       </div>
     );
   }, [locale, popup, t, getLocationName]);
@@ -243,12 +299,12 @@ const PopupContainer: FCWithMessages = () => {
             </button>
           </div>
         )}
-        {isClickedTooltip && availableSources.length > 1 && (
+        {isClickedTooltip && (layersInteractiveData?.length ?? 0) > 1 && (
           <Select
             onValueChange={(layer) => {
               setSelectedLayerSlug(layer);
             }}
-            defaultValue={layersInteractiveData?.[0].value}
+            value={selectedLayerSlug ?? undefined}
           >
             <SelectTrigger>
               <SelectValue />
