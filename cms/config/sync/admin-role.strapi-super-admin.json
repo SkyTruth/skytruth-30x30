@@ -1622,7 +1622,10 @@
           "marine_target_year",
           "pas",
           "name_pt",
-          "has_shared_marine_area"
+          "has_shared_marine_area",
+          "terrestrial_target",
+          "terrestrial_target_year",
+          "ort_record"
         ]
       },
       "conditions": [],
@@ -1668,7 +1671,10 @@
           "marine_target_year",
           "pas",
           "name_pt",
-          "has_shared_marine_area"
+          "has_shared_marine_area",
+          "terrestrial_target",
+          "terrestrial_target_year",
+          "ort_record"
         ]
       },
       "conditions": [],
@@ -1698,7 +1704,10 @@
           "marine_target_year",
           "pas",
           "name_pt",
-          "has_shared_marine_area"
+          "has_shared_marine_area",
+          "terrestrial_target",
+          "terrestrial_target_year",
+          "ort_record"
         ]
       },
       "conditions": [],

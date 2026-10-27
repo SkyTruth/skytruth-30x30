@@ -15,33 +15,19 @@
     "code": {
       "type": "string",
       "required": true,
-      "unique": false,
-      "description": "Unique textual identifier for the location, e.g. iso3 code for countries.",
-      "pluginOptions": {}
+      "unique": false
     },
     "name": {
       "type": "string",
-      "required": true,
-      "pluginOptions": {}
+      "required": true
     },
     "total_marine_area": {
       "type": "biginteger",
-      "description": "Total marine area in km2",
-      "required": true,
-      "column": {
-        "defaultTo": 0,
-        "type": "decimal",
-        "args": [
-          12,
-          2
-        ]
-      },
-      "pluginOptions": {}
+      "required": true
     },
     "type": {
       "type": "string",
-      "required": true,
-      "pluginOptions": {}
+      "required": true
     },
     "groups": {
       "type": "relation",
@@ -74,16 +60,13 @@
       "mappedBy": "location"
     },
     "marine_bounds": {
-      "type": "json",
-      "pluginOptions": {}
+      "type": "json"
     },
     "total_terrestrial_area": {
-      "pluginOptions": {},
       "type": "biginteger",
       "required": true
     },
     "terrestrial_bounds": {
-      "pluginOptions": {},
       "type": "json"
     },
     "name_es": {
@@ -114,6 +97,25 @@
     },
     "has_shared_marine_area": {
       "type": "boolean"
+    },
+    "terrestrial_target": {
+      "type": "integer",
+      "conditions": {
+        "visible": {
+          "==": [
+            {
+              "var": ""
+            },
+            ""
+          ]
+        }
+      }
+    },
+    "terrestrial_target_year": {
+      "type": "integer"
+    },
+    "ort_record": {
+      "type": "string"
     }
   }
 }

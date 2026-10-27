@@ -292,6 +292,48 @@
           "sortable": true
         }
       },
+      "terrestrial_target": {
+        "edit": {
+          "label": "terrestrial_target",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "terrestrial_target",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "terrestrial_target_year": {
+        "edit": {
+          "label": "terrestrial_target_year",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "terrestrial_target_year",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "ort_record": {
+        "edit": {
+          "label": "ort_record",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "ort_record",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -465,6 +507,20 @@
           {
             "name": "has_shared_marine_area",
             "size": 4
+          },
+          {
+            "name": "terrestrial_target",
+            "size": 4
+          },
+          {
+            "name": "terrestrial_target_year",
+            "size": 4
+          }
+        ],
+        [
+          {
+            "name": "ort_record",
+            "size": 6
           }
         ]
       ]
