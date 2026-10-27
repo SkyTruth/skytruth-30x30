@@ -1,6 +1,6 @@
 # Conservation Builder API
 
-Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area is already protected, broken down by location.
+Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area will have added protection, broken down by location.
 
 It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL PostGIS database. Those tables are produced by `cloud_functions/data_processing`.
 
@@ -9,7 +9,7 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
-| `POST` | `/coverage` | How much of a drawn area is already protected, by location |
+| `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
 | `POST` | `/` | Deprecated alias for `/coverage` |
 
 ### `POST /coverage`
