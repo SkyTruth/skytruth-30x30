@@ -56,6 +56,7 @@ def health() -> dict[str, str]:
 @app.post("/coverage", response_model=LocationStats)
 @app.post("/", response_model=LocationStats, deprecated=True)
 def coverage(body: AnalysisRequest, engine: PooledEngine) -> dict:
-    """How much of the given area is already protected, broken down by location.
+    """How much of the given area will have added protection coverage,
+    broken down by location.
     """
     return get_locations_stats(engine, body.geometry, body.environment.table)
