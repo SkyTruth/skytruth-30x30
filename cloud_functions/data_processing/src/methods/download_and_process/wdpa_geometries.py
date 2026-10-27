@@ -35,8 +35,6 @@ def stream_parquet_chunks(paths, batch_size=1000):
             gdf = gpd.GeoDataFrame(df, geometry="geometry", crs="EPSG:4326")
             yield gdf
 
-    del parquet_file, df, gdf
-
 
 def calculate_radius(rep_area: float, geom) -> float:
     """
