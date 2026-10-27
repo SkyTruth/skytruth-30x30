@@ -332,5 +332,5 @@ LONG_RUNNING_TASKS = [
     "update_terrestrial_protected_areas_tileset",
     "generate_iho_pa_intersections",
     "generate_buffered_iho_pa_intersections",
-    "test_oom"
+    "test_oom",
 ]
