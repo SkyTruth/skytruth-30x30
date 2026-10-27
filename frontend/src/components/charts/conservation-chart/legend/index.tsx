@@ -66,10 +66,12 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
             <span className="block w-10 border-b border-dashed border-orange"></span>
           )}
           <span>
+            <span className='relative top-px'>
             {t.rich('target-xx-by', {
               target,
               year: targetYear,
             })}
+            </span>
             <TooltipButton
               text={dataInfo?.content
                 .replace('{target}', `${target}`)
