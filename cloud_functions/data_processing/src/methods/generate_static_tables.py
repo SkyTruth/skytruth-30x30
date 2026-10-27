@@ -10,6 +10,7 @@ from src.core.params import (
     GADM_FILE_NAME,
     LOCATIONS_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
+    NATIONAL_TARGETS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     TOLERANCE,
@@ -25,6 +26,97 @@ from src.utils.geo import get_area_km2
 from src.utils.logger import Logger
 
 logger = Logger()
+
+
+def process_national_targets(
+    bucket: str = BUCKET,
+    cbd_filename: str = NATIONAL_TARGETS_FILE_NAME,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """
+    Reads the national targets identified from the Convention on Biological Diversity reports
+    from a CSV in GCS. Targets the review was not confident in, and targets with no date to
+    reach them by, are discarded. The global target is set from the Kunming-Montreal Global
+    Biodiversity Framework rather than from a national commitment.
+
+    Args:
+        bucket (str): The GCS bucket name.
+        cbd_filename (str): The name of the CBD national targets CSV file.
+        verbose (bool): If True, logs the process.
+
+    Returns:
+        pd.DataFrame: Targets keyed by location code, one nullable column per target and target
+            year, and the ORT record backing the target. Only the marine target and year are
+            upserted today; the rest are ready for a later schema update.
+    """
+    if verbose:
+        logger.info({"message": f"Reading national targets from {cbd_filename} in bucket {bucket}"})
+
+    cbd_national_targets = read_dataframe(
+        bucket_name=bucket, filename=cbd_filename, verbose=verbose
+    )
+    cbd_national_targets.loc[
+        ~cbd_national_targets["Marine Confidence"].str.lower().isin(["high"]),
+        ["% Marine Target", "Marine By Year"],
+    ] = pd.NA
+    cbd_national_targets.loc[
+        ~cbd_national_targets["Terrestrial Confidence"].str.lower().isin(["high"]),
+        ["% Terrestrial Target", "Terrestrial By Year"],
+    ] = pd.NA
+    cbd_national_targets = cbd_national_targets.rename(
+        columns={
+            "Iso Code": "code",
+            "% Marine Target": "marine_target",
+            "Marine By Year": "marine_target_year",
+            "% Terrestrial Target": "terrestrial_target",
+            "Terrestrial By Year": "terrestrial_target_year",
+            "ORT Record": "ort_record",
+        }
+    )[
+        [
+            "code",
+            "marine_target",
+            "marine_target_year",
+            "terrestrial_target",
+            "terrestrial_target_year",
+            "ort_record",
+        ]
+    ]
+
+    target_cols = [
+        "marine_target",
+        "marine_target_year",
+        "terrestrial_target",
+        "terrestrial_target_year",
+    ]
+
+    # Empty cells read back as "" rather than NA, so coerce before anything tests for a value
+    national_targets = cbd_national_targets.set_index("code")
+    national_targets[target_cols] = (
+        national_targets[target_cols].apply(pd.to_numeric, errors="coerce").astype("Float64")
+    )
+    national_targets["ort_record"] = national_targets["ort_record"].replace("", pd.NA)
+
+    # Drop rows with no target dates
+    national_targets.loc[national_targets["marine_target_year"].isna(), "marine_target"] = pd.NA
+    national_targets.loc[
+        national_targets["terrestrial_target_year"].isna(), "terrestrial_target"
+    ] = pd.NA
+    national_targets = national_targets.dropna(subset=target_cols, how="all")
+
+    # Hardcode the global target
+    global_pledge = "https://www.cbd.int/article/cop15-final-text-kunming-montreal-gbf-221222"
+    national_targets.loc["GLOB", ["marine_target", "marine_target_year"]] = [30, 2030]
+    national_targets.loc["GLOB", ["terrestrial_target", "terrestrial_target_year"]] = [30, 2030]
+    national_targets.loc["GLOB", "ort_record"] = global_pledge
+
+    national_targets = national_targets.reset_index()
+
+    if verbose:
+        resolved = int(national_targets["marine_target"].notna().sum())
+        logger.info({"message": f"Resolved marine targets for {resolved} locations"})
+
+    return national_targets
 
 
 def generate_locations_table(
@@ -55,6 +147,7 @@ def generate_locations_table(
     translations = read_dataframe(
         bucket_name=bucket, filename=translation_file_name, verbose=verbose
     )
+    national_targets = process_national_targets(bucket=bucket, verbose=verbose)
 
     if verbose:
         logger.info({"message": "Processing data to create the locations table"})
@@ -156,6 +249,8 @@ def generate_locations_table(
         ],
         ignore_index=True,
     )
+
+    locs = locs.merge(national_targets, on="code", how="left")
 
     # Typesafe defaults that might be missing after merger
     locs["has_shared_marine_area"] = (
