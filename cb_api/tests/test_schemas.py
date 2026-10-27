@@ -31,6 +31,13 @@ def test_geometry_is_required():
     assert [error["loc"] for error in excinfo.value.errors()] == [("geometry",)]
 
 
+def test_an_empty_geometry_counts_as_missing():
+    with pytest.raises(ValidationError) as excinfo:
+        AnalysisRequest(geometry={})
+
+    assert [error["loc"] for error in excinfo.value.errors()] == [("geometry",)]
+
+
 def test_geometry_passes_through_untouched():
     assert AnalysisRequest(geometry=POLYGON).geometry == POLYGON
 

@@ -137,7 +137,7 @@ def test_a_missing_geometry_is_a_400(api: Harness, path: str):
     response = api.client.post(path, json={})
 
     assert response.status_code == 400
-    assert response.json() == {"error": "Invalid request body"}
+    assert response.json() == {"error": "Geometry is required"}
     assert api.calls == []
 
 
@@ -146,7 +146,7 @@ def test_an_unknown_environment_is_a_400(api: Harness, path: str):
     response = api.client.post(path, json={"geometry": POLYGON, "environment": "lunar"})
 
     assert response.status_code == 400
-    assert response.json() == {"error": "Invalid request body"}
+    assert response.json() == {"error": "Environment must be one of `marine` or `terrestrial`"}
     assert api.calls == []
 
 
