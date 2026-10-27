@@ -41,11 +41,6 @@ def upload_locations(
         "terrestrial_target_year",
     ]
     integer_fields = ["total_marine_area", "total_terrestrial_area", *target_fields]
-    unsupported_fields = [
-        "terrestrial_target",
-        "terrestrial_target_year",
-        "ort_record",
-    ]
 
     converters = {field: _parse_list_or_na for field in list_fields}
     locs_df = read_dataframe(bucket_name=bucket, filename=filename, converters=converters)
@@ -53,14 +48,12 @@ def upload_locations(
     locs_df[integer_fields] = (
         locs_df[integer_fields].apply(pd.to_numeric, errors="coerce").round().astype("Int64")
     )
-
-    # Every column is upserted, so drop the ones the Strapi location schema does not define yet
-    locs_df = locs_df.drop(columns=unsupported_fields)
+    locs_df["ort_record"] = locs_df["ort_record"].replace("", pd.NA)
 
     # Remove keys with NA values, this will allow us ot only upsert data we actually have
     # rather than stubbing defaults. Targets are the exception: the pipeline resolves them for
     # every location, so an empty one is sent as null to clear a target that has been withdrawn.
-    locations = _extract_non_na_values(locs_df, null_fields=target_fields)
+    locations = _extract_non_na_values(locs_df, null_fields=[*target_fields, "ort_record"])
 
     options = request.get("options") if request else None
 

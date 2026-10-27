@@ -105,7 +105,6 @@ def test_upload_locations_happy_path(monkeypatch):
             # Fractional target, whole target, and an unset one read back from the csv as ""
             "marine_target": ["49.6", "30", ""],
             "marine_target_year": ["2025", "2030", ""],
-            # Generated into the locations table but not on the Strapi location schema
             "terrestrial_target": ["30", "", "30"],
             "terrestrial_target_year": ["2030", "", "2030"],
             "ort_record": ["CBD NBSAP", "", "Ocean Panel"],
@@ -191,13 +190,12 @@ def test_upload_locations_happy_path(monkeypatch):
     assert row0["marine_target_year"] == 2025
     assert row1["marine_target"] == 30
 
-    # Columns the Strapi location schema does not define are never sent
-    for row in payload:
-        assert not {
-            "terrestrial_target",
-            "terrestrial_target_year",
-            "ort_record",
-        }.intersection(row)
+    assert row0["terrestrial_target"] == 30
+    assert row0["terrestrial_target_year"] == 2030
+    assert row0["ort_record"] == "CBD NBSAP"
+    assert row1["terrestrial_target"] is None
+    assert row1["terrestrial_target_year"] is None
+    assert row1["ort_record"] is None
 
     # Row 2: both lists parsed/kept where provided
     row2 = payload[2]
