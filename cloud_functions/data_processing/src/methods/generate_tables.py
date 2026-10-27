@@ -147,19 +147,6 @@ def generate_protected_areas_diff_table(
     return len(db_changes["new"]) + len(db_changes["changed"]) > 0
 
 
-def dissolve_multipolygons(gdf: gpd.GeoDataFrame, key: str = "WDPAID") -> gpd.GeoDataFrame:
-    counts = gdf[key].value_counts()
-
-    singles = gdf[gdf[key].isin(counts[counts == 1].index)]
-    multiples = gdf[gdf[key].isin(counts[counts > 1].index)]
-
-    dissolved = multiples.dissolve(by=key)
-    dissolved = dissolved.reset_index()
-    result = pd.concat([singles, dissolved], ignore_index=True)
-
-    return result
-
-
 def generate_habitat_protection_table(
     gadm_eez_union_file_name: str = GADM_EEZ_UNION_FILE_NAME,
     pa_stats_filename: str = PA_TERRESTRIAL_HABITATS_FILE_NAME,
