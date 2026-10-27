@@ -1620,12 +1620,12 @@
           "name_fr",
           "marine_target",
           "marine_target_year",
-          "pas",
-          "name_pt",
-          "has_shared_marine_area",
           "terrestrial_target",
           "terrestrial_target_year",
-          "ort_record"
+          "ort_record",
+          "pas",
+          "name_pt",
+          "has_shared_marine_area"
         ]
       },
       "conditions": [],
@@ -1669,12 +1669,12 @@
           "name_fr",
           "marine_target",
           "marine_target_year",
-          "pas",
-          "name_pt",
-          "has_shared_marine_area",
           "terrestrial_target",
           "terrestrial_target_year",
-          "ort_record"
+          "ort_record",
+          "pas",
+          "name_pt",
+          "has_shared_marine_area"
         ]
       },
       "conditions": [],
@@ -1702,12 +1702,12 @@
           "name_fr",
           "marine_target",
           "marine_target_year",
-          "pas",
-          "name_pt",
-          "has_shared_marine_area",
           "terrestrial_target",
           "terrestrial_target_year",
-          "ort_record"
+          "ort_record",
+          "pas",
+          "name_pt",
+          "has_shared_marine_area"
         ]
       },
       "conditions": [],

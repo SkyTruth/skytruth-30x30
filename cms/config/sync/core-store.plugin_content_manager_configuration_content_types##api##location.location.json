@@ -9,7 +9,8 @@
       "pageSize": 10,
       "mainField": "code",
       "defaultSortBy": "code",
-      "defaultSortOrder": "ASC"
+      "defaultSortOrder": "ASC",
+      "relationOpenMode": "modal"
     },
     "metadatas": {
       "id": {
@@ -402,12 +403,6 @@
       }
     },
     "layouts": {
-      "list": [
-        "id",
-        "code",
-        "name",
-        "total_marine_area"
-      ],
       "edit": [
         [
           {
@@ -433,15 +428,15 @@
           {
             "name": "name_fr",
             "size": 6
+          },
+          {
+            "name": "name_pt",
+            "size": 6
           }
         ],
         [
           {
             "name": "groups",
-            "size": 6
-          },
-          {
-            "name": "members",
             "size": 6
           }
         ],
@@ -451,13 +446,17 @@
             "size": 6
           },
           {
-            "name": "fishing_protection_level_stats",
+            "name": "members",
             "size": 6
           }
         ],
         [
           {
             "name": "mpaa_protection_level_stats",
+            "size": 6
+          },
+          {
+            "name": "fishing_protection_level_stats",
             "size": 6
           }
         ],
@@ -491,26 +490,6 @@
           {
             "name": "marine_target_year",
             "size": 4
-          }
-        ],
-        [
-          {
-            "name": "pas",
-            "size": 6
-          },
-          {
-            "name": "name_pt",
-            "size": 6
-          }
-        ],
-        [
-          {
-            "name": "has_shared_marine_area",
-            "size": 4
-          },
-          {
-            "name": "terrestrial_target",
-            "size": 4
           },
           {
             "name": "terrestrial_target_year",
@@ -519,10 +498,30 @@
         ],
         [
           {
+            "name": "terrestrial_target",
+            "size": 4
+          },
+          {
             "name": "ort_record",
             "size": 6
           }
+        ],
+        [
+          {
+            "name": "pas",
+            "size": 6
+          },
+          {
+            "name": "has_shared_marine_area",
+            "size": 4
+          }
         ]
+      ],
+      "list": [
+        "id",
+        "code",
+        "name",
+        "total_marine_area"
       ]
     }
   },
