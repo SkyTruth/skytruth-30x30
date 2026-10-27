@@ -35,6 +35,7 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
       filters: {
         slug: tooltipSlug,
       },
+      populate: 'data_sources',
     },
     {
       query: {
@@ -43,6 +44,13 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
       },
     }
   );
+
+  const sources = dataInfo?.data_sources?.map(({ documentId, slug, title, url }) => ({
+    documentId,
+    slug,
+    title,
+    url: url?.replace('{ort_record}', ortRecord ?? ''),
+  }));
 
   return (
     <div
@@ -75,8 +83,8 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
             <TooltipButton
               text={dataInfo?.content
                 .replace('{target}', `${target}`)
-                .replace('{target_year}', `${targetYear}`)
-                .replace('{ort_record}', ortRecord ?? '')}
+                .replace('{target_year}', `${targetYear}`)}
+              sources={sources}
               className="align-bottom hover:bg-transparent"
             />
           </span>
