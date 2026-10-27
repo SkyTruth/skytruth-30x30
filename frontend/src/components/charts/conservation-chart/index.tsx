@@ -30,6 +30,7 @@ type ConservationChartProps = {
   displayTarget?: boolean;
   target?: number;
   targetYear?: number;
+  ortRecord?: string;
   tooltipSlug: string;
   data: {
     year?: number;
@@ -49,6 +50,7 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
   displayTarget = true,
   target = 30,
   targetYear = 2030,
+  ortRecord,
   tooltipSlug,
   data,
 }) => {
@@ -308,6 +310,7 @@ const ConservationChart: FCWithMessages<ConservationChartProps> = ({
         displayTarget={displayTarget}
         target={target}
         targetYear={targetYear}
+        ortRecord={ortRecord}
         tooltipSlug={tooltipSlug}
         displayProjections={numHistoricalYears > 0}
       />

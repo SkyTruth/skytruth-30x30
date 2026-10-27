@@ -8,6 +8,7 @@ interface ChartLegendProps {
   displayTarget?: boolean;
   target?: number;
   targetYear?: number;
+  ortRecord?: string;
   tooltipSlug: string;
   displayProjections?: boolean;
 }
@@ -16,6 +17,7 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
   displayTarget,
   target,
   targetYear,
+  ortRecord,
   tooltipSlug,
   displayProjections,
 }) => {
@@ -62,7 +64,8 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
             <TooltipButton
               text={dataInfo?.content
                 .replace('{target}', `${target}`)
-                .replace('{target_year}', `${targetYear}`)}
+                .replace('{target_year}', `${targetYear}`)
+                .replace('{ort_record}', ortRecord ?? '')}
               className="align-bottom hover:bg-transparent"
             />
           </span>

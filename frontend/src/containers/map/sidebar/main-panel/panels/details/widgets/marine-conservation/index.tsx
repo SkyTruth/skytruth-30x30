@@ -213,6 +213,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
           displayTarget={!!stats?.target}
           target={stats?.target ?? undefined}
           targetYear={stats?.targetYear ?? undefined}
+          ortRecord={location.ort_record}
         />
         {tab !== 'marine' && (
           <Button
