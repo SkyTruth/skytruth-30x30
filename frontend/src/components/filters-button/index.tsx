@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useForm } from 'react-hook-form';
 
@@ -42,6 +42,16 @@ const FiltersButton: FCWithMessages<FiltersButtonProps> = ({
 
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
 
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [collisionBoundary, setCollisionBoundary] = useState<Element | null>(null);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setCollisionBoundary(triggerRef.current?.closest('table')?.parentElement ?? null);
+    }
+    setIsFiltersOpen(open);
+  };
+
   const { watch, setValue } = useForm<FormValues>({
     mode: 'onChange',
     defaultValues: {
@@ -81,14 +91,18 @@ const FiltersButton: FCWithMessages<FiltersButtonProps> = ({
 
   return (
     <div>
-      <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+      <Popover open={isFiltersOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
-          <Button className="-ml-4" size="icon" variant="ghost">
+          <Button ref={triggerRef} className="-ml-4" size="icon" variant="ghost">
             <span className="sr-only">{t('filter')}</span>
             <Filter className={ICON_CLASSNAMES} aria-hidden />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="flex flex-col gap-6 font-mono text-xs">
+        <PopoverContent
+          align="start"
+          collisionBoundary={collisionBoundary}
+          className="flex flex-col gap-6 font-mono text-xs"
+        >
           {headerButtons && (
             <div className="space-between flex gap-6">
               <Button

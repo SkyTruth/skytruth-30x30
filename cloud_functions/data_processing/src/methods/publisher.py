@@ -398,6 +398,8 @@ def dispatch_publisher(
 
             process_marine_habitat_geoms(habitats=current, verbose=verbose)
 
+            # TODO: When we move to Workflows (TECH-3777), we can fan out to parallel
+            # rather than sequentially. For now, we process one habitat at a time.
             if remaining:
                 task_config["HABITAT"] = remaining
                 step_list = ["process_marine_habitat_geoms"]
@@ -451,6 +453,7 @@ def dispatch_publisher(
             generate_iho_pa_intersections(buffer=True, clip=False, verbose=verbose)
             step_list = [
                 "generate_mangroves_minus_pa",
+                "generate_seamounts_minus_pa",
                 "generate_coldwatercorals_minus_pa",
                 "generate_saltmarshes_minus_pa",
                 "generate_seagrasses_minus_pa",
@@ -465,6 +468,8 @@ def dispatch_publisher(
             step_list = ["generate_habitat_protection_table"]
 
         case "generate_habitat_protection_table":
+            # TODO: When we move to Workflows (TECH-3777), we can fan out each
+            # terrestrial biome and marine habitat to parallel rather than sequentially.
             _ = generate_habitat_protection_table(verbose=verbose)
             step_list = ["update_habitat_protection_stats"]
 
@@ -475,7 +480,7 @@ def dispatch_publisher(
         case "generate_marine_protection_level_stats_table":
             _ = generate_marine_protection_level_stats_table(verbose=verbose)
             step_list = ["update_mpaa_protection_level_stats"]
-            if env == "production":
+            if env in ("staging", "production"):
                 step_list.extend(["update_mpatlas_tileset"])
 
         case "generate_fishing_protection_table":
@@ -490,7 +495,7 @@ def dispatch_publisher(
             updates = generate_protected_areas_diff_table(verbose=verbose)
             if updates:
                 step_list = ["update_protected_areas"]
-                if env == "production":
+                if env in ("staging", "production"):
                     step_list.extend(
                         [
                             "update_marine_protected_areas_tileset",
@@ -542,6 +547,12 @@ def dispatch_publisher(
             generate_marine_habitat_minus_pa(
                 habitat="mangroves",
                 n_jobs=2,
+                verbose=verbose,
+            )
+
+        case "generate_seamounts_minus_pa":
+            generate_marine_habitat_minus_pa(
+                habitat="seamounts",
                 verbose=verbose,
             )
 
@@ -655,10 +666,10 @@ def dispatch_publisher(
 
         case "update_marine_protected_areas_tileset":
             create_and_update_protected_area_tileset(
-                bucket=BUCKET,
                 source_file=WDPA_MARINE_FILE_NAME,
-                tileset_file=map_params.MARINE_PA_TILESET_FILE,
-                tileset_id=map_params.MARINE_PA_TILESET_ID,
+                output_blob=map_params.MARINE_PA_TILESET_FILE,
+                archive_blob=map_params.MARINE_PA_TILESET_ARCHIVE_FILE,
+                layer_name=map_params.MARINE_PA_TILESET_ID,
                 display_name=map_params.MARINE_PA_TILESET_NAME,
                 tolerance=TOLERANCE,
                 method="update_marine_protected_areas_tileset",
@@ -667,10 +678,10 @@ def dispatch_publisher(
 
         case "update_terrestrial_protected_areas_tileset":
             create_and_update_protected_area_tileset(
-                bucket=BUCKET,
                 source_file=WDPA_TERRESTRIAL_FILE_NAME,
-                tileset_file=map_params.TERRESTRIAL_PA_TILESET_FILE,
-                tileset_id=map_params.TERRESTRIAL_PA_TILESET_ID,
+                output_blob=map_params.TERRESTRIAL_PA_TILESET_FILE,
+                archive_blob=map_params.TERRESTRIAL_PA_TILESET_ARCHIVE_FILE,
+                layer_name=map_params.TERRESTRIAL_PA_TILESET_ID,
                 display_name=map_params.TERRESTRIAL_PA_TILESET_NAME,
                 tolerance=TOLERANCE,
                 method="update_terrestrial_protected_areas_tileset",

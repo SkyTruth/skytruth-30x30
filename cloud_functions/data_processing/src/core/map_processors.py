@@ -13,27 +13,18 @@ from src.utils.logger import Logger
 logger = Logger()
 
 
-def generate_mbtiles(
+def generate_vector_tiles(
     input_file: str,
     output_file: str,
     verbose: bool = False,
 ) -> None:
     """
-        generate mbtiles file from geomtry file
-
-        Args:
-            input_file (Path): The path to the file.
-            output_file (Union[Path, None], optional): The path to the output file.
-    The default is None.
-            update (bool, optional): Whether to update the mbtiles file. The default is False.
-
-        Returns:
-            Path: The path to the output file.
-
+    Generate a vector tileset from a geometry file. Tippecanoe picks the format
+    from the output extension: .mbtiles or .pmtiles.
     """
     try:
         if verbose:
-            print(f"Creating mbtiles file from {input_file}...")
+            logger.info({"message": f"Creating vector tiles from {input_file}..."})
         # https://github.com/mapbox/tippecanoe
         # -zg: Automatically choose a maxzoom that should be sufficient to clearly distinguish the
         #   features and the detail within each feature
@@ -48,11 +39,11 @@ def generate_mbtiles(
         )
 
         if verbose:
-            print(f"mbtiles file created and written to {output_file}")
+            logger.info({"message": f"Vector tiles created and written to {output_file}"})
 
     except Exception as excep:
         logger.error(
-            {"message": f"Error generating mbtiles file from {input_file}", "error": str(excep)}
+            {"message": f"Error generating vector tiles from {input_file}", "error": str(excep)}
         )
         raise excep
 
