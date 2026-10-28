@@ -82,5 +82,7 @@ def protection_level(body: ProtectionLevelRequest, engine: PooledEngine) -> dict
 
 @app.post("/habitats", response_model=LocationStats)
 def habitats(body: HabitatRequest, engine: PooledEngine) -> dict:
-    """How much of the given area's `habitat` is protected, broken down by location."""
+    """How much of the given area's `habitat` will have added protection,
+    broken down by location.
+    """
     return get_locations_stats(engine, body.geometry, body.habitat.table)

@@ -43,15 +43,9 @@ class Habitat(StrEnum):
 
 
 class GeometryRequest(BaseModel):
-    """The area to analyse, shared by every endpoint."""
+    """The area to analyze, shared by every endpoint."""
 
     geometry: dict
-
-
-class AnalysisRequest(GeometryRequest):
-    """Request body for POST /coverage."""
-
-    environment: Environment = Environment.MARINE
 
     @field_validator("geometry")
     @classmethod
@@ -60,6 +54,12 @@ class AnalysisRequest(GeometryRequest):
         if not value:
             raise ValueError("Geometry is required")
         return value
+
+
+class AnalysisRequest(GeometryRequest):
+    """Request body for POST /coverage."""
+
+    environment: Environment = Environment.MARINE
 
 
 class ProtectionLevelRequest(AnalysisRequest):

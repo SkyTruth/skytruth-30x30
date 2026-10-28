@@ -92,23 +92,25 @@ def test_the_habitat_is_required(api: Harness):
     response = api.client.post(PATH, json={"geometry": POLYGON})
 
     assert response.status_code == 400
-    assert response.json() == {"error": "Invalid request body"}
+    assert response.json() == {"error": "Habitat is required"}
     assert api.calls == []
 
 
 @pytest.mark.parametrize(
-    "body",
+    ("body", "message"),
     [
-        {"habitat": "mangroves"},
-        {"geometry": POLYGON, "habitat": "kelp"},
-        {"geometry": POLYGON, "habitat": "seamounts"},
+        ({"habitat": "mangroves"}, "Geometry is required"),
+        ({"geometry": {}, "habitat": "mangroves"}, "Geometry is required"),
+        ({"geometry": POLYGON, "habitat": "kelp"}, "Invalid habitat"),
+        ({"geometry": POLYGON, "habitat": "seamounts"}, "Invalid habitat"),
     ],
+    ids=["missing-geometry", "empty-geometry", "unknown-habitat", "habitat-not-loaded"],
 )
-def test_an_unusable_body_is_a_400(api: Harness, body: dict):
+def test_an_unusable_body_is_a_400_naming_the_cause(api: Harness, body: dict, message: str):
     response = api.client.post(PATH, json=body)
 
     assert response.status_code == 400
-    assert response.json() == {"error": "Invalid request body"}
+    assert response.json() == {"error": message}
     assert api.calls == []
 
 
