@@ -4,6 +4,7 @@ import TooltipButton from '@/components/tooltip-button';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 import { useGetDataInfos } from '@/types/generated/data-info';
+import { useGetDataSources } from '@/types/generated/data-source';
 
 interface ChartLegendProps {
   className?: string;
@@ -45,12 +46,30 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
     }
   );
 
-  const sources = dataInfo?.data_sources?.map(({ documentId, slug, title, url }) => ({
-    documentId,
-    slug,
-    title,
-    url: url?.replace('{ort_record}', ortRecord ?? ''),
-  }));
+  const { data: generalSources } = useGetDataSources(
+    {
+      locale,
+      filters: {
+        slug: '30x30-targets-general',
+      },
+    },
+    {
+      query: {
+        enabled: !ortRecord,
+        select: ({ data }) =>
+          data.map(({ documentId, slug, title, url }) => ({ documentId, slug, title, url })),
+      },
+    }
+  );
+
+  const sources = ortRecord
+    ? dataInfo?.data_sources?.map(({ documentId, slug, title, url }) => ({
+        documentId,
+        slug,
+        title,
+        url: url?.replace('{ort_record}', ortRecord),
+      }))
+    : generalSources;
 
   return (
     <div
