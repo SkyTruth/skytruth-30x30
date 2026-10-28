@@ -2305,6 +2305,9 @@ export type ProtectionCoverageStatLocation = {
   name_fr?: string;
   marine_target?: number;
   marine_target_year?: number;
+  terrestrial_target?: number;
+  terrestrial_target_year?: number;
+  ort_record?: string;
   pas?: ProtectionCoverageStatLocationPasItem[];
   name_pt?: string;
   has_shared_marine_area?: boolean;
@@ -3385,6 +3388,9 @@ export type PaChildrenItemLocation = {
   name_fr?: string;
   marine_target?: number;
   marine_target_year?: number;
+  terrestrial_target?: number;
+  terrestrial_target_year?: number;
+  ort_record?: string;
   pas?: PaChildrenItemLocationPasItem[];
   name_pt?: string;
   has_shared_marine_area?: boolean;
@@ -4241,6 +4247,9 @@ export type MpaaProtectionLevelStatLocation = {
   name_fr?: string;
   marine_target?: number;
   marine_target_year?: number;
+  terrestrial_target?: number;
+  terrestrial_target_year?: number;
+  ort_record?: string;
   pas?: MpaaProtectionLevelStatLocationPasItem[];
   name_pt?: string;
   has_shared_marine_area?: boolean;
@@ -6343,6 +6352,9 @@ export interface Location {
   name_fr: string;
   marine_target?: number;
   marine_target_year?: number;
+  terrestrial_target?: number;
+  terrestrial_target_year?: number;
+  ort_record?: string;
   pas?: Pa[];
   name_pt: string;
   has_shared_marine_area?: boolean;
@@ -6432,6 +6444,9 @@ export type LocationGroupsItem = {
   name_fr?: string;
   marine_target?: number;
   marine_target_year?: number;
+  terrestrial_target?: number;
+  terrestrial_target_year?: number;
+  ort_record?: string;
   pas?: LocationGroupsItemPasItem[];
   name_pt?: string;
   has_shared_marine_area?: boolean;
@@ -7311,6 +7326,9 @@ export type LocationRequestData = {
   name_fr: string;
   marine_target?: number;
   marine_target_year?: number;
+  terrestrial_target?: number;
+  terrestrial_target_year?: number;
+  ort_record?: string;
   pas?: LocationRequestDataPasItem[];
   name_pt: string;
   has_shared_marine_area?: boolean;
@@ -8043,6 +8061,9 @@ export type HabitatStatLocation = {
   name_fr?: string;
   marine_target?: number;
   marine_target_year?: number;
+  terrestrial_target?: number;
+  terrestrial_target_year?: number;
+  ort_record?: string;
   pas?: HabitatStatLocationPasItem[];
   name_pt?: string;
   has_shared_marine_area?: boolean;
@@ -9429,6 +9450,9 @@ export type FishingProtectionLevelStatLocation = {
   name_fr?: string;
   marine_target?: number;
   marine_target_year?: number;
+  terrestrial_target?: number;
+  terrestrial_target_year?: number;
+  ort_record?: string;
   pas?: FishingProtectionLevelStatLocationPasItem[];
   name_pt?: string;
   has_shared_marine_area?: boolean;

@@ -127,7 +127,7 @@ const ProtectionTypesWidget: FCWithMessages<ProtectionTypesWidgetProps> = ({ loc
       {widgetChartData.map((chartData) => (
         <HorizontalBarChart
           key={chartData.slug}
-          showTarget={location === 'GLOB'}
+          showTarget={false}
           className="py-2"
           data={chartData}
         />
