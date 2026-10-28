@@ -97,6 +97,12 @@ variable "runtime_environment_variables" {
   default     = {}
 }
 
+variable "allow_unauthenticated" {
+  description = "Allow public invocation without authentication."
+  type        = bool
+  default     = false
+}
+
 variable "additional_invokers" {
   description = "Additional service account emails to grant roles/run.invoker on this Cloud Run service."
   type        = list(string)
