@@ -1,10 +1,15 @@
 """End-to-end checks of the spatial query against a PostGIS database."""
 
+from collections.abc import Iterator
+
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.analysis import AnalysisTable, get_locations_stats
 from src.errors import BadRequestError
+from src.main import app, get_engine
 
 pytestmark = pytest.mark.integration
 
@@ -31,7 +36,7 @@ def by_code(result: dict) -> dict[str, float]:
     return {area["code"]: area["protected_area"] for area in result["locations_area"]}
 
 
-def test_areas_are_square_kilometres(analysis_tables: Engine):
+def test_areas_are_square_kilometers(analysis_tables: Engine):
     """A wrong projection or a missing /1e6 would be out by orders of magnitude."""
     result = get_locations_stats(analysis_tables, box(1, 0, 2, 1), AnalysisTable.MARINE)
 
@@ -118,3 +123,76 @@ def test_an_empty_polygon_is_rejected(analysis_tables: Engine):
 def test_unparseable_geojson_is_rejected(analysis_tables: Engine):
     with pytest.raises(BadRequestError, match="Invalid geometry: unable to parse input geometry"):
         get_locations_stats(analysis_tables, {"type": "Nonsense"}, AnalysisTable.MARINE)
+
+
+# --- through the route ------------------------------------------------------
+
+
+@pytest.fixture
+def api(analysis_tables: Engine) -> Iterator[TestClient]:
+    """A client whose requests reach the test database."""
+    app.dependency_overrides[get_engine] = lambda: analysis_tables
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize("path", ["/coverage", "/"])
+def test_the_route_returns_the_same_numbers_as_the_query(
+    api: TestClient, analysis_tables: Engine, path: str
+):
+    geometry = box(0, 0, 3, 1)
+
+    response = api.post(path, json={"geometry": geometry})
+
+    assert response.status_code == 200
+    assert response.json() == get_locations_stats(analysis_tables, geometry, AnalysisTable.MARINE)
+
+
+def test_the_route_reads_the_terrestrial_table(api: TestClient, analysis_tables: Engine):
+    geometry = box(0, 0, 3, 1)
+
+    response = api.post("/coverage", json={"geometry": geometry, "environment": "terrestrial"})
+
+    assert response.status_code == 200
+    assert response.json() == get_locations_stats(
+        analysis_tables, geometry, AnalysisTable.TERRESTRIAL
+    )
+
+
+def test_an_area_touching_nothing_is_an_empty_result_over_http(api: TestClient):
+    response = api.post("/coverage", json={"geometry": box(50, 50, 51, 51)})
+
+    assert response.status_code == 200
+    assert response.json()["locations_area"] == []
+    assert response.json()["total_protected_area"] == 0
+
+
+@pytest.mark.parametrize("path", ["/coverage", "/"])
+def test_a_line_is_a_400_over_http(api: TestClient, path: str):
+    """status 400 plus 'Invalid geometry' is what the frontend branches on."""
+    response = api.post(
+        path, json={"geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}}
+    )
+
+    assert response.status_code == 400
+    assert "Invalid geometry" in response.json()["error"]
+
+
+def test_a_topology_error_is_a_400_over_http(api: TestClient, analysis_tables: Engine):
+    """GEOS refuses to intersect a self-intersecting polygon. A shape that triggers that
+    must be flagged as invalid geometry."""
+    with analysis_tables.begin() as conn:
+        conn.execute(
+            text(
+                f"INSERT INTO data.{AnalysisTable.MARINE.value} (location, the_geom) VALUES "
+                "('CCC', ST_Multi(ST_GeomFromText("
+                "'POLYGON((10 10, 11 11, 11 10, 10 11, 10 10))', 4326)))"
+            )
+        )
+
+    response = api.post("/coverage", json={"geometry": box(10.25, 10.25, 10.75, 10.75)})
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "Invalid geometry: input geometry could not be processed"}

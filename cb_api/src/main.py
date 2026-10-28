@@ -1,14 +1,17 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.engine import Engine
 
+from src.analysis import get_locations_stats
 from src.config import ALLOWED_ORIGINS, get_settings
 from src.db import create_db_engine
 from src.errors import register_error_handlers
+from src.schemas import AnalysisRequest, LocationStats
 
 logging.basicConfig(level=logging.INFO)
 
@@ -42,6 +45,18 @@ def get_engine(request: Request) -> Engine:
     return request.app.state.engine
 
 
+PooledEngine = Annotated[Engine, Depends(get_engine)]
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/coverage", response_model=LocationStats)
+@app.post("/", response_model=LocationStats, deprecated=True)
+def coverage(body: AnalysisRequest, engine: PooledEngine) -> dict:
+    """How much of the given area will have added protection coverage,
+    broken down by location.
+    """
+    return get_locations_stats(engine, body.geometry, body.environment.table)

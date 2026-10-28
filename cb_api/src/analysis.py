@@ -146,6 +146,14 @@ def get_locations_stats(
                 GROUP BY location
                 """
         )
-        data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
+        try:
+            data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
+        except sqlalchemy.exc.DBAPIError as exc:
+            # Raise GEOS topology errors as invalid geometries; other DB errors stay 500s
+            if not exc.connection_invalidated and "TopologyException" in str(exc.orig):
+                raise BadRequestError(
+                    "Invalid geometry: input geometry could not be processed"
+                ) from exc
+            raise
 
     return serialize_response(data_response)

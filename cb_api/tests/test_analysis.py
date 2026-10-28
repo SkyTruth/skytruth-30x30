@@ -262,6 +262,34 @@ class ExplodingEngine(RecordingEngine):
         return self
 
 
+TOPOLOGY_ERROR = {
+    "S": "ERROR",
+    "C": "XX000",
+    "M": "lwgeom_intersection_prec: GEOS Error: TopologyException: "
+    "Input geom 0 is invalid: Self-intersection at 0.5 0.5",
+}
+
+
+def test_a_topology_error_in_the_analysis_query_is_an_invalid_geometry():
+    error = sqlalchemy.exc.ProgrammingError("stmt", None, Exception(TOPOLOGY_ERROR))
+
+    with pytest.raises(
+        BadRequestError, match="Invalid geometry: input geometry could not be processed"
+    ) as excinfo:
+        get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)
+
+    assert excinfo.value.__cause__ is error, "the database error must stay attached for the log"
+
+
+def test_a_lost_connection_is_not_blamed_on_the_caller_even_mid_topology_error():
+    error = sqlalchemy.exc.ProgrammingError(
+        "stmt", None, Exception(TOPOLOGY_ERROR), connection_invalidated=True
+    )
+
+    with pytest.raises(sqlalchemy.exc.ProgrammingError):
+        get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)
+
+
 @pytest.mark.parametrize(
     "error",
     [
@@ -270,9 +298,9 @@ class ExplodingEngine(RecordingEngine):
         sqlalchemy.exc.InterfaceError("stmt", None, Exception("network error")),
     ],
 )
-def test_analysis_query_failures_are_not_blamed_on_the_caller(
+def test_other_analysis_query_failures_are_not_blamed_on_the_caller(
     error: sqlalchemy.exc.DBAPIError,
 ):
-    """The geometry has already passed validation, so anything the query raises is ours."""
+    """The geometry has already passed validation, so it is not an error from the caller."""
     with pytest.raises(type(error)):
         get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)

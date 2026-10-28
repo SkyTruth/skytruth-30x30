@@ -1,6 +1,6 @@
 # Conservation Builder API
 
-Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area is already protected, broken down by location.
+Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area will have added protection, broken down by location.
 
 It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL PostGIS database. Those tables are produced by `cloud_functions/data_processing`.
 
@@ -9,6 +9,42 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
+| `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
+| `POST` | `/` | Deprecated alias for `/coverage` |
+
+### `POST /coverage`
+
+`geometry` is required and takes a GeoJSON Feature, FeatureCollection or bare geometry;
+it must resolve to a Polygon or MultiPolygon. `environment` is optional and selects the
+table the area is compared against (`marine` by default or `terrestrial`).
+
+```bash
+curl -X POST localhost:8080/coverage \
+  -H 'Content-Type: application/json' \
+  -d '{"environment": "marine", "geometry": {"type": "Polygon", "coordinates": [[[146.9,-39.2],[147,-39.2],[147,-39.1],[146.9,-39.1],[146.9,-39.2]]]}}'
+```
+
+```json
+{
+  "locations_area": [{ "code": "AUS", "protected_area": 34.0 }],
+  "total_area": 96.0,
+  "total_protected_area": 34.0
+}
+```
+
+Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `locations_area` breaks it down by location code, and `total_protected_area` is their sum.
+
+`protected_area` and `total_protected_area` are the protected area that would be *added* by the drawn polygon because they're not *currently* protected.
+
+An area that intersects nothing (e.g., a marine request over land) returns zeroes, including `total_area`.
+
+Unrecognized fields in the body are ignored.
+
+### `POST /` is temporary
+
+The load balancer rewrites the public path to the service root, so the same handler is
+registered at `/` as well and is marked deprecated in the schema. It will be removed
+once nothing posts to it. New callers should use `/coverage`.
 
 ## Configuration
 
