@@ -58,7 +58,7 @@ The response is shaped like the one for `/coverage`.
 ### `POST /habitats`
 
 The same as `/coverage`, but for one habitat: `protected_area` is the area of that habitat not yet protected, which the drawn polygon would add. Takes `geometry` and a **required**
-`habitat` (one of `mangroves`, `saltmarshes`, `seagrasses`, `coldwatercorals`,
+`habitat` (one of `mangroves`, `saltmarshes`, `seagrasses`, `seamounts`, `cold-water-corals`,
 `climate-resilient-corals`, `other-corals`). There is no default, and no `environment`:
 each habitat has exactly one table.
 

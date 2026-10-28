@@ -16,7 +16,8 @@ class AnalysisTable(StrEnum):
     MANGROVES = "mangroves_minus_pa"
     SALTMARSHES = "saltmarshes_minus_pa"
     SEAGRASSES = "seagrasses_minus_pa"
-    COLDWATERCORALS = "coldwatercorals_minus_pa"
+    SEAMOUNTS = "seamounts_minus_pa"
+    COLD_WATER_CORALS = "cold_water_corals_minus_pa"
     CLIMATE_RESILIENT_CORALS = "climate_resilient_corals_minus_pa"
     OTHER_CORALS = "other_corals_minus_pa"
 

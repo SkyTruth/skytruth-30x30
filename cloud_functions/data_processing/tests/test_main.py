@@ -188,7 +188,7 @@ def _fetched_habitats(call_log):
 
 @pytest.mark.parametrize(
     "habitat",
-    ["coldwatercorals", ["coldwatercorals", "saltmarshes", "seagrasses"]],
+    ["cold-water-corals", ["cold-water-corals", "saltmarshes", "seagrasses"]],
     ids=["single", "list"],
 )
 def test_download_marine_habitats_forwards_habitat_selection(patched_all, habitat):
@@ -370,12 +370,12 @@ def test_failed_download_retries_only_the_habitats_that_never_landed(patched_all
     main.run_from_payload(
         {
             "METHOD": "download_marine_habitats",
-            "HABITAT": ["coldwatercorals", "saltmarshes", "seagrasses"],
+            "HABITAT": ["cold-water-corals", "saltmarshes", "seagrasses"],
             "MAX_RETRIES": 3,
         }
     )
 
-    assert fetched == ["coldwatercorals", "saltmarshes"]
+    assert fetched == ["cold-water-corals", "saltmarshes"]
     assert _retry_payloads(patched_all)[0]["HABITAT"] == ["seagrasses"]
 
 
@@ -867,7 +867,7 @@ def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
     """One method per habitat, each dispatching only its own key, so a Workflow can fan
     them out unchanged. Everything else is defaulted inside
     generate_marine_habitat_minus_pa."""
-    resp = main.run_from_payload({"METHOD": f"generate_{habitat}_minus_pa"})
+    resp = main.run_from_payload({"METHOD": f"generate_{habitat.replace('-', '_')}_minus_pa"})
 
     assert resp == ("OK", 200)
 
@@ -901,6 +901,8 @@ def test_buffered_iho_pa_intersections_launches_every_habitat_minus_pa_job(patch
 
     launched = [payload["METHOD"] for payload in _next_step_payloads(patched_all)]
 
-    assert [f"generate_{habitat}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS] == [
+    assert [
+        f"generate_{habitat.replace('-', '_')}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS
+    ] == [
         method for method in launched if method.endswith("_minus_pa") and "location" not in method
     ]

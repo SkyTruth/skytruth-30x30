@@ -33,7 +33,8 @@ class Habitat(StrEnum):
     MANGROVES = "mangroves"
     SALTMARSHES = "saltmarshes"
     SEAGRASSES = "seagrasses"
-    COLDWATERCORALS = "coldwatercorals"
+    SEAMOUNTS = "seamounts"
+    COLD_WATER_CORALS = "cold-water-corals"
     CLIMATE_RESILIENT_CORALS = "climate-resilient-corals"
     OTHER_CORALS = "other-corals"
 

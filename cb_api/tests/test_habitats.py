@@ -102,9 +102,16 @@ def test_the_habitat_is_required(api: Harness):
         ({"habitat": "mangroves"}, "Geometry is required"),
         ({"geometry": {}, "habitat": "mangroves"}, "Geometry is required"),
         ({"geometry": POLYGON, "habitat": "kelp"}, "Invalid habitat"),
-        ({"geometry": POLYGON, "habitat": "seamounts"}, "Invalid habitat"),
+        ({"geometry": POLYGON, "habitat": "warm-water-corals"}, "Invalid habitat"),
+        ({"geometry": POLYGON, "habitat": "coldwatercorals"}, "Invalid habitat"),
     ],
-    ids=["missing-geometry", "empty-geometry", "unknown-habitat", "habitat-not-loaded"],
+    ids=[
+        "missing-geometry",
+        "empty-geometry",
+        "unknown-habitat",
+        "habitat-not-loaded",
+        "renamed-habitat",
+    ],
 )
 def test_an_unusable_body_is_a_400_naming_the_cause(api: Harness, body: dict, message: str):
     response = api.client.post(PATH, json=body)
