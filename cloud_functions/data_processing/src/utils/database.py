@@ -142,7 +142,7 @@ def get_pas(verbose: bool = False) -> list[dict]:
         SELECT
           pas.id AS pas_id
           ,jsonb_agg(
-            jsonb_build_object('documentId', c.document_id)
+            jsonb_build_object('id', c.id)
           ) FILTER (WHERE c.id IS NOT NULL) AS children
         FROM pas pas
           LEFT JOIN pas_children_lnk pcl
@@ -157,7 +157,7 @@ def get_pas(verbose: bool = False) -> list[dict]:
           ,CASE
             WHEN p.id IS NULL THEN NULL
             ELSE jsonb_build_object(
-              'documentId', p.document_id
+              'id', p.id
             )
         END AS parent
         FROM pas pas
@@ -167,7 +167,8 @@ def get_pas(verbose: bool = False) -> list[dict]:
           ON p.id = ppl.inv_pa_id
       )
       SELECT
-        pas.document_id AS "documentId"
+        pas.id
+        ,pas.document_id AS "documentId"
         ,pas."name"
         ,pas.area
         ,pas."year"

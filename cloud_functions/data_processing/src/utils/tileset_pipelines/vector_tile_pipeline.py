@@ -9,7 +9,7 @@ from src.core.map_params import (
     MAPBOX_TOKEN,
     MAPBOX_USER,
 )
-from src.core.map_processors import generate_mbtiles, upload_to_mapbox
+from src.core.map_processors import generate_vector_tiles, upload_to_mapbox
 from src.utils.gcp import read_json_df, upload_file_to_gcs
 from src.utils.logger import Logger
 
@@ -39,7 +39,7 @@ def _check_mapbox_credentials():
 
 
 def _generate_mbtiles(temp_dir: Path, ctx: dict[str, Any]):
-    generate_mbtiles(
+    generate_vector_tiles(
         input_file=str(temp_dir / ctx["local_geojson"]),
         output_file=str(temp_dir / ctx["local_mbtiles"]),
         verbose=ctx["verbose"],

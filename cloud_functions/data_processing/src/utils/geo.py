@@ -143,7 +143,7 @@ def tile_geometry(geom, transform, tile_size_pixels=1000):
             tile = box(x, y, x + res_x * tile_size_pixels, y + res_y * tile_size_pixels)
             clipped = geom.intersection(tile)
             if not clipped.is_empty:
-                tiles.append(clipped)
+                tiles.append(make_valid(clipped))
             y += res_y * tile_size_pixels
         x += res_x * tile_size_pixels
 
@@ -243,6 +243,26 @@ def _ensure_valid(geom):
     can rule it out.
     """
     return geom if geom.is_valid else shapely.make_valid(geom)
+
+
+def unwrap_antimeridian(geom):
+    """Split a geometry drawn the long way around the globe at the antimeridian.
+
+    A polygon crossing 180° is commonly stored with vertices on both sides of the
+    meridian, which reads as a ring spanning almost the whole world and inflates its
+    area and its bounding box accordingly. Shifting the negative longitudes into the
+    0–360 range makes the ring continuous, and ``_wrap_to_180`` then splits it into
+    conventional -180–180 parts. Geometry spanning 180° of longitude or less is
+    returned untouched.
+    """
+    if geom is None or geom.is_empty:
+        return geom
+
+    minx, _, maxx, _ = geom.bounds
+    if maxx - minx <= 180:
+        return geom
+
+    return _wrap_to_180(transform(_shift_negative_longitudes, geom))
 
 
 def buffer_km(geom, km=2, src_crs="EPSG:4326"):

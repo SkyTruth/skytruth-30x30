@@ -31,11 +31,12 @@ const MapSidebar: FCWithMessages = () => {
   const showLayersToggle = showLayersPanel;
 
   return (
-    <div className="relative z-20 flex h-full border-l border-black">
+    <div className="pointer-events-none relative z-20 flex h-full border-l border-black">
       {/* MAIN PANEL */}
       {showSidebar && (
         <div
-          className={cn('relative z-10 border-b border-black bg-white', {
+          data-map-overlay-panel
+          className={cn('pointer-events-auto relative z-10 border-b border-black bg-white', {
             'border-r': isSidebarOpen,
           })}
         >
@@ -44,7 +45,7 @@ const MapSidebar: FCWithMessages = () => {
             open={isSidebarOpen}
             onOpenChange={setSidebarOpen}
           >
-            <CollapsibleContent className="relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
+            <CollapsibleContent className="pointer-events-auto relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
               <div className="h-full md:w-[460px]">
                 <MainPanel />
               </div>
@@ -56,7 +57,8 @@ const MapSidebar: FCWithMessages = () => {
       {/* SECONDARY PANEL (LAYERS) */}
       {showLayersPanel && (
         <div
-          className={cn('relative z-20 border-b border-black bg-white', {
+          data-map-overlay-panel
+          className={cn('pointer-events-auto relative z-20 border-b border-black bg-white', {
             'border-r': isLayersOpen,
           })}
         >
@@ -65,7 +67,7 @@ const MapSidebar: FCWithMessages = () => {
             open={isLayersOpen}
             onOpenChange={setLayersOpen}
           >
-            <CollapsibleContent className="relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
+            <CollapsibleContent className="pointer-events-auto relative left-0 top-0 h-full flex-shrink-0 bg-white fill-mode-none data-[state=closed]:animate-collapsible-left data-[state=open]:animate-collapsible-right">
               <div className="h-full md:w-[280px]">
                 <LayersPanel />
               </div>
@@ -81,12 +83,15 @@ const MapSidebar: FCWithMessages = () => {
           <Button
             type="button"
             variant="white"
-            className={cn('relative top-0 -mt-px h-10 max-w-[120px] border-l-0 !py-3', {
-              'hidden md:flex': true,
-              'px-1': isLayersOpen,
-              'border-l border-black px-3': !isLayersOpen,
-              '-ml-px': (isSidebarOpen && !isLayersOpen) || (!isSidebarOpen && !isLayersOpen),
-            })}
+            className={cn(
+              'pointer-events-auto relative top-0 -mt-px h-10 max-w-[120px] border-l-0 !py-3',
+              {
+                'hidden md:flex': true,
+                'px-1': isLayersOpen,
+                'border-l border-black px-3': !isLayersOpen,
+                '-ml-px': (isSidebarOpen && !isLayersOpen) || (!isSidebarOpen && !isLayersOpen),
+              }
+            )}
             onClick={() => setLayersOpen(!isLayersOpen)}
           >
             {isLayersOpen && (
@@ -111,7 +116,7 @@ const MapSidebar: FCWithMessages = () => {
           <Button
             type="button"
             variant="white"
-            className={cn('absolute bottom-0 h-10 border-l-0 !py-3 px-1', {
+            className={cn('pointer-events-auto absolute bottom-0 h-10 border-l-0 !py-3 px-1', {
               'hidden md:flex': true,
             })}
             onClick={() => setSidebarOpen(!isSidebarOpen)}

@@ -62,13 +62,17 @@ def health() -> dict[str, str]:
 @app.post("/coverage", response_model=LocationStats)
 @app.post("/", response_model=LocationStats, deprecated=True)
 def coverage(body: AnalysisRequest, engine: PooledEngine) -> dict:
-    """How much of the given area is already protected, broken down by location."""
+    """How much of the given area will have added protection coverage,
+    broken down by location.
+    """
     return get_locations_stats(engine, body.geometry, body.environment.table)
 
 
 @app.post("/protection-level", response_model=LocationStats)
 def protection_level(body: ProtectionLevelRequest, engine: PooledEngine) -> dict:
-    """How much of the given area is protected at `level`, broken down by location."""
+    """How much of the given area will have added protection at `level`,
+    broken down by location.
+    """
     if body.level.marine_only and body.environment is not Environment.MARINE:
         raise BadRequestError(
             f"{body.level} is not available for the {body.environment} environment"

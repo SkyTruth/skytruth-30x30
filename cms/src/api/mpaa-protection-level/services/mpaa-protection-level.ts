@@ -4,24 +4,11 @@
 
 import { factories } from '@strapi/strapi';
 
-export type LocationMap = {
-  [slug: string]: string; // Maps MPAA protection level slug to documentId
-}
+import { getLookupMap, type LookupIdField } from '../../../utils/lookup-map';
 
 export default factories
-.createCoreService('api::mpaa-protection-level.mpaa-protection-level', ({ strapi }) => ({
-  async getMpaaProtectionLevelMap(): Promise<LocationMap> {
-    const mpaaProtectionLevels = await strapi.db.query('api::mpaa-protection-level.mpaa-protection-level').findMany({
-      select: ['documentId', 'slug'],
-      where: {
-        locale: 'en'
-      }
-    });
-    const mpaaProtectionLevelMap: LocationMap = {};
-    mpaaProtectionLevels.forEach((level) => {
-      mpaaProtectionLevelMap[level.slug] = level.documentId;
-    }
-    );
-    return mpaaProtectionLevelMap;
+.createCoreService('api::mpaa-protection-level.mpaa-protection-level', () => ({
+  getMpaaProtectionLevelMap(idField: LookupIdField) {
+    return getLookupMap('api::mpaa-protection-level.mpaa-protection-level', 'slug', idField, true);
   }
 }));

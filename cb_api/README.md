@@ -1,6 +1,6 @@
 # Conservation Builder API
 
-Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area is already protected, broken down by location.
+Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area will have added protection, broken down by location.
 
 It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL PostGIS database. Those tables are produced by `cloud_functions/data_processing`.
 
@@ -9,9 +9,9 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
-| `POST` | `/coverage` | How much of a drawn area is already protected, by location |
-| `POST` | `/protection-level` | The same, counting only areas at a given protection level |
-| `POST` | `/habitats` | The same, counting only one habitat |
+| `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
+| `POST` | `/protection-level` | The same, for protection at a given level |
+| `POST` | `/habitats` | The same, for one habitat |
 | `POST` | `/` | Deprecated alias for `/coverage` |
 
 ### `POST /coverage`
@@ -23,39 +23,41 @@ table the area is compared against (`marine` by default or `terrestrial`).
 ```bash
 curl -X POST localhost:8080/coverage \
   -H 'Content-Type: application/json' \
-  -d '{"environment": "marine", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
+  -d '{"environment": "marine", "geometry": {"type": "Polygon", "coordinates": [[[146.9,-39.2],[147,-39.2],[147,-39.1],[146.9,-39.1],[146.9,-39.2]]]}}'
 ```
 
 ```json
 {
-  "locations_area": [{ "code": "ESP", "protected_area": 30 }],
-  "total_area": 100,
-  "total_protected_area": 30
+  "locations_area": [{ "code": "AUS", "protected_area": 34.0 }],
+  "total_area": 96.0,
+  "total_protected_area": 34.0
 }
 ```
 
-Areas are square kilometres, computed in a Mollweide equal-area projection and rounded.
-`total_area` is the drawn area; `total_protected_area` is the part of it already
-protected; `locations_area` breaks that down by location code.
+Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `locations_area` breaks it down by location code, and `total_protected_area` is their sum.
 
-Unrecognised fields in the body are ignored.
+`protected_area` and `total_protected_area` are the protected area that would be *added* by the drawn polygon because they're not *currently* protected.
+
+An area that intersects nothing (e.g., a marine request over land) returns zeroes, including `total_area`.
+
+Unrecognized fields in the body are ignored.
 
 ### `POST /protection-level`
 **Marine only.**
 
-The same as `/coverage`, but counting only the area protected at a given level. Takes `geometry` and `environment` as above, plus an optional `level` (currently only `fully-highly-protected`, which is the default).
+The same as `/coverage`, but for protection at a given level: `protected_area` is the area not yet protected at that level, which the drawn polygon would add. Takes `geometry` and `environment` as above, plus an optional `level` (currently only `fully-highly-protected`, which is the default).
 
 ```bash
 curl -X POST localhost:8080/protection-level \
   -H 'Content-Type: application/json' \
-  -d '{"level": "fully-highly-protected", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
+  -d '{"level": "fully-highly-protected", "geometry": {"type": "Polygon", "coordinates": [[[146.9,-39.2],[147,-39.2],[147,-39.1],[146.9,-39.1],[146.9,-39.2]]]}}'
 ```
 
 The response is shaped like the one for `/coverage`.
 
 ### `POST /habitats`
 
-Area protected for a type of habitat. Takes `geometry` and a **required**
+The same as `/coverage`, but for one habitat: `protected_area` is the area of that habitat not yet protected, which the drawn polygon would add. Takes `geometry` and a **required**
 `habitat` (one of `mangroves`, `saltmarshes`, `seagrasses`, `coldwatercorals`,
 `climate-resilient-corals`, `other-corals`). There is no default, and no `environment`:
 each habitat has exactly one table.

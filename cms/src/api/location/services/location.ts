@@ -4,18 +4,11 @@
 
 import { factories } from '@strapi/strapi';
 
-export default factories.createCoreService('api::location.location', ({ strapi }) => ({
-  async getLocationMap(): Promise<IDMap> {
-    const locations = await strapi.db.query('api::location.location').findMany({
-      select: ['documentId', 'code'],
-    });
+import { getLookupMap, type LookupIdField } from '../../../utils/lookup-map';
 
-    const locationMap: IDMap = {};
-    locations.forEach((location) => {
-      locationMap[location.code] = location.documentId;
-    });
-
-    return locationMap;
+export default factories.createCoreService('api::location.location', () => ({
+  getLocationMap(idField: LookupIdField) {
+    return getLookupMap('api::location.location', 'code', idField, false);
   },
    mapRelations(relations: string[], locationsMap: IDMap): [string[], { err: string }[]] {
     const errors = [];

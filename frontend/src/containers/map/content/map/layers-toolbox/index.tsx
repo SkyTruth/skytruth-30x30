@@ -18,11 +18,18 @@ const LayersToolbox: FCWithMessages = () => {
   const setLegendReady = useSetAtom(legendReadyAtom);
 
   return (
-    <div className="absolute bottom-0 right-0 z-20 bg-red" data-screenshot="legend">
+    <div
+      className="absolute bottom-0 right-0 z-20 bg-red"
+      data-screenshot="legend"
+      data-map-overlay-panel
+    >
       <div className="relative">
         <Collapsible className="relative bg-red" open={open} onOpenChange={setOpen}>
           {!screenshotOpen && (
-            <CollapsibleTrigger className="absolute right-0 top-0 -translate-y-full border border-b-0 border-black bg-white">
+            <CollapsibleTrigger
+              data-map-overlay-panel
+              className="absolute right-0 top-0 -translate-y-full border border-b-0 border-black bg-white"
+            >
               {open && <LuChevronDown className="mx-2 my-px h-5 w-5" aria-hidden />}
               {!open && (
                 <span className="flex items-center gap-2 py-2.5 pl-3 pr-4 font-mono text-xs">

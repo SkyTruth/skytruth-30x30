@@ -23,7 +23,7 @@ export default factories.createCoreController('api::location.location', ({ strap
       await strapi.db.transaction(async () => {
         const locationsMap: IDMap = await strapi
           .service('api::location.location')
-          .getLocationMap();
+          .getLocationMap('documentId');
 
         for (const location of data) {
           const { code, name, ...attributes } = location;

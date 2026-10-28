@@ -3,7 +3,7 @@ from typing import Any
 import geopandas as gpd
 import pandas as pd
 
-from src.core.commons import add_tolerance_suffix
+from src.core.commons import add_tolerance_suffix, read_mpatlas_from_gcs
 from src.core.map_params import (
     COUNTRIES_TILESET_FILE,
     COUNTRIES_TILESET_ID,
@@ -14,9 +14,11 @@ from src.core.map_params import (
     MARINE_REGIONS_TILESET_FILE,
     MARINE_REGIONS_TILESET_ID,
     MARINE_REGIONS_TILESET_NAME,
+    MPATLAS_TILESET_ARCHIVE_FILE,
     MPATLAS_TILESET_FILE,
     MPATLAS_TILESET_ID,
     MPATLAST_TILESET_NAME,
+    PMTILES_BUCKET,
     TERRESTRIAL_REGIONS_TILESET_FILE,
     TERRESTRIAL_REGIONS_TILESET_ID,
     TERRESTRIAL_REGIONS_TILESET_NAME,
@@ -36,6 +38,10 @@ from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.utils.gcp import read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
+from src.utils.tileset_pipelines.vector_pmtiles_pipeline import (
+    VectorPMTilesetConfig,
+    run_vector_pmtiles_pipeline,
+)
 from src.utils.tileset_pipelines.vector_tile_pipeline import (
     MBTilesetConfig,
     run_vector_tileset_pipeline,
@@ -72,6 +78,7 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
         "protection",
         "protecti_1",
         "wdpa_id",
+        "wdpa_pid",
         "year",
         "geometry",
     ]
@@ -86,10 +93,13 @@ def mpatlas_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
 
 
 def create_and_update_mpatlas_tileset(
-    bucket: str = BUCKET,
+    source_bucket: str = BUCKET,
     source_file: str = MPATLAS_FILE_NAME,
-    tileset_file: str = MPATLAS_TILESET_FILE,
-    tileset_id: str = MPATLAS_TILESET_ID,
+    output_bucket: str = PMTILES_BUCKET,
+    output_blob: str = MPATLAS_TILESET_FILE,
+    archive_bucket: str = BUCKET,
+    archive_blob: str = MPATLAS_TILESET_ARCHIVE_FILE,
+    layer_name: str = MPATLAS_TILESET_ID,
     display_name: str = MPATLAST_TILESET_NAME,
     method: str = "update_mpatlas_tileset",
     verbose: bool = False,
@@ -100,21 +110,21 @@ def create_and_update_mpatlas_tileset(
         if verbose:
             logger.info({"message": f"Creating and updating {display_name} tileset..."})
 
-        cfg = MBTilesetConfig(
-            bucket=bucket,
-            tileset_blob_name=tileset_file,
-            tileset_id=tileset_id,
-            display_name=display_name,
-            local_geojson_name=f"{tileset_id}.geojson",
-            local_mbtiles_name=f"{tileset_id}.mbtiles",
+        config = VectorPMTilesetConfig(
+            source_bucket=source_bucket,
             source_file=source_file,
+            output_bucket=output_bucket,
+            output_blob=output_blob,
+            archive_bucket=archive_bucket,
+            archive_blob=archive_blob,
+            layer_name=layer_name,
+            display_name=display_name,
             verbose=verbose,
             keep_temp=keep_temp,
         )
 
-        return run_vector_tileset_pipeline(
-            cfg,
-            process=mpatlas_process,
+        return run_vector_pmtiles_pipeline(
+            config, process=mpatlas_process, read_source=read_mpatlas_from_gcs
         )
     except Exception as e:
         logger.error(
@@ -381,13 +391,16 @@ def terrestrial_regions_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
 
 
 def create_and_update_protected_area_tileset(
-    bucket: str,
     source_file: str,
-    tileset_file: str,
-    tileset_id: str,
+    output_blob: str,
+    archive_blob: str,
+    layer_name: str,
     display_name: str,
     tolerance: float,
     method: str,
+    source_bucket: str = BUCKET,
+    output_bucket: str = PMTILES_BUCKET,
+    archive_bucket: str = BUCKET,
     verbose: bool = False,
     *,
     keep_temp: bool = False,
@@ -396,22 +409,20 @@ def create_and_update_protected_area_tileset(
         if verbose:
             logger.info({"message": f"Creating and updating {display_name} tileset..."})
 
-        cfg = MBTilesetConfig(
-            bucket=bucket,
-            tileset_blob_name=tileset_file,
-            tileset_id=tileset_id,
-            display_name=display_name,
-            local_geojson_name=f"{tileset_id}.geojson",
-            local_mbtiles_name=f"{tileset_id}.mbtiles",
+        config = VectorPMTilesetConfig(
+            source_bucket=source_bucket,
             source_file=add_tolerance_suffix(source_file, tolerance),
+            output_bucket=output_bucket,
+            output_blob=output_blob,
+            archive_bucket=archive_bucket,
+            archive_blob=archive_blob,
+            layer_name=layer_name,
+            display_name=display_name,
             verbose=verbose,
             keep_temp=keep_temp,
         )
 
-        return run_vector_tileset_pipeline(
-            cfg,
-            process=protected_area_process,
-        )
+        return run_vector_pmtiles_pipeline(config, process=protected_area_process)
     except Exception as e:
         logger.error(
             {
@@ -430,7 +441,7 @@ def create_and_update_protected_area_tileset(
 
 
 def protected_area_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
-    properties = ["GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "geometry"]
+    properties = ["GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "WDPA_PID", "geometry"]
     gdf.drop(columns=list(set(gdf.columns) - set(properties)), inplace=True)
 
     return gdf
