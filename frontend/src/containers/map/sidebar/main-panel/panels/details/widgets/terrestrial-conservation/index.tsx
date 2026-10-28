@@ -159,7 +159,7 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
           target={location.terrestrial_target}
           targetYear={location.terrestrial_target_year}
           ortRecord={location.ort_record}
-          tooltipSlug={"30x30-terrestrial-target"}
+          tooltipSlug="30x30-terrestrial-target"
         />
       ) : (
         <NoTargetNote environment="terrestrial" location={location} />
