@@ -264,7 +264,7 @@
       "historical-trend": "Historical Trend",
       "future-projection": "Future Projection",
       "historical": "Historical",
-      "target-xx-by": "Target: {target}% by {year}"
+      "target-xx-by": "Target: <value>{target}% by {year}</value>"
     },
     "chart-horizontal-bar": {
       "marine-protected-percentage": "{percentage}<b>%</b>",

@@ -71,13 +71,14 @@ const ChartLegend: FCWithMessages<ChartLegendProps> = ({
       {displayTarget && (
         <span className="inline-flex w-full items-center gap-3">
           {displayTargetLine && (
-            <span className="block w-10 border-b border-dashed border-orange"></span>
+            <span className="block w-10 border-b border-dashed border-orange-700"></span>
           )}
           <span>
             <span className="relative top-px">
               {t.rich('target-xx-by', {
                 target,
                 year: targetYear,
+                value: (chunks) => <span className="text-orange-700">{chunks}</span>,
               })}
             </span>
             <TooltipButton
