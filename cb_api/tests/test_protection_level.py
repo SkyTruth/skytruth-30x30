@@ -124,18 +124,23 @@ def test_the_refusal_is_not_the_generic_validation_body(api: Harness):
 
 
 @pytest.mark.parametrize(
-    "body",
+    ("body", "message"),
     [
-        {},
-        {"geometry": POLYGON, "environment": "lunar"},
-        {"geometry": POLYGON, "level": "barely-protected"},
+        ({}, "Geometry is required"),
+        ({"geometry": {}}, "Geometry is required"),
+        (
+            {"geometry": POLYGON, "environment": "lunar"},
+            "Environment must be one of `marine` or `terrestrial`",
+        ),
+        ({"geometry": POLYGON, "level": "barely-protected"}, "Invalid level"),
     ],
+    ids=["missing-geometry", "empty-geometry", "unknown-environment", "unknown-level"],
 )
-def test_an_unusable_body_is_a_400(api: Harness, body: dict):
+def test_an_unusable_body_is_a_400_naming_the_cause(api: Harness, body: dict, message: str):
     response = api.client.post(PATH, json=body)
 
     assert response.status_code == 400
-    assert response.json() == {"error": "Invalid request body"}
+    assert response.json() == {"error": message}
     assert api.calls == []
 
 
