@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -13,10 +15,42 @@ class BadRequestError(Exception):
     """The caller sent a request they can fix."""
 
 
+def describe_validation_error(errors: Sequence[Mapping[str, Any]]) -> str:
+    """A specific message naming what is wrong with the request body."""
+    by_field = {error["loc"]: error for error in errors}
+
+    geometry = by_field.get(("body", "geometry"))
+    if geometry:
+        # Missing, null, and {} count as absent
+        if geometry["type"] == "missing" or not geometry.get("input"):
+            return "Geometry is required"
+        return "Invalid geometry: expected a GeoJSON object"
+
+    if ("body", "environment") in by_field:
+        return "Environment must be one of `marine` or `terrestrial`"
+
+    for error in errors:
+        loc = error["loc"]
+        if error["type"] == "json_invalid":
+            return "Request body is not valid JSON"
+        if loc == ("body",):
+            return "Request body must be a JSON object"
+        if len(loc) > 1 and isinstance(loc[1], str):
+            field = loc[1]
+            if error["type"] == "missing":
+                return f"{field.capitalize()} is required"
+            return f"Invalid {field}"
+
+    return "Invalid request body"
+
+
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
-    """Answer 400 with the standard error body rather than FastAPI's 422."""
+    """Answer 400 with the standard error body rather than FastAPI's 422.
+
+    The validation detail is logged, not returned.
+    """
     logger.warning("Rejected request body: %s", exc.errors())
-    return JSONResponse(status_code=400, content={"error": "Invalid request body"})
+    return JSONResponse(status_code=400, content={"error": describe_validation_error(exc.errors())})
 
 
 async def handle_bad_request_error(request: Request, exc: BadRequestError) -> JSONResponse:

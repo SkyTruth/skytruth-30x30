@@ -4,6 +4,7 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.analysis import AnalysisTable, get_locations_stats
@@ -35,7 +36,7 @@ def by_code(result: dict) -> dict[str, float]:
     return {area["code"]: area["protected_area"] for area in result["locations_area"]}
 
 
-def test_areas_are_square_kilometres(analysis_tables: Engine):
+def test_areas_are_square_kilometers(analysis_tables: Engine):
     """A wrong projection or a missing /1e6 would be out by orders of magnitude."""
     result = get_locations_stats(analysis_tables, box(1, 0, 2, 1), AnalysisTable.MARINE)
 
@@ -197,3 +198,21 @@ def test_protection_level_refuses_terrestrial_before_touching_the_database(api: 
 
     assert response.status_code == 400
     assert "fully-highly-protected" in response.json()["error"]
+
+
+def test_a_topology_error_is_a_400_over_http(api: TestClient, analysis_tables: Engine):
+    """GEOS refuses to intersect a self-intersecting polygon. A shape that triggers that
+    must be flagged as invalid geometry."""
+    with analysis_tables.begin() as conn:
+        conn.execute(
+            text(
+                f"INSERT INTO data.{AnalysisTable.MARINE.value} (location, the_geom) VALUES "
+                "('CCC', ST_Multi(ST_GeomFromText("
+                "'POLYGON((10 10, 11 11, 11 10, 10 11, 10 10))', 4326)))"
+            )
+        )
+
+    response = api.post("/coverage", json={"geometry": box(10.25, 10.25, 10.75, 10.75)})
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "Invalid geometry: input geometry could not be processed"}

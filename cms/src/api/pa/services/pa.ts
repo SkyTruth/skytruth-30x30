@@ -4,38 +4,31 @@
 
 import { factories } from '@strapi/strapi';
 
-import type { ToUpdateRelations, InputPA ,PA, PARelations } from '../controllers/pa';
-
+import type { ToUpdateRelations, InputPA ,PA, PARelations, RowIdMap } from '../controllers/pa';
 
 export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
-  async getRelationMaps(): Promise<{[key: string]: IDMap}>{
-    const locationMap = await strapi
-      .service('api::location.location')
-      .getLocationMap();
-
-    const mpaaProtectionLevelMap = await strapi
-      .service('api::mpaa-protection-level.mpaa-protection-level')
-      .getMpaaProtectionLevelMap();
-
-    const environmentMap = await strapi
-      .service('api::environment.environment')
-      .getEnvironmentMap();
-
-    const protectionStatusMap = await strapi
-      .service('api::protection-status.protection-status')
-      .getProtectionStatusMap();
-
-    const dataSourceMap = await strapi
-      .service('api::data-source.data-source')
-      .getDataSourceMap();
-
-    const mpaaIucnCategoryMap = await strapi
-      .service('api::mpa-iucn-category.mpa-iucn-category')
-      .getMpaaIucnCategoryMap();
-
-    const mpaaEstablishmentStageMap = await strapi
-      .service('api::mpaa-establishment-stage.mpaa-establishment-stage')
-      .getMpaaEstablishmentStageMap();
+  async getRelationIdMaps(): Promise<{[key: string]: RowIdMap}>{
+    const [
+      locationMap,
+      mpaaProtectionLevelMap,
+      environmentMap,
+      protectionStatusMap,
+      dataSourceMap,
+      mpaaIucnCategoryMap,
+      mpaaEstablishmentStageMap,
+    ] = await Promise.all([
+      strapi.service('api::location.location').getLocationMap('id'),
+      strapi
+        .service('api::mpaa-protection-level.mpaa-protection-level')
+        .getMpaaProtectionLevelMap('id'),
+      strapi.service('api::environment.environment').getEnvironmentMap('id'),
+      strapi.service('api::protection-status.protection-status').getProtectionStatusMap('id'),
+      strapi.service('api::data-source.data-source').getDataSourceMap('id'),
+      strapi.service('api::mpa-iucn-category.mpa-iucn-category').getMpaaIucnCategoryMap('id'),
+      strapi
+        .service('api::mpaa-establishment-stage.mpaa-establishment-stage')
+        .getMpaaEstablishmentStageMap('id'),
+    ]);
 
       return {
         dataSourceMap,
@@ -61,13 +54,13 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
    * Check to make sure string values of relational data exist in the database
    * and make sure required fields exist on PAs to be created
    * @param pa Protected area
-   * @param idMaps ID Maps returned from getRelationMaps above
+   * @param idMaps ID Maps returned from getRelationIdMaps above
    * @param errors Error array to be updated
    * @returns boolean, true if all relationships are valid false if not
    */
-  validateFields(pa: PA, idMaps: {[key: string]: IDMap}, errors: {msg: string, err: string}[]): boolean {
+  validateFields(pa: PA, idMaps: {[key: string]: RowIdMap}, errors: {msg: string, err: string}[]): boolean {
     const {
-      documentId,
+      id,
       // relational fields
       data_source,
       environment,
@@ -95,21 +88,21 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
     // Validate relational fields
     if (!dataSourceMap[data_source]) {
       errors.push({
-          msg: `Failed to find data source for PA, name: ${pa?.name}, documentId: ${documentId}`,
+          msg: `Failed to find data source for PA, name: ${pa?.name}, id: ${id}`,
           err: `Data source ${data_source} not found`
       });
       return false;
     }
     if (!environmentMap[environment]) {
       errors.push({
-          msg: `Failed to find environment for PA, name: ${pa?.name}, documentId: ${documentId}`,
+          msg: `Failed to find environment for PA, name: ${pa?.name}, id: ${id}`,
           err: `Environment ${environment} not found`
       });
       return false;
     }
     if (!locationMap[location]) {
       errors.push({
-          msg: `Failed to find location for PA, name: ${pa?.name}, documentId: ${documentId}`,
+          msg: `Failed to find location for PA, name: ${pa?.name}, id: ${id}`,
           err: `Location ${location} not found`
       });
       return false;
@@ -117,35 +110,35 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
 
     if (mpaa_establishment_stage && !mpaaEstablishmentStageMap[mpaa_establishment_stage]) {
       errors.push({
-          msg: `Failed to find MPAA Establishment Stage for PA, name: ${pa?.name}, documentId: ${documentId}`,
+          msg: `Failed to find MPAA Establishment Stage for PA, name: ${pa?.name}, id: ${id}`,
           err: `Establishment Stage ${mpaa_establishment_stage} not found`
       });
       return false;
     }
     if (iucn_category && !mpaaIucnCategoryMap[iucn_category]) {
       errors.push({
-          msg: `Failed to find MPAA IUCN Category for PA, name: ${pa?.name}, documentId: ${documentId}`,
+          msg: `Failed to find MPAA IUCN Category for PA, name: ${pa?.name}, id: ${id}`,
           err: `IUCN Category ${iucn_category} not found`
       });
       return false;
     }
       if (mpaa_protection_level && !mpaaProtectionLevelMap[mpaa_protection_level]) {
       errors.push({
-          msg: `Failed to find MPAA Protection Level for PA, name: ${pa?.name}, documentId: ${documentId}`,
+          msg: `Failed to find MPAA Protection Level for PA, name: ${pa?.name}, id: ${id}`,
           err: `Protection Level ${mpaa_protection_level} not found`
       });
       return false;
     }
     if (!protectionStatusMap[protection_status]) {
       errors.push({
-          msg: `Failed to find Protection Status for PA, name: ${pa?.name}, documentId: ${documentId}`,
+          msg: `Failed to find Protection Status for PA, name: ${pa?.name}, id: ${id}`,
           err: `Protection Status ${protection_status} not found`
       });
       return false;
     }
 
     // Validate required fields for net-new PAs
-    if (!documentId) {
+    if (!id) {
       if (!name) {
         errors.push({
           msg: `Failed to create PA, wdpa_id: ${pa?.wdpaid}`,
@@ -192,15 +185,15 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
    */
   checkParentChild(pa: InputPA, toUpdateRelations: ToUpdateRelations): PA {
     const { children, parent } = pa;
-    const paIdentifier = pa?.documentId ?? this.makePAKey(pa);
+    const paIdentifier = pa?.id ?? this.makePAKey(pa);
 
     if (children?.length) {
-      if (!children.every(child => !!child?.documentId)) {
+      if (!children.every(child => !!child?.id)) {
       toUpdateRelations[paIdentifier] = { children: [] };
 
       children.forEach(child => {
         toUpdateRelations[paIdentifier].children.push({
-          documentId: child?.documentId,
+          id: child?.id,
           key: this.makePAKey(child)
         })
       })
@@ -213,14 +206,14 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
       delete pa.children
       } else {
         //Every child has an ID so just clean up the child objects
-        const updatedChildren = children.map(child => child.documentId);
+        const updatedChildren = children.map(child => child.id);
         pa.children = updatedChildren;
       }
     }
 
 
     if (parent) {
-      if(!parent?.documentId) {
+      if(!parent?.id) {
         if (!toUpdateRelations[paIdentifier]) {
           toUpdateRelations[paIdentifier] = {parent: {}};
         }
@@ -233,7 +226,7 @@ export default factories.createCoreService('api::pa.pa', ({ strapi }) => ({
          */
         delete pa.parent
       } else {
-        pa.parent = parent.documentId;
+        pa.parent = parent.id;
       }
     }
     return pa
