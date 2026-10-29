@@ -58,8 +58,12 @@ const PopupContainer: FCWithMessages = () => {
     if (!map || !mapboxPopup) return;
 
     const updateAnchor = () => {
+      // The popup has no element until it is added to the map
+      const popupElement = mapboxPopup.getElement();
+      if (!popupElement) return;
+
       const mapRect = map.getContainer().getBoundingClientRect();
-      const { width, height } = mapboxPopup.getElement()!.getBoundingClientRect();
+      const { width, height } = popupElement.getBoundingClientRect();
       const point = map.project(mapboxPopup.getLngLat());
       const cursor = { x: mapRect.left + point.x, y: mapRect.top + point.y };
 
