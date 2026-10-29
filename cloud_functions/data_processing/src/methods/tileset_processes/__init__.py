@@ -5,6 +5,7 @@ from src.methods.tileset_processes.vector_tileset_processes import (
     countries_process,
     create_and_update_country_tileset,
     create_and_update_eez_tileset,
+    create_and_update_marine_habitat_tileset,
     create_and_update_marine_regions_tileset,
     create_and_update_mpatlas_tileset,
     create_and_update_protected_area_tileset,
@@ -13,6 +14,7 @@ from src.methods.tileset_processes.vector_tileset_processes import (
     marine_regions_process,
     mpatlas_process,
     protected_area_process,
+    read_marine_habitat,
     terrestrial_regions_process,
 )
 
@@ -20,6 +22,7 @@ __all__ = [
     # Vector
     "create_and_update_country_tileset",
     "create_and_update_eez_tileset",
+    "create_and_update_marine_habitat_tileset",
     "create_and_update_marine_regions_tileset",
     "create_and_update_mpatlas_tileset",
     "create_and_update_protected_area_tileset",
@@ -29,6 +32,7 @@ __all__ = [
     "marine_regions_process",
     "mpatlas_process",
     "protected_area_process",
+    "read_marine_habitat",
     "terrestrial_regions_process",
     # Raster
     "create_and_update_climate_resilient_coral_tileset",
