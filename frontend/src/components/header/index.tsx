@@ -26,6 +26,7 @@ import {
   useSyncMapLayers,
   useSyncMapSettings,
 } from '@/containers/map/content/map/sync-settings';
+import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import ArrowRight from '@/styles/icons/arrow-right.svg';
 import { FCWithMessages } from '@/types';
@@ -83,6 +84,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const [mapSettings] = useSyncMapSettings();
   const [mapLayers] = useSyncMapLayers();
   const [mapLayerSettings] = useSyncMapLayerSettings();
+  const [mapContentSettings] = useSyncMapContentSettings();
   const [runAsOf] = useQueryState('run-as-of');
   const { query, pathname } = useRouter();
   const { locationCode = 'GLOB' } = query;
@@ -101,6 +103,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
                 settings: mapSettings,
                 layers: mapLayers,
                 layerSettings: mapLayerSettings,
+                content: mapContentSettings,
               }),
             }),
           },
@@ -117,7 +120,16 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
           : undefined,
       };
     });
-  }, [navigationItems, locationCode, mapSettings, mapLayers, mapLayerSettings, runAsOf, pathname]);
+  }, [
+    navigationItems,
+    locationCode,
+    mapSettings,
+    mapLayers,
+    mapLayerSettings,
+    mapContentSettings,
+    runAsOf,
+    pathname,
+  ]);
 
   return (
     <header className={cn('border-b font-mono text-sm', headerVariants({ theme }))}>
