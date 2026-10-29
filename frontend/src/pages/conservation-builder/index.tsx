@@ -46,11 +46,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const { mapParams = null, 'run-as-of': runAsOf } = query;
 
   if (mapParams) {
-    // Keep the previous page's settings, switching to terrestrial if the tab isn't a CB tab
+    // Keep the previous page's settings (summary on PT goes to terrestrial on CB),
+    // except with showDetails always false
     const params = JSON.parse(mapParams as string);
-    if (!isConservationBuilderTab(params.content?.tab)) {
-      params.content = { showDetails: false, ...params.content, tab: 'terrestrial' };
-    }
+    const tab = params.content?.tab;
+    params.content = {
+      ...params.content,
+      showDetails: false,
+      tab: isConservationBuilderTab(tab) ? tab : 'terrestrial',
+    };
 
     let searchParams = mapParamsToSearchParams(JSON.stringify(params));
     if (runAsOf) {
