@@ -71,6 +71,9 @@ const TOOLTIP_MAPPING = {
   iucnCategory: 'details-iucn-category',
 };
 
+// IUCN categories by slug, from most to least strictly protected
+const IUCN_CATEGORY_ORDER = ['Ia', 'Ib', 'II', 'III', 'IV', 'V', 'VI'];
+
 const useTooltips = () => {
   const locale = useLocale();
 
@@ -183,11 +186,19 @@ const useFiltersOptions = () => {
     },
     {
       query: {
-        select: ({ data }) =>
-          data.map((iucnCategory) => ({
-            name: iucnCategory.name,
-            value: iucnCategory.slug,
-          })),
+        select: ({ data }) => {
+          // Show IUCN categories in order
+          const getRank = (slug: string) => {
+            const index = IUCN_CATEGORY_ORDER.indexOf(slug);
+            return index === -1 ? IUCN_CATEGORY_ORDER.length : index;
+          };
+          return [...data]
+            .sort((a, b) => getRank(a.slug) - getRank(b.slug))
+            .map((iucnCategory) => ({
+              name: iucnCategory.name,
+              value: iucnCategory.slug,
+            }));
+        },
         placeholderData: { data: [] },
       },
     }
@@ -610,13 +621,15 @@ export const useData = (
 
         const reversePathItems = key.split('.').reverse();
 
-        return reversePathItems.reduce((res, pathItem, index) => {
+        const filter = reversePathItems.reduce((res, pathItem, index) => {
           if (index === 0) {
             return { [pathItem]: { $in: values } };
           }
 
           return { [pathItem]: res };
         }, {});
+
+        return { ...res, ...filter };
       }, {}),
     }),
     [environment, filters, locationCode]

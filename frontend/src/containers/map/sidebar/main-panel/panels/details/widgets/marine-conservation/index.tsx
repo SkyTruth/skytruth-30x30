@@ -21,6 +21,7 @@ import type {
 } from '@/types/generated/strapi.schemas';
 
 import MissingCountriesList from '../widget-alerts/MissingCountriesList';
+import NoTargetNote from '../widget-alerts/NoTargetNote';
 
 type MarineConservationWidgetProps = {
   location: LocationGroupsItem;
@@ -141,6 +142,8 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
 
     const data = aggregatedData.reduce((acc, entry) => {
       if (entry.locations.length < mostLocsByYear.length) return acc;
+      // TODO: Remove once region coverage history before 2025 is fixed
+      if (location.type === 'region' && entry.year < 2025) return acc;
 
       const { year, protectedArea, coverage } = entry;
       const percentage = coverage ?? (protectedArea * 100) / Number(entry.totalArea);
@@ -160,7 +163,7 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
       data[data.length - 1].active = true;
     }
     return data;
-  }, [aggregatedData, mostLocsByYear]);
+  }, [aggregatedData, mostLocsByYear, location.type]);
 
   const noData = useMemo(() => {
     if (!chartData.length) {
@@ -213,7 +216,9 @@ const MarineConservationWidget: FCWithMessages<MarineConservationWidgetProps> = 
           displayTarget={!!stats?.target}
           target={stats?.target ?? undefined}
           targetYear={stats?.targetYear ?? undefined}
+          ortRecord={location.ort_record}
         />
+        {!stats?.target && <NoTargetNote environment="marine" location={location} />}
         {tab !== 'marine' && (
           <Button
             variant="white"
@@ -236,6 +241,7 @@ MarineConservationWidget.messages = [
   'containers.map-sidebar-main-panel',
   ...Widget.messages,
   ...ConservationChart.messages,
+  ...NoTargetNote.messages,
 ];
 
 export default MarineConservationWidget;

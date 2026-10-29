@@ -86,6 +86,7 @@ GADM_EEZ_UNION_FILE_NAME = "static/GADM_eez_union.geojson"
 #   Locations (combined Marine Regions, GADM, and IHO seas)
 # ------------------------------------------------------------
 LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
+NATIONAL_TARGETS_FILE_NAME = "processing/national_targets_Oct2026.csv"
 
 
 # ------------------------------------------------------------
@@ -152,7 +153,8 @@ SEAMOUNTS_URL = (
 )
 SEAMOUNTS_ZIPFILE_NAME = "habitats/seamounts.zip"
 SEAMOUNTS_SHAPEFILE_NAME = (
-    "DownloadPack-14_001_ZSL002_ModelledSeamounts2011_v1/01_Data/Seamounts/Seamounts.shp"
+    "DownloadPack-14_001_ZSL002_ModelledSeamounts2011_v1/01_Data/"
+    "SeamountsBaseArea/SeamountsBaseArea.shp"
 )
 ARCHIVE_SEAMOUNTS_FILE_NAME = f"archive/habitats/{SEAMOUNTS_URL.split('/')[-1]}"
 
@@ -182,7 +184,10 @@ MARINE_HABITAT_PARAMS = {
         "url": SEAMOUNTS_URL,
         "file_name": SEAMOUNTS_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_SEAMOUNTS_FILE_NAME,
-        "needs_processing": False,
+        "shapefile_name": SEAMOUNTS_SHAPEFILE_NAME,
+        "needs_processing": True,
+        "source": "shapefile",
+        "overlaps": True,
     },
     "coldwatercorals": {
         "url": COLD_WATER_CORALS_URL,
@@ -294,6 +299,7 @@ ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = (
 #                     Raster Data Sources
 # ------------------------------------------------------------
 CLIMATE_RES_CORAL_SOURCE_FILE = "raw/climate_resilient_corals.tif"
+CLIMATE_RESILIENT_CORALS_HABITATS = ("other-corals", "climate-resilient-corals")
 
 # ------------------------------------------------------------
 #                     Workflow Parameters
@@ -304,6 +310,7 @@ LONG_RUNNING_TASKS = [
     "generate_coldwatercorals_minus_pa",
     "generate_saltmarshes_minus_pa",
     "generate_seagrasses_minus_pa",
+    "generate_climate_resilient_corals_minus_pa",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",

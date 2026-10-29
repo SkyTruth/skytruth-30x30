@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 import pytest
 
@@ -42,6 +44,44 @@ def test_extract_non_na_values_drops_nulls_keeps_lists():
     assert cleaned[1] == {"code": 2, "area": 5}
 
 
+def test_extract_non_na_values_sends_null_for_null_fields():
+    """
+    A field the pipeline owns is sent as None when empty, so Strapi clears it rather than
+    keeping the stored value, while every other empty field is still left off.
+    """
+    df = pd.DataFrame(
+        {
+            "code": ["USA", "ITA"],
+            "marine_target": pd.array([30, None], dtype="Int64"),
+            "marine_target_year": pd.array([2030, None], dtype="Int64"),
+            "total_marine_area": pd.array([1234, None], dtype="Int64"),
+        }
+    )
+
+    cleaned = db_uploads._extract_non_na_values(
+        df, null_fields=["marine_target", "marine_target_year"]
+    )
+
+    assert cleaned[0] == {
+        "code": "USA",
+        "marine_target": 30,
+        "marine_target_year": 2030,
+        "total_marine_area": 1234,
+    }
+
+    # A withdrawn target is cleared, but the missing area is still left untouched
+    assert cleaned[1] == {"code": "ITA", "marine_target": None, "marine_target_year": None}
+
+
+def test_extract_non_na_values_nulls_are_json_serializable():
+    """pd.NA raises on json.dumps, so null_fields have to be converted to None."""
+    df = pd.DataFrame({"code": ["ITA"], "marine_target": pd.array([None], dtype="Int64")})
+
+    cleaned = db_uploads._extract_non_na_values(df, null_fields=["marine_target"])
+
+    assert json.dumps(cleaned) == '[{"code": "ITA", "marine_target": null}]'
+
+
 def test_upload_locations_happy_path(monkeypatch):
     """
     - read_dataframe should be called with list-field converters
@@ -58,7 +98,16 @@ def test_upload_locations_happy_path(monkeypatch):
             "terrestrial_bounds": ["[1.1, 2.2, 3.3, 4.4]", "", ""],
             "marine_bounds": ["", "", "[0.0, 0.0, 10.0, 10.0]"],
             "has_shared_marine_area": [True, pd.NA, False],
-            "total_marine_area": [pd.NA, 1234, None],
+            # Blank for a land locked country, and a value to_csv wrote in float form
+            "total_marine_area": ["", "1234", "212881389.0"],
+            # Blank for locations with no GADM row, such as the high seas
+            "total_terrestrial_area": ["9833517", "1964375", ""],
+            # Fractional target, whole target, and an unset one read back from the csv as ""
+            "marine_target": ["49.6", "30", ""],
+            "marine_target_year": ["2025", "2030", ""],
+            "terrestrial_target": ["30", "", "30"],
+            "terrestrial_target_year": ["2030", "", "2030"],
+            "ort_record": ["CBD NBSAP", "", "Ocean Panel"],
         }
     )
 
@@ -103,7 +152,9 @@ def test_upload_locations_happy_path(monkeypatch):
 
     assert captured_kwargs["bucket_name"] == "test-bucket"
     assert captured_kwargs["filename"] == "locations.csv"
-    assert captured_kwargs["dtype"] == {"total_marine_area": "Int64"}
+    # Integer columns are coerced after the read, not with a dtype, so a value written as a
+    # float does not fail the parse
+    assert captured_kwargs["dtype"] is None
 
     # The function should request converters for these fields:
     for expected in ["groups", "members", "terrestrial_bounds", "marine_bounds"]:
@@ -134,10 +185,32 @@ def test_upload_locations_happy_path(monkeypatch):
     assert row1["total_marine_area"] == 1234
     assert "has_shared_marine_area" not in row1
 
+    # Fractional targets are rounded to the integers Strapi stores
+    assert row0["marine_target"] == 50
+    assert row0["marine_target_year"] == 2025
+    assert row1["marine_target"] == 30
+
+    assert row0["terrestrial_target"] == 30
+    assert row0["terrestrial_target_year"] == 2030
+    assert row0["ort_record"] == "CBD NBSAP"
+    assert row1["terrestrial_target"] is None
+    assert row1["terrestrial_target_year"] is None
+    assert row1["ort_record"] is None
+
     # Row 2: both lists parsed/kept where provided
     row2 = payload[2]
     assert row2["code"] == "ABNJ"
     assert row2["groups"] == ["OCE"]
+
+    # An unset target is sent as null so a withdrawn target gets cleared, not retained
+    assert row2["marine_target"] is None
+    assert row2["marine_target_year"] is None
+    assert row2["total_marine_area"] == 212881389
+
+    # Areas are sent as integers, not as the strings a csv with a blank cell reads back as
+    assert row0["total_terrestrial_area"] == 9833517
+    assert isinstance(row0["total_terrestrial_area"], int)
+    assert "total_terrestrial_area" not in row2
     assert row2["marine_bounds"] == [0.0, 0.0, 10.0, 10.0]
     assert row2["members"] == []
 

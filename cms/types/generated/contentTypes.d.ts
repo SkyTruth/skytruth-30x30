@@ -1271,6 +1271,7 @@ export interface ApiLocationLocation extends Struct.CollectionTypeSchema {
     name_es: Schema.Attribute.String & Schema.Attribute.Required;
     name_fr: Schema.Attribute.String & Schema.Attribute.Required;
     name_pt: Schema.Attribute.String & Schema.Attribute.Required;
+    ort_record: Schema.Attribute.String;
     pas: Schema.Attribute.Relation<'oneToMany', 'api::pa.pa'>;
     protection_coverage_stats: Schema.Attribute.Relation<
       'oneToMany',
@@ -1278,6 +1279,8 @@ export interface ApiLocationLocation extends Struct.CollectionTypeSchema {
     >;
     publishedAt: Schema.Attribute.DateTime;
     terrestrial_bounds: Schema.Attribute.JSON;
+    terrestrial_target: Schema.Attribute.Integer;
+    terrestrial_target_year: Schema.Attribute.Integer;
     total_marine_area: Schema.Attribute.BigInteger & Schema.Attribute.Required;
     total_terrestrial_area: Schema.Attribute.BigInteger &
       Schema.Attribute.Required;

@@ -106,6 +106,8 @@
       "clear-all": "Clear All",
       "clear-custom-region": "Clear custom region",
       "no-data-for": "No data for",
+      "no-marine-target": "No marine target reported",
+      "no-terrestrial-target": "No terrestrial target reported",
       "overlapping-eez-explainer": "Some selected countries may have overlapping EEZs (red dashed outline), which could affect statistics. <a>Reach out to us</a> to request analysis. <Button>Hide warning</Button>",
       "warning": "Warning",
       "remove-from-custom-region": "Remove from Custom Region",
@@ -193,7 +195,16 @@
       "name": "Name",
       "coverage": "Coverage",
       "area": "Area",
+      "location": "Location",
       "data-source": "Data Source",
+      "view-on-protected-planet": "View on Protected Planet",
+      "view-on-mpatlas": "View on MPAtlas",
+      "protected-areas": "Protected areas",
+      "protected-areas-count": "{count, plural, one {Protected Area} other {Protected Areas}}",
+      "protected-seas-count": "{count, plural, one {Protected Seas Site} other {Protected Seas Sites}}",
+      "mpa-not-implemented": "This MPA is not yet implemented.",
+      "designation": "Designation",
+      "year": "Year",
       "iucn-category": "IUCN Category",
       "pas": "PAs",
       "n-a": "N/A",
@@ -239,7 +250,7 @@
     "filters-button": {
       "filter": "Filter",
       "select-all": "Select all",
-      "clear-all": "Clear all (None selected)",
+      "clear-all": "Clear all",
       "error-no-filters": "Please, select at least one option"
     },
     "widget": {
@@ -253,7 +264,7 @@
       "historical-trend": "Historical Trend",
       "future-projection": "Future Projection",
       "historical": "Historical",
-      "target-xx-by": "Target: {target}% by {year}"
+      "target-xx-by": "Target: <value>{target}% by {year}</value>"
     },
     "chart-horizontal-bar": {
       "marine-protected-percentage": "{percentage}<b>%</b>",

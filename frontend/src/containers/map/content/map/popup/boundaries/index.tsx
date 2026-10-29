@@ -24,7 +24,7 @@ import { FCWithMessages } from '@/types';
 import { useGetLayers } from '@/types/generated/layer';
 import { LayerTyped } from '@/types/layers';
 
-import { EEZ_SOURCE, POPUP_PROPERTIES_BY_SOURCE } from '../constants';
+import { EEZ_SOURCE, BOUNDARY_POPUP_PROPERTIES_BY_SOURCE } from '../constants';
 
 import useFormattedStats from './hooks';
 import StatCard from './StatCard';
@@ -117,7 +117,7 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
   }, [popup, source, layersInteractiveIds, map, rendered]);
 
   const locationCodes = useMemo(() => {
-    const locKeys = POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.ids ?? [];
+    const locKeys = BOUNDARY_POPUP_PROPERTIES_BY_SOURCE[source?.['id']]?.ids ?? [];
     const codes = [];
     locKeys.forEach((key: string) => geometryData?.[key] && codes.push(geometryData[key]));
 
@@ -129,11 +129,11 @@ const BoundariesPopup: FCWithMessages<{ layerSlug: string }> = ({ layerSlug }) =
     if (!geometryData || !sourceId) return undefined;
 
     if (sourceId === EEZ_SOURCE) {
-      return geometryData[POPUP_PROPERTIES_BY_SOURCE[sourceId]?.name[locale]];
+      return geometryData[BOUNDARY_POPUP_PROPERTIES_BY_SOURCE[sourceId]?.name[locale]];
     }
 
     const code = locationCodes[0];
-    const type = POPUP_PROPERTIES_BY_SOURCE[sourceId]?.locationType;
+    const type = BOUNDARY_POPUP_PROPERTIES_BY_SOURCE[sourceId]?.locationType;
 
     if (!code || !type) return undefined;
     return getLocationName({ code, type });
