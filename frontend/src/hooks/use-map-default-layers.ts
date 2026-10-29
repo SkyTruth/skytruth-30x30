@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import Router from 'next/router';
-
 import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 
@@ -93,48 +91,4 @@ export function useChangeMapTab() {
     },
     [currentTab, setSettings, setMapLayers, getDefaultLayersForTab]
   );
-}
-
-const getTabFromQuery = (content: unknown): string => {
-  try {
-    return JSON.parse(content as string)?.tab ?? 'summary';
-  } catch {
-    return 'summary';
-  }
-};
-
-// Returns a callback that sets the new page's default layers after navigation
-export function useResetLayersOnNavigate() {
-  const [, setMapLayers] = useSyncMapLayers();
-  const { getDefaultLayersForTab } = useDefaultLayersForTab();
-
-  const isResetPendingRef = useRef(false);
-  const getDefaultLayersForTabRef = useRef(getDefaultLayersForTab);
-
-  useEffect(() => {
-    getDefaultLayersForTabRef.current = getDefaultLayersForTab;
-  }, [getDefaultLayersForTab]);
-
-  useEffect(() => {
-    const onRouteChangeComplete = (_url: string, { shallow }: { shallow: boolean }) => {
-      if (!isResetPendingRef.current || shallow) return;
-
-      isResetPendingRef.current = false;
-      setMapLayers(getDefaultLayersForTabRef.current(getTabFromQuery(Router.query.content)));
-    };
-    const onRouteChangeError = () => {
-      isResetPendingRef.current = false;
-    };
-
-    Router.events.on('routeChangeComplete', onRouteChangeComplete);
-    Router.events.on('routeChangeError', onRouteChangeError);
-    return () => {
-      Router.events.off('routeChangeComplete', onRouteChangeComplete);
-      Router.events.off('routeChangeError', onRouteChangeError);
-    };
-  }, [setMapLayers]);
-
-  return useCallback(() => {
-    isResetPendingRef.current = true;
-  }, []);
 }

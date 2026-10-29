@@ -26,7 +26,6 @@ import {
   useSyncMapLayers,
   useSyncMapSettings,
 } from '@/containers/map/content/map/sync-settings';
-import { useResetLayersOnNavigate } from '@/hooks/use-map-default-layers';
 import { cn } from '@/lib/classnames';
 import ArrowRight from '@/styles/icons/arrow-right.svg';
 import { FCWithMessages } from '@/types';
@@ -88,9 +87,6 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const { query, pathname } = useRouter();
   const { locationCode = 'GLOB' } = query;
 
-  // Clicking the link for the current page resets it, including its tab's default layers
-  const resetMapLayersAfterNavigation = useResetLayersOnNavigate();
-
   const navigationEntries = useMemo(() => {
     return navigationItems.map(({ name, href, colorClassName, preserveMapParams }) => {
       return {
@@ -113,19 +109,15 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
           as: href,
         }),
         colorClassName: colorClassName,
-        onClick: pathname.startsWith(href) ? resetMapLayersAfterNavigation : undefined,
+        // Clicking the link for the current page does nothing, except Ctrl/Cmd-click to open a new tab
+        onClick: pathname.startsWith(href)
+          ? (e) => {
+              if (!e.ctrlKey && !e.metaKey) e.preventDefault();
+            }
+          : undefined,
       };
     });
-  }, [
-    navigationItems,
-    locationCode,
-    mapSettings,
-    mapLayers,
-    mapLayerSettings,
-    runAsOf,
-    pathname,
-    resetMapLayersAfterNavigation,
-  ]);
+  }, [navigationItems, locationCode, mapSettings, mapLayers, mapLayerSettings, runAsOf, pathname]);
 
   return (
     <header className={cn('border-b font-mono text-sm', headerVariants({ theme }))}>
