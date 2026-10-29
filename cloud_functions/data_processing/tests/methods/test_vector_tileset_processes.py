@@ -1,7 +1,7 @@
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import Point
+from shapely.geometry import MultiPolygon, Point, Polygon, box
 
 import src.methods.tileset_processes as tp
 import src.methods.tileset_processes.vector_tileset_processes as vtp
@@ -404,3 +404,108 @@ def test_protected_area_process():
     out = tp.protected_area_process(gdf.copy(), {"verbose": False})
     expected = {"GIS_AREA", "NAME", "PA_DEF", "ISO3", "WDPAID", "WDPA_PID", "geometry"}
     assert set(out.columns) == expected
+
+
+HABITAT_PARAMS = {
+    "mangroves": {"file_name": "habitats/mangroves.gpkg.gz", "source": "gpkg"},
+    "seagrasses": {"file_name": "habitats/seagrasses.zip", "source": "wcmc"},
+}
+
+
+@pytest.mark.parametrize("habitat", ["mangroves", "seagrasses"])
+def test_marine_habitat_tileset_reads_the_habitat_source(habitat, monkeypatch):
+    calls = {}
+
+    def mock_run_vector_pmtiles_pipeline(config, *, read_source):
+        calls["config"] = config
+        calls["gdf"] = read_source(config.source_bucket, config.source_file)
+
+    def mock_load_habitat_geometry(name, params, bucket, fallback_area_km2, verbose):
+        calls["load"] = (name, params, bucket, fallback_area_km2)
+        return gpd.GeoDataFrame(geometry=[box(0, 0, 1, 1)], crs="EPSG:4326")
+
+    monkeypatch.setattr(
+        vtp, "run_vector_pmtiles_pipeline", mock_run_vector_pmtiles_pipeline, raising=True
+    )
+    monkeypatch.setattr(vtp, "_load_habitat_geometry", mock_load_habitat_geometry, raising=True)
+
+    tp.create_and_update_marine_habitat_tileset(
+        **PMTILES_KWARGS,
+        habitat=habitat,
+        method=f"update_{habitat}_tileset",
+        habitat_params=HABITAT_PARAMS,
+        fallback_area_km2=2.5,
+    )
+
+    config = calls["config"]
+    assert calls["load"] == (habitat, HABITAT_PARAMS[habitat], "data-bkt", 2.5)
+    assert calls["gdf"].geometry.iloc[0].equals(box(0, 0, 1, 1))
+    assert config.source_file == HABITAT_PARAMS[habitat]["file_name"]
+    assert config.output_bucket == "pmtiles-bkt"
+    assert config.output_blob == "layer.pmtiles"
+    assert config.archive_bucket == "archive-bkt"
+    assert config.archive_blob == "maps/layer/layer_Oct2026.pmtiles"
+    assert config.layer_name == "layer"
+
+
+@pytest.mark.parametrize("method", ["update_mangroves_tileset", "update_seagrasses_tileset"])
+def test_marine_habitat_tileset_raises_schedule_retry_on_failure(method, monkeypatch):
+    def mock_run_vector_pmtiles_pipeline(config, *, read_source):
+        raise RuntimeError("tippecanoe error")
+
+    monkeypatch.setattr(
+        vtp, "run_vector_pmtiles_pipeline", mock_run_vector_pmtiles_pipeline, raising=True
+    )
+
+    with pytest.raises(ScheduleRetry) as exc_info:
+        tp.create_and_update_marine_habitat_tileset(
+            **PMTILES_KWARGS,
+            habitat="mangroves",
+            method=method,
+            habitat_params=HABITAT_PARAMS,
+        )
+
+    cfg = METHOD_RETRY_CONFIGS[method]
+    assert exc_info.value.delay_seconds == cfg["delay_seconds"]
+    assert exc_info.value.max_retries == cfg["max_retries"]
+
+
+def test_marine_habitat_tileset_is_unknown_for_unconfigured_habitat():
+    with pytest.raises(KeyError):
+        tp.create_and_update_marine_habitat_tileset(
+            **PMTILES_KWARGS,
+            habitat="kelp",
+            method="update_kelp_tileset",
+            habitat_params=HABITAT_PARAMS,
+        )
+
+
+def read_marine_habitat(gdf, monkeypatch):
+    monkeypatch.setattr(vtp, "_load_habitat_geometry", lambda *args: gdf, raising=True)
+    return tp.read_marine_habitat(
+        "bkt",
+        "habitat.zip",
+        habitat="seagrasses",
+        params=HABITAT_PARAMS["seagrasses"],
+        fallback_area_km2=1.0,
+        verbose=False,
+    )
+
+
+def test_read_marine_habitat_simplifies_and_keeps_only_geometry(monkeypatch):
+    bowtie = Polygon([(10, 10), (11, 11), (11, 10), (10, 11)])
+    gdf = gpd.GeoDataFrame(
+        {
+            "source": ["polygon", "point"],
+            "rep_area_km2": [1.0, 2.0],
+        },
+        geometry=[MultiPolygon([box(30, 30, 31, 31), box(32, 32, 33, 33)]), bowtie],
+        crs="EPSG:4326",
+    )
+
+    out = read_marine_habitat(gdf, monkeypatch)
+
+    assert set(out.columns) == {"geometry"}
+    assert out.crs == "EPSG:4326"
+    assert len(out) == 3
+    assert out.geometry.is_valid.all()
