@@ -109,7 +109,7 @@ const PopupContainer: FCWithMessages = () => {
     if (mapboxPopup.isOpen()) updateAnchor();
     else mapboxPopup.once('open', updateAnchor);
     map.on('move', updateAnchor);
-    
+
     // Re-anchor as the panels open and close over the map
     const resizeObserver = new ResizeObserver(() => {
       if (mapboxPopup.isOpen()) updateAnchor();
