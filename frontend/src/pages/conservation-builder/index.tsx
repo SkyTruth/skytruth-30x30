@@ -30,9 +30,12 @@ ConservationBuilderPage.messages = ['pages.conservation-builder', ...MapLayout.m
 // Conservation Builder has no summary tab, so default to terrestrial if the URL has no valid tab
 const CONSERVATION_BUILDER_CONTENT = JSON.stringify({ showDetails: false, tab: 'terrestrial' });
 
+const isConservationBuilderTab = (tab: unknown) =>
+  ['terrestrial', 'marine'].includes(tab as string);
+
 const hasConservationBuilderTab = (content: unknown) => {
   try {
-    return ['terrestrial', 'marine'].includes(JSON.parse(content as string)?.tab);
+    return isConservationBuilderTab(JSON.parse(content as string)?.tab);
   } catch {
     return false;
   }
@@ -43,15 +46,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const { mapParams = null, 'run-as-of': runAsOf } = query;
 
   if (mapParams) {
-    // Drop the layers so Conservation Builder loads its own default layers
+    // Keep the previous page's settings (summary on PT goes to terrestrial on CB),
+    // except with showDetails always false
     const params = JSON.parse(mapParams as string);
-    delete params.layers;
+    const tab = params.content?.tab;
+    params.content = {
+      ...params.content,
+      showDetails: false,
+      tab: isConservationBuilderTab(tab) ? tab : 'terrestrial',
+    };
 
     let searchParams = mapParamsToSearchParams(JSON.stringify(params));
     if (runAsOf) {
       searchParams += `&run-as-of=${runAsOf}`;
     }
-    searchParams += `&content=${CONSERVATION_BUILDER_CONTENT}`;
 
     const target = `/${context.locale}${PAGES.conservationBuilder}/?${searchParams}`;
 
