@@ -74,7 +74,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return getServiceUnavailableProps(context);
   }
 
-  if (!locationsData || !locationsData.data) return { notFound: true };
+  if (!locationsData?.data?.length) return { notFound: true };
 
   return {
     props: {
