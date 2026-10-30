@@ -1,7 +1,7 @@
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import MultiPolygon, Point, Polygon, box
+from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box
 
 import src.methods.tileset_processes as tp
 import src.methods.tileset_processes.vector_tileset_processes as vtp
@@ -428,6 +428,7 @@ def test_marine_habitat_tileset_reads_the_habitat_source(habitat, monkeypatch):
         vtp, "run_vector_pmtiles_pipeline", mock_run_vector_pmtiles_pipeline, raising=True
     )
     monkeypatch.setattr(vtp, "_load_habitat_geometry", mock_load_habitat_geometry, raising=True)
+    mock_unep_points(monkeypatch, [Point(5, 5)])
 
     tp.create_and_update_marine_habitat_tileset(
         **PMTILES_KWARGS,
@@ -439,13 +440,17 @@ def test_marine_habitat_tileset_reads_the_habitat_source(habitat, monkeypatch):
 
     config = calls["config"]
     assert calls["load"] == (habitat, HABITAT_PARAMS[habitat], "data-bkt", 2.5)
-    assert calls["gdf"].geometry.iloc[0].equals(box(0, 0, 1, 1))
+    # Only the UNEP-WCMC source gets a points layer, named after the tileset's layer
+    layers = calls["gdf"] if habitat == "seagrasses" else {"layer": calls["gdf"]}
+    assert list(layers) == (["layer", "layer_points"] if habitat == "seagrasses" else ["layer"])
+    assert layers["layer"].geometry.iloc[0].equals(box(0, 0, 1, 1))
     assert config.source_file == HABITAT_PARAMS[habitat]["file_name"]
     assert config.output_bucket == "pmtiles-bkt"
     assert config.output_blob == "layer.pmtiles"
     assert config.archive_bucket == "archive-bkt"
     assert config.archive_blob == "maps/layer/layer_Oct2026.pmtiles"
     assert config.layer_name == "layer"
+    assert config.tippecanoe_options == ["-r1"]
 
 
 @pytest.mark.parametrize("method", ["update_mangroves_tileset", "update_seagrasses_tileset"])
@@ -480,13 +485,29 @@ def test_marine_habitat_tileset_is_unknown_for_unconfigured_habitat():
         )
 
 
-def read_marine_habitat(gdf, monkeypatch):
+def mock_unep_points(monkeypatch, points, crs="EPSG:4326"):
+    """Stand in for the point shapefile inside a UNEP-WCMC zip."""
+    reads = []
+
+    def mock_load_zipped_shapefile_from_gcs(file_name, bucket, internal_shapefile_path):
+        reads.append((file_name, bucket, internal_shapefile_path))
+        return gpd.GeoDataFrame({"REP_AREA_K": [1.0] * len(points)}, geometry=points, crs=crs)
+
+    monkeypatch.setattr(
+        vtp, "_find_unep_layer_paths", lambda bucket, file_name: ("pt.shp", "py.shp")
+    )
+    monkeypatch.setattr(vtp, "load_zipped_shapefile_from_gcs", mock_load_zipped_shapefile_from_gcs)
+    return reads
+
+
+def read_marine_habitat(gdf, monkeypatch, habitat="mangroves"):
     monkeypatch.setattr(vtp, "_load_habitat_geometry", lambda *args: gdf, raising=True)
     return tp.read_marine_habitat(
         "bkt",
         "habitat.zip",
-        habitat="seagrasses",
-        params=HABITAT_PARAMS["seagrasses"],
+        layer_name=habitat,
+        habitat=habitat,
+        params=HABITAT_PARAMS[habitat],
         fallback_area_km2=1.0,
         verbose=False,
     )
@@ -509,3 +530,27 @@ def test_read_marine_habitat_simplifies_and_keeps_only_geometry(monkeypatch):
     assert out.crs == "EPSG:4326"
     assert len(out) == 3
     assert out.geometry.is_valid.all()
+
+
+def test_read_marine_habitat_adds_unep_points_layer(monkeypatch):
+    reads = mock_unep_points(
+        monkeypatch,
+        # Points in Web Mercator, one of them a multipoint, and one with no geometry
+        [MultiPoint([(0, 0), (111_320, 0)]), Point(0, 111_325), None],
+        crs="EPSG:3857",
+    )
+    polygons = gpd.GeoDataFrame({"source": ["point"]}, geometry=[box(0, 0, 1, 1)], crs="EPSG:4326")
+
+    out = read_marine_habitat(polygons, monkeypatch, habitat="seagrasses")
+
+    assert list(out) == ["seagrasses", "seagrasses_points"]
+    assert reads == [("habitats/seagrasses.zip", "bkt", "pt.shp")]
+    assert set(out["seagrasses"].columns) == {"geometry"}
+
+    points = out["seagrasses_points"]
+    assert set(points.columns) == {"geometry"}
+    assert points.crs == "EPSG:4326"
+    # The multipoint is exploded and the missing geometry dropped
+    assert list(points.geom_type) == ["Point", "Point", "Point"]
+    assert points.geometry.x.round(3).tolist() == [0.0, 1.0, 0.0]
+    assert points.geometry.y.round(3).tolist() == [0.0, 0.0, 1.0]
