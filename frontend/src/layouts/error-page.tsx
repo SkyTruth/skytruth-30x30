@@ -1,17 +1,17 @@
-import Link from 'next/link';
+import { ReactNode } from 'react';
 
 import { useTranslations } from 'next-intl';
 
 import Head from '@/components/head';
 import Header from '@/components/header';
-import { PAGES } from '@/constants/pages';
+import { EXTERNAL_LINKS } from '@/constants/external-links';
 import { FCWithMessages } from '@/types';
 
 export interface ErrorPageLayoutProps {
   pageTitle?: string;
-  error: 404 | 500;
+  error: 404 | 500 | 503;
   title?: string;
-  description?: string;
+  description?: ReactNode;
 }
 
 const ErrorPageLayout: FCWithMessages<ErrorPageLayoutProps> = ({
@@ -24,7 +24,10 @@ const ErrorPageLayout: FCWithMessages<ErrorPageLayoutProps> = ({
 
   return (
     <>
-      <Head title={pageTitle} description={description} />
+      <Head
+        title={pageTitle}
+        description={typeof description === 'string' ? description : undefined}
+      />
       <div className="flex h-screen w-full flex-col">
         <div className="flex-shrink-0">
           <Header />
@@ -36,12 +39,14 @@ const ErrorPageLayout: FCWithMessages<ErrorPageLayoutProps> = ({
             </h1>
             <h2 className="my-4 mt-4 text-4xl md:mb-8 md:text-5xl">{title}</h2>
             <p>{description}</p>
-            <Link
-              href={PAGES.progressTracker}
+            <a
+              href={EXTERNAL_LINKS.skytruth30x30}
+              target="_blank"
+              rel="noopener noreferrer"
               className="mt-6 inline-block bg-black px-8 py-3 font-mono text-xs uppercase text-white md:mt-4"
             >
               {t('go-to-homepage')}
-            </Link>
+            </a>
           </div>
         </div>
       </div>

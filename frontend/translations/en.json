@@ -16,6 +16,12 @@
       "page-title": "Internal server error",
       "page-description": "Something went wrong. We are working on the problem."
     },
+    "503": {
+      "page-title": "Service unavailable",
+      "page-description": "We're having trouble reaching our servers. Please try again later or reach out to <link>support@skytruth.org</link> for assistance.",
+      "maintenance-page-title": "Planned Maintenance",
+      "maintenance-page-description": "We're currently conducting planned maintenance. Please reach out to <link>support@skytruth.org</link> for assistance in the meantime."
+    },
     "progress-tracker": {},
     "conservation-builder": {}
   },
