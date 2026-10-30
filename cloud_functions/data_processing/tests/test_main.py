@@ -57,6 +57,7 @@ def patched_all(monkeypatch, call_log):
         "generate_total_area_minus_pa",
         "generate_location_minus_fhp_mpa",
         "generate_marine_habitat_minus_pa",
+        "create_and_update_marine_habitat_tileset",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -904,3 +905,24 @@ def test_buffered_iho_pa_intersections_launches_every_habitat_minus_pa_job(patch
     assert [f"generate_{habitat}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS] == [
         method for method in launched if method.endswith("_minus_pa") and "location" not in method
     ]
+
+
+@pytest.mark.parametrize(
+    ("method", "habitat", "layer_name", "output_blob"),
+    [
+        ("update_mangroves_tileset", "mangroves", "mangroves", "mangroves.pmtiles"),
+        ("update_seagrasses_tileset", "seagrasses", "seagrasses", "seagrasses.pmtiles"),
+    ],
+)
+def test_habitat_tileset_methods_publish_their_habitat(
+    patched_all, method, habitat, layer_name, output_blob
+):
+    resp = main.run_from_payload({"METHOD": method})
+
+    assert resp == ("OK", 200)
+    [(name, _, kwargs)] = patched_all
+    assert name == "create_and_update_marine_habitat_tileset"
+    assert kwargs["habitat"] == habitat
+    assert kwargs["layer_name"] == layer_name
+    assert kwargs["output_blob"] == output_blob
+    assert kwargs["method"] == method

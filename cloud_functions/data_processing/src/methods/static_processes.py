@@ -729,6 +729,22 @@ def _load_habitat_geometry(
     return merged
 
 
+def _simplify_habitat_geometry(
+    geometry: gpd.GeoDataFrame,
+    crs,
+    simplify_tolerance: float,
+) -> gpd.GeoDataFrame:
+    """Reproject to crs, explode, simplify, and validate each habitat geometry."""
+    if geometry.crs is not None and geometry.crs != crs:
+        geometry = geometry.to_crs(crs)
+
+    geometry = geometry.explode(index_parts=False, ignore_index=True)
+    geometry["geometry"] = shapely.make_valid(
+        shapely.simplify(geometry.geometry.values, simplify_tolerance)
+    )
+    return geometry[~geometry.geometry.is_empty & geometry.geometry.notna()]
+
+
 def process_marine_habitat_geoms(
     habitats: str | list[str] | None = None,
     habitat_params: dict = HABITAT_PROCESSING_PARAMS,
@@ -802,16 +818,9 @@ def process_marine_habitat_geoms(
         params = habitat_params[habitat]
         geometry = _load_habitat_geometry(habitat, params, bucket, fallback_area_km2, verbose)
 
-        if geometry.crs is not None and geometry.crs != regions.crs:
-            geometry = geometry.to_crs(regions.crs)
-
         if verbose:
             logger.info({"message": f"exploding, simplifying and validating {habitat} geometry"})
-        geometry = geometry.explode(index_parts=False, ignore_index=True)
-        geometry["geometry"] = shapely.make_valid(
-            shapely.simplify(geometry.geometry.values, simplify_tolerance)
-        )
-        geometry = geometry[~geometry.geometry.is_empty & geometry.geometry.notna()]
+        geometry = _simplify_habitat_geometry(geometry, regions.crs, simplify_tolerance)
 
         if verbose:
             logger.info({"message": f"computing global {habitat} area"})

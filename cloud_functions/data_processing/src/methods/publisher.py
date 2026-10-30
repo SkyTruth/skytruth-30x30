@@ -88,6 +88,7 @@ from src.methods.tileset_processes import (
     create_and_update_climate_resilient_coral_tileset,
     create_and_update_country_tileset,
     create_and_update_eez_tileset,
+    create_and_update_marine_habitat_tileset,
     create_and_update_marine_regions_tileset,
     create_and_update_mpatlas_tileset,
     create_and_update_protected_area_tileset,
@@ -692,6 +693,28 @@ def dispatch_publisher(
 
         case "update_climate_resilient_coral_tileset":
             create_and_update_climate_resilient_coral_tileset(
+                verbose=verbose,
+            )
+
+        case "update_mangroves_tileset":
+            create_and_update_marine_habitat_tileset(
+                habitat="mangroves",
+                output_blob=map_params.MANGROVES_TILESET_FILE,
+                archive_blob=map_params.MANGROVES_TILESET_ARCHIVE_FILE,
+                layer_name=map_params.MANGROVES_TILESET_ID,
+                display_name=map_params.MANGROVES_TILESET_NAME,
+                method="update_mangroves_tileset",
+                verbose=verbose,
+            )
+
+        case "update_seagrasses_tileset":
+            create_and_update_marine_habitat_tileset(
+                habitat="seagrasses",
+                output_blob=map_params.SEAGRASSES_TILESET_FILE,
+                archive_blob=map_params.SEAGRASSES_TILESET_ARCHIVE_FILE,
+                layer_name=map_params.SEAGRASSES_TILESET_ID,
+                display_name=map_params.SEAGRASSES_TILESET_NAME,
+                method="update_seagrasses_tileset",
                 verbose=verbose,
             )
 

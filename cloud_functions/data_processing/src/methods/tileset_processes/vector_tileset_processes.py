@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Any
 
 import geopandas as gpd
@@ -29,14 +30,21 @@ from src.core.params import (
     EEZ_MULTIPLE_SOV_FILE_NAME,
     GADM_FILE_NAME,
     LOCATIONS_TRANSLATED_FILE_NAME,
+    MARINE_HABITAT_PARAMS,
     MPATLAS_FILE_NAME,
     REGIONS_FILE_NAME,
     RELATED_COUNTRIES_FILE_NAME,
     TOLERANCE,
+    UNEP_POINT_AREA_KM2,
 )
 from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
-from src.utils.gcp import read_dataframe, read_json_from_gcs
+from src.methods.static_processes import (
+    _find_unep_layer_paths,
+    _load_habitat_geometry,
+    _simplify_habitat_geometry,
+)
+from src.utils.gcp import load_zipped_shapefile_from_gcs, read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
 from src.utils.tileset_pipelines.vector_pmtiles_pipeline import (
     VectorPMTilesetConfig,
@@ -445,3 +453,101 @@ def protected_area_process(gdf: gpd.GeoDataFrame, ctx: dict[str, Any]):
     gdf.drop(columns=list(set(gdf.columns) - set(properties)), inplace=True)
 
     return gdf
+
+
+def create_and_update_marine_habitat_tileset(
+    habitat: str,
+    output_blob: str,
+    archive_blob: str,
+    layer_name: str,
+    display_name: str,
+    method: str,
+    habitat_params: dict = MARINE_HABITAT_PARAMS,
+    fallback_area_km2: float = UNEP_POINT_AREA_KM2,
+    source_bucket: str = BUCKET,
+    output_bucket: str = PMTILES_BUCKET,
+    archive_bucket: str = BUCKET,
+    verbose: bool = False,
+    *,
+    keep_temp: bool = False,
+):
+    """Publish one marine habitat's downloaded source extent as vector PMTiles."""
+    try:
+        if verbose:
+            logger.info({"message": f"Creating and updating {display_name} tileset..."})
+
+        params = habitat_params[habitat]
+
+        config = VectorPMTilesetConfig(
+            source_bucket=source_bucket,
+            source_file=params["file_name"],
+            output_bucket=output_bucket,
+            output_blob=output_blob,
+            archive_bucket=archive_bucket,
+            archive_blob=archive_blob,
+            layer_name=layer_name,
+            display_name=display_name,
+            verbose=verbose,
+            keep_temp=keep_temp,
+            # Use -r1 to keep points at every zoom
+            tippecanoe_options=["-r1"],
+        )
+
+        return run_vector_pmtiles_pipeline(
+            config,
+            read_source=partial(
+                read_marine_habitat,
+                layer_name=layer_name,
+                habitat=habitat,
+                params=params,
+                fallback_area_km2=fallback_area_km2,
+                verbose=verbose,
+            ),
+        )
+    except Exception as e:
+        logger.error(
+            {
+                "message": f"Error creating and updating {display_name} tileset",
+                "error": str(e),
+            }
+        )
+        retry_cfg = METHOD_RETRY_CONFIGS.get(method)
+        if retry_cfg:
+            raise ScheduleRetry(
+                delay_seconds=retry_cfg["delay_seconds"],
+                max_retries=retry_cfg["max_retries"],
+                message=f"{display_name} tileset update failed: {e}",
+            ) from e
+        raise
+
+
+def read_marine_habitat(
+    bucket: str,
+    source_file: str,
+    *,
+    layer_name: str,
+    habitat: str,
+    params: dict,
+    fallback_area_km2: float,
+    verbose: bool,
+) -> gpd.GeoDataFrame | dict[str, gpd.GeoDataFrame]:
+    """Read a marine habitat source (same as habitat statistics),
+    including UNEP-WCMC point records buffered into circles.
+
+    A UNEP-WCMC source also gets a {layer_name}_points layer of the point records'
+    locations, since their buffered circles are too small to see when zoomed out.
+    """
+    gdf = _load_habitat_geometry(habitat, params, bucket, fallback_area_km2, verbose)
+    gdf = _simplify_habitat_geometry(gdf, "EPSG:4326", TOLERANCE)
+    polygons = gdf[["geometry"]]
+
+    if params["source"] != "wcmc":
+        return polygons
+
+    file_name = params["file_name"]
+    point_layer, _ = _find_unep_layer_paths(bucket, file_name)
+    points = load_zipped_shapefile_from_gcs(file_name, bucket, internal_shapefile_path=point_layer)
+    points = points.to_crs("EPSG:4326").explode(index_parts=False, ignore_index=True)
+    points = points[points.geometry.notna() & ~points.geometry.is_empty]
+
+    return {layer_name: polygons, f"{layer_name}_points": points[["geometry"]]}

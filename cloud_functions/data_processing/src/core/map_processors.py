@@ -14,14 +14,20 @@ logger = Logger()
 
 
 def generate_vector_tiles(
-    input_file: str,
+    input_file: str | list[str],
     output_file: str,
     verbose: bool = False,
+    options: list[str] | None = None,
 ) -> None:
     """
-    Generate a vector tileset from a geometry file. Tippecanoe picks the format
-    from the output extension: .mbtiles or .pmtiles.
+    Generate a vector tileset from one or more geometry files. Tippecanoe picks the format
+    from the output extension: .mbtiles or .pmtiles, and names each tile layer after its
+    input file. Extra tippecanoe flags can be added via options.
     """
+    if isinstance(input_file, list):
+        input_file = " ".join(input_file)
+    extra_options = "".join(f"{option} " for option in options or [])
+
     try:
         if verbose:
             logger.info({"message": f"Creating vector tiles from {input_file}..."})
@@ -33,7 +39,7 @@ def generate_vector_tiles(
         # -o: The following argurment is the output path
         # -ae:  Increase the maxzoom if features are still being dropped at that zoom level
         subprocess.run(
-            f"tippecanoe -zg -f -P -o {output_file} -ae {input_file}",
+            f"tippecanoe -zg -f -P {extra_options}-o {output_file} -ae {input_file}",
             shell=True,
             check=True,
         )
