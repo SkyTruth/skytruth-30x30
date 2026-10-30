@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import src.methods.generate_tables as gen_tables
+import src.methods.generate_tables.fishing_protection as gen_tables
 
 # ---------------------------------------------------------------------------
 # Fixtures
