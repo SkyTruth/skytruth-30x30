@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 import { useTranslations } from 'next-intl';
 
 import Head from '@/components/head';
@@ -7,9 +9,9 @@ import { FCWithMessages } from '@/types';
 
 export interface ErrorPageLayoutProps {
   pageTitle?: string;
-  error: 404 | 500;
+  error: 404 | 500 | 503;
   title?: string;
-  description?: string;
+  description?: ReactNode;
 }
 
 const ErrorPageLayout: FCWithMessages<ErrorPageLayoutProps> = ({
@@ -22,7 +24,10 @@ const ErrorPageLayout: FCWithMessages<ErrorPageLayoutProps> = ({
 
   return (
     <>
-      <Head title={pageTitle} description={description} />
+      <Head
+        title={pageTitle}
+        description={typeof description === 'string' ? description : undefined}
+      />
       <div className="flex h-screen w-full flex-col">
         <div className="flex-shrink-0">
           <Header />

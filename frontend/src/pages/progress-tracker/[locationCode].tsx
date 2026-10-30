@@ -7,6 +7,7 @@ import { PAGES } from '@/constants/pages';
 import MapLayout from '@/layouts/map';
 import { fetchTranslations } from '@/lib/i18n';
 import mapParamsToSearchParams from '@/lib/mapparams-to-searchparams';
+import { getServiceUnavailableProps, isBackendDown } from '@/lib/service-unavailable';
 import { FCWithMessages } from '@/types';
 import { getGetLocationsQueryKey, getGetLocationsQueryOptions } from '@/types/generated/location';
 import { LocationListResponse } from '@/types/generated/strapi.schemas';
@@ -55,23 +56,23 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
   const queryClient = new QueryClient();
 
+  const locationsParams = {
+    locale: context.locale,
+    filters: {
+      code: locationCode,
+    },
+  };
+
   await queryClient.prefetchQuery({
-    ...getGetLocationsQueryOptions({
-      locale: context.locale,
-      filters: {
-        code: locationCode,
-      },
-    }),
+    ...getGetLocationsQueryOptions(locationsParams),
   });
 
-  const locationsData = queryClient.getQueryData<LocationListResponse>(
-    getGetLocationsQueryKey({
-      locale: context.locale,
-      filters: {
-        code: locationCode,
-      },
-    })
-  );
+  const locationsKey = getGetLocationsQueryKey(locationsParams);
+  const locationsData = queryClient.getQueryData<LocationListResponse>(locationsKey);
+
+  if (isBackendDown(queryClient.getQueryState(locationsKey)?.error)) {
+    return getServiceUnavailableProps(context);
+  }
 
   if (!locationsData || !locationsData.data) return { notFound: true };
 
