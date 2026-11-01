@@ -112,12 +112,8 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
           as: href,
         }),
         colorClassName: colorClassName,
-        // Clicking the link for the current page does nothing, except Ctrl/Cmd-click to open a new tab
-        onClick: pathname.startsWith(href)
-          ? (e) => {
-              if (!e.ctrlKey && !e.metaKey) e.preventDefault();
-            }
-          : undefined,
+        // Clicking the link for the current page does nothing
+        onNavigate: pathname.startsWith(href) ? (e) => e.preventDefault() : undefined,
       };
     });
   }, [
@@ -169,12 +165,12 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
                   <div className="mt-6 flow-root">
                     <div className="-my-6 divide-y divide-gray-500/10">
                       <div className="space-y-2 py-6 font-mono text-sm">
-                        {navigationEntries.map(({ name, href, as, colorClassName, onClick }) => (
+                        {navigationEntries.map(({ name, href, as, colorClassName, onNavigate }) => (
                           <ActiveLink
                             key={name}
                             href={href}
                             as={as}
-                            onClick={onClick}
+                            onNavigate={onNavigate}
                             className={cn(
                               'group -mx-3 block px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                               buttonVariants({ theme })
@@ -205,12 +201,12 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         </div>
 
         <ul className="hidden md:flex md:gap-x-10">
-          {navigationEntries.map(({ name, href, as, colorClassName, onClick }) => (
+          {navigationEntries.map(({ name, href, as, colorClassName, onNavigate }) => (
             <li key={name}>
               <ActiveLink
                 href={href}
                 as={as}
-                onClick={onClick}
+                onNavigate={onNavigate}
                 className="group -mx-3 flex px-3 py-2 ring-offset-white transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                 activeClassName="bg-white text-black hover:bg-white is-active"
               >
