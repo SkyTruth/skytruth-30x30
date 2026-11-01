@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { useRouter } from 'next/router';
+
 import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 
@@ -52,14 +54,15 @@ function useDefaultLayersForTab() {
   return { defaultLayerSlugs, getDefaultLayersForTab, hasLoadedDatasets };
 }
 
-// Sets the current tab's default layers on page load, if the URL has no layers
+// Sets the current tab's default layers on page load, if the URL has no layers param
 export default function useMapDefaultLayers() {
-  const [mapLayers, setMapLayers] = useSyncMapLayers();
+  const [, setMapLayers] = useSyncMapLayers();
   const [{ tab }] = useSyncMapContentSettings();
+  const { query } = useRouter();
 
   const { defaultLayerSlugs, getDefaultLayersForTab, hasLoadedDatasets } = useDefaultLayersForTab();
 
-  const initialMapLayersRef = useRef(mapLayers);
+  const hasInitialLayersParamRef = useRef(query.layers !== undefined);
   const hasSetInitialDefaultsRef = useRef(false);
 
   useEffect(() => {
@@ -68,7 +71,7 @@ export default function useMapDefaultLayers() {
 
     hasSetInitialDefaultsRef.current = true;
 
-    if (initialMapLayersRef.current.length > 0) return;
+    if (hasInitialLayersParamRef.current) return;
 
     setMapLayers(getDefaultLayersForTab(tab));
     // eslint-disable-next-line react-hooks/exhaustive-deps
