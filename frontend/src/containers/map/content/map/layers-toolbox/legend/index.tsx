@@ -236,11 +236,7 @@ const Legend: FCWithMessages = () => {
   );
 
   const legendItems = useMemo(() => {
-    if (!layersQuery.data?.length) {
-      return null;
-    }
-
-    return allActiveLayers.map((slug) => {
+    const items = allActiveLayers.map((slug) => {
       let opacity = 1;
       let color: string | undefined;
       let isVisible = true;
@@ -249,8 +245,8 @@ const Legend: FCWithMessages = () => {
       let legend_config: LegendLegendComponent;
       let params_config;
 
-      if (!customLayers[slug] && layersQuery.data?.length) {
-        const layer = layersQuery.data.filter((layer) => layer.slug === slug)[0];
+      if (!customLayers[slug]) {
+        const layer = layersQuery.data?.find((layer) => layer.slug === slug);
 
         if (!layer) return null;
 
@@ -308,6 +304,8 @@ const Legend: FCWithMessages = () => {
         />
       );
     });
+
+    return items.filter(Boolean);
   }, [
     allActiveLayers,
     customLayers,
@@ -323,7 +321,7 @@ const Legend: FCWithMessages = () => {
 
   return (
     <div ref={legendContainerRef} className="select-none py-2 pl-2 pr-4">
-      {!layersQuery.data?.length && (
+      {!legendItems.length && (
         <p>
           {t.rich('open-layers-to-add-to-map', {
             b: (chunks) => <span className="text-sm font-black uppercase">{chunks}</span>,
