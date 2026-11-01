@@ -1,22 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { usePreviousImmediate } from 'rooks';
-
 import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 
 import useDatasetsByEnvironment from './use-datasets-by-environment';
 
-export default function useMapDefaultLayers() {
-  const [mapLayers, setMapLayers] = useSyncMapLayers();
-  const [{ tab }] = useSyncMapContentSettings();
-
-  const previousTab = usePreviousImmediate(tab);
-
+function useDefaultLayersForTab() {
   const [datasets] = useDatasetsByEnvironment();
-
-  const initialMapLayersRef = useRef(mapLayers);
-  const hasSetInitialDefaultsRef = useRef(false);
 
   const defaultLayerSlugs = useMemo(() => {
     const datasetsDefaultLayerIds = (datasets = []) => {
@@ -57,34 +47,48 @@ export default function useMapDefaultLayers() {
     [defaultLayerSlugs]
   );
 
-  // Initial page load set for default map layers. Only fires if the layers query param is
-  // empty or missing
+  const hasLoadedDatasets = datasets.terrestrial !== undefined || datasets.marine !== undefined;
+
+  return { defaultLayerSlugs, getDefaultLayersForTab, hasLoadedDatasets };
+}
+
+// Sets the current tab's default layers on page load, if the URL has no layers
+export default function useMapDefaultLayers() {
+  const [mapLayers, setMapLayers] = useSyncMapLayers();
+  const [{ tab }] = useSyncMapContentSettings();
+
+  const { defaultLayerSlugs, getDefaultLayersForTab, hasLoadedDatasets } = useDefaultLayersForTab();
+
+  const initialMapLayersRef = useRef(mapLayers);
+  const hasSetInitialDefaultsRef = useRef(false);
+
   useEffect(() => {
     if (hasSetInitialDefaultsRef.current) return;
-    if (datasets.terrestrial === undefined && datasets.marine === undefined) {
-      return; // datasets not yet loaded
-    }
+    if (!hasLoadedDatasets) return;
 
     hasSetInitialDefaultsRef.current = true;
 
-    if (initialMapLayersRef.current.length > 0) {
-      // URL already had layers when the page loaded — respect the user's state.
-      return;
-    }
+    if (initialMapLayersRef.current.length > 0) return;
 
     setMapLayers(getDefaultLayersForTab(tab));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultLayerSlugs]);
-  // Intentionally excludes `tab` since this is to catch only the initial map load
-  // and Conservation builder forces tab to a new state often while data is fetching
+}
 
-  // Sets default map layers on tab switch, only runs after above initial set-up has run
-  useEffect(() => {
-    if (!hasSetInitialDefaultsRef.current) return;
+// Returns a callback that switches the tab and sets that tab's default layers in one URL update
+export function useChangeMapTab() {
+  const [, setMapLayers] = useSyncMapLayers();
+  const [{ tab: currentTab }, setSettings] = useSyncMapContentSettings();
 
-    if (tab !== previousTab && !!previousTab) {
-      const mapLayers = getDefaultLayersForTab(tab);
-      setMapLayers(mapLayers);
-    }
-  }, [tab, previousTab, defaultLayerSlugs, setMapLayers, getDefaultLayersForTab]);
+  const { getDefaultLayersForTab } = useDefaultLayersForTab();
+
+  return useCallback(
+    (tab: string) => {
+      if (tab === currentTab) return;
+
+      setSettings((prevSettings) => ({ ...prevSettings, tab }));
+      setMapLayers(getDefaultLayersForTab(tab));
+    },
+    [currentTab, setSettings, setMapLayers, getDefaultLayersForTab]
+  );
 }
