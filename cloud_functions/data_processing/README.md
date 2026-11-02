@@ -6,6 +6,10 @@ The purpose of this Cloud Function is to download, store, process, and update th
 
 For architecture, data sources and the high-level data update plan, please see the [internal documentation][documentation].
 
+## National Targets
+
+The marine and terrestrial conservation targets shown for each location come from a hand review of Convention on Biological Diversity reports, which produced the national targets CSV in the bucket. Targets the review was not confident in, and targets with no date to reach them by, are discarded. The global target is not a national commitment, so it is set from the Kunming-Montreal Global Biodiversity Framework.
+
 ## Development
 
 This project is managed using [Poetry][poetry]. Install Poetry and then run `poetry install` from this directory to install dependencies.

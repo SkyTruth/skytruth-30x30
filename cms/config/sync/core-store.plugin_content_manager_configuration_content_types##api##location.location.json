@@ -9,7 +9,8 @@
       "pageSize": 10,
       "mainField": "code",
       "defaultSortBy": "code",
-      "defaultSortOrder": "ASC"
+      "defaultSortOrder": "ASC",
+      "relationOpenMode": "modal"
     },
     "metadatas": {
       "id": {
@@ -249,6 +250,48 @@
           "sortable": true
         }
       },
+      "terrestrial_target": {
+        "edit": {
+          "label": "terrestrial_target",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "terrestrial_target",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "terrestrial_target_year": {
+        "edit": {
+          "label": "terrestrial_target_year",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "terrestrial_target_year",
+          "searchable": true,
+          "sortable": true
+        }
+      },
+      "ort_record": {
+        "edit": {
+          "label": "ort_record",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "ort_record",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "pas": {
         "edit": {
           "label": "pas",
@@ -391,15 +434,15 @@
           {
             "name": "name_fr",
             "size": 6
+          },
+          {
+            "name": "name_pt",
+            "size": 6
           }
         ],
         [
           {
             "name": "groups",
-            "size": 6
-          },
-          {
-            "name": "members",
             "size": 6
           }
         ],
@@ -409,13 +452,17 @@
             "size": 6
           },
           {
-            "name": "fishing_protection_level_stats",
+            "name": "members",
             "size": 6
           }
         ],
         [
           {
             "name": "mpaa_protection_level_stats",
+            "size": 6
+          },
+          {
+            "name": "fishing_protection_level_stats",
             "size": 6
           }
         ],
@@ -457,14 +504,24 @@
             "size": 6
           },
           {
-            "name": "name_pt",
-            "size": 6
+            "name": "has_shared_marine_area",
+            "size": 4
           }
         ],
         [
           {
-            "name": "has_shared_marine_area",
+            "name": "terrestrial_target",
             "size": 4
+          },
+          {
+            "name": "terrestrial_target_year",
+            "size": 4
+          }
+        ],
+        [
+          {
+            "name": "ort_record",
+            "size": 6
           }
         ]
       ]

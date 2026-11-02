@@ -3,7 +3,7 @@ import inspect
 import pandas as pd
 import pytest
 
-import src.methods.generate_tables as gen_tables
+import src.methods.generate_tables.marine_protection_level as gen_tables
 
 # ---------------------------------------------------------------------------
 # Fixtures

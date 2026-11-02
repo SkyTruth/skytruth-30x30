@@ -78,8 +78,8 @@ const StackedHorizontalBarChart: FCWithMessages<StackedHorizontalBarChartProps> 
           />
         ))}
         {showTarget && (
-          <span className="absolute bottom-0 left-[30%] top-0 w-1 border-x border-white bg-orange">
-            <span className="absolute left-0 top-5 whitespace-nowrap text-xs text-orange">
+          <span className="absolute bottom-0 left-[30%] top-0 w-1 border-x border-white bg-orange-700">
+            <span className="absolute left-0 top-5 whitespace-nowrap text-xs text-orange-700">
               {t('30%-target')}
             </span>
           </span>

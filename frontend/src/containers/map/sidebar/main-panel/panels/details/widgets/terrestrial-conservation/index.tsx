@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import ConservationChart from '@/components/charts/conservation-chart';
+import ChartLegend from '@/components/charts/conservation-chart/legend';
 import { Button } from '@/components/ui/button';
 import Widget from '@/components/widget';
 import { CUSTOM_REGION_CODE } from '@/containers/map/constants';
@@ -19,6 +20,7 @@ import type {
 } from '@/types/generated/strapi.schemas';
 
 import MissingCountriesList from '../widget-alerts/MissingCountriesList';
+import NoTargetNote from '../widget-alerts/NoTargetNote';
 
 type TerrestrialConservationWidgetProps = {
   location: LocationGroupsItem;
@@ -149,6 +151,19 @@ const TerrestrialConservationWidget: FCWithMessages<TerrestrialConservationWidge
           </span>
         </div>
       )}
+      {location.terrestrial_target ? (
+        <ChartLegend
+          className="ml-0"
+          displayTarget
+          displayTargetLine={false}
+          target={location.terrestrial_target}
+          targetYear={location.terrestrial_target_year}
+          ortRecord={location.ort_record}
+          tooltipSlug="30x30-terrestrial-target"
+        />
+      ) : (
+        <NoTargetNote environment="terrestrial" location={location} />
+      )}
       {tab !== 'terrestrial' && (
         <Button
           variant="white"
@@ -170,6 +185,7 @@ TerrestrialConservationWidget.messages = [
   'containers.map-sidebar-main-panel',
   ...Widget.messages,
   ...ConservationChart.messages,
+  ...NoTargetNote.messages,
 ];
 
 export default TerrestrialConservationWidget;
