@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-import src.methods.generate_tables as generate_tables
+import src.methods.generate_tables.protection_coverage_table as generate_tables
 
 
 @pytest.fixture
