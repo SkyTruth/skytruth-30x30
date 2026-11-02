@@ -2,7 +2,7 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import box
 
-import src.methods.generate_tables as generate_tables
+import src.methods.generate_tables.fishing_protection as generate_tables
 
 
 def _run_iho_fishing_stats(monkeypatch, iho, sites):

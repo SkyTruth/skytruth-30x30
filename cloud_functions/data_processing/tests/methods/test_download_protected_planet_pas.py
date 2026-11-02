@@ -6,8 +6,8 @@ import pytest
 import shapely
 from shapely.geometry import Point
 
-from src.methods import download_and_process
-from src.methods.download_and_process import download_and_process_protected_planet_pas
+from src.methods.download_and_process import wdpa, wdpa_geometries, wdpa_unpack
+from src.methods.download_and_process.wdpa import download_and_process_protected_planet_pas
 
 # Deliberately not the production value - a coarse tolerance makes the filename
 # suffix unambiguous and the simplification effect measurable.
@@ -103,18 +103,17 @@ def pa_job_recorder(monkeypatch):
     def _upload_file_to_gcs(bucket, file_name, blob_name, **kwargs):
         calls["files"].append(blob_name)
 
-    monkeypatch.setattr(
-        download_and_process, "download_file_with_progress", _download_file_with_progress
-    )
-    monkeypatch.setattr(download_and_process, "upload_gdf", _upload_gdf)
-    monkeypatch.setattr(download_and_process, "upload_dataframe", _upload_dataframe)
-    monkeypatch.setattr(download_and_process, "duplicate_blob", _duplicate_blob)
-    monkeypatch.setattr(download_and_process, "upload_file_to_gcs", _upload_file_to_gcs)
+    monkeypatch.setattr(wdpa, "download_file_with_progress", _download_file_with_progress)
+    monkeypatch.setattr(wdpa, "upload_gdf", _upload_gdf)
+    monkeypatch.setattr(wdpa, "upload_dataframe", _upload_dataframe)
+    monkeypatch.setattr(wdpa, "duplicate_blob", _duplicate_blob)
+    monkeypatch.setattr(wdpa, "upload_file_to_gcs", _upload_file_to_gcs)
     # No-op so the fixture parquets in PA_DIR survive the (real) unpack step,
     # which then finds no *.zip and does nothing.
-    monkeypatch.setattr(download_and_process, "unzip_file", lambda *a, **k: None)
-    monkeypatch.setattr(download_and_process, "Parallel", _SerialParallel)
-    monkeypatch.setattr(download_and_process, "show_container_mem", lambda *a, **k: None)
+    monkeypatch.setattr(wdpa, "unzip_file", lambda *a, **k: None)
+    monkeypatch.setattr(wdpa_geometries, "Parallel", _SerialParallel)
+    monkeypatch.setattr(wdpa, "show_container_mem", lambda *a, **k: None)
+    monkeypatch.setattr(wdpa_unpack, "show_container_mem", lambda *a, **k: None)
 
     return calls
 

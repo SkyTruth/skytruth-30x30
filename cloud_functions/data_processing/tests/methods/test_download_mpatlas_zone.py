@@ -2,8 +2,8 @@ import copy
 import json
 from unittest.mock import patch
 
-import src.methods.download_and_process as download
-from src.methods.download_and_process import normalize_mpatlas_geojson
+import src.methods.download_and_process.mpatlas as download
+from src.methods.download_and_process.mpatlas import normalize_mpatlas_geojson
 
 
 def properties_by_zone(data):
@@ -136,8 +136,8 @@ def test_download_mpatlas_produces_internal_meta_schema(monkeypatch, mock_mpatla
     assert by_zone.loc[4823, "protection_mpaguide_level"] == "full"
 
 
-@patch("src.methods.download_and_process.save_file_bucket")
-@patch("src.methods.download_and_process.requests.get")
+@patch("src.methods.download_and_process.mpatlas.save_file_bucket")
+@patch("src.methods.download_and_process.mpatlas.requests.get")
 def test_download_archives_raw_and_saves_normalized(mock_get, mock_save, mock_mpatlas_v4_geojson):
     raw_bytes = json.dumps(mock_mpatlas_v4_geojson).encode("utf-8")
     mock_get.return_value.content = raw_bytes

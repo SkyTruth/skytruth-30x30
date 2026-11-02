@@ -39,10 +39,10 @@ from src.core.params import (
 )
 from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
-from src.methods.static_processes import (
+from src.methods.static_processes.marine_habitat_geoms import _simplify_habitat_geometry
+from src.methods.static_processes.marine_habitat_sources import (
     _find_unep_layer_paths,
     _load_habitat_geometry,
-    _simplify_habitat_geometry,
 )
 from src.utils.gcp import load_zipped_shapefile_from_gcs, read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
