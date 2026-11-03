@@ -18,6 +18,7 @@ from src.core.params import (
     CHUNK_SIZE,
     CLIMATE_RES_CORAL_SOURCE_FILE,
     CLIMATE_RESILIENT_CORALS_HABITATS,
+    CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
@@ -451,7 +452,7 @@ def dispatch_publisher(
             step_list = [
                 "generate_mangroves_minus_pa",
                 "generate_seamounts_minus_pa",
-                "generate_coldwatercorals_minus_pa",
+                "generate_cold_water_corals_minus_pa",
                 "generate_saltmarshes_minus_pa",
                 "generate_seagrasses_minus_pa",
             ]
@@ -546,30 +547,35 @@ def dispatch_publisher(
                 n_jobs=2,
                 verbose=verbose,
             )
+            step_list = ["update_mangroves_minus_pa"]
 
         case "generate_seamounts_minus_pa":
             generate_marine_habitat_minus_pa(
                 habitat="seamounts",
                 verbose=verbose,
             )
+            step_list = ["update_seamounts_minus_pa"]
 
-        case "generate_coldwatercorals_minus_pa":
+        case "generate_cold_water_corals_minus_pa":
             generate_marine_habitat_minus_pa(
-                habitat="coldwatercorals",
+                habitat="cold-water-corals",
                 verbose=verbose,
             )
+            step_list = ["update_cold_water_corals_minus_pa"]
 
         case "generate_saltmarshes_minus_pa":
             generate_marine_habitat_minus_pa(
                 habitat="saltmarshes",
                 verbose=verbose,
             )
+            step_list = ["update_saltmarshes_minus_pa"]
 
         case "generate_seagrasses_minus_pa":
             generate_marine_habitat_minus_pa(
                 habitat="seagrasses",
                 verbose=verbose,
             )
+            step_list = ["update_seagrasses_minus_pa"]
 
         case "generate_climate_resilient_corals_minus_pa":
             generate_raster_habitat_minus_pa(
@@ -580,6 +586,7 @@ def dispatch_publisher(
                 n_jobs=-1,
                 verbose=verbose,
             )
+            step_list = ["update_climate_resilient_corals_minus_pa"]
 
         # ------------------
         #   Database updates
@@ -644,6 +651,52 @@ def dispatch_publisher(
                 gcs_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 verbose=verbose,
             )
+
+        case "update_mangroves_minus_pa":
+            update_cb(
+                table_name="mangroves_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="mangroves"),
+                verbose=verbose,
+            )
+
+        case "update_seamounts_minus_pa":
+            update_cb(
+                table_name="seamounts_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="seamounts"),
+                verbose=verbose,
+            )
+
+        case "update_cold_water_corals_minus_pa":
+            update_cb(
+                table_name="cold_water_corals_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(
+                    habitat="cold-water-corals"
+                ),
+                verbose=verbose,
+            )
+
+        case "update_saltmarshes_minus_pa":
+            update_cb(
+                table_name="saltmarshes_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="saltmarshes"),
+                verbose=verbose,
+            )
+
+        case "update_seagrasses_minus_pa":
+            update_cb(
+                table_name="seagrasses_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="seagrasses"),
+                verbose=verbose,
+            )
+
+        case "update_climate_resilient_corals_minus_pa":
+            # One table per raster class
+            for habitat in CLIMATE_RESILIENT_CORALS_HABITATS:
+                update_cb(
+                    table_name=f"{habitat.replace('-', '_')}_minus_pa",
+                    gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat),
+                    verbose=verbose,
+                )
 
         # ------------------
         #   Map Tilesets Updates
