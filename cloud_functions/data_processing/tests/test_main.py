@@ -903,6 +903,6 @@ def test_buffered_iho_pa_intersections_launches_every_habitat_minus_pa_job(patch
 
     assert [
         f"generate_{habitat.replace('-', '_')}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS
-    ] == [
+    ] + ["generate_climate_resilient_corals_minus_pa"] == [
         method for method in launched if method.endswith("_minus_pa") and "location" not in method
     ]

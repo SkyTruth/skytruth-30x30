@@ -455,6 +455,7 @@ def dispatch_publisher(
                 "generate_cold_water_corals_minus_pa",
                 "generate_saltmarshes_minus_pa",
                 "generate_seagrasses_minus_pa",
+                "generate_climate_resilient_corals_minus_pa",
             ]
 
         # ------------------
