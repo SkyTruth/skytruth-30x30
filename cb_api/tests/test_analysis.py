@@ -57,11 +57,7 @@ def test_malformed_wrappers_are_rejected(geojson):
 
 
 def test_no_rows_produces_a_zeroed_response():
-    assert serialize_response([]) == {
-        "locations_area": [],
-        "total_area": 0,
-        "total_protected_area": 0,
-    }
+    assert serialize_response([]) == {"locations_area": [], "total_area": 0}
 
 
 def test_single_row_reports_the_user_area_and_one_location():
@@ -69,8 +65,7 @@ def test_single_row_reports_the_user_area_and_one_location():
         [{"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100}]
     ) == {
         "total_area": 100,
-        "locations_area": [{"code": "ESP", "protected_area": 30}],
-        "total_protected_area": 30,
+        "locations_area": [{"code": "ESP", "added_area": 30}],
     }
 
 
@@ -83,10 +78,9 @@ def test_distinct_locations_are_listed_separately():
     )
 
     assert result["locations_area"] == [
-        {"code": "ESP", "protected_area": 30},
-        {"code": "PRT", "protected_area": 20},
+        {"code": "ESP", "added_area": 30},
+        {"code": "PRT", "added_area": 20},
     ]
-    assert result["total_protected_area"] == 50
 
 
 def test_repeated_locations_accumulate():
@@ -97,12 +91,11 @@ def test_repeated_locations_accumulate():
         ]
     )
 
-    assert result["locations_area"] == [{"code": "ESP", "protected_area": 50}]
-    assert result["total_protected_area"] == 50
+    assert result["locations_area"] == [{"code": "ESP", "added_area": 50}]
 
 
 def test_rows_without_a_location_contribute_nothing():
-    """A null location is skipped entirely — it adds no entry *and* no protected area."""
+    """A null location is skipped entirely: it adds no entry and no area."""
     result = serialize_response(
         [
             {"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100},
@@ -110,8 +103,7 @@ def test_rows_without_a_location_contribute_nothing():
         ]
     )
 
-    assert result["locations_area"] == [{"code": "ESP", "protected_area": 30}]
-    assert result["total_protected_area"] == 30
+    assert result["locations_area"] == [{"code": "ESP", "added_area": 30}]
     assert result["total_area"] == 100
 
 

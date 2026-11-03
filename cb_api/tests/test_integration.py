@@ -34,7 +34,7 @@ def box(min_lon: float, min_lat: float, max_lon: float, max_lat: float) -> dict:
 
 
 def by_code(result: dict) -> dict[str, float]:
-    return {area["code"]: area["protected_area"] for area in result["locations_area"]}
+    return {area["code"]: area["added_area"] for area in result["locations_area"]}
 
 
 def test_areas_are_square_kilometers(analysis_tables: Engine):
@@ -53,17 +53,11 @@ def test_rows_sharing_a_location_are_summed_by_the_query(analysis_tables: Engine
     assert areas["AAA"] == 2 * areas["BBB"]
 
 
-def test_total_protected_area_is_the_sum_of_the_locations(analysis_tables: Engine):
+def test_an_area_the_table_covers_completely_is_all_added_area(analysis_tables: Engine):
+    """The boxes tile the request exactly, so the locations should add up to the drawn area."""
     result = get_locations_stats(analysis_tables, box(0, 0, 3, 1), AnalysisTable.MARINE)
 
-    assert result["total_protected_area"] == sum(by_code(result).values())
-
-
-def test_a_fully_covered_area_is_entirely_protected(analysis_tables: Engine):
-    """The boxes tile the request exactly, so protected and total should agree."""
-    result = get_locations_stats(analysis_tables, box(0, 0, 3, 1), AnalysisTable.MARINE)
-
-    assert result["total_protected_area"] == pytest.approx(result["total_area"], abs=2)
+    assert sum(by_code(result).values()) == pytest.approx(result["total_area"], abs=2)
 
 
 def test_only_the_overlapping_part_is_counted(analysis_tables: Engine):
@@ -71,15 +65,15 @@ def test_only_the_overlapping_part_is_counted(analysis_tables: Engine):
     whole = get_locations_stats(analysis_tables, box(0, 0, 1, 1), AnalysisTable.MARINE)
     half = get_locations_stats(analysis_tables, box(0, 0, 0.5, 1), AnalysisTable.MARINE)
 
-    assert half["locations_area"][0]["protected_area"] == pytest.approx(
-        whole["locations_area"][0]["protected_area"] / 2, rel=0.01
+    assert half["locations_area"][0]["added_area"] == pytest.approx(
+        whole["locations_area"][0]["added_area"] / 2, rel=0.01
     )
 
 
 def test_an_area_touching_nothing_comes_back_empty(analysis_tables: Engine):
     result = get_locations_stats(analysis_tables, box(50, 50, 51, 51), AnalysisTable.MARINE)
 
-    assert result == {"locations_area": [], "total_area": 0, "total_protected_area": 0}
+    assert result == {"locations_area": [], "total_area": 0}
 
 
 @pytest.mark.parametrize("table", list(AnalysisTable))
@@ -87,7 +81,7 @@ def test_every_table_in_the_enum_exists(analysis_tables: Engine, table: Analysis
     """A typo in the enum would only ever show up against a real schema."""
     result = get_locations_stats(analysis_tables, box(0, 0, 3, 1), AnalysisTable(table))
 
-    assert result["total_protected_area"] > 0
+    assert sum(by_code(result).values()) > 0
 
 
 def test_a_self_intersecting_polygon_is_repaired(analysis_tables: Engine):
@@ -99,7 +93,7 @@ def test_a_self_intersecting_polygon_is_repaired(analysis_tables: Engine):
 
     result = get_locations_stats(analysis_tables, bowtie, AnalysisTable.MARINE)
 
-    assert result["total_protected_area"] > 0
+    assert sum(by_code(result).values()) > 0
 
 
 # --- geometries PostGIS has to reject ---------------------------------------
@@ -166,8 +160,7 @@ def test_an_area_touching_nothing_is_an_empty_result_over_http(api: TestClient):
     response = api.post("/coverage", json={"geometry": box(50, 50, 51, 51)})
 
     assert response.status_code == 200
-    assert response.json()["locations_area"] == []
-    assert response.json()["total_protected_area"] == 0
+    assert response.json() == {"locations_area": [], "total_area": 0}
 
 
 @pytest.mark.parametrize("path", ["/coverage", "/"])
