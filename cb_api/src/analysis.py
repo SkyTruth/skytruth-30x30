@@ -60,40 +60,26 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
 
 def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
     """Converts the data from the database into a Dict
-    {locations_area: [{"code": <location_iso>, "protected_area": <area>}],
-    "total_area": <total_area>, "total_protected_area": <area>} response
+    {locations_area: [{"code": <location_iso>, "added_area": <area>}],
+    "total_area": <total_area>} response
     """
     if not data:
-        return {
-            "locations_area": [],
-            "total_area": 0,
-            "total_protected_area": 0,
-        }
+        return {"locations_area": [], "total_area": 0}
 
-    result = {"total_area": data[0]["user_area_km2"]}
     sub_result = {}
-    total_protected_area = 0
     for row in data:
         iso = row["location"]
         if iso is None:
             continue
-        total_protected_area += row["portion_area_km2"]
         if iso not in sub_result:
-            sub_result[iso] = {
-                "code": iso,
-                "protected_area": row["portion_area_km2"],
-            }
+            sub_result[iso] = {"code": iso, "added_area": row["portion_area_km2"]}
         else:
-            sub_result[iso]["protected_area"] += row["portion_area_km2"]
+            sub_result[iso]["added_area"] += row["portion_area_km2"]
 
-    result.update(
-        {
-            "locations_area": list(sub_result.values()),
-            "total_protected_area": total_protected_area,
-        }
-    )
-
-    return result
+    return {
+        "locations_area": list(sub_result.values()),
+        "total_area": data[0]["user_area_km2"],
+    }
 
 
 def get_locations_stats(

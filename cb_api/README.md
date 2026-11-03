@@ -27,24 +27,21 @@ curl -X POST localhost:8080/coverage \
 
 ```json
 {
-  "locations_area": [{ "code": "AUS", "protected_area": 34.0 }],
-  "total_area": 96.0,
-  "total_protected_area": 34.0
+  "locations_area": [{ "code": "AUS", "added_area": 34.0 }],
+  "total_area": 96.0
 }
 ```
 
-Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `locations_area` breaks it down by location code, and `total_protected_area` is their sum.
+Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `added_area` is the part of it in each location that is not yet protected, which a protected area drawn there would add.
 
-`protected_area` and `total_protected_area` are the protected area that would be *added* by the drawn polygon because they're not *currently* protected.
-
-An area that intersects nothing (e.g., a marine request over land) returns zeroes, including `total_area`.
+An area that intersects nothing (e.g., a marine request over land) returns an empty `locations_area` and a `total_area` of 0.
 
 Unrecognized fields in the body are ignored.
 
 ### `POST /protection-level`
 **Marine only.**
 
-The same as `/coverage`, but for protection at a given level: `protected_area` is the area not yet protected at that level, which the drawn polygon would add. Takes `geometry` and `environment` as above, plus an optional `level` (currently only `fully-highly-protected`, which is the default).
+The same as `/coverage`, but for protection at a given level: `added_area` is the area not yet protected at that level, which the drawn polygon would add. Takes `geometry` and `environment` as above, plus an optional `level` (currently only `fully-highly-protected`, which is the default).
 
 ```bash
 curl -X POST localhost:8080/protection-level \

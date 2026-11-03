@@ -78,7 +78,7 @@ def test_the_analysis_layer_output_validates():
     response = LocationStats.model_validate(serialize_response(rows))
 
     assert response.total_area == 100.0
-    assert response.total_protected_area == 50.0
+    assert [area.added_area for area in response.locations_area] == [30.0, 20.0]
     assert [area.code for area in response.locations_area] == ["ESP", "PRT"]
 
 

@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from src.analysis import AnalysisTable
 
@@ -52,12 +52,13 @@ class ProtectionLevelRequest(AnalysisRequest):
 
 class LocationArea(BaseModel):
     code: str
-    protected_area: float
+    added_area: float = Field(
+        description="Area of the drawn shape in this location that is not yet protected, in km²"
+    )
 
 
 class LocationStats(BaseModel):
     """Response body for POST /coverage."""
 
     locations_area: list[LocationArea]
-    total_area: float
-    total_protected_area: float
+    total_area: float = Field(description="Area of the drawn shape, in km²")

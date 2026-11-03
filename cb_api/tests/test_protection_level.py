@@ -17,9 +17,8 @@ POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 PATH = "/protection-level"
 
 STATS = {
-    "locations_area": [{"code": "ESP", "protected_area": 12.0}],
+    "locations_area": [{"code": "ESP", "added_area": 12.0}],
     "total_area": 100.0,
-    "total_protected_area": 12.0,
 }
 
 ENGINE = object()
