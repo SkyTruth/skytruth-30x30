@@ -158,7 +158,7 @@ const ModellingWidget: FCWithMessages = () => {
                 ({ code }) => code === currentLoc?.code
               );
 
-              const customArea = CLoc.protected_area;
+              const customArea = CLoc.added_area ?? CLoc.protected_area ?? 0;
               // If custom area exceeds total unprotected area, cap it to the total unprotected area
               // necessary because of rounding errors and differences in data resolutions
               const totalCustomArea =
@@ -291,7 +291,7 @@ const ModellingWidget: FCWithMessages = () => {
           // national waters
           const totalCustomAreas = modellingData.locations_area
             .filter(({ code }) => !seaCodes.has(code))
-            .reduce((acc, { protected_area }) => acc + protected_area, 0);
+            .reduce((acc, loc) => acc + (loc.added_area ?? loc.protected_area ?? 0), 0);
           // sum of existing global protected area and custom protected areas (analysis)
           const totalProtectedArea = protectedArea + totalCustomAreas;
           // percentage of custom protected areas (analysis)
