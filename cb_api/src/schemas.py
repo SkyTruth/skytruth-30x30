@@ -16,6 +16,19 @@ class Environment(StrEnum):
         return AnalysisTable.MARINE
 
 
+class ProtectionLevel(StrEnum):
+    FULLY_HIGHLY_PROTECTED = "fully-highly-protected"
+
+    @property
+    def table(self) -> AnalysisTable:
+        return AnalysisTable.FULLY_HIGHLY_PROTECTED
+
+    @property
+    def marine_only(self) -> bool:
+        """No protection level has a terrestrial table yet."""
+        return True
+
+
 class AnalysisRequest(BaseModel):
     """Request body for POST /coverage."""
 
@@ -29,6 +42,12 @@ class AnalysisRequest(BaseModel):
         if not value:
             raise ValueError("Geometry is required")
         return value
+
+
+class ProtectionLevelRequest(AnalysisRequest):
+    """Request body for POST /protection-level."""
+
+    level: ProtectionLevel = ProtectionLevel.FULLY_HIGHLY_PROTECTED
 
 
 class LocationArea(BaseModel):
