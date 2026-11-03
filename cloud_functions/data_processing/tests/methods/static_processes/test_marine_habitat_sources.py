@@ -3,7 +3,7 @@ import pytest
 import src.methods.static_processes.marine_habitat_sources as marine_habitat_sources
 
 FAKE_HABITAT_PARAMS = {
-    "coldwatercorals": {
+    "cold-water-corals": {
         "url": "https://example.test/corals.zip",
         "file_name": "habitats/corals.zip",
         "archive_file_name": "archive/habitats/corals_v1.zip",
@@ -77,7 +77,7 @@ def test_a_single_name_downloads_only_that_habitat(download_recorder):
 
 def test_a_list_downloads_those_habitats_in_order(download_recorder):
     """Passing multiple habitats downloads them in order."""
-    download(["seagrasses", "coldwatercorals"])
+    download(["seagrasses", "cold-water-corals"])
 
     assert [call["blob_name"] for call in download_recorder] == [
         "habitats/seagrasses.zip",
@@ -90,7 +90,7 @@ def test_a_list_downloads_those_habitats_in_order(download_recorder):
     [
         "nonexistent",
         ["nonexistent"],
-        ["coldwatercorals", "nonexistent"],
+        ["cold-water-corals", "nonexistent"],
         [None],
         [1],
         [None, "nonexistent", 1],
