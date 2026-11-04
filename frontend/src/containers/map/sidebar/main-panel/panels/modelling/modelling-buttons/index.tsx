@@ -27,9 +27,11 @@ import {
   drawStateAtom,
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { FileTooLargeError, useUploadErrorMessage } from '@/hooks/use-upload-error-message';
 import { cn } from '@/lib/classnames';
 import { createCustomLayer } from '@/lib/utils/create-custom-layer';
+import { CB_API_FLAG } from '@/lib/utils/fetch-modelling';
 import {
   extractPolygons,
   convertFilesToGeojson,
@@ -64,6 +66,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
+  const isCbApiActive = Boolean(useFeatureFlag(CB_API_FLAG));
 
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -157,7 +160,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
               queryClient,
               tab,
               layer.id,
-              polygonFeature
+              polygonFeature,
+              isCbApiActive
             );
 
             if (!valid) {
@@ -203,6 +207,7 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
       getUploadErrorMessage,
       modellingState,
       queryClient,
+      isCbApiActive,
       setDrawState,
       setCustomLayers,
       setModellingCustomLayerId,

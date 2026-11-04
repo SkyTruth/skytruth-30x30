@@ -20,7 +20,9 @@ import {
   modellingCustomLayerIdAtom,
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { createCustomLayer } from '@/lib/utils/create-custom-layer';
+import { CB_API_FLAG } from '@/lib/utils/fetch-modelling';
 import { getGeoJSONBoundingBox } from '@/lib/utils/geo';
 import { validateGeometryForModelling } from '@/lib/utils/validate-geometry-for-modelling';
 import { FCWithMessages } from '@/types';
@@ -34,6 +36,7 @@ const DrawControls: FCWithMessages = () => {
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
+  const isCbApiActive = Boolean(useFeatureFlag(CB_API_FLAG));
 
   const onCreate: UseMapboxDrawProps['onCreate'] = useCallback(
     ({ features }) => {
@@ -80,7 +83,8 @@ const DrawControls: FCWithMessages = () => {
           queryClient,
           tab,
           layer.id,
-          drawnFeature as Feature
+          drawnFeature as Feature,
+          isCbApiActive
         );
 
         if (!valid) {
@@ -102,6 +106,7 @@ const DrawControls: FCWithMessages = () => {
       customLayers,
       modellingState.active,
       queryClient,
+      isCbApiActive,
       setCustomLayers,
       setModellingCustomLayerId,
       setBboxLocation,

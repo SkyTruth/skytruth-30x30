@@ -2,31 +2,29 @@ import type { QueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import type { Feature } from 'geojson';
 
-import { ModellingData } from '@/types/modelling';
-
-const fetchModelling = async (tab: string, feature: Feature) => {
-  return axios.post<ModellingData>(process.env.NEXT_PUBLIC_ANALYSIS_CF_URL, {
-    environment: tab,
-    geometry: feature,
-  });
-};
+import { fetchModelling, getModellingQueryKey } from '@/lib/utils/fetch-modelling';
 
 /**
  * Validates a geometry by calling the analysis API via React Query's fetchQuery.
- * On success the result is cached under ['modelling', tab, layerId] so the
- * Modelling component gets a cache hit and avoids a duplicate request.
+ * On success the result is cached under getModellingQueryKey so the Modelling
+ * component gets a cache hit and avoids a duplicate request.
  */
 export async function validateGeometryForModelling(
   queryClient: QueryClient,
   tab: string,
   layerId: string,
-  feature: Feature
+  feature: Feature,
+  isCbApiActive: boolean
 ): Promise<{ valid: boolean }> {
   try {
-    await queryClient.fetchQuery(['modelling', tab, layerId], () => fetchModelling(tab, feature), {
-      staleTime: Infinity,
-      retry: false,
-    });
+    await queryClient.fetchQuery(
+      getModellingQueryKey(tab, layerId, isCbApiActive),
+      () => fetchModelling(tab, feature, isCbApiActive),
+      {
+        staleTime: Infinity,
+        retry: false,
+      }
+    );
     return { valid: true };
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 400) {
