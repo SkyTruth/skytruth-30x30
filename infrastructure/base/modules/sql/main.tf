@@ -57,9 +57,6 @@ resource "google_sql_database_instance" "db-main" {
     disk_autoresize_limit = 64
   }
 
-  # A major version upgrade can run for hours; the provider's default update
-  # timeout is 30 minutes, after which the apply errors while the upgrade
-  # carries on server-side.
   timeouts {
     update = "3h"
   }
