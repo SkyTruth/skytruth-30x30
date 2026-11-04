@@ -61,13 +61,16 @@ MPATLAS_TILESET_FILE = "mpatlas.pmtiles"
 MPATLAS_TILESET_ARCHIVE_FILE = f"maps/mpatlas/mpatlas_{today_formatted}.pmtiles"
 
 # ------------------------
-# Marine Habitats
+# Mangroves (Global Mangrove Watch)
 # ------------------------
 MANGROVES_TILESET_ID = "mangroves"
 MANGROVES_TILESET_NAME = "Mangroves"
 MANGROVES_TILESET_FILE = "mangroves.pmtiles"
 MANGROVES_TILESET_ARCHIVE_FILE = f"maps/mangroves/mangroves_{today_formatted}.pmtiles"
 
+# ------------------------
+# Seagrasses (UNEP-WCMC)
+# ------------------------
 SEAGRASSES_TILESET_ID = "seagrasses"
 SEAGRASSES_TILESET_NAME = "Seagrasses"
 SEAGRASSES_TILESET_FILE = "seagrasses.pmtiles"

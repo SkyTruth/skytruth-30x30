@@ -427,7 +427,7 @@ def test_marine_habitat_tileset_reads_the_habitat_source(habitat, monkeypatch):
     monkeypatch.setattr(
         vtp, "run_vector_pmtiles_pipeline", mock_run_vector_pmtiles_pipeline, raising=True
     )
-    monkeypatch.setattr(vtp, "_load_habitat_geometry", mock_load_habitat_geometry, raising=True)
+    monkeypatch.setattr(vtp, "load_habitat_geometry", mock_load_habitat_geometry, raising=True)
     mock_unep_points(monkeypatch, [Point(5, 5)])
 
     tp.create_and_update_marine_habitat_tileset(
@@ -494,14 +494,14 @@ def mock_unep_points(monkeypatch, points, crs="EPSG:4326"):
         return gpd.GeoDataFrame({"REP_AREA_K": [1.0] * len(points)}, geometry=points, crs=crs)
 
     monkeypatch.setattr(
-        vtp, "_find_unep_layer_paths", lambda bucket, file_name: ("pt.shp", "py.shp")
+        vtp, "find_unep_layer_paths", lambda bucket, file_name: ("pt.shp", "py.shp")
     )
     monkeypatch.setattr(vtp, "load_zipped_shapefile_from_gcs", mock_load_zipped_shapefile_from_gcs)
     return reads
 
 
 def read_marine_habitat(gdf, monkeypatch, habitat="mangroves"):
-    monkeypatch.setattr(vtp, "_load_habitat_geometry", lambda *args: gdf, raising=True)
+    monkeypatch.setattr(vtp, "load_habitat_geometry", lambda *args: gdf, raising=True)
     return tp.read_marine_habitat(
         "bkt",
         "habitat.zip",

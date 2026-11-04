@@ -39,10 +39,10 @@ from src.core.params import (
 )
 from src.core.processors import add_translations
 from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
-from src.methods.static_processes.marine_habitat_geoms import _simplify_habitat_geometry
+from src.methods.static_processes.marine_habitat_geoms import simplify_habitat_geometry
 from src.methods.static_processes.marine_habitat_sources import (
-    _find_unep_layer_paths,
-    _load_habitat_geometry,
+    find_unep_layer_paths,
+    load_habitat_geometry,
 )
 from src.utils.gcp import load_zipped_shapefile_from_gcs, read_dataframe, read_json_from_gcs
 from src.utils.logger import Logger
@@ -537,15 +537,15 @@ def read_marine_habitat(
     A UNEP-WCMC source also gets a {layer_name}_points layer of the point records'
     locations, since their buffered circles are too small to see when zoomed out.
     """
-    gdf = _load_habitat_geometry(habitat, params, bucket, fallback_area_km2, verbose)
-    gdf = _simplify_habitat_geometry(gdf, "EPSG:4326", TOLERANCE)
+    gdf = load_habitat_geometry(habitat, params, bucket, fallback_area_km2, verbose)
+    gdf = simplify_habitat_geometry(gdf, "EPSG:4326", TOLERANCE)
     polygons = gdf[["geometry"]]
 
     if params["source"] != "wcmc":
         return polygons
 
     file_name = params["file_name"]
-    point_layer, _ = _find_unep_layer_paths(bucket, file_name)
+    point_layer, _ = find_unep_layer_paths(bucket, file_name)
     points = load_zipped_shapefile_from_gcs(file_name, bucket, internal_shapefile_path=point_layer)
     points = points.to_crs("EPSG:4326").explode(index_parts=False, ignore_index=True)
     points = points[points.geometry.notna() & ~points.geometry.is_empty]

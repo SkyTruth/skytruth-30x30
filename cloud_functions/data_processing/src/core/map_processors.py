@@ -26,7 +26,6 @@ def generate_vector_tiles(
     """
     if isinstance(input_file, list):
         input_file = " ".join(input_file)
-    extra_options = "".join(f"{option} " for option in options or [])
 
     try:
         if verbose:
@@ -38,8 +37,12 @@ def generate_vector_tiles(
         # -P: reads the geojson in parallel if the file is newline delimited
         # -o: The following argurment is the output path
         # -ae:  Increase the maxzoom if features are still being dropped at that zoom level
+        flags = "-zg -f -P"
+        if options:
+            flags = f"{flags} {' '.join(options)}"
+
         subprocess.run(
-            f"tippecanoe -zg -f -P {extra_options}-o {output_file} -ae {input_file}",
+            f"tippecanoe {flags} -o {output_file} -ae {input_file}",
             shell=True,
             check=True,
         )
