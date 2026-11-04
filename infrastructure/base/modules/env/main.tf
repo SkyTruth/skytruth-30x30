@@ -50,6 +50,9 @@ module "frontend_cloudrun" {
   max_scale             = var.frontend_max_scale
   tag                   = var.environment
   use_hello_world_image = var.use_hello_world_image
+
+  # Requests to /api/analysis wait for cb_api, which can take up to 600s
+  timeout_seconds = 600
 }
 
 module "backend_cloudrun" {
@@ -178,6 +181,7 @@ locals {
     NEXT_PUBLIC_ANALYSIS_CF_URL = local.analysis_cf_lb_url
     NEXT_PUBLIC_ENVIRONMENT     = "production"
     LOG_LEVEL                   = "info"
+    CB_API_URL = module.cb_api_cloudrun.cloudrun_service_url
   }
   analysis_cloud_function_env = {
     DATABASE_CLIENT   = "postgres"
