@@ -73,7 +73,7 @@ def download_marine_habitats(
         )
 
 
-def _find_unep_layer_paths(bucket: str, zipfile_name: str) -> tuple[str, str]:
+def find_unep_layer_paths(bucket: str, zipfile_name: str) -> tuple[str, str]:
     """
     Locate the point and polygon shapefiles inside a UNEP-WCMC download.
     """
@@ -128,7 +128,7 @@ def _buffer_unep_points(
     return buffered
 
 
-def _load_habitat_geometry(
+def load_habitat_geometry(
     habitat: str,
     params: dict,
     bucket: str,
@@ -162,7 +162,7 @@ def _load_habitat_geometry(
 
     if verbose:
         logger.info({"message": f"locating {habitat} layers in {file_name}"})
-    point_layer, polygon_layer = _find_unep_layer_paths(bucket, file_name)
+    point_layer, polygon_layer = find_unep_layer_paths(bucket, file_name)
 
     if verbose:
         logger.info({"message": f"loading {habitat} point layer {point_layer}"})

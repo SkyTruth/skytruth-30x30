@@ -63,7 +63,7 @@ def mangrove_recorders(monkeypatch, mangrove_extent, mangrove_regions):
     def _upload_gdf(bucket, df, destination_blob, project_id=None, verbose=True, timeout=600):
         uploads.append({"bucket": bucket, "df": df, "destination_blob": destination_blob})
 
-    # The habitat source is read by _load_habitat_geometry, which lives in
+    # The habitat source is read by load_habitat_geometry, which lives in
     # marine_habitat_sources; everything else is read and written here.
     monkeypatch.setattr(
         marine_habitat_sources, "read_gzipped_gpkg_from_gcs", _read_gpkg, raising=True

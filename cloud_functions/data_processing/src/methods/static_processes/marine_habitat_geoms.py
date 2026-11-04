@@ -17,7 +17,7 @@ from src.core.params import (
     TOLERANCE,
     UNEP_POINT_AREA_KM2,
 )
-from src.methods.static_processes.marine_habitat_sources import _load_habitat_geometry
+from src.methods.static_processes.marine_habitat_sources import load_habitat_geometry
 from src.utils.gcp import read_parquet_from_gcs, save_json_to_gcs, upload_gdf
 from src.utils.geo import fast_union_area_km2, get_area_km2
 from src.utils.logger import Logger
@@ -54,6 +54,22 @@ def _clip_and_union_habitat(
         "area_km2": get_area_km2(habitat_geom),
         "geometry": habitat_geom,
     }
+
+
+def simplify_habitat_geometry(
+    geometry: gpd.GeoDataFrame,
+    crs,
+    simplify_tolerance: float,
+) -> gpd.GeoDataFrame:
+    """Reproject to crs, explode, simplify, and validate each habitat geometry."""
+    if geometry.crs is not None and geometry.crs != crs:
+        geometry = geometry.to_crs(crs)
+
+    geometry = geometry.explode(index_parts=False, ignore_index=True)
+    geometry["geometry"] = shapely.make_valid(
+        shapely.simplify(geometry.geometry.values, simplify_tolerance)
+    )
+    return geometry[~geometry.geometry.is_empty & geometry.geometry.notna()]
 
 
 def process_marine_habitat_geoms(
@@ -127,18 +143,11 @@ def process_marine_habitat_geoms(
 
     for habitat in habitats:
         params = habitat_params[habitat]
-        geometry = _load_habitat_geometry(habitat, params, bucket, fallback_area_km2, verbose)
-
-        if geometry.crs is not None and geometry.crs != regions.crs:
-            geometry = geometry.to_crs(regions.crs)
+        geometry = load_habitat_geometry(habitat, params, bucket, fallback_area_km2, verbose)
 
         if verbose:
             logger.info({"message": f"exploding, simplifying and validating {habitat} geometry"})
-        geometry = geometry.explode(index_parts=False, ignore_index=True)
-        geometry["geometry"] = shapely.make_valid(
-            shapely.simplify(geometry.geometry.values, simplify_tolerance)
-        )
-        geometry = geometry[~geometry.geometry.is_empty & geometry.geometry.notna()]
+        geometry = simplify_habitat_geometry(geometry, regions.crs, simplify_tolerance)
 
         if verbose:
             logger.info({"message": f"computing global {habitat} area"})

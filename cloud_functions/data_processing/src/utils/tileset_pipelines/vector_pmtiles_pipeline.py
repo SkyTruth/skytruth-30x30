@@ -5,7 +5,7 @@ Pipeline for converting a GeoJSON source to vector PMTiles for static hosting on
 import shutil
 import tempfile
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -30,10 +30,11 @@ class VectorPMTilesetConfig:
     display_name: str
     verbose: bool = False
     keep_temp: bool = False
+    tippecanoe_options: list[str] = field(default_factory=list)
 
 
 Process = Callable[[gpd.GeoDataFrame, dict[str, Any]], gpd.GeoDataFrame]
-ReadSource = Callable[[str, str], gpd.GeoDataFrame]
+ReadSource = Callable[[str, str], gpd.GeoDataFrame | dict[str, gpd.GeoDataFrame]]
 
 
 def run_vector_pmtiles_pipeline(
@@ -51,30 +52,36 @@ def run_vector_pmtiles_pipeline(
     temp_dir = Path(tempfile.mkdtemp())
 
     try:
-        # We are using Tippecanoe to name the tile layer after the input file,
-        # so this sets the source-layer name.
-        geojson_local = temp_dir / f"{config.layer_name}.geojson"
         pmtiles_local = temp_dir / f"{config.layer_name}.pmtiles"
 
         if read_source:
-            gdf = read_source(config.source_bucket, config.source_file)
+            source = read_source(config.source_bucket, config.source_file)
         else:
-            gdf = read_json_df(config.source_bucket, config.source_file, verbose=config.verbose)
+            source = read_json_df(config.source_bucket, config.source_file, verbose=config.verbose)
 
-        if process:
-            ctx = {
-                "bucket": config.source_bucket,
-                "source_file": config.source_file,
-                "verbose": config.verbose,
-            }
-            gdf = process(gdf, ctx)
+        layers = source if isinstance(source, dict) else {config.layer_name: source}
 
-        gdf["geometry"] = gdf["geometry"].make_valid()
-        gdf.to_file(geojson_local, driver="GeoJSON")
+        geojson_files = []
+        for name, gdf in layers.items():
+            if process:
+                ctx = {
+                    "bucket": config.source_bucket,
+                    "source_file": config.source_file,
+                    "verbose": config.verbose,
+                }
+                gdf = process(gdf, ctx)
+
+            gdf["geometry"] = gdf["geometry"].make_valid()
+            # We are using Tippecanoe to name the tile layer after the input file,
+            # so this sets the source-layer name.
+            geojson_local = temp_dir / f"{name}.geojson"
+            gdf.to_file(geojson_local, driver="GeoJSON")
+            geojson_files.append(str(geojson_local))
 
         generate_vector_tiles(
-            input_file=str(geojson_local),
+            input_file=geojson_files,
             output_file=str(pmtiles_local),
+            options=config.tippecanoe_options,
             verbose=config.verbose,
         )
 
