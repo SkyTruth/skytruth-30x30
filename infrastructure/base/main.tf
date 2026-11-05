@@ -50,6 +50,7 @@ module "staging" {
   environment                                        = "staging"
   database_name                                      = "strapi"
   database_user                                      = "strapi"
+  database_version                                   = "POSTGRES_18"
   use_hello_world_image                              = false
 }
 
@@ -92,6 +93,7 @@ module "production" {
   environment                                        = "production"
   database_name                                      = "strapi"
   database_user                                      = "strapi"
+  database_version                                   = "POSTGRES_18"
   use_hello_world_image                              = false
 }
 

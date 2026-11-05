@@ -70,6 +70,7 @@ module "database" {
   database_name              = var.database_name
   database_user              = var.database_user
   database_password          = module.postgres_application_user_password.secret_value
+  database_version           = var.database_version
   network_id                 = module.network.network_id
   sql-database-instance-tier = "db-custom-2-3840"
 

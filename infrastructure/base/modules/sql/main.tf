@@ -34,6 +34,7 @@ resource "google_sql_database_instance" "db-main" {
 
   settings {
     tier                        = var.sql-database-instance-tier
+    edition                     = "ENTERPRISE"
     deletion_protection_enabled = true
 
     ip_configuration {
@@ -54,6 +55,10 @@ resource "google_sql_database_instance" "db-main" {
     }
     disk_autoresize       = true
     disk_autoresize_limit = 64
+  }
+
+  timeouts {
+    update = "3h"
   }
 }
 

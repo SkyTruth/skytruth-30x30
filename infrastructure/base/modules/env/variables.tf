@@ -108,6 +108,11 @@ variable "database_user" {
   description = "Name of the database user"
 }
 
+variable "database_version" {
+  type        = string
+  description = "Cloud SQL database version, e.g. POSTGRES_18. Changing it on an existing instance is an in-place major version upgrade"
+}
+
 variable "backend_path_prefix" {
   type        = string
   description = "Path prefix for the backend service"
