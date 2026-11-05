@@ -14,7 +14,7 @@ from src.methods.marine_habitats import (
     _protected_habitat_all_locations,
     _rollup_corals_subtable,
 )
-from src.methods.static_processes import _buffer_unep_points
+from src.methods.static_processes.marine_habitat_sources import _buffer_unep_points
 from src.utils.geo import get_area_km2
 
 

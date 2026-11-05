@@ -86,6 +86,7 @@ GADM_EEZ_UNION_FILE_NAME = "static/GADM_eez_union.geojson"
 #   Locations (combined Marine Regions, GADM, and IHO seas)
 # ------------------------------------------------------------
 LOCATIONS_FILE_NAME = "tables/locations_processed.csv"
+NATIONAL_TARGETS_FILE_NAME = "processing/national_targets_Oct2026.csv"
 
 
 # ------------------------------------------------------------
@@ -331,6 +332,8 @@ LONG_RUNNING_TASKS = [
     "generate_marine_protection_level_stats_table",
     "update_marine_protected_areas_tileset",
     "update_terrestrial_protected_areas_tileset",
+    "update_mangroves_tileset",
+    "update_seagrasses_tileset",
     "generate_iho_pa_intersections",
     "generate_buffered_iho_pa_intersections",
 ]
