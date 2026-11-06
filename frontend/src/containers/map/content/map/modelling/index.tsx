@@ -22,6 +22,8 @@ const Modelling: FC = () => {
   const setModellingState = useSetAtom(modellingAtom);
 
   const [{ tab }] = useSyncMapContentSettings();
+  // TODO: TECH-3876, clean up the use_cb_api feature flag so stats always come from
+  // cb_api
   const isCbApiActive = Boolean(useFeatureFlag(CB_API_FLAG));
 
   const modellingLayer = modellingLayerId ? customLayers[modellingLayerId] : null;

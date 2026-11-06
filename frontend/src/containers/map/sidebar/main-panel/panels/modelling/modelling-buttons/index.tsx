@@ -66,6 +66,8 @@ const ModellingButtons: FCWithMessages<ModellingButtonsProps> = ({ className }) 
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
+  // TODO: TECH-3876, clean up the use_cb_api feature flag so uploads are always
+  // validated against cb_api
   const isCbApiActive = Boolean(useFeatureFlag(CB_API_FLAG));
 
   const [uploadError, setUploadError] = useState<string | null>(null);

@@ -4,8 +4,11 @@ import type { Feature } from 'geojson';
 import { ModellingData } from '@/types/modelling';
 
 // Strapi feature flag that sends modelling requests to cb_api
+// TODO: TECH-3876, clean up the use_cb_api feature flag so cb_api is the only
+// analysis backend; then drop `isCbApiActive` from the functions below
 export const CB_API_FLAG = 'use_cb_api';
 
+// TODO: TECH-3876, clean up the use_cb_api feature flag: drop the backend from the query key
 export const getModellingQueryKey = (tab: string, layerId: string, isCbApiActive: boolean) => [
   'modelling',
   tab,
@@ -14,6 +17,8 @@ export const getModellingQueryKey = (tab: string, layerId: string, isCbApiActive
 ];
 
 export const fetchModelling = (tab: string, feature: Feature, isCbApiActive: boolean) => {
+  // TODO: TECH-3876, clean up the use_cb_api feature flag so '/api/analysis/coverage' is
+  // the only URL, and remove NEXT_PUBLIC_ANALYSIS_CF_URL
   const url = isCbApiActive ? '/api/analysis/coverage' : process.env.NEXT_PUBLIC_ANALYSIS_CF_URL;
 
   return axios.post<ModellingData>(url, {

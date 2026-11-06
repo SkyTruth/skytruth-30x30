@@ -14,6 +14,7 @@ export async function validateGeometryForModelling(
   tab: string,
   layerId: string,
   feature: Feature,
+  // TODO: TECH-3876, clean up the use_cb_api feature flag: remove this parameter
   isCbApiActive: boolean
 ): Promise<{ valid: boolean }> {
   try {

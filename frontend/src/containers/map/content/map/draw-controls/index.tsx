@@ -36,6 +36,8 @@ const DrawControls: FCWithMessages = () => {
   const setModellingCustomLayerId = useSetAtom(modellingCustomLayerIdAtom);
   const [customLayers, setCustomLayers] = useAtom(customLayersAtom);
   const setBboxLocation = useSetAtom(bboxLocationAtom);
+  // TODO: TECH-3876, clean up the use_cb_api feature flag so drawn shapes are always
+  // validated against cb_api
   const isCbApiActive = Boolean(useFeatureFlag(CB_API_FLAG));
 
   const onCreate: UseMapboxDrawProps['onCreate'] = useCallback(
