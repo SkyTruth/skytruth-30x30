@@ -33,9 +33,8 @@ const getCoverageTarget = (location: Location, tab: string) =>
   (tab === 'marine' ? location?.marine_target : location?.terrestrial_target) ?? undefined;
 
 /**
- * Coverage stats for the Conservation Builder panel: one entry per country the drawn shape
- * intersects ("National level contribution") and one for the world ("Global level
- * contribution")
+ * Coverage stats for the Conservation Builder panel, one entry per location the drawn shape
+ * intersects, grouped by panel section (e.g. Countries, Global)
  *
  * The added area comes from the analysis result in modellingAtom; the existing protected
  * area and the total area come from Strapi's protection coverage stats
@@ -125,13 +124,13 @@ const useCoverageContributions = () => {
     }
   );
 
-  const { national, global } = useMemo(() => {
+  const { countries, global } = useMemo(() => {
     const statsByCode = new Map(
       (coverageStats ?? []).map((stat) => [stat.location?.code, stat] as const)
     );
 
-    // National: one entry per location
-    const national = locationsArea.flatMap((locationArea): SectionStats[] => {
+    // Countries: one entry per intersected location that has coverage stats
+    const countries = locationsArea.flatMap((locationArea): SectionStats[] => {
       const { code } = locationArea;
       // TECH-3764: Clean up
       if (!isIhoActive && seaCodes.has(code)) return [];
@@ -161,23 +160,24 @@ const useCoverageContributions = () => {
 
     // Global: the world's coverage plus the shape's added area summed across locations
     const globalStat = statsByCode.get(GLOBAL_CODE);
-    const global: SectionStats | null = globalStat
-      ? {
-          code: GLOBAL_CODE,
-          location: globalStat.location as Location,
-          coverage: computeContribution(
-            globalStat.protected_area ?? 0,
-            sumAddedArea(locationsArea, seaCodes),
-            Number(globalStat.total_area ?? 0)
-          ),
-          coverageTarget: getCoverageTarget(globalStat.location as Location, tab),
-        }
-      : null;
+    const global: SectionStats | null =
+      globalStat && countries.length
+        ? {
+            code: GLOBAL_CODE,
+            location: globalStat.location as Location,
+            coverage: computeContribution(
+              globalStat.protected_area ?? 0,
+              sumAddedArea(locationsArea, seaCodes),
+              Number(globalStat.total_area ?? 0)
+            ),
+            coverageTarget: getCoverageTarget(globalStat.location as Location, tab),
+          }
+        : null;
 
-    return { national, global };
+    return { countries, global };
   }, [coverageStats, locationsArea, seaCodes, isIhoActive, tab]);
 
-  return { national, global, isLoading: isInitialLoading };
+  return { countries, global, isLoading: isInitialLoading };
 };
 
 export default useCoverageContributions;

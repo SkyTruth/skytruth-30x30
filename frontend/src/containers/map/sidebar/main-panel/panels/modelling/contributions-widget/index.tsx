@@ -16,9 +16,10 @@ import ContributionSection from './contribution-section';
 import useCoverageContributions from './use-coverage-contributions';
 
 /**
- * Stats in the Conservation Builder panel once a shape is drawn or uploaded: the
- * "National level contribution" and "Global level contribution" sections, each a list of
- * collapsible locations. Also shows the loading, error and no-data states
+ * Stats in the Conservation Builder panel once a shape is drawn or uploaded, grouped into
+ * sections (e.g. "Countries", "Global"), each a list of collapsible locations. A section is
+ * hidden if the shape doesn't intersect any of its locations. Also shows the loading, error
+ * and no-data states
  *
  * Shown while the use_cb_api flag is on; the legacy `../widget` is shown while it is off
  * TODO: TECH-3876, clean up the use_cb_api feature flag so this is the only
@@ -40,11 +41,12 @@ const ContributionsWidget: FCWithMessages = () => {
 
   const tooltips = useTooltips();
 
-  const { national, global, isLoading } = useCoverageContributions();
+  const { countries, global, isLoading } = useCoverageContributions();
+  const hasLocations = countries.length > 0;
 
-  // One location is open, all others collapsed (starting with the first national one)
+  // One location is open, all others collapsed (starting with the first one listed)
   const [openCode, setOpenCode] = useState('');
-  const firstCode = national[0]?.code ?? '';
+  const firstCode = countries[0]?.code ?? '';
   useEffect(() => setOpenCode(firstCode), [firstCode]);
 
   const loading = modellingStatus === 'running' || drawStatus === 'uploading' || isLoading;
@@ -55,22 +57,24 @@ const ContributionsWidget: FCWithMessages = () => {
   return (
     <Widget
       className="border-black py-0"
-      noData={!national.length}
+      noData={!hasLocations}
       loading={loading}
       loadingMessage={loadingMessage}
       error={error}
       errorMessage={errorMessage}
     >
       <Accordion type="single" collapsible value={openCode} onValueChange={setOpenCode}>
-        <ContributionSection
-          title={t('national-level-contribution')}
-          tooltip={tooltips?.['contributionDetails']}
-          items={national.map((stats) => ({ title: getLocationName(stats.location), stats }))}
-        />
+        {countries.length > 0 && (
+          <ContributionSection
+            title={t('countries-section')}
+            tooltip={tooltips?.['countries']}
+            items={countries.map((stats) => ({ title: getLocationName(stats.location), stats }))}
+          />
+        )}
         {global && (
           <ContributionSection
-            title={t('global-contribution')}
-            tooltip={tooltips?.['globalContribution']}
+            title={t('global-section')}
+            tooltip={tooltips?.['global']}
             items={[{ title: t('globe'), stats: global }]}
           />
         )}

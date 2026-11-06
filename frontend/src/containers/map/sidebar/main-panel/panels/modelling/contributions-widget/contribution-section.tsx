@@ -89,8 +89,8 @@ type ContributionSectionProps = {
 };
 
 /**
- * One level of the panel (e.g. "National level contribution" or "Global level contribution"):
- * the heading with info tooltip, then one collapsible per location at that level
+ * One section of the panel, the heading with an info tooltip, 
+ * then one collapsible per location
  */
 const ContributionSection: FCWithMessages<ContributionSectionProps> = ({
   title,
