@@ -349,7 +349,7 @@ module "cb_api_cloudrun" {
   memory                = "512Mi"
   timeout_seconds       = 600
 
-  # Set this to false once an image exists
+  # Switch to var.use_hello_world_image once both cb_api repos have an image
   use_hello_world_image = true
 }
 
