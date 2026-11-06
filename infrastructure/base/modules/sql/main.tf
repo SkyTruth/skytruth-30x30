@@ -73,6 +73,8 @@ resource "google_sql_user" "app-user" {
   password = local.postgres_password
 }
 
+# Cloud SQL creates this user in cloudsqlsuperuser with no table grants. It is
+# only read-only after its membership is revoked and SELECT granted in SQL.
 resource "google_sql_user" "read-only-user" {
   name     = var.read_only_user
   instance = google_sql_database_instance.db-main.name
