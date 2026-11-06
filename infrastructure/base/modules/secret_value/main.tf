@@ -32,4 +32,7 @@ resource "google_secret_manager_secret_version" "backend_app_secret" {
 
 data "google_secret_manager_secret_version" "latest" {
   secret = google_secret_manager_secret.secret.id
+
+  # A new secret has no versions until backend_app_secret is created.
+  depends_on = [google_secret_manager_secret_version.backend_app_secret]
 }
