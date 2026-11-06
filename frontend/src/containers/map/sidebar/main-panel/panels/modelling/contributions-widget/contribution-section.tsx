@@ -10,6 +10,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
 import { SectionStats } from './use-coverage-contributions';
@@ -34,15 +35,33 @@ const ContributionLegend: FCWithMessages = () => {
 
 ContributionLegend.messages = ['containers.map-sidebar-main-panel'];
 
+type StatBlockProps = {
+  className?: string;
+  title: string;
+  contribution?: Contribution;
+  target?: number;
+};
+
+/** One section inside a location, with heading and chart */
+const StatBlock: FCWithMessages<StatBlockProps> = ({ className, title, contribution, target }) => {
+  if (!contribution) return null;
+
+  return (
+    <div className={className}>
+      <h4 className="text-sm font-bold">{title}</h4>
+      <ContributionChart className="pt-3" contribution={contribution} target={target} />
+    </div>
+  );
+};
+
+StatBlock.messages = [...ContributionChart.messages];
+
 type ContributionItemProps = {
   title: string;
   stats: SectionStats;
 };
 
-/**
- * One collapsible location in the panel:
- * Each shows the legend and stats
- */
+/** One collapsible location in the panel: each shows the legend and stats */
 const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
@@ -60,14 +79,13 @@ const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats 
       </AccordionHeader>
       <AccordionContent className="pb-6">
         <ContributionLegend />
-        {/* Marine/Terrestrial Conservation Coverage */}
-        <h4 className="pt-4 text-sm font-bold">
-          {tab === 'marine'
-            ? t('marine-conservation-coverage')
-            : t('terrestrial-conservation-coverage')}
-        </h4>
-        <ContributionChart
-          className="pt-3"
+        <StatBlock
+          className="pt-4"
+          title={
+            tab === 'marine'
+              ? t('marine-conservation-coverage')
+              : t('terrestrial-conservation-coverage')
+          }
           contribution={stats.coverage}
           target={stats.coverageTarget}
         />
@@ -79,7 +97,7 @@ const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats 
 ContributionItem.messages = [
   'containers.map-sidebar-main-panel',
   ...ContributionLegend.messages,
-  ...ContributionChart.messages,
+  ...StatBlock.messages,
 ];
 
 type ContributionSectionProps = {
@@ -89,7 +107,7 @@ type ContributionSectionProps = {
 };
 
 /**
- * One section of the panel, the heading with an info tooltip, 
+ * One section of the panel, the heading with an info tooltip,
  * then one collapsible per location
  */
 const ContributionSection: FCWithMessages<ContributionSectionProps> = ({
