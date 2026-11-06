@@ -114,6 +114,8 @@ resource "google_cloud_run_service" "cloud_run" {
       template[0].metadata[0].annotations["client.knative.dev/user-image"],
       template[0].metadata[0].annotations["run.googleapis.com/client-name"],
       template[0].metadata[0].annotations["run.googleapis.com/client-version"],
+      metadata[0].annotations["run.googleapis.com/urls"],
+      metadata[0].annotations["run.googleapis.com/maxScale"],
     ]
   }
 }
