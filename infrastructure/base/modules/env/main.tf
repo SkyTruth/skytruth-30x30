@@ -351,8 +351,6 @@ module "cb_api_cloudrun" {
 
   # Set this to false once an image exists
   use_hello_world_image = true
-
-  depends_on = [module.postgres_read_only_user_password]
 }
 
 resource "google_storage_bucket" "data_bucket" {
