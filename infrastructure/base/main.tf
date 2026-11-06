@@ -30,6 +30,7 @@ module "staging" {
   backend_write_user                                 = "data_write"
   functions_path_prefix                              = "functions"
   analysis_function_path_prefix                      = "analysis"
+  cb_api_path_prefix                                 = "conservation-builder/api"
   analysis_function_timeout_seconds                  = 600
   analysis_function_max_instance_count               = 2
   analysis_function_max_instance_request_concurrency = 10
@@ -73,6 +74,7 @@ module "production" {
   backend_write_user                                 = "data_write"
   functions_path_prefix                              = "functions"
   analysis_function_path_prefix                      = "analysis"
+  cb_api_path_prefix                                 = "conservation-builder/api"
   analysis_function_timeout_seconds                  = 600
   analysis_function_max_instance_count               = 2
   analysis_function_max_instance_request_concurrency = 10

@@ -67,12 +67,6 @@ variable "ingress" {
   default     = null
 }
 
-variable "invoker_members" {
-  type        = list(string)
-  description = "IAM members allowed to invoke the service"
-  default     = ["allUsers"]
-}
-
 variable "vpc_connector_name" {
   type        = string
   description = "Name of the VPC Access Connector"

@@ -291,6 +291,8 @@ module "load_balancer" {
   backend_path_prefix           = var.backend_path_prefix
   functions_path_prefix         = var.functions_path_prefix
   analysis_function_path_prefix = var.analysis_function_path_prefix
+  cb_api_cloud_run_name         = module.cb_api_cloudrun.name
+  cb_api_path_prefix            = var.cb_api_path_prefix
 }
 
 module "analysis_cloud_function" {
@@ -341,8 +343,7 @@ module "cb_api_cloudrun" {
   env_vars           = local.cb_api_env
   secrets            = local.cb_api_secrets
 
-  ingress         = "internal"
-  invoker_members = ["serviceAccount:${module.frontend_cloudrun.service_account_email}"]
+  ingress = "internal-and-cloud-load-balancing"
 
   container_concurrency = 10
   max_scale             = 2

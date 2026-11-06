@@ -120,8 +120,10 @@ resource "google_cloud_run_service" "cloud_run" {
 
 data "google_iam_policy" "noauth" {
   binding {
-    role    = "roles/run.invoker"
-    members = var.invoker_members
+    role = "roles/run.invoker"
+    members = [
+      "allUsers",
+    ]
   }
 }
 

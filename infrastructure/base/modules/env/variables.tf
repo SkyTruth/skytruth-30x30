@@ -133,6 +133,11 @@ variable "analysis_function_path_prefix" {
   description = "Path prefix for the analysis function"
 }
 
+variable "cb_api_path_prefix" {
+  type        = string
+  description = "Path prefix for the cb_api service"
+}
+
 variable "analysis_function_timeout_seconds" {
   type        = number
   default     = 180
