@@ -298,6 +298,7 @@ module "load_balancer" {
 
 module "analysis_cloud_function" {
   source                           = "../cloudfunction"
+  allow_unauthenticated            = true
   region                           = var.gcp_region
   project                          = var.gcp_project_id
   vpc_connector_name               = module.network.vpc_access_connector_name
@@ -457,7 +458,10 @@ module "data_pipes_cloud_function" {
   available_cpu                    = var.data_processing_available_cpu
   max_instance_count               = var.data_processing_max_instance_count
   max_instance_request_concurrency = var.data_processing_max_instance_request_concurrency
-  additional_invokers              = [google_service_account.scheduler_invoker.email]
+  additional_invokers = [
+    google_service_account.scheduler_invoker.email,
+    google_service_account.cloudtasks_invoker.email,
+  ]
 }
 
 
