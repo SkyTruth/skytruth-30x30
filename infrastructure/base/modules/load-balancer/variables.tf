@@ -59,3 +59,13 @@ variable "analysis_function_path_prefix" {
   description = "Path prefix for the analysis function"
 }
 
+variable "cb_api_cloud_run_name" {
+  type        = string
+  description = "Name of the cb_api Cloud Run service"
+}
+
+variable "cb_api_path_prefix" {
+  type        = string
+  description = "Path prefix for the cb_api service"
+}
+
