@@ -35,34 +35,62 @@ const ContributionLegend: FCWithMessages = () => {
 
 ContributionLegend.messages = ['containers.map-sidebar-main-panel'];
 
+// Request state of a stat that loads separately from coverage
+export type StatStatus = 'loading' | 'error' | 'success';
+
 type StatBlockProps = {
   className?: string;
   title: string;
   contribution?: Contribution;
   target?: number;
+  status?: StatStatus;
 };
 
-/** One section inside a location, with heading and chart */
-const StatBlock: FCWithMessages<StatBlockProps> = ({ className, title, contribution, target }) => {
-  if (!contribution) return null;
+/**
+ * One section inside a location, with heading and chart, or a loading or error message
+ * while its request runs
+ */
+const StatBlock: FCWithMessages<StatBlockProps> = ({
+  className,
+  title,
+  contribution,
+  target,
+  status = 'success',
+}) => {
+  const t = useTranslations('containers.map-sidebar-main-panel');
+  const tUploads = useTranslations('services.uploads');
+
+  if (status === 'success' && !contribution) return null;
 
   return (
     <div className={className}>
       <h4 className="text-sm font-bold">{title}</h4>
-      <ContributionChart className="pt-3" contribution={contribution} target={target} />
+      {status === 'loading' && <p className="pt-3 font-mono text-xs">{t('loading-data')}</p>}
+      {status === 'error' && (
+        <p className="pt-3 font-mono text-xs">{tUploads('general-stats-error')}</p>
+      )}
+      {status === 'success' && (
+        <ContributionChart className="pt-3" contribution={contribution} target={target} />
+      )}
     </div>
   );
 };
 
-StatBlock.messages = [...ContributionChart.messages];
+StatBlock.messages = [
+  'containers.map-sidebar-main-panel',
+  'services.uploads',
+  ...ContributionChart.messages,
+];
 
 type ContributionItemProps = {
   title: string;
   stats: SectionStats;
+  // "Fully/Highly Protected" stat; unset on the terrestrial tab
+  fhp?: { status: StatStatus; contribution?: Contribution };
 };
 
 /** One collapsible location in the panel: each shows the legend and stats */
-const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats }) => {
+const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats, fhp }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
 
@@ -89,6 +117,7 @@ const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats 
           contribution={stats.coverage}
           target={stats.coverageTarget}
         />
+        {fhp && <StatBlock className="pt-6" title={t('fully-highly-protected')} {...fhp} />}
       </AccordionContent>
     </AccordionItem>
   );

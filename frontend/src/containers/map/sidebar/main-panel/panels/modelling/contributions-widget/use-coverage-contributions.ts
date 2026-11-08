@@ -183,7 +183,7 @@ const useCoverageContributions = () => {
     return { countries, regionsAndSeas, global };
   }, [coverageStats, locationsArea, seaCodes, isIhoActive, tab]);
 
-  return { countries, regionsAndSeas, global, isLoading: isInitialLoading };
+  return { countries, regionsAndSeas, global, seaCodes, isLoading: isInitialLoading };
 };
 
 export default useCoverageContributions;

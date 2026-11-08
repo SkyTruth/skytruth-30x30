@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useAtomValue } from 'jotai';
 import { useTranslations } from 'next-intl';
@@ -12,8 +12,9 @@ import { FCWithMessages } from '@/types';
 
 import useTooltips from '../useTooltips';
 
-import ContributionSection from './contribution-section';
-import useCoverageContributions from './use-coverage-contributions';
+import ContributionSection, { StatStatus } from './contribution-section';
+import useCoverageContributions, { SectionStats } from './use-coverage-contributions';
+import useFhpContributions from './use-fhp-contributions';
 
 /**
  * Stats in the Conservation Builder panel once a shape is drawn or uploaded, grouped into
@@ -41,8 +42,22 @@ const ContributionsWidget: FCWithMessages = () => {
 
   const tooltips = useTooltips();
 
-  const { countries, regionsAndSeas, global, isLoading } = useCoverageContributions();
+  const { countries, regionsAndSeas, global, seaCodes, isLoading } = useCoverageContributions();
   const hasLocations = countries.length > 0 || regionsAndSeas.length > 0;
+
+  // Fully/Highly Protected stats for every listed location, marine only
+  const isMarine = tab === 'marine';
+  const listedCodes = useMemo(
+    () => [...countries, ...regionsAndSeas].map(({ code }) => code),
+    [countries, regionsAndSeas]
+  );
+  const fhp = useFhpContributions(listedCodes, seaCodes, isMarine);
+  const fhpStatus: StatStatus = fhp.isError ? 'error' : fhp.isLoading ? 'loading' : 'success';
+  const withFhp = (title: string, stats: SectionStats) => ({
+    title,
+    stats,
+    fhp: isMarine ? { status: fhpStatus, contribution: fhp.fhpByCode.get(stats.code) } : undefined,
+  });
 
   // One location is open, all others collapsed (starting with the first one listed)
   const [openCode, setOpenCode] = useState('');
@@ -68,21 +83,21 @@ const ContributionsWidget: FCWithMessages = () => {
           <ContributionSection
             title={t('countries-section')}
             tooltip={tooltips?.['countries']}
-            items={countries.map((stats) => ({ title: getLocationName(stats.location), stats }))}
+            items={countries.map((stats) => withFhp(getLocationName(stats.location), stats))}
           />
         )}
         {regionsAndSeas.length > 0 && (
           <ContributionSection
             title={t('regions-and-seas-section')}
             tooltip={tooltips?.['regionsAndSeas']}
-            items={regionsAndSeas.map((stats) => ({ title: t('highseas'), stats }))}
+            items={regionsAndSeas.map((stats) => withFhp(t('highseas'), stats))}
           />
         )}
         {global && (
           <ContributionSection
             title={t('global-section')}
             tooltip={tooltips?.['global']}
-            items={[{ title: t('globe'), stats: global }]}
+            items={[withFhp(t('globe'), global)]}
           />
         )}
       </Accordion>
