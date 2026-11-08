@@ -28,3 +28,15 @@ export const fetchModelling = (tab: string, feature: Feature, isCbApiActive: boo
     geometry: feature,
   });
 };
+
+export type ModellingStatEndpoint = 'protection-level';
+
+export const fetchModellingStat = (
+  endpoint: ModellingStatEndpoint,
+  feature: Feature,
+  params: Record<string, string>
+) =>
+  axios.post<ModellingData>(getCbApiUrl(endpoint), {
+    ...params,
+    geometry: feature,
+  });
