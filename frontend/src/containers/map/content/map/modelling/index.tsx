@@ -1,41 +1,25 @@
-import { FC, useEffect, useMemo } from 'react';
+import { FC, useEffect } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
-import type { GeoJSONObject } from '@turf/turf';
 import { isAxiosError } from 'axios';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useSetAtom } from 'jotai';
 
 import { conservationStatsImpressed } from '@/components/analytics/heap';
-import {
-  modellingAtom,
-  customLayersAtom,
-  modellingCustomLayerIdAtom,
-} from '@/containers/map/store';
+import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { CB_API_FLAG, fetchModelling, getModellingQueryKey } from '@/lib/utils/fetch-modelling';
-import { extractPolygons } from '@/lib/utils/file-upload';
+
+import useModellingFeature from './use-modelling-feature';
 
 const Modelling: FC = () => {
-  const modellingLayerId = useAtomValue(modellingCustomLayerIdAtom);
-  const customLayers = useAtomValue(customLayersAtom);
+  const { feature, layerId: modellingLayerId } = useModellingFeature();
   const setModellingState = useSetAtom(modellingAtom);
 
   const [{ tab }] = useSyncMapContentSettings();
   // TODO: TECH-3876, clean up the use_cb_api feature flag so stats always come from
   // cb_api
   const isCbApiActive = Boolean(useFeatureFlag(CB_API_FLAG));
-
-  const modellingLayer = modellingLayerId ? customLayers[modellingLayerId] : null;
-
-  const feature = useMemo(() => {
-    if (!modellingLayer) return null;
-    try {
-      return extractPolygons(modellingLayer.feature as GeoJSONObject).feature;
-    } catch {
-      return null;
-    }
-  }, [modellingLayer]);
 
   const getErrorMessageKey = (req: unknown): string => {
     if (!isAxiosError(req)) return 'general-stats-error';
