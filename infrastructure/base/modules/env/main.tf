@@ -37,6 +37,13 @@ module "postgres_application_user_password" {
   use_random_value = true
 }
 
+module "postgres_read_only_user_password" {
+  source           = "../secret_value"
+  region           = var.gcp_region
+  key              = "${var.project_name}_postgres_read_only_user_password"
+  use_random_value = true
+}
+
 module "frontend_cloudrun" {
   source                = "../cloudrun"
   name                  = "${var.project_name}-fe"
@@ -80,6 +87,9 @@ module "database" {
   database_name              = var.database_name
   database_user              = var.database_user
   database_password          = module.postgres_application_user_password.secret_value
+  database_version           = var.database_version
+  read_only_user             = "cb_api_read_only"
+  read_only_password         = module.postgres_read_only_user_password.secret_value
   network_id                 = module.network.network_id
   sql-database-instance-tier = "db-custom-2-3840"
 
@@ -152,6 +162,7 @@ locals {
   cms_lb_url         = "https://${local.domain}/${var.backend_path_prefix}/"
   api_lb_url         = "https://${local.domain}/${var.backend_path_prefix}/api/"
   analysis_cf_lb_url = "https://${local.domain}/${var.functions_path_prefix}/${var.analysis_function_path_prefix}/"
+  cb_api_lb_url      = "https://${local.domain}/${var.cb_api_path_prefix}/"
   cms_env = {
     HOST = "0.0.0.0"
     PORT = 1337
@@ -181,7 +192,8 @@ locals {
     NEXT_PUBLIC_ANALYSIS_CF_URL = local.analysis_cf_lb_url
     NEXT_PUBLIC_ENVIRONMENT     = "production"
     LOG_LEVEL                   = "info"
-    CB_API_URL = module.cb_api_cloudrun.cloudrun_service_url
+    NEXT_PUBLIC_CB_API_URL      = local.cb_api_lb_url
+    CB_API_URL                  = module.cb_api_cloudrun.cloudrun_service_url
   }
   analysis_cloud_function_env = {
     DATABASE_CLIENT   = "postgres"
@@ -284,6 +296,8 @@ module "load_balancer" {
   backend_path_prefix           = var.backend_path_prefix
   functions_path_prefix         = var.functions_path_prefix
   analysis_function_path_prefix = var.analysis_function_path_prefix
+  cb_api_cloud_run_name         = module.cb_api_cloudrun.name
+  cb_api_path_prefix            = var.cb_api_path_prefix
 }
 
 module "analysis_cloud_function" {
@@ -311,12 +325,12 @@ locals {
   cb_api_env = [
     { name = "DATABASE_HOST", value = module.database.database_host },
     { name = "DATABASE_NAME", value = module.database.database_name },
-    { name = "DATABASE_USERNAME", value = module.database.database_user },
+    { name = "DATABASE_USERNAME", value = module.database.read_only_user },
   ]
 
   cb_api_secrets = [{
     name        = "DATABASE_PASSWORD"
-    secret_name = module.postgres_application_user_password.secret_name
+    secret_name = module.postgres_read_only_user_password.secret_name
   }]
 }
 
@@ -334,15 +348,15 @@ module "cb_api_cloudrun" {
   env_vars           = local.cb_api_env
   secrets            = local.cb_api_secrets
 
+  ingress = "internal-and-cloud-load-balancing"
+
   container_concurrency = 10
   max_scale             = 2
   memory                = "512Mi"
   timeout_seconds       = 600
 
-  # Set this to false once an image exists
+  # Switch to var.use_hello_world_image once both cb_api repos have an image
   use_hello_world_image = true
-
-  depends_on = [module.postgres_application_user_password]
 }
 
 resource "google_storage_bucket" "data_bucket" {

@@ -95,6 +95,16 @@ resource "google_compute_url_map" "load-balancer-url-map" {
         }
       }
     }
+
+    path_rule {
+      paths   = ["/${var.cb_api_path_prefix}/*"]
+      service = google_compute_backend_service.cb_api_service.id
+      route_action {
+        url_rewrite {
+          path_prefix_rewrite = "/"
+        }
+      }
+    }
   }
 }
 
@@ -115,6 +125,16 @@ resource "google_compute_region_network_endpoint_group" "cloudrun_frontend_neg" 
   region                = var.region
   cloud_run {
     service = var.frontend_cloud_run_name
+  }
+}
+
+resource "google_compute_region_network_endpoint_group" "cloudrun_cb_api_neg" {
+  provider              = google-beta
+  name                  = "${var.name}-cb-api-neg"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+  cloud_run {
+    service = var.cb_api_cloud_run_name
   }
 }
 
@@ -151,6 +171,15 @@ resource "google_compute_backend_service" "analysis_service" {
 
   backend {
     group = google_compute_region_network_endpoint_group.function_analysis_neg.id
+  }
+}
+
+resource "google_compute_backend_service" "cb_api_service" {
+  name        = "${var.name}-cb-api-service"
+  description = "${var.name} cb_api service"
+
+  backend {
+    group = google_compute_region_network_endpoint_group.cloudrun_cb_api_neg.id
   }
 }
 
