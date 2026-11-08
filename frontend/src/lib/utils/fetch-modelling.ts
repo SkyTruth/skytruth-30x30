@@ -16,10 +16,12 @@ export const getModellingQueryKey = (tab: string, layerId: string, isCbApiActive
   isCbApiActive ? 'cb-api' : 'cloud-function',
 ];
 
+const getCbApiUrl = (endpoint: string) =>
+  `${process.env.NEXT_PUBLIC_CB_API_URL.replace(/\/+$/, '')}/${endpoint}`;
+
 export const fetchModelling = (tab: string, feature: Feature, isCbApiActive: boolean) => {
-  // TODO: TECH-3876, clean up the use_cb_api feature flag so '/api/analysis/coverage' is
-  // the only URL, and remove NEXT_PUBLIC_ANALYSIS_CF_URL
-  const url = isCbApiActive ? '/api/analysis/coverage' : process.env.NEXT_PUBLIC_ANALYSIS_CF_URL;
+  // TODO: TECH-3876, clean up the use_cb_api feature flag: remove NEXT_PUBLIC_ANALYSIS_CF_URL
+  const url = isCbApiActive ? getCbApiUrl('coverage') : process.env.NEXT_PUBLIC_ANALYSIS_CF_URL;
 
   return axios.post<ModellingData>(url, {
     environment: tab,

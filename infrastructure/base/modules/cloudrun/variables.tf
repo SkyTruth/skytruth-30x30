@@ -61,6 +61,12 @@ variable "container_concurrency" {
   default     = null
 }
 
+variable "ingress" {
+  type        = string
+  description = "Which traffic can reach the service: all, internal, or internal-and-cloud-load-balancing. Leave null to keep the service's current setting."
+  default     = null
+}
+
 variable "vpc_connector_name" {
   type        = string
   description = "Name of the VPC Access Connector"
