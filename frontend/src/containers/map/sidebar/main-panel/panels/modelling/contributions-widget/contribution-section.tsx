@@ -16,6 +16,7 @@ import { cn } from '@/lib/classnames';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
+import type { StatStatus } from './stat-status';
 import { SectionStats } from './use-coverage-contributions';
 
 /** One legend entry: a colored square (`className` sets its color) and its label */
@@ -39,9 +40,6 @@ const ContributionLegend: FCWithMessages = () => {
 };
 
 ContributionLegend.messages = ['containers.map-sidebar-main-panel'];
-
-// Request state of a stat that loads separately from coverage
-export type StatStatus = 'loading' | 'error' | 'success';
 
 type StatBlockProps = {
   className?: string;

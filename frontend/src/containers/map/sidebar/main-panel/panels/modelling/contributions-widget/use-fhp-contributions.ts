@@ -1,15 +1,10 @@
 import { useMemo } from 'react';
 
-import {
-  Contribution,
-  computeContribution,
-  getAddedArea,
-  sumAddedArea,
-} from '@/lib/utils/modelling-contributions';
+import { GLOBAL_CODE, buildContributions } from '@/lib/utils/modelling-contributions';
 import { useGetMpaaProtectionLevelStats } from '@/types/generated/mpaa-protection-level-stat';
 import { MpaaProtectionLevelStat } from '@/types/generated/strapi.schemas';
 
-import { GLOBAL_CODE } from './use-coverage-contributions';
+import { toStatus } from './stat-status';
 import useModellingStat from './use-modelling-stat';
 
 const FHP_LEVEL = 'fully-highly-protected';
@@ -28,20 +23,14 @@ const FHP_LEVEL = 'fully-highly-protected';
  */
 const useFhpContributions = (codes: string[], seaCodes: ReadonlySet<string>, enabled: boolean) => {
   // Added fully/highly protected area per location
-  const {
-    data: fhpData,
-    isInitialLoading: isAnalysisLoading,
-    isError,
-  } = useModellingStat(
+  const analysis = useModellingStat(
     'protection-level',
     { level: FHP_LEVEL, environment: 'marine' },
     { enabled }
   );
 
   // Existing fully/highly protected area per location, plus global
-  const { data: fhpStats, isInitialLoading: isStatsLoading } = useGetMpaaProtectionLevelStats<
-    MpaaProtectionLevelStat[]
-  >(
+  const stats = useGetMpaaProtectionLevelStats<MpaaProtectionLevelStat[]>(
     {
       filters: {
         location: {
@@ -74,30 +63,23 @@ const useFhpContributions = (codes: string[], seaCodes: ReadonlySet<string>, ena
     }
   );
 
-  const fhpByCode = useMemo(() => {
-    const contributions = new Map<string, Contribution>();
-    if (!fhpData || !fhpStats) return contributions;
+  const byCode = useMemo(
+    () =>
+      analysis.data && stats.data
+        ? buildContributions(
+            stats.data.map(({ location, area, total_area }) => ({
+              code: location?.code,
+              existing: Number(area ?? 0),
+              total: Number(total_area),
+            })),
+            analysis.data.locations_area,
+            seaCodes
+          )
+        : new Map(),
+    [analysis.data, stats.data, seaCodes]
+  );
 
-    const addedByCode = new Map(
-      fhpData.locations_area.map((locationArea) => [locationArea.code, getAddedArea(locationArea)])
-    );
-
-    fhpStats.forEach(({ location, area, total_area }) => {
-      const code = location?.code;
-      if (!code) return;
-
-      const added =
-        code === GLOBAL_CODE
-          ? sumAddedArea(fhpData.locations_area, seaCodes)
-          : (addedByCode.get(code) ?? 0);
-
-      contributions.set(code, computeContribution(Number(area ?? 0), added, Number(total_area)));
-    });
-
-    return contributions;
-  }, [fhpData, fhpStats, seaCodes]);
-
-  return { fhpByCode, isLoading: isAnalysisLoading || isStatsLoading, isError };
+  return { byCode, status: toStatus(analysis, stats) };
 };
 
 export default useFhpContributions;

@@ -12,7 +12,7 @@ import { FCWithMessages } from '@/types';
 
 import useTooltips from '../useTooltips';
 
-import ContributionSection, { StatStatus } from './contribution-section';
+import ContributionSection from './contribution-section';
 import useCoverageContributions, { SectionStats } from './use-coverage-contributions';
 import useFhpContributions from './use-fhp-contributions';
 
@@ -52,11 +52,10 @@ const ContributionsWidget: FCWithMessages = () => {
     [countries, regionsAndSeas]
   );
   const fhp = useFhpContributions(listedCodes, seaCodes, isMarine);
-  const fhpStatus: StatStatus = fhp.isError ? 'error' : fhp.isLoading ? 'loading' : 'success';
   const withFhp = (title: string, stats: SectionStats) => ({
     title,
     stats,
-    fhp: isMarine ? { status: fhpStatus, contribution: fhp.fhpByCode.get(stats.code) } : undefined,
+    fhp: isMarine ? { status: fhp.status, contribution: fhp.byCode.get(stats.code) } : undefined,
   });
 
   // One location is open, all others collapsed (starting with the first one listed)
