@@ -1,3 +1,5 @@
+import { PropsWithChildren } from 'react';
+
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -10,10 +12,19 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { cn } from '@/lib/classnames';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
 import { SectionStats } from './use-coverage-contributions';
+
+/** One legend entry: a colored square (`className` sets its color) and its label */
+const LegendItem = ({ className, children }: PropsWithChildren<{ className: string }>) => (
+  <li className="flex items-center gap-2">
+    <span aria-hidden className={cn('h-2.5 w-2.5', className)} />
+    {children}
+  </li>
+);
 
 /** Existing area and Added area legend shown at the top of each open location */
 const ContributionLegend: FCWithMessages = () => {
@@ -21,14 +32,8 @@ const ContributionLegend: FCWithMessages = () => {
 
   return (
     <ul className="flex gap-8 font-mono text-xs">
-      <li className="flex items-center gap-2">
-        <span aria-hidden className="h-2.5 w-2.5 bg-existing-area" />
-        {t('existing-area')}
-      </li>
-      <li className="flex items-center gap-2">
-        <span aria-hidden className="h-2.5 w-2.5 bg-blue-700" />
-        {t('added-area')}
-      </li>
+      <LegendItem className="bg-existing-area">{t('existing-area')}</LegendItem>
+      <LegendItem className="bg-blue-700">{t('added-area')}</LegendItem>
     </ul>
   );
 };
