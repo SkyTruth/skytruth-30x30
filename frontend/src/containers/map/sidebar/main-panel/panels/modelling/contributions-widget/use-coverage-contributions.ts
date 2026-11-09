@@ -6,17 +6,11 @@ import { useLocale } from 'next-intl';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
-import {
-  Contribution,
-  computeContribution,
-  getAddedArea,
-  sumAddedArea,
-} from '@/lib/utils/modelling-contributions';
+import { Contribution, GLOBAL_CODE, buildContributions } from '@/lib/utils/modelling-contributions';
 import { useGetLocations } from '@/types/generated/location';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { Location, ProtectionCoverageStat } from '@/types/generated/strapi.schemas';
 
-export const GLOBAL_CODE = 'GLOB';
 const HIGH_SEAS_TYPE = 'highseas';
 
 /** Stats for one collapsible location in the Conservation Builder panel */
@@ -126,38 +120,40 @@ const useCoverageContributions = () => {
   );
 
   const { countries, regionsAndSeas, global } = useMemo(() => {
-    const statsByCode = new Map(
-      (coverageStats ?? []).map((stat) => [stat.location?.code, stat] as const)
+    const locationByCode = new Map(
+      (coverageStats ?? []).map((stat) => [stat.location?.code, stat.location as Location])
     );
 
+    // Coverage of every location with stats, plus global
+    const coverageByCode = buildContributions(
+      (coverageStats ?? []).map(({ location, protected_area, total_area }) => ({
+        code: location?.code,
+        existing: protected_area ?? 0,
+        // Fallback area if the location isn't in WDPA
+        total: Number(
+          total_area ??
+            (tab === 'marine' ? location?.total_marine_area : location?.total_terrestrial_area)
+        ),
+      })),
+      locationsArea,
+      seaCodes
+    );
+
+    const toSectionStats = (code: string): SectionStats => {
+      const location = locationByCode.get(code);
+      return {
+        code,
+        location,
+        coverage: coverageByCode.get(code),
+        coverageTarget: getCoverageTarget(location, tab),
+      };
+    };
+
     // One entry per intersected location that has coverage stats
-    const locations = locationsArea.flatMap((locationArea): SectionStats[] => {
-      const { code } = locationArea;
+    const locations = locationsArea
       // TECH-3764: Clean up
-      if (!isIhoActive && seaCodes.has(code)) return [];
-
-      const stat = statsByCode.get(code);
-      if (!stat) return [];
-
-      const location = stat.location as Location;
-      // Fallback area if the location isn't in WDPA
-      const fallbackArea =
-        tab === 'marine' ? location?.total_marine_area : location?.total_terrestrial_area;
-      const total = Number(stat.total_area ?? fallbackArea);
-
-      return [
-        {
-          code,
-          location,
-          coverage: computeContribution(
-            stat.protected_area ?? 0,
-            getAddedArea(locationArea),
-            total
-          ),
-          coverageTarget: getCoverageTarget(location, tab),
-        },
-      ];
-    });
+      .filter(({ code }) => (isIhoActive || !seaCodes.has(code)) && coverageByCode.has(code))
+      .map(({ code }) => toSectionStats(code));
 
     // Regions and Seas includes High Seas (ABNJ)
     const isHighSeas = ({ location }: SectionStats) => location?.type === HIGH_SEAS_TYPE;
@@ -165,20 +161,8 @@ const useCoverageContributions = () => {
     const regionsAndSeas = locations.filter(isHighSeas);
 
     // Global: the world's coverage plus the shape's added area summed across locations
-    const globalStat = statsByCode.get(GLOBAL_CODE);
-    const global: SectionStats | null =
-      globalStat && locations.length
-        ? {
-            code: GLOBAL_CODE,
-            location: globalStat.location as Location,
-            coverage: computeContribution(
-              globalStat.protected_area ?? 0,
-              sumAddedArea(locationsArea, seaCodes),
-              Number(globalStat.total_area ?? 0)
-            ),
-            coverageTarget: getCoverageTarget(globalStat.location as Location, tab),
-          }
-        : null;
+    const global =
+      locations.length && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
 
     return { countries, regionsAndSeas, global };
   }, [coverageStats, locationsArea, seaCodes, isIhoActive, tab]);
