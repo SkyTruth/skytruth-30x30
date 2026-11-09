@@ -1,5 +1,8 @@
 import { ModellingLocationArea } from '@/types/modelling';
 
+// Strapi location code of the whole world, shown in the Global section
+export const GLOBAL_CODE = 'GLOB';
+
 /**
  * How much of an area is protected before and after a drawn shape,
  * shown in one stat block of the Conservation Builder panel
@@ -59,3 +62,31 @@ export const sumAddedArea = (
   locations
     .filter(({ code }) => !exclude.has(code))
     .reduce((total, location) => total + getAddedArea(location), 0);
+
+/** Existing protected area and total area of one location for a stat in km² */
+export type Baseline = {
+  code: string;
+  existing: number;
+  total: number;
+};
+
+/**
+ * Contribution per location code for one stat (e.g. coverage): 
+ * baseline and added area from an analysis result. 
+ * `GLOBAL_CODE` gets the added area of every location in the analysis except `exclude`
+ */
+export const buildContributions = (
+  baselines: Baseline[],
+  locations: ModellingLocationArea[],
+  exclude: ReadonlySet<string> = new Set()
+) => {
+  const addedByCode = new Map(locations.map((location) => [location.code, getAddedArea(location)]));
+
+  return new Map(
+    baselines.map(({ code, existing, total }) => {
+      const added =
+        code === GLOBAL_CODE ? sumAddedArea(locations, exclude) : (addedByCode.get(code) ?? 0);
+      return [code, computeContribution(existing, added, total)] as const;
+    })
+  );
+};
