@@ -42,8 +42,8 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
       <div className="flex items-start justify-between gap-4">
         <div className="shrink-0">
           {/* Protected percentage including the drawn shape (with "+X%") */}
-          <div className="flex items-start gap-2">
-            <span className="text-3xl font-bold leading-none">
+          <div className="-mt-1.5 flex items-center gap-2">
+            <span className="pt-[0.2em] text-3xl font-bold leading-none">
               {formatPercentage(locale, totalPercentage, { displayPercentageSign: false })}
               <span className="pl-0.5 text-xs">%</span>
             </span>
