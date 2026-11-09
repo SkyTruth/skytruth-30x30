@@ -155,7 +155,7 @@ const useCoverageContributions = () => {
       .filter(({ code }) => (isIhoActive || !seaCodes.has(code)) && coverageByCode.has(code))
       .map(({ code }) => toSectionStats(code));
 
-    // Regions and Seas includes High Seas (ABNJ)
+    // Regions and Seas includes Areas Beyond National Jurisdiction (ABNJ, the high seas)
     const isHighSeas = ({ location }: SectionStats) => location?.type === HIGH_SEAS_TYPE;
     const countries = locations.filter((stats) => !isHighSeas(stats));
     const regionsAndSeas = locations.filter(isHighSeas);

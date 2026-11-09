@@ -75,7 +75,10 @@ const ContributionsWidget: FCWithMessages = () => {
           <ContributionSection
             title={t('regions-and-seas-section')}
             tooltip={tooltips?.['regionsAndSeas']}
-            items={regionsAndSeas.map((stats) => ({ title: t('highseas'), stats }))}
+            items={regionsAndSeas.map((stats) => ({
+              title: getLocationName(stats.location),
+              stats,
+            }))}
           />
         )}
         {global && (
