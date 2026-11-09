@@ -43,7 +43,7 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
           </span>
           {added > 0 && (
             <AddedPercentageBadge
-              className="pb-0 pt-[0.2em] text-sm"
+              className="pb-[0.1em] pt-[0.3em] text-sm"
               percentage={addedPercentage}
             />
           )}
