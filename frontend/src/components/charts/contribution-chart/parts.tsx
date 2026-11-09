@@ -9,13 +9,27 @@ export const MAX_PERCENTAGE = 100;
 // Width of a bar segment, capped at the full bar
 export const toWidth = (percentage: number) => `${Math.min(percentage, MAX_PERCENTAGE)}%`;
 
-/** Blue "+X%" badge: how much the drawn shape adds to the protected percentage */
-export const AddedPercentageBadge = ({ percentage }: { percentage: number }) => {
+/**
+ * Blue "+X%" badge: how much the drawn shape adds to the protected percentage. The box
+ * scales with its font size, so a text size in `className` makes it larger or smaller
+ */
+export const AddedPercentageBadge = ({
+  className,
+  percentage,
+}: {
+  className?: string;
+  percentage: number;
+}) => {
   const t = useTranslations('components.chart-contribution');
   const locale = useLocale();
 
   return (
-    <span className="inline-flex items-center bg-blue-700 px-1.5 pb-[0.27em] pt-[0.47em] text-base font-bold leading-none text-white">
+    <span
+      className={cn(
+        'inline-flex items-center bg-blue-700 px-1.5 pb-[0.27em] pt-[0.47em] text-base font-bold leading-none text-white',
+        className
+      )}
+    >
       <span>
         {t('added-percentage', {
           percentage: formatPercentage(locale, percentage, { displayPercentageSign: false }),
