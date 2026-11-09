@@ -41,6 +41,22 @@ const ContributionLegend: FCWithMessages = () => {
 
 ContributionLegend.messages = ['containers.map-sidebar-main-panel'];
 
+/** "Loading data..." or the stats error while a stat's request runs or after it fails */
+const StatStatusMessage: FCWithMessages<{ status: StatStatus }> = ({ status }) => {
+  const t = useTranslations('containers.map-sidebar-main-panel');
+  const tUploads = useTranslations('services.uploads');
+
+  if (status === 'success') return null;
+
+  return (
+    <p className="pt-3 font-mono text-xs">
+      {status === 'loading' ? t('loading-data') : tUploads('general-stats-error')}
+    </p>
+  );
+};
+
+StatStatusMessage.messages = ['containers.map-sidebar-main-panel', 'services.uploads'];
+
 type StatBlockProps = {
   className?: string;
   title: string;
@@ -60,18 +76,12 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   target,
   status = 'success',
 }) => {
-  const t = useTranslations('containers.map-sidebar-main-panel');
-  const tUploads = useTranslations('services.uploads');
-
   if (status === 'success' && !contribution) return null;
 
   return (
     <div className={className}>
       <h4 className="text-sm font-bold">{title}</h4>
-      {status === 'loading' && <p className="pt-3 font-mono text-xs">{t('loading-data')}</p>}
-      {status === 'error' && (
-        <p className="pt-3 font-mono text-xs">{tUploads('general-stats-error')}</p>
-      )}
+      <StatStatusMessage status={status} />
       {status === 'success' && (
         <ContributionChart className="pt-3" contribution={contribution} target={target} />
       )}
@@ -79,11 +89,7 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   );
 };
 
-StatBlock.messages = [
-  'containers.map-sidebar-main-panel',
-  'services.uploads',
-  ...ContributionChart.messages,
-];
+StatBlock.messages = [...StatStatusMessage.messages, ...ContributionChart.messages];
 
 type ContributionItemProps = {
   title: string;

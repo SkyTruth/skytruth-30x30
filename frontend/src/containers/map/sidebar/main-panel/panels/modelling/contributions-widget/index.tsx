@@ -52,10 +52,12 @@ const ContributionsWidget: FCWithMessages = () => {
     [countries, regionsAndSeas]
   );
   const fhp = useFhpContributions(listedCodes, seaCodes, isMarine);
-  const withFhp = (title: string, stats: SectionStats) => ({
+  const withMarineStats = (title: string, stats: SectionStats) => ({
     title,
     stats,
-    fhp: isMarine ? { status: fhp.status, contribution: fhp.byCode.get(stats.code) } : undefined,
+    ...(isMarine && {
+      fhp: { status: fhp.status, contribution: fhp.byCode.get(stats.code) },
+    }),
   });
 
   // One location is open, all others collapsed (starting with the first one listed)
@@ -82,21 +84,23 @@ const ContributionsWidget: FCWithMessages = () => {
           <ContributionSection
             title={t('countries-section')}
             tooltip={tooltips?.['countries']}
-            items={countries.map((stats) => withFhp(getLocationName(stats.location), stats))}
+            items={countries.map((stats) =>
+              withMarineStats(getLocationName(stats.location), stats)
+            )}
           />
         )}
         {regionsAndSeas.length > 0 && (
           <ContributionSection
             title={t('regions-and-seas-section')}
             tooltip={tooltips?.['regionsAndSeas']}
-            items={regionsAndSeas.map((stats) => withFhp(t('highseas'), stats))}
+            items={regionsAndSeas.map((stats) => withMarineStats(t('highseas'), stats))}
           />
         )}
         {global && (
           <ContributionSection
             title={t('global-section')}
             tooltip={tooltips?.['global']}
-            items={[withFhp(t('globe'), global)]}
+            items={[withMarineStats(t('globe'), global)]}
           />
         )}
       </Accordion>
