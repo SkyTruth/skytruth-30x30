@@ -38,7 +38,9 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
       <div className="flex items-center justify-between gap-4">
         <span className="text-base font-bold">{title}</span>
         <div className="flex items-center gap-2 font-mono">
-          <span className="text-base font-bold">{formatPercentage(locale, totalPercentage)}</span>
+          <span className="pt-[0.2em] text-base font-bold leading-none">
+            {formatPercentage(locale, totalPercentage)}
+          </span>
           {added > 0 && (
             <AddedPercentageBadge
               className="pb-0 pt-[0.2em] text-sm"
