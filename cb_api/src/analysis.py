@@ -13,6 +13,13 @@ class AnalysisTable(StrEnum):
     MARINE = "eez_minus_mpa_v2"
     TERRESTRIAL = "gadm_minus_pa_v2"
     FULLY_HIGHLY_PROTECTED = "location_minus_fhp_mpa"
+    MANGROVES = "mangroves_minus_pa"
+    SALTMARSHES = "saltmarshes_minus_pa"
+    SEAGRASSES = "seagrasses_minus_pa"
+    SEAMOUNTS = "seamounts_minus_pa"
+    COLD_WATER_CORALS = "cold_water_corals_minus_pa"
+    CLIMATE_RESILIENT_CORALS = "climate_resilient_corals_minus_pa"
+    OTHER_CORALS = "other_corals_minus_pa"
 
 
 def get_geojson(geojson: JSON) -> dict:
