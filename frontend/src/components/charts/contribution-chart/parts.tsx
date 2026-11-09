@@ -26,8 +26,9 @@ export const AddedPercentageBadge = ({
   return (
     <span
       className={cn(
-        'inline-flex items-center bg-blue-700 px-1.5 pb-[0.27em] pt-[0.47em] text-base font-bold leading-none text-white',
-        className
+        'inline-flex items-center bg-blue-700 px-1.5 pb-[0.27em] pt-[0.47em] text-base font-bold text-white',
+        className,
+        'leading-none'
       )}
     >
       <span>
