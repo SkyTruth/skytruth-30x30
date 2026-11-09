@@ -29,7 +29,7 @@ export const fetchModelling = (tab: string, feature: Feature, isCbApiActive: boo
   });
 };
 
-export type ModellingStatEndpoint = 'protection-level';
+export type ModellingStatEndpoint = 'protection-level' | 'habitats';
 
 export const fetchModellingStat = (
   endpoint: ModellingStatEndpoint,

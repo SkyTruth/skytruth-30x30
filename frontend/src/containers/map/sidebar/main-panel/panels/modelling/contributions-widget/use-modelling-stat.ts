@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import type { Feature } from 'geojson';
 
 import useModellingFeature from '@/containers/map/content/map/modelling/use-modelling-feature';
@@ -33,6 +33,24 @@ const useModellingStat = (
   const { feature, layerId } = useModellingFeature();
 
   return useQuery(getModellingStatQuery(endpoint, params, feature, layerId, enabled));
+};
+
+/**
+ * The same as `useModellingStat` for several requests to one endpoint in parallel (e.g. one
+ * per habitat), each loading and failing on its own. Results are in the order of `paramsList`
+ */
+export const useModellingStats = (
+  endpoint: ModellingStatEndpoint,
+  paramsList: Record<string, string>[],
+  { enabled = true }: { enabled?: boolean } = {}
+) => {
+  const { feature, layerId } = useModellingFeature();
+
+  return useQueries({
+    queries: paramsList.map((params) =>
+      getModellingStatQuery(endpoint, params, feature, layerId, enabled)
+    ),
+  });
 };
 
 export default useModellingStat;
