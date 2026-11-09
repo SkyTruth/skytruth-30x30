@@ -2,8 +2,7 @@ import { FC, useEffect, useMemo } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import type { GeoJSONObject } from '@turf/turf';
-import axios, { isAxiosError } from 'axios';
-import type { Feature } from 'geojson';
+import { isAxiosError } from 'axios';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { conservationStatsImpressed } from '@/components/analytics/heap';
@@ -13,15 +12,9 @@ import {
   modellingCustomLayerIdAtom,
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
+import { CB_API_FLAG, fetchModelling, getModellingQueryKey } from '@/lib/utils/fetch-modelling';
 import { extractPolygons } from '@/lib/utils/file-upload';
-import { ModellingData } from '@/types/modelling';
-
-const fetchModelling = async (tab: string, feature: Feature) => {
-  return axios.post<ModellingData>(process.env.NEXT_PUBLIC_ANALYSIS_CF_URL, {
-    environment: tab,
-    geometry: feature,
-  });
-};
 
 const Modelling: FC = () => {
   const modellingLayerId = useAtomValue(modellingCustomLayerIdAtom);
@@ -29,6 +22,9 @@ const Modelling: FC = () => {
   const setModellingState = useSetAtom(modellingAtom);
 
   const [{ tab }] = useSyncMapContentSettings();
+  // TODO: TECH-3876, clean up the use_cb_api feature flag so stats always come from
+  // cb_api
+  const isCbApiActive = Boolean(useFeatureFlag(CB_API_FLAG));
 
   const modellingLayer = modellingLayerId ? customLayers[modellingLayerId] : null;
 
@@ -56,8 +52,8 @@ const Modelling: FC = () => {
   };
 
   const { isFetching, isSuccess, data } = useQuery(
-    ['modelling', tab, modellingLayerId],
-    () => fetchModelling(tab, feature),
+    getModellingQueryKey(tab, modellingLayerId, isCbApiActive),
+    () => fetchModelling(tab, feature, isCbApiActive),
     {
       enabled: Boolean(feature) && ['marine', 'terrestrial'].includes(tab),
       select: ({ data }) => data,
