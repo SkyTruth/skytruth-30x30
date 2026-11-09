@@ -71,8 +71,8 @@ export type Baseline = {
 };
 
 /**
- * Contribution per location code for one stat (e.g. coverage): 
- * baseline and added area from an analysis result. 
+ * Contribution per location code for one stat (e.g. coverage):
+ * baseline and added area from an analysis result.
  * `GLOBAL_CODE` gets the added area of every location in the analysis except `exclude`
  */
 export const buildContributions = (
