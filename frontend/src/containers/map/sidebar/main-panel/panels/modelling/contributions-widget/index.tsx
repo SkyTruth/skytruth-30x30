@@ -15,6 +15,7 @@ import useTooltips from '../useTooltips';
 import ContributionSection from './contribution-section';
 import useCoverageContributions, { SectionStats } from './use-coverage-contributions';
 import useFhpContributions from './use-fhp-contributions';
+import useHabitatContributions from './use-habitat-contributions';
 
 /**
  * Stats in the Conservation Builder panel once a shape is drawn or uploaded, grouped into
@@ -45,18 +46,23 @@ const ContributionsWidget: FCWithMessages = () => {
   const { countries, regionsAndSeas, global, seaCodes, isLoading } = useCoverageContributions();
   const hasLocations = countries.length > 0 || regionsAndSeas.length > 0;
 
-  // Fully/Highly Protected stats for every listed location, marine only
+  // Fully/Highly Protected and Habitat Protection stats for every listed location, marine only
   const isMarine = tab === 'marine';
   const listedCodes = useMemo(
     () => [...countries, ...regionsAndSeas].map(({ code }) => code),
     [countries, regionsAndSeas]
   );
   const fhp = useFhpContributions(listedCodes, seaCodes, isMarine);
+  const habitats = useHabitatContributions(listedCodes, seaCodes, isMarine);
   const withMarineStats = (title: string, stats: SectionStats) => ({
     title,
     stats,
     ...(isMarine && {
       fhp: { status: fhp.status, contribution: fhp.byCode.get(stats.code) },
+      habitats: {
+        status: habitats.status,
+        habitats: habitats.habitatsByCode.get(stats.code) ?? [],
+      },
     }),
   });
 

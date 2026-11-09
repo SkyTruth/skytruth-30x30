@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { useLocale } from 'next-intl';
 
 import { MARINE_HABITAT_CHART_COLORS } from '@/constants/habitat-chart-colors';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import {
   Baseline,
   Contribution,
@@ -17,7 +16,7 @@ import { HabitatStat } from '@/types/generated/strapi.schemas';
 import { StatStatus, toStatus } from './stat-status';
 import { useModellingStats } from './use-modelling-stat';
 
-// Habitats cb_api can analyze, in the order the panel lists them (same as the details panel).
+// Habitats cb_api can analyze, in the order the panel lists them
 // `strapiSlug` is the habitat's slug in Strapi and in MARINE_HABITAT_CHART_COLORS
 const HABITATS = [
   { slug: 'climate-resilient-corals', strapiSlug: 'climate-resilient-corals' },
@@ -29,9 +28,7 @@ const HABITATS = [
   { slug: 'seamounts', strapiSlug: 'seamounts' },
 ];
 
-const CLIMATE_RESILIENT_CORALS_SLUGS = ['climate-resilient-corals', 'other-corals'];
-
-// The CMS's maximum page size, so every year of every requested row comes back
+// The CMS's maximum page size, so no row is cut off when locations have several update years
 const ALL_ROWS = 100_000;
 
 /** One habitat row under "Habitat Protection" */
@@ -39,7 +36,6 @@ export type HabitatContribution = {
   slug: string;
   name: string;
   color: string;
-  // State of this habitat's analysis request
   status: StatStatus;
   contribution?: Contribution;
 };
@@ -47,10 +43,6 @@ export type HabitatContribution = {
 /**
  * "Habitat Protection" stats for the Conservation Builder panel (marine only), keyed by
  * location code, with `GLOB` for the Global section
- *
- * The added area comes from one cb_api habitats analysis per habitat; the existing protected
- * area and the habitat's extent come from Strapi's habitat stats, newest year per location
- * and habitat. A habitat with no extent in a location is left out of that location
  *
  * @param codes locations listed in the panel
  * @param seaCodes IHO seas, left out of the Global sum because they overlap national waters
@@ -63,24 +55,14 @@ const useHabitatContributions = (
 ) => {
   const locale = useLocale();
 
-  // TECH-3472: remove feature flag (climate resilient corals)
-  const isClimateResCoralsActive = useFeatureFlag('is_climate_res_corals_active');
-  const habitats = useMemo(
-    () =>
-      HABITATS.filter(
-        ({ slug }) => isClimateResCoralsActive || !CLIMATE_RESILIENT_CORALS_SLUGS.includes(slug)
-      ),
-    [isClimateResCoralsActive]
-  );
-
   // Added habitat area per location, one request per habitat
   const analyses = useModellingStats(
     'habitats',
-    habitats.map(({ slug }) => ({ habitat: slug })),
+    HABITATS.map(({ slug }) => ({ habitat: slug })),
     { enabled }
   );
 
-  // Existing protected habitat area and habitat extent per location, every year
+  // Existing protected habitat area and habitat extent per location
   const stats = useGetHabitatStats<HabitatStat[]>(
     {
       filters: {
@@ -96,7 +78,7 @@ const useHabitatContributions = (
         },
         habitat: {
           slug: {
-            $in: habitats.map(({ strapiSlug }) => strapiSlug),
+            $in: HABITATS.map(({ strapiSlug }) => strapiSlug),
           },
         },
       },
@@ -142,14 +124,14 @@ const useHabitatContributions = (
     const rowsByCode = new Map<string, HabitatContribution[]>();
     if (!stats.data) return rowsByCode;
 
-    // Newest year per location and habitat (rows come newest first)
+    // Newest year per location and habitat
     const latestStats = new Map<string, HabitatStat>();
     stats.data.forEach((stat) => {
       const key = `${stat.location?.code}|${stat.habitat?.slug}`;
       if (!latestStats.has(key)) latestStats.set(key, stat);
     });
 
-    habitats.forEach(({ slug, strapiSlug }, index) => {
+    HABITATS.forEach(({ slug, strapiSlug }, index) => {
       const analysis = analyses[index];
 
       // Locations where the habitat exists
@@ -178,7 +160,7 @@ const useHabitatContributions = (
     });
 
     return rowsByCode;
-  }, [stats.data, habitats, analyses, codes, seaCodes, habitatNames]);
+  }, [stats.data, analyses, codes, seaCodes, habitatNames]);
 
   return { habitatsByCode, status: toStatus(stats) };
 };

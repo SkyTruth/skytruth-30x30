@@ -4,6 +4,7 @@ import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import ContributionChart from '@/components/charts/contribution-chart';
+import HabitatContributionChart from '@/components/charts/habitat-contribution-chart';
 import TooltipButton from '@/components/tooltip-button';
 import {
   AccordionContent,
@@ -18,6 +19,7 @@ import { FCWithMessages } from '@/types';
 
 import type { StatStatus } from './stat-status';
 import { SectionStats } from './use-coverage-contributions';
+import type { HabitatContribution } from './use-habitat-contributions';
 
 /** One legend entry: a colored square (`className` sets its color) and its label */
 const LegendItem = ({ className, children }: PropsWithChildren<{ className: string }>) => (
@@ -63,6 +65,8 @@ type StatBlockProps = {
   contribution?: Contribution;
   target?: number;
   status?: StatStatus;
+  compact?: boolean;
+  color?: string;
 };
 
 /**
@@ -75,12 +79,25 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   contribution,
   target,
   status = 'success',
+  compact = false,
+  color,
 }) => {
   if (status === 'success' && !contribution) return null;
 
+  if (compact && status === 'success') {
+    return (
+      <HabitatContributionChart
+        className={className}
+        title={title}
+        color={color}
+        contribution={contribution}
+      />
+    );
+  }
+
   return (
     <div className={className}>
-      <h4 className="text-sm font-bold">{title}</h4>
+      <h4 className={cn('font-bold', compact ? 'text-base' : 'text-sm')}>{title}</h4>
       <StatStatusMessage status={status} />
       {status === 'success' && (
         <ContributionChart className="pt-3" contribution={contribution} target={target} />
@@ -89,17 +106,71 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   );
 };
 
-StatBlock.messages = [...StatStatusMessage.messages, ...ContributionChart.messages];
+StatBlock.messages = [
+  ...StatStatusMessage.messages,
+  ...ContributionChart.messages,
+  ...HabitatContributionChart.messages,
+];
+
+type HabitatProtectionProps = {
+  className?: string;
+  status: StatStatus;
+  habitats: HabitatContribution[];
+};
+
+/**
+ * "Habitat Protection" inside a location: one row per habitat found there, each loading on
+ * its own. Shows nothing if the location has none of the habitats
+ */
+const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
+  className,
+  status,
+  habitats,
+}) => {
+  const t = useTranslations('containers.map-sidebar-main-panel');
+
+  if (status === 'success' && !habitats.length) return null;
+
+  return (
+    <div className={className}>
+      <h4 className="text-sm font-bold">{t('habitat-protection')}</h4>
+      <StatStatusMessage status={status} />
+      {status === 'success' && (
+        <>
+          <ul className="pt-3 font-mono text-xs">
+            <LegendItem className="bg-blue-700">{t('newly-protected-habitat')}</LegendItem>
+          </ul>
+          {habitats.map(({ slug, name, ...habitat }) => (
+            <StatBlock key={slug} className="pt-4" compact title={name} {...habitat} />
+          ))}
+        </>
+      )}
+    </div>
+  );
+};
+
+HabitatProtection.messages = [
+  'containers.map-sidebar-main-panel',
+  ...StatStatusMessage.messages,
+  ...StatBlock.messages,
+];
 
 type ContributionItemProps = {
   title: string;
   stats: SectionStats;
   // "Fully/Highly Protected" stat; unset on the terrestrial tab
   fhp?: { status: StatStatus; contribution?: Contribution };
+  // "Habitat Protection" rows; unset on the terrestrial tab
+  habitats?: Omit<HabitatProtectionProps, 'className'>;
 };
 
 /** One collapsible location in the panel: each shows the legend and stats */
-const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats, fhp }) => {
+const ContributionItem: FCWithMessages<ContributionItemProps> = ({
+  title,
+  stats,
+  fhp,
+  habitats,
+}) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
 
@@ -127,6 +198,7 @@ const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats,
           target={stats.coverageTarget}
         />
         {fhp && <StatBlock className="pt-6" title={t('fully-highly-protected')} {...fhp} />}
+        {habitats && <HabitatProtection className="pt-6" {...habitats} />}
       </AccordionContent>
     </AccordionItem>
   );
@@ -136,6 +208,7 @@ ContributionItem.messages = [
   'containers.map-sidebar-main-panel',
   ...ContributionLegend.messages,
   ...StatBlock.messages,
+  ...HabitatProtection.messages,
 ];
 
 type ContributionSectionProps = {
