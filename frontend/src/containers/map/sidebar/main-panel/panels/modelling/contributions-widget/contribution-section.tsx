@@ -22,7 +22,7 @@ import { SectionStats } from './use-coverage-contributions';
 const LegendItem = ({ className, children }: PropsWithChildren<{ className: string }>) => (
   <li className="flex items-center gap-2">
     <span aria-hidden className={cn('h-2.5 w-2.5', className)} />
-    {children}
+    <span className="pt-[0.2em] leading-none">{children}</span>
   </li>
 );
 
