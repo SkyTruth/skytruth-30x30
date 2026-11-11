@@ -126,11 +126,11 @@ def get_locations_stats(
                     stats AS (
                         SELECT
                             location,
-                            ROUND((ST_Area(ST_Transform(
+                            ST_Area(ST_Transform(
                                 ST_MakeValid(ST_Intersection(the_geom, user_data_stats.geom)),
                                 '+proj=longlat +datum=WGS84 +no_defs +type=crs',
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
-                            ) AS portion_area_km2,
+                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6
+                            AS portion_area_km2,
                             user_data_stats.user_area_km2
                         FROM
                             data.{table.value},
@@ -140,7 +140,7 @@ def get_locations_stats(
                     )
                 SELECT
                     location,
-                    SUM(portion_area_km2) AS portion_area_km2,
+                    ROUND(SUM(portion_area_km2)) AS portion_area_km2,
                     AVG(user_area_km2) AS user_area_km2
                 FROM stats
                 GROUP BY location
