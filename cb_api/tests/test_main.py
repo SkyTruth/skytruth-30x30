@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
 
+from src import main
 from src.config import get_settings
 from src.errors import BadRequestError
 from src.main import app, get_engine
@@ -42,8 +43,15 @@ error_client = TestClient(app, raise_server_exceptions=False)
 
 POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 
+# One valid request per route that queries the database
+ANALYSIS_REQUESTS = [
+    ("/coverage", {"geometry": POLYGON}),
+    ("/protection-level", {"geometry": POLYGON}),
+    ("/habitats", {"geometry": POLYGON, "habitat": "mangroves"}),
+]
 
-# --- health ------------------------------------------------------------------------
+
+# --- health and routing ------------------------------------------------------------
 
 
 def test_health_returns_ok():
@@ -51,6 +59,12 @@ def test_health_returns_ok():
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_the_service_root_is_not_an_endpoint():
+    response = client.post("/", json={"geometry": POLYGON})
+
+    assert response.status_code == 404
 
 
 # --- engine wiring -----------------------------------------------------------------
@@ -61,6 +75,30 @@ def test_get_engine_reads_the_engine_off_app_state():
     request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(engine=engine)))
 
     assert get_engine(request) is engine
+
+
+@pytest.mark.parametrize(("path", "body"), ANALYSIS_REQUESTS)
+def test_analysis_routes_query_with_the_pooled_engine(
+    monkeypatch: pytest.MonkeyPatch, path: str, body: dict
+):
+    """The engine is a placeholder object and the analysis layer a stub, so no database
+    is involved."""
+    pooled_engine = object()
+    engines_used = []
+
+    def fake_get_locations_stats(engine, *_):
+        engines_used.append(engine)
+        return {"locations": [], "total_area": 0.0}
+
+    monkeypatch.setattr(main, "get_locations_stats", fake_get_locations_stats)
+    app.dependency_overrides[get_engine] = lambda: pooled_engine
+    try:
+        response = client.post(path, json=body)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert engines_used == [pooled_engine]
 
 
 def test_lifespan_builds_and_disposes_the_engine(monkeypatch: pytest.MonkeyPatch):
