@@ -2,13 +2,21 @@ import type { QueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import type { Feature } from 'geojson';
 
-import { ModellingData } from '@/types/modelling';
+import {
+  toModellingData,
+  type CloudFunctionModellingData,
+  type ModellingData,
+} from '@/types/modelling';
 
 const fetchModelling = async (tab: string, feature: Feature) => {
-  return axios.post<ModellingData>(process.env.NEXT_PUBLIC_ANALYSIS_CF_URL, {
-    environment: tab,
-    geometry: feature,
-  });
+  const response = await axios.post<ModellingData | CloudFunctionModellingData>(
+    process.env.NEXT_PUBLIC_ANALYSIS_CF_URL,
+    {
+      environment: tab,
+      geometry: feature,
+    }
+  );
+  return { ...response, data: toModellingData(response.data) };
 };
 
 /**

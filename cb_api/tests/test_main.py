@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
 
+from src import main
 from src.config import get_settings
 from src.errors import BadRequestError
 from src.main import app, get_engine
@@ -42,8 +43,11 @@ error_client = TestClient(app, raise_server_exceptions=False)
 
 POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 
+# One valid request per route that queries the database
+ANALYSIS_REQUESTS = [("/coverage", {"geometry": POLYGON})]
 
-# --- health ------------------------------------------------------------------------
+
+# --- health and routing ------------------------------------------------------------
 
 
 def test_health_returns_ok():
@@ -51,6 +55,12 @@ def test_health_returns_ok():
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_the_service_root_is_not_an_endpoint():
+    response = client.post("/", json={"geometry": POLYGON})
+
+    assert response.status_code == 404
 
 
 # --- engine wiring -----------------------------------------------------------------
@@ -61,6 +71,30 @@ def test_get_engine_reads_the_engine_off_app_state():
     request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(engine=engine)))
 
     assert get_engine(request) is engine
+
+
+@pytest.mark.parametrize(("path", "body"), ANALYSIS_REQUESTS)
+def test_analysis_routes_query_with_the_pooled_engine(
+    monkeypatch: pytest.MonkeyPatch, path: str, body: dict
+):
+    """The engine is a placeholder object and the analysis layer a stub, so no database
+    is involved."""
+    pooled_engine = object()
+    engines_used = []
+
+    def fake_get_locations_stats(engine, *_):
+        engines_used.append(engine)
+        return {"locations": [], "total_area": 0.0}
+
+    monkeypatch.setattr(main, "get_locations_stats", fake_get_locations_stats)
+    app.dependency_overrides[get_engine] = lambda: pooled_engine
+    try:
+        response = client.post(path, json=body)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert engines_used == [pooled_engine]
 
 
 def test_lifespan_builds_and_disposes_the_engine(monkeypatch: pytest.MonkeyPatch):
@@ -106,12 +140,8 @@ def test_unexpected_errors_become_a_500_without_the_message(caplog: pytest.LogCa
     assert "connection reset" in caplog.text
 
 
-def test_a_missing_geometry_is_logged_but_not_returned(caplog: pytest.LogCaptureFixture):
-    response = client.post("/_test/validate", json={})
-
-    assert response.status_code == 400
-    assert response.json() == {"error": "Invalid request body"}
-    assert "geometry" in caplog.text
+GEOMETRY_REQUIRED = {"error": "Geometry is required"}
+ENVIRONMENT_INVALID = {"error": "Environment must be one of `marine` or `terrestrial`"}
 
 
 def test_validation_failures_are_400_not_422():
@@ -119,7 +149,92 @@ def test_validation_failures_are_400_not_422():
     response = client.post("/_test/validate", json={"geometry": POLYGON, "environment": "lunar"})
 
     assert response.status_code == 400
-    assert response.json() == {"error": "Invalid request body"}
+    assert "detail" not in response.json()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [{}, {"geometry": None}, {"geometry": {}}],
+    ids=["missing", "null", "empty"],
+)
+def test_an_absent_geometry_is_reported_as_required(body: dict):
+    response = client.post("/_test/validate", json=body)
+
+    assert response.status_code == 400
+    assert response.json() == GEOMETRY_REQUIRED
+
+
+@pytest.mark.parametrize("environment", ["lunar", None, "Marine"])
+def test_an_unknown_environment_names_the_allowed_values(environment):
+    response = client.post(
+        "/_test/validate", json={"geometry": POLYGON, "environment": environment}
+    )
+
+    assert response.status_code == 400
+    assert response.json() == ENVIRONMENT_INVALID
+
+
+def test_geometry_is_reported_before_environment():
+    response = client.post("/_test/validate", json={"environment": "lunar"})
+
+    assert response.json() == GEOMETRY_REQUIRED
+
+
+@pytest.mark.parametrize("geometry", ["not a geometry", [1, 2], 3])
+def test_a_geometry_of_the_wrong_type_is_an_invalid_geometry(geometry):
+    response = client.post("/_test/validate", json={"geometry": geometry})
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "Invalid geometry: expected a GeoJSON object"}
+
+
+@pytest.mark.parametrize(
+    ("raw", "message"),
+    [
+        ('{"geometry":', "Request body is not valid JSON"),
+        ("[1, 2]", "Request body must be a JSON object"),
+        ("", "Request body must be a JSON object"),
+    ],
+    ids=["malformed", "array", "empty"],
+)
+def test_a_body_problem_names_the_body(raw: str, message: str):
+    response = client.post(
+        "/_test/validate", content=raw, headers={"Content-Type": "application/json"}
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"error": message}
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ['{"geometry":', "[1, 2]", "", '{"environment": "lunar", "geometry": {"type": "Polygon"}}'],
+)
+def test_only_geometry_problems_say_invalid_geometry(raw: str):
+    """The frontend treats "Invalid geometry" as "redraw the shape"."""
+    response = client.post(
+        "/_test/validate", content=raw, headers={"Content-Type": "application/json"}
+    )
+
+    assert "Invalid geometry" not in response.json()["error"]
+
+
+def test_an_unrecognised_field_error_names_the_field():
+    from src.errors import describe_validation_error
+
+    assert describe_validation_error([{"type": "missing", "loc": ("body", "habitat")}]) == (
+        "Habitat is required"
+    )
+    assert describe_validation_error([{"type": "enum", "loc": ("body", "habitat")}]) == (
+        "Invalid habitat"
+    )
+
+
+def test_validation_detail_is_logged_but_not_returned(caplog: pytest.LogCaptureFixture):
+    response = client.post("/_test/validate", json={"geometry": "not a geometry"})
+
+    assert "dict_type" not in response.text
+    assert "dict_type" in caplog.text
 
 
 # --- CORS --------------------------------------------------------------------------

@@ -109,7 +109,7 @@ const ModellingWidget: FCWithMessages = () => {
   const isIhoActive = useFeatureFlag('is_iho_active');
 
   const locationQueries = useQueries({
-    queries: (modellingData?.locations_area || []).map((location) =>
+    queries: (modellingData?.locations || []).map((location) =>
       getGetProtectionCoverageStatsQueryOptions<NationalLevelContribution | null>(
         {
           locale,
@@ -137,8 +137,7 @@ const ModellingWidget: FCWithMessages = () => {
         },
         {
           query: {
-            enabled:
-              Boolean(modellingData?.locations_area) && ['marine', 'terrestrial'].includes(tab),
+            enabled: Boolean(modellingData?.locations) && ['marine', 'terrestrial'].includes(tab),
             select: ({ data }) => {
               if (!data?.length) return null;
 
@@ -154,11 +153,9 @@ const ModellingWidget: FCWithMessages = () => {
 
               const totalArea = Number(data?.[0]?.total_area ?? fallBackArea);
               // total custom protected area (analysis)
-              const CLoc = modellingData.locations_area.find(
-                ({ code }) => code === currentLoc?.code
-              );
+              const CLoc = modellingData.locations.find(({ code }) => code === currentLoc?.code);
 
-              const customArea = CLoc.protected_area;
+              const customArea = CLoc.added_area;
               // If custom area exceeds total unprotected area, cap it to the total unprotected area
               // necessary because of rounding errors and differences in data resolutions
               const totalCustomArea =
@@ -200,7 +197,7 @@ const ModellingWidget: FCWithMessages = () => {
 
   // Seas overlap national waters, so they are excluded from the contributions and the global
   // total. Queried separately because the coverage stats above may have no row for a sea.
-  const locationCodes = (modellingData?.locations_area || []).map(({ code }) => code);
+  const locationCodes = (modellingData?.locations || []).map(({ code }) => code);
 
   const { data: seaCodes } = useGetLocations<Set<string>>(
     {
@@ -278,7 +275,7 @@ const ModellingWidget: FCWithMessages = () => {
     {
       query: {
         queryKey: [modellingData, tab, locale],
-        enabled: Boolean(modellingData?.locations_area) && ['marine', 'terrestrial'].includes(tab),
+        enabled: Boolean(modellingData?.locations) && ['marine', 'terrestrial'].includes(tab),
         select: ({ data }) => {
           if (!data) return null;
 
@@ -289,9 +286,9 @@ const ModellingWidget: FCWithMessages = () => {
 
           // total custom protected areas: filter out seas because they overlap
           // national waters
-          const totalCustomAreas = modellingData.locations_area
+          const totalCustomAreas = modellingData.locations
             .filter(({ code }) => !seaCodes.has(code))
-            .reduce((acc, { protected_area }) => acc + protected_area, 0);
+            .reduce((acc, loc) => acc + loc.added_area, 0);
           // sum of existing global protected area and custom protected areas (analysis)
           const totalProtectedArea = protectedArea + totalCustomAreas;
           // percentage of custom protected areas (analysis)
