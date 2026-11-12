@@ -10,7 +10,6 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | --- | --- | --- |
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
 | `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
-| `POST` | `/` | Deprecated alias for `/coverage` |
 
 ### `POST /coverage`
 
@@ -36,12 +35,6 @@ Areas are square kilometers, computed in a Mollweide equal-area projection and r
 An area that intersects nothing (e.g., a marine request over land) returns an empty `locations_area`, and `total_area` is still the drawn area.
 
 Unrecognized fields in the body are ignored.
-
-### `POST /` is temporary
-
-The load balancer rewrites the public path to the service root, so the same handler is
-registered at `/` as well and is marked deprecated in the schema. It will be removed
-once nothing posts to it. New callers should use `/coverage`.
 
 ## Configuration
 
