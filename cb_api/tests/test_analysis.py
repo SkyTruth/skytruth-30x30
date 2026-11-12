@@ -61,7 +61,7 @@ def test_single_row_reports_the_user_area_and_one_location():
         [{"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100}]
     ) == {
         "total_area": 100,
-        "locations_area": [{"code": "ESP", "added_area": 30}],
+        "locations": [{"code": "ESP", "added_area": 30}],
     }
 
 
@@ -73,7 +73,7 @@ def test_distinct_locations_are_listed_separately():
         ]
     )
 
-    assert result["locations_area"] == [
+    assert result["locations"] == [
         {"code": "ESP", "added_area": 30},
         {"code": "PRT", "added_area": 20},
     ]
@@ -87,7 +87,7 @@ def test_repeated_locations_accumulate():
         ]
     )
 
-    assert result["locations_area"] == [{"code": "ESP", "added_area": 50}]
+    assert result["locations"] == [{"code": "ESP", "added_area": 50}]
 
 
 def test_rows_without_a_location_contribute_nothing():
@@ -99,7 +99,7 @@ def test_rows_without_a_location_contribute_nothing():
         ]
     )
 
-    assert result["locations_area"] == [{"code": "ESP", "added_area": 30}]
+    assert result["locations"] == [{"code": "ESP", "added_area": 30}]
     assert result["total_area"] == 100
 
 
@@ -110,7 +110,7 @@ def test_a_shape_touching_nothing_still_reports_its_area():
         [{"location": None, "portion_area_km2": None, "user_area_km2": 7865.0}]
     )
 
-    assert result == {"locations_area": [], "total_area": 7865.0}
+    assert result == {"locations": [], "total_area": 7865.0}
 
 
 # --- validate_geometry_topology ----------------------------------------------------

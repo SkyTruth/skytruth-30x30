@@ -17,7 +17,7 @@ POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 PATH = "/coverage"
 
 STATS = {
-    "locations_area": [{"code": "ESP", "added_area": 30.0}],
+    "locations": [{"code": "ESP", "added_area": 30.0}],
     "total_area": 100.0,
 }
 
