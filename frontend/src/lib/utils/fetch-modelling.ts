@@ -1,7 +1,11 @@
 import axios from 'axios';
 import type { Feature } from 'geojson';
 
-import { ModellingData } from '@/types/modelling';
+import {
+  toModellingData,
+  type CloudFunctionModellingData,
+  type ModellingData,
+} from '@/types/modelling';
 
 // Strapi feature flag that sends modelling requests to cb_api
 // TODO: TECH-3876, clean up the use_cb_api feature flag so cb_api is the only
@@ -19,12 +23,13 @@ export const getModellingQueryKey = (tab: string, layerId: string, isCbApiActive
 const getCbApiUrl = (endpoint: string) =>
   `${process.env.NEXT_PUBLIC_CB_API_URL.replace(/\/+$/, '')}/${endpoint}`;
 
-export const fetchModelling = (tab: string, feature: Feature, isCbApiActive: boolean) => {
+export const fetchModelling = async (tab: string, feature: Feature, isCbApiActive: boolean) => {
   // TODO: TECH-3876, clean up the use_cb_api feature flag: remove NEXT_PUBLIC_ANALYSIS_CF_URL
   const url = isCbApiActive ? getCbApiUrl('coverage') : process.env.NEXT_PUBLIC_ANALYSIS_CF_URL;
 
-  return axios.post<ModellingData>(url, {
+  const response = await axios.post<ModellingData | CloudFunctionModellingData>(url, {
     environment: tab,
     geometry: feature,
   });
+  return { ...response, data: toModellingData(response.data) };
 };

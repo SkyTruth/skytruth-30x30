@@ -74,10 +74,10 @@ const Modelling: FC = () => {
     if (isFetching) {
       setModellingState((prevState) => ({ ...prevState, status: 'running' }));
     } else if (isSuccess) {
-      if (data?.locations_area?.length > 0) {
+      if (data?.locations?.length > 0) {
         setModellingState((prevState) => ({ ...prevState, status: 'success', data }));
         conservationStatsImpressed({
-          countries: data.locations_area.flatMap((loc) => loc.code),
+          countries: data.locations.flatMap((loc) => loc.code),
           environment: tab,
           area: data.total_area,
         });
