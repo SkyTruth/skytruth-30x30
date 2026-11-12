@@ -4,7 +4,6 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio
-import shapely
 from joblib import Parallel, delayed
 from rasterio.features import rasterize, shapes
 from rasterio.windows import Window, from_bounds
@@ -24,6 +23,7 @@ from src.core.params import (
     CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN,
     TOLERANCE,
 )
+from src.core.raster_pa_stats import iter_location_pa_masks
 from src.methods.subtract_geometries.io import load_pa_by_location, upload_with_archive
 from src.utils.gcp import (
     delete_stale_blobs,
@@ -353,69 +353,27 @@ def process_location_raster_tiles(
     locations, rasts, footprints = [], [], []
 
     with rasterio.open(raster_path) as src:
-        location_geom = robust_unary_union(
-            location_area.to_crs(src.crs).geometry.apply(make_valid).values
-        )
-        pas = location_pa.to_crs(src.crs).geometry.apply(make_valid)
         srid = src.crs.to_epsg()
         nodata = src.nodata
 
-        if location_geom.intersects(box(*src.bounds)):
-            shapely.prepare(location_geom)
-            full = (
-                from_bounds(*location_geom.bounds, transform=src.transform)
-                .round_offsets()
-                .round_lengths()
-                .crop(src.height, src.width)
-            )
-            row_end = int(full.row_off + full.height)
-            col_end = int(full.col_off + full.width)
+        # TODO: the habitat and protected habitat stats per location mask the same
+        # pixels. When we move to Workflows (TECH-3777), compute them from these masks
+        # in the same pass instead of in their own job.
+        for pixels, chunk_transform, in_location, in_pa in iter_location_pa_masks(
+            src, location_area, location_pa, chunk_size_pixels
+        ):
+            pixels[~(in_location & ~in_pa)] = nodata
 
-            for chunk_row in range(int(full.row_off), row_end, chunk_size_pixels):
-                for chunk_col in range(int(full.col_off), col_end, chunk_size_pixels):
-                    chunk = Window(
-                        chunk_col,
-                        chunk_row,
-                        min(chunk_size_pixels, col_end - chunk_col),
-                        min(chunk_size_pixels, row_end - chunk_row),
-                    )
-                    chunk_box = box(*window_bounds(chunk, src.transform))
-                    if not location_geom.intersects(chunk_box):
+            for row in range(0, pixels.shape[0], tile_size_pixels):
+                for col in range(0, pixels.shape[1], tile_size_pixels):
+                    tile = pixels[row : row + tile_size_pixels, col : col + tile_size_pixels]
+                    if (tile == nodata).all():
                         continue
-
-                    chunk_transform = src.window_transform(chunk)
-                    pixels = src.read(1, window=chunk)
-
-                    unprotected = rasterize(
-                        [location_geom],
-                        out_shape=pixels.shape,
-                        transform=chunk_transform,
-                        all_touched=False,
-                        dtype="uint8",
-                    ).astype(bool)
-                    chunk_pas = pas.values[pas.sindex.query(chunk_box)]
-                    if len(chunk_pas):
-                        unprotected &= ~rasterize(
-                            chunk_pas,
-                            out_shape=pixels.shape,
-                            transform=chunk_transform,
-                            all_touched=False,
-                            dtype="uint8",
-                        ).astype(bool)
-                    pixels[~unprotected] = nodata
-
-                    for row in range(0, pixels.shape[0], tile_size_pixels):
-                        for col in range(0, pixels.shape[1], tile_size_pixels):
-                            tile = pixels[
-                                row : row + tile_size_pixels, col : col + tile_size_pixels
-                            ]
-                            if (tile == nodata).all():
-                                continue
-                            tile_window = Window(col, row, tile.shape[1], tile.shape[0])
-                            tile_transform = window_transform(tile_window, chunk_transform)
-                            locations.append(location)
-                            rasts.append(raster_tile_wkb(tile, tile_transform, srid, nodata))
-                            footprints.append(box(*window_bounds(tile_window, chunk_transform)))
+                    tile_window = Window(col, row, tile.shape[1], tile.shape[0])
+                    tile_transform = window_transform(tile_window, chunk_transform)
+                    locations.append(location)
+                    rasts.append(raster_tile_wkb(tile, tile_transform, srid, nodata))
+                    footprints.append(box(*window_bounds(tile_window, chunk_transform)))
 
         return gpd.GeoDataFrame(
             {"location": locations, "rast": rasts}, geometry=footprints, crs=src.crs
