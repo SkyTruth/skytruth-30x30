@@ -56,10 +56,6 @@ def test_malformed_wrappers_are_rejected(geojson):
 # --- serialize_response ------------------------------------------------------------
 
 
-def test_no_rows_produces_a_zeroed_response():
-    assert serialize_response([]) == {"locations_area": [], "total_area": 0}
-
-
 def test_single_row_reports_the_user_area_and_one_location():
     assert serialize_response(
         [{"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100}]
@@ -105,6 +101,16 @@ def test_rows_without_a_location_contribute_nothing():
 
     assert result["locations_area"] == [{"code": "ESP", "added_area": 30}]
     assert result["total_area"] == 100
+
+
+def test_a_shape_touching_nothing_still_reports_its_area():
+    """With nothing intersecting, the query's LEFT JOIN returns a single row with no
+    location and no portion, but still the drawn area."""
+    result = serialize_response(
+        [{"location": None, "portion_area_km2": None, "user_area_km2": 7865.0}]
+    )
+
+    assert result == {"locations_area": [], "total_area": 7865.0}
 
 
 # --- validate_geometry_topology ----------------------------------------------------
@@ -173,7 +179,8 @@ def test_a_lost_connection_during_validation_is_not_blamed_on_the_caller():
 
 
 class RecordingEngine:
-    """An engine whose connection records the SQL it is handed and returns no rows."""
+    """An engine whose connection records the SQL it is handed and returns one row
+    with no location, as the stats query does when nothing intersects."""
 
     def __init__(self):
         self.statements: list[str] = []
@@ -198,7 +205,7 @@ class RecordingEngine:
         return {"geom_type": "ST_Polygon", "is_empty": False}
 
     def all(self):
-        return []
+        return [{"location": None, "portion_area_km2": None, "user_area_km2": 7865.0}]
 
 
 @pytest.mark.parametrize("table", list(AnalysisTable))

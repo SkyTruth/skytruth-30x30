@@ -33,7 +33,7 @@ curl -X POST localhost:8080/coverage \
 
 Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `added_area` is the part of it in each location that is not yet protected, which a protected area drawn there would add.
 
-An area that intersects nothing (e.g., a marine request over land) returns an empty `locations_area` and a `total_area` of 0.
+An area that intersects nothing (e.g., a marine request over land) returns an empty `locations_area`, and `total_area` is still the drawn area.
 
 Unrecognized fields in the body are ignored.
 

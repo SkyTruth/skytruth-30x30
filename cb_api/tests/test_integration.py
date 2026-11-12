@@ -16,6 +16,10 @@ pytestmark = pytest.mark.integration
 MIN_DEGREE_CELL_KM2 = 11_000
 MAX_DEGREE_CELL_KM2 = 14_000
 
+# A 1°x1° cell at 50–51°N covers about 7,900 km²
+MIN_DEGREE_CELL_AT_50N_KM2 = 7_500
+MAX_DEGREE_CELL_AT_50N_KM2 = 8_300
+
 
 def box(min_lon: float, min_lat: float, max_lon: float, max_lat: float) -> dict:
     return {
@@ -69,10 +73,22 @@ def test_only_the_overlapping_part_is_counted(analysis_tables: Engine):
     )
 
 
-def test_an_area_touching_nothing_comes_back_empty(analysis_tables: Engine):
+def test_an_area_touching_nothing_reports_its_area(analysis_tables: Engine):
     result = get_locations_stats(analysis_tables, box(50, 50, 51, 51), AnalysisTable.MARINE)
 
-    assert result == {"locations_area": [], "total_area": 0}
+    assert result["locations_area"] == []
+    assert MIN_DEGREE_CELL_AT_50N_KM2 < result["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
+
+
+def test_a_shape_partly_outside_every_location_lists_only_real_locations(
+    analysis_tables: Engine,
+):
+    """Half of this box lies past the last fixture box. Only shapes touching nothing get
+    a row with no location, so the result lists AAA alone and counts the whole box."""
+    result = get_locations_stats(analysis_tables, box(2.5, 0, 3.5, 1), AnalysisTable.MARINE)
+
+    assert list(by_code(result)) == ["AAA"]
+    assert result["total_area"] == pytest.approx(2 * by_code(result)["AAA"], abs=2)
 
 
 @pytest.mark.parametrize("table", list(AnalysisTable))
@@ -159,7 +175,8 @@ def test_an_area_touching_nothing_is_an_empty_result_over_http(api: TestClient):
     response = api.post("/coverage", json={"geometry": box(50, 50, 51, 51)})
 
     assert response.status_code == 200
-    assert response.json() == {"locations_area": [], "total_area": 0}
+    assert response.json()["locations_area"] == []
+    assert MIN_DEGREE_CELL_AT_50N_KM2 < response.json()["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
 
 
 @pytest.mark.parametrize("path", ["/coverage", "/"])
