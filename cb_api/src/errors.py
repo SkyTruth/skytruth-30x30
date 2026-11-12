@@ -22,7 +22,7 @@ def describe_validation_error(errors: Sequence[Mapping[str, Any]]) -> str:
     geometry = by_field.get(("body", "geometry"))
     if geometry:
         # Missing, null, and {} count as absent
-        if geometry["type"] == "missing" or not geometry.get("input"):
+        if geometry.get("type") == "missing" or not geometry.get("input"):
             return "Geometry is required"
         return "Invalid geometry: expected a GeoJSON object"
 

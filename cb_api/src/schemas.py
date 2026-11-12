@@ -50,7 +50,7 @@ class ProtectionLevelRequest(AnalysisRequest):
     level: ProtectionLevel = ProtectionLevel.FULLY_HIGHLY_PROTECTED
 
 
-class LocationArea(BaseModel):
+class Location(BaseModel):
     code: str
     added_area: float = Field(
         description="Area of the drawn shape in this location that is not yet protected, in km²"
@@ -58,7 +58,7 @@ class LocationArea(BaseModel):
 
 
 class LocationStats(BaseModel):
-    """Response body for POST /coverage."""
+    """Response body for POST /coverage and POST /protection-level."""
 
-    locations_area: list[LocationArea]
+    locations: list[Location]
     total_area: float = Field(description="Area of the drawn shape, in km²")
