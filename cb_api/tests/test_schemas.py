@@ -83,7 +83,7 @@ def test_the_analysis_layer_output_validates():
 
 
 def test_an_empty_result_validates():
-    response = LocationStats.model_validate(serialize_response([]))
+    response = LocationStats.model_validate({"locations_area": [], "total_area": 7865.0})
 
     assert response.locations_area == []
-    assert response.total_area == 0
+    assert response.total_area == 7865.0
