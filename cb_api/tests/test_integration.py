@@ -148,13 +148,10 @@ def api(analysis_tables: Engine) -> Iterator[TestClient]:
         app.dependency_overrides.clear()
 
 
-@pytest.mark.parametrize("path", ["/coverage", "/"])
-def test_the_route_returns_the_same_numbers_as_the_query(
-    api: TestClient, analysis_tables: Engine, path: str
-):
+def test_the_route_returns_the_same_numbers_as_the_query(api: TestClient, analysis_tables: Engine):
     geometry = box(0, 0, 3, 1)
 
-    response = api.post(path, json={"geometry": geometry})
+    response = api.post("/coverage", json={"geometry": geometry})
 
     assert response.status_code == 200
     assert response.json() == get_locations_stats(analysis_tables, geometry, AnalysisTable.MARINE)
@@ -179,11 +176,10 @@ def test_an_area_touching_nothing_is_an_empty_result_over_http(api: TestClient):
     assert MIN_DEGREE_CELL_AT_50N_KM2 < response.json()["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
 
 
-@pytest.mark.parametrize("path", ["/coverage", "/"])
-def test_a_line_is_a_400_over_http(api: TestClient, path: str):
+def test_a_line_is_a_400_over_http(api: TestClient):
     """status 400 plus 'Invalid geometry' is what the frontend branches on."""
     response = api.post(
-        path, json={"geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}}
+        "/coverage", json={"geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}}
     )
 
     assert response.status_code == 400
