@@ -1,43 +1,20 @@
-"""End-to-end checks of the spatial query against a PostGIS database."""
-
-from collections.abc import Iterator
+"""The spatial query in src/analysis.py, against a PostGIS database."""
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.analysis import AnalysisTable, get_locations_stats
 from src.errors import BadRequestError
-from src.main import app, get_engine
+from tests.integration_tests.helpers import (
+    MAX_DEGREE_CELL_AT_50N_KM2,
+    MAX_DEGREE_CELL_KM2,
+    MIN_DEGREE_CELL_AT_50N_KM2,
+    MIN_DEGREE_CELL_KM2,
+    box,
+    by_code,
+)
 
 pytestmark = pytest.mark.integration
-
-MIN_DEGREE_CELL_KM2 = 11_000
-MAX_DEGREE_CELL_KM2 = 14_000
-
-# A 1°x1° cell at 50–51°N covers about 7,900 km²
-MIN_DEGREE_CELL_AT_50N_KM2 = 7_500
-MAX_DEGREE_CELL_AT_50N_KM2 = 8_300
-
-
-def box(min_lon: float, min_lat: float, max_lon: float, max_lat: float) -> dict:
-    return {
-        "type": "Polygon",
-        "coordinates": [
-            [
-                [min_lon, min_lat],
-                [max_lon, min_lat],
-                [max_lon, max_lat],
-                [min_lon, max_lat],
-                [min_lon, min_lat],
-            ]
-        ],
-    }
-
-
-def by_code(result: dict) -> dict[str, float]:
-    return {area["code"]: area["added_area"] for area in result["locations"]}
 
 
 def test_areas_are_square_kilometers(analysis_tables: Engine):
@@ -133,72 +110,3 @@ def test_an_empty_polygon_is_rejected(analysis_tables: Engine):
 def test_unparseable_geojson_is_rejected(analysis_tables: Engine):
     with pytest.raises(BadRequestError, match="Invalid geometry: unable to parse input geometry"):
         get_locations_stats(analysis_tables, {"type": "Nonsense"}, AnalysisTable.MARINE)
-
-
-# --- through the route ------------------------------------------------------
-
-
-@pytest.fixture
-def api(analysis_tables: Engine) -> Iterator[TestClient]:
-    """A client whose requests reach the test database."""
-    app.dependency_overrides[get_engine] = lambda: analysis_tables
-    try:
-        yield TestClient(app)
-    finally:
-        app.dependency_overrides.clear()
-
-
-def test_the_route_returns_the_same_numbers_as_the_query(api: TestClient, analysis_tables: Engine):
-    geometry = box(0, 0, 3, 1)
-
-    response = api.post("/coverage", json={"geometry": geometry})
-
-    assert response.status_code == 200
-    assert response.json() == get_locations_stats(analysis_tables, geometry, AnalysisTable.MARINE)
-
-
-def test_the_route_reads_the_terrestrial_table(api: TestClient, analysis_tables: Engine):
-    geometry = box(0, 0, 3, 1)
-
-    response = api.post("/coverage", json={"geometry": geometry, "environment": "terrestrial"})
-
-    assert response.status_code == 200
-    assert response.json() == get_locations_stats(
-        analysis_tables, geometry, AnalysisTable.TERRESTRIAL
-    )
-
-
-def test_an_area_touching_nothing_is_an_empty_result_over_http(api: TestClient):
-    response = api.post("/coverage", json={"geometry": box(50, 50, 51, 51)})
-
-    assert response.status_code == 200
-    assert response.json()["locations"] == []
-    assert MIN_DEGREE_CELL_AT_50N_KM2 < response.json()["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
-
-
-def test_a_line_is_a_400_over_http(api: TestClient):
-    """status 400 plus 'Invalid geometry' is what the frontend branches on."""
-    response = api.post(
-        "/coverage", json={"geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]}}
-    )
-
-    assert response.status_code == 400
-    assert "Invalid geometry" in response.json()["error"]
-
-
-def test_a_topology_error_is_a_400_over_http(api: TestClient, analysis_tables: Engine):
-    """GEOS refuses to intersect a self-intersecting polygon. A shape that triggers that
-    must be flagged as invalid geometry."""
-    with analysis_tables.begin() as conn:
-        conn.execute(
-            text(
-                f"INSERT INTO data.{AnalysisTable.MARINE.value} (location, the_geom) VALUES "
-                "('CCC', ST_Multi(ST_GeomFromText("
-                "'POLYGON((10 10, 11 11, 11 10, 10 11, 10 10))', 4326)))"
-            )
-        )
-
-    response = api.post("/coverage", json={"geometry": box(10.25, 10.25, 10.75, 10.75)})
-
-    assert response.status_code == 400
-    assert response.json() == {"error": "Invalid geometry: input geometry could not be processed"}
