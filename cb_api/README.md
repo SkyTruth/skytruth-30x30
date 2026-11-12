@@ -14,7 +14,9 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 ### `POST /coverage`
 
 `geometry` is required and takes a GeoJSON Feature, FeatureCollection or bare geometry;
-it must resolve to a Polygon or MultiPolygon. `environment` is optional and selects the
+it must resolve to a Polygon or MultiPolygon. **Only the first feature of a
+FeatureCollection is used**; any others are ignored, so to analyze several shapes
+together, send them as one MultiPolygon. `environment` is optional and selects the
 table the area is compared against (`marine` by default or `terrestrial`).
 
 ```bash
