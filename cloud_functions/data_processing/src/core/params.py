@@ -294,6 +294,11 @@ CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = "conservation_builder/{habitat}_minu
 ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = (
     f"archive/conservation_builder/{{habitat}}_minus_pa_{today_formatted}.parquet"
 )
+# Raster habitats: a folder of {location}.parquet files of PostGIS raster tiles
+CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN = "conservation_builder/{habitat}_minus_pa_tiles"
+ARCHIVE_CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN = (
+    f"archive/conservation_builder/{{habitat}}_minus_pa_tiles_{today_formatted}"
+)
 
 # ------------------------------------------------------------
 #                     Raster Data Sources
