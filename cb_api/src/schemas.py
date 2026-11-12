@@ -29,11 +29,24 @@ class ProtectionLevel(StrEnum):
         return True
 
 
-class AnalysisRequest(BaseModel):
-    """Request body for POST /coverage."""
+class Habitat(StrEnum):
+    MANGROVES = "mangroves"
+    SALTMARSHES = "saltmarshes"
+    SEAGRASSES = "seagrasses"
+    SEAMOUNTS = "seamounts"
+    COLD_WATER_CORALS = "cold-water-corals"
+    CLIMATE_RESILIENT_CORALS = "climate-resilient-corals"
+    OTHER_CORALS = "other-corals"
+
+    @property
+    def table(self) -> AnalysisTable:
+        return AnalysisTable[self.name]
+
+
+class GeometryRequest(BaseModel):
+    """The area to analyze, shared by every endpoint."""
 
     geometry: dict
-    environment: Environment = Environment.MARINE
 
     @field_validator("geometry")
     @classmethod
@@ -44,10 +57,25 @@ class AnalysisRequest(BaseModel):
         return value
 
 
+class AnalysisRequest(GeometryRequest):
+    """Request body for POST /coverage."""
+
+    environment: Environment = Environment.MARINE
+
+
 class ProtectionLevelRequest(AnalysisRequest):
     """Request body for POST /protection-level."""
 
     level: ProtectionLevel = ProtectionLevel.FULLY_HIGHLY_PROTECTED
+
+
+class HabitatRequest(GeometryRequest):
+    """Request body for POST /habitats.
+
+    No environment: each habitat has exactly one table.
+    """
+
+    habitat: Habitat
 
 
 class Location(BaseModel):
@@ -58,7 +86,7 @@ class Location(BaseModel):
 
 
 class LocationStats(BaseModel):
-    """Response body for POST /coverage and POST /protection-level."""
+    """Response body for POST /coverage, POST /protection-level and POST /habitats."""
 
     locations: list[Location]
     total_area: float = Field(description="Area of the drawn shape, in km²")
