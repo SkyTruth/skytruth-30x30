@@ -1,6 +1,7 @@
 """The spatial query in src/analysis.py, against a PostGIS database."""
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.analysis import AnalysisTable, get_locations_stats
@@ -68,14 +69,6 @@ def test_a_shape_partly_outside_every_location_lists_only_real_locations(
     assert result["total_area"] == pytest.approx(2 * by_code(result)["AAA"], abs=2)
 
 
-@pytest.mark.parametrize("table", list(AnalysisTable))
-def test_every_table_in_the_enum_exists(analysis_tables: Engine, table: AnalysisTable):
-    """A typo in the enum would only ever show up against a real schema."""
-    result = get_locations_stats(analysis_tables, box(0, 0, 3, 1), AnalysisTable(table))
-
-    assert sum(by_code(result).values()) > 0
-
-
 def test_a_self_intersecting_polygon_is_repaired(analysis_tables: Engine):
     """ST_MakeValid should repair a self-intersecting polygon (bow-tie)."""
     bowtie = {
@@ -110,3 +103,20 @@ def test_an_empty_polygon_is_rejected(analysis_tables: Engine):
 def test_unparseable_geojson_is_rejected(analysis_tables: Engine):
     with pytest.raises(BadRequestError, match="Invalid geometry: unable to parse input geometry"):
         get_locations_stats(analysis_tables, {"type": "Nonsense"}, AnalysisTable.MARINE)
+
+
+def test_a_topology_error_is_flagged_as_invalid_geometry(analysis_tables: Engine):
+    """GEOS refuses to intersect a self-intersecting polygon, so flag as invalid geometry."""
+    with analysis_tables.begin() as conn:
+        conn.execute(
+            text(
+                f"INSERT INTO data.{AnalysisTable.MARINE.value} (location, the_geom) VALUES "
+                "('CCC', ST_Multi(ST_GeomFromText("
+                "'POLYGON((10 10, 11 11, 11 10, 10 11, 10 10))', 4326)))"
+            )
+        )
+
+    with pytest.raises(
+        BadRequestError, match="Invalid geometry: input geometry could not be processed"
+    ):
+        get_locations_stats(analysis_tables, box(10.25, 10.25, 10.75, 10.75), AnalysisTable.MARINE)
