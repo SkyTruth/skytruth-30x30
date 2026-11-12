@@ -25,14 +25,14 @@ curl -X POST localhost:8080/coverage \
 
 ```json
 {
-  "locations_area": [{ "code": "AUS", "added_area": 34.0 }],
+  "locations": [{ "code": "AUS", "added_area": 34.0 }],
   "total_area": 96.0
 }
 ```
 
 Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `added_area` is the part of it in each location that is not yet protected, which a protected area drawn there would add.
 
-An area that intersects nothing (e.g., a marine request over land) returns an empty `locations_area`, and `total_area` is still the drawn area.
+An area that intersects nothing (e.g., a marine request over land) returns an empty `locations`, and `total_area` is still the drawn area.
 
 Unrecognized fields in the body are ignored.
 

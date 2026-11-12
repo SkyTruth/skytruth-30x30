@@ -60,7 +60,7 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
 
 def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
     """Converts the stats query's rows into a Dict
-    {locations_area: [{"code": <location_iso>, "added_area": <area>}],
+    {locations: [{"code": <location_iso>, "added_area": <area>}],
     "total_area": <total_area>} response
     """
     sub_result = {}
@@ -74,7 +74,7 @@ def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
             sub_result[iso]["added_area"] += row["portion_area_km2"]
 
     return {
-        "locations_area": list(sub_result.values()),
+        "locations": list(sub_result.values()),
         "total_area": data[0]["user_area_km2"],
     }
 

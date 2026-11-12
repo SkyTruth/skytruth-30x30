@@ -78,12 +78,12 @@ def test_the_analysis_layer_output_validates():
     response = LocationStats.model_validate(serialize_response(rows))
 
     assert response.total_area == 100.0
-    assert [area.added_area for area in response.locations_area] == [30.0, 20.0]
-    assert [area.code for area in response.locations_area] == ["ESP", "PRT"]
+    assert [area.added_area for area in response.locations] == [30.0, 20.0]
+    assert [area.code for area in response.locations] == ["ESP", "PRT"]
 
 
 def test_an_empty_result_validates():
-    response = LocationStats.model_validate({"locations_area": [], "total_area": 7865.0})
+    response = LocationStats.model_validate({"locations": [], "total_area": 7865.0})
 
-    assert response.locations_area == []
+    assert response.locations == []
     assert response.total_area == 7865.0

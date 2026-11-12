@@ -37,7 +37,7 @@ def box(min_lon: float, min_lat: float, max_lon: float, max_lat: float) -> dict:
 
 
 def by_code(result: dict) -> dict[str, float]:
-    return {area["code"]: area["added_area"] for area in result["locations_area"]}
+    return {area["code"]: area["added_area"] for area in result["locations"]}
 
 
 def test_areas_are_square_kilometers(analysis_tables: Engine):
@@ -68,15 +68,15 @@ def test_only_the_overlapping_part_is_counted(analysis_tables: Engine):
     whole = get_locations_stats(analysis_tables, box(0, 0, 1, 1), AnalysisTable.MARINE)
     half = get_locations_stats(analysis_tables, box(0, 0, 0.5, 1), AnalysisTable.MARINE)
 
-    assert half["locations_area"][0]["added_area"] == pytest.approx(
-        whole["locations_area"][0]["added_area"] / 2, rel=0.01
+    assert half["locations"][0]["added_area"] == pytest.approx(
+        whole["locations"][0]["added_area"] / 2, rel=0.01
     )
 
 
 def test_an_area_touching_nothing_reports_its_area(analysis_tables: Engine):
     result = get_locations_stats(analysis_tables, box(50, 50, 51, 51), AnalysisTable.MARINE)
 
-    assert result["locations_area"] == []
+    assert result["locations"] == []
     assert MIN_DEGREE_CELL_AT_50N_KM2 < result["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
 
 
@@ -172,7 +172,7 @@ def test_an_area_touching_nothing_is_an_empty_result_over_http(api: TestClient):
     response = api.post("/coverage", json={"geometry": box(50, 50, 51, 51)})
 
     assert response.status_code == 200
-    assert response.json()["locations_area"] == []
+    assert response.json()["locations"] == []
     assert MIN_DEGREE_CELL_AT_50N_KM2 < response.json()["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
 
 
