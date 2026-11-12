@@ -10,6 +10,7 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | --- | --- | --- |
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
 | `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
+| `POST` | `/protection-level` | The same, for protection at a given level |
 
 ### `POST /coverage`
 
@@ -37,6 +38,19 @@ Areas are square kilometers, computed in a Mollweide equal-area projection and r
 An area that intersects nothing (e.g., a marine request over land) returns an empty `locations`, and `total_area` is still the drawn area.
 
 Unrecognized fields in the body are ignored.
+
+### `POST /protection-level`
+**Marine only.**
+
+The same as `/coverage`, but for protection at a given level: `added_area` is the area not yet protected at that level, which the drawn polygon would add. Takes `geometry` and `environment` as above, plus an optional `level` (currently only `fully-highly-protected`, which is the default).
+
+```bash
+curl -X POST localhost:8080/protection-level \
+  -H 'Content-Type: application/json' \
+  -d '{"level": "fully-highly-protected", "geometry": {"type": "Polygon", "coordinates": [[[146.9,-39.2],[147,-39.2],[147,-39.1],[146.9,-39.1],[146.9,-39.2]]]}}'
+```
+
+The response is shaped like the one for `/coverage`.
 
 ## Configuration
 

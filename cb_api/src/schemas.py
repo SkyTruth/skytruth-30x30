@@ -16,6 +16,19 @@ class Environment(StrEnum):
         return AnalysisTable.MARINE
 
 
+class ProtectionLevel(StrEnum):
+    FULLY_HIGHLY_PROTECTED = "fully-highly-protected"
+
+    @property
+    def table(self) -> AnalysisTable:
+        return AnalysisTable.FULLY_HIGHLY_PROTECTED
+
+    @property
+    def marine_only(self) -> bool:
+        """No protection level has a terrestrial table yet."""
+        return True
+
+
 class AnalysisRequest(BaseModel):
     """Request body for POST /coverage."""
 
@@ -31,6 +44,12 @@ class AnalysisRequest(BaseModel):
         return value
 
 
+class ProtectionLevelRequest(AnalysisRequest):
+    """Request body for POST /protection-level."""
+
+    level: ProtectionLevel = ProtectionLevel.FULLY_HIGHLY_PROTECTED
+
+
 class Location(BaseModel):
     code: str
     added_area: float = Field(
@@ -39,7 +58,7 @@ class Location(BaseModel):
 
 
 class LocationStats(BaseModel):
-    """Response body for POST /coverage."""
+    """Response body for POST /coverage and POST /protection-level."""
 
     locations: list[Location]
     total_area: float = Field(description="Area of the drawn shape, in km²")

@@ -44,7 +44,10 @@ error_client = TestClient(app, raise_server_exceptions=False)
 POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 
 # One valid request per route that queries the database
-ANALYSIS_REQUESTS = [("/coverage", {"geometry": POLYGON})]
+ANALYSIS_REQUESTS = [
+    ("/coverage", {"geometry": POLYGON}),
+    ("/protection-level", {"geometry": POLYGON}),
+]
 
 
 # --- health and routing ------------------------------------------------------------
