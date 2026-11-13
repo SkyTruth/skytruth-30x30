@@ -51,7 +51,12 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
         </div>
       </div>
       <div className="flex items-center gap-1 pt-2 font-mono">
-        <ContributionBar className="flex-1" contribution={contribution} existingColor={color} />
+        <ContributionBar
+          className="flex-1"
+          contribution={contribution}
+          existingColor={color}
+          outlined
+        />
         <span className="text-xs">{t('percentage', { percentage: MAX_PERCENTAGE })}</span>
       </div>
       <ProtectedAreaText className="pt-2 font-mono" contribution={contribution} />
