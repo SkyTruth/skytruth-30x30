@@ -5,6 +5,7 @@ from google.cloud import storage
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import create_engine, text
+from tqdm.auto import tqdm
 
 from src.core.params import BUCKET, PROJECT
 from src.utils.gcp import read_parquet_from_gcs
@@ -163,8 +164,8 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False):
             # Upload data to PostgreSQL, streaming the tiles as hex WKB
             if verbose:
                 logger.info({"message": f"Uploading {len(blobs)} files to data.{table_name}..."})
-            for blob in blobs:
-                tiles = read_parquet_from_gcs(bucket_name=BUCKET, filename=blob, verbose=verbose)
+            for blob in tqdm(blobs, disable=not verbose):
+                tiles = read_parquet_from_gcs(bucket_name=BUCKET, filename=blob, verbose=False)
                 with cursor.copy(f"COPY data.{table_name} (location, rast) FROM STDIN") as copy:
                     for location, rast in zip(tiles["location"], tiles["rast"], strict=True):
                         copy.write_row((location, rast.hex()))
