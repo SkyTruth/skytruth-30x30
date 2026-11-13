@@ -56,21 +56,12 @@ def test_malformed_wrappers_are_rejected(geojson):
 # --- serialize_response ------------------------------------------------------------
 
 
-def test_no_rows_produces_a_zeroed_response():
-    assert serialize_response([]) == {
-        "locations_area": [],
-        "total_area": 0,
-        "total_protected_area": 0,
-    }
-
-
 def test_single_row_reports_the_user_area_and_one_location():
     assert serialize_response(
         [{"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100}]
     ) == {
         "total_area": 100,
-        "locations_area": [{"code": "ESP", "protected_area": 30}],
-        "total_protected_area": 30,
+        "locations": [{"code": "ESP", "added_area": 30}],
     }
 
 
@@ -82,11 +73,10 @@ def test_distinct_locations_are_listed_separately():
         ]
     )
 
-    assert result["locations_area"] == [
-        {"code": "ESP", "protected_area": 30},
-        {"code": "PRT", "protected_area": 20},
+    assert result["locations"] == [
+        {"code": "ESP", "added_area": 30},
+        {"code": "PRT", "added_area": 20},
     ]
-    assert result["total_protected_area"] == 50
 
 
 def test_repeated_locations_accumulate():
@@ -97,12 +87,11 @@ def test_repeated_locations_accumulate():
         ]
     )
 
-    assert result["locations_area"] == [{"code": "ESP", "protected_area": 50}]
-    assert result["total_protected_area"] == 50
+    assert result["locations"] == [{"code": "ESP", "added_area": 50}]
 
 
 def test_rows_without_a_location_contribute_nothing():
-    """A null location is skipped entirely — it adds no entry *and* no protected area."""
+    """A null location is skipped entirely: it adds no entry and no area."""
     result = serialize_response(
         [
             {"location": "ESP", "portion_area_km2": 30, "user_area_km2": 100},
@@ -110,9 +99,18 @@ def test_rows_without_a_location_contribute_nothing():
         ]
     )
 
-    assert result["locations_area"] == [{"code": "ESP", "protected_area": 30}]
-    assert result["total_protected_area"] == 30
+    assert result["locations"] == [{"code": "ESP", "added_area": 30}]
     assert result["total_area"] == 100
+
+
+def test_a_shape_touching_nothing_still_reports_its_area():
+    """With nothing intersecting, the query's LEFT JOIN returns a single row with no
+    location and no portion, but still the drawn area."""
+    result = serialize_response(
+        [{"location": None, "portion_area_km2": None, "user_area_km2": 7865.0}]
+    )
+
+    assert result == {"locations": [], "total_area": 7865.0}
 
 
 # --- validate_geometry_topology ----------------------------------------------------
@@ -181,7 +179,8 @@ def test_a_lost_connection_during_validation_is_not_blamed_on_the_caller():
 
 
 class RecordingEngine:
-    """An engine whose connection records the SQL it is handed and returns no rows."""
+    """An engine whose connection records the SQL it is handed and returns one row
+    with no location, as the stats query does when nothing intersects."""
 
     def __init__(self):
         self.statements: list[str] = []
@@ -206,7 +205,7 @@ class RecordingEngine:
         return {"geom_type": "ST_Polygon", "is_empty": False}
 
     def all(self):
-        return []
+        return [{"location": None, "portion_area_km2": None, "user_area_km2": 7865.0}]
 
 
 @pytest.mark.parametrize("table", list(AnalysisTable))
@@ -262,6 +261,34 @@ class ExplodingEngine(RecordingEngine):
         return self
 
 
+TOPOLOGY_ERROR = {
+    "S": "ERROR",
+    "C": "XX000",
+    "M": "lwgeom_intersection_prec: GEOS Error: TopologyException: "
+    "Input geom 0 is invalid: Self-intersection at 0.5 0.5",
+}
+
+
+def test_a_topology_error_in_the_analysis_query_is_an_invalid_geometry():
+    error = sqlalchemy.exc.ProgrammingError("stmt", None, Exception(TOPOLOGY_ERROR))
+
+    with pytest.raises(
+        BadRequestError, match="Invalid geometry: input geometry could not be processed"
+    ) as excinfo:
+        get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)
+
+    assert excinfo.value.__cause__ is error, "the database error must stay attached for the log"
+
+
+def test_a_lost_connection_is_not_blamed_on_the_caller_even_mid_topology_error():
+    error = sqlalchemy.exc.ProgrammingError(
+        "stmt", None, Exception(TOPOLOGY_ERROR), connection_invalidated=True
+    )
+
+    with pytest.raises(sqlalchemy.exc.ProgrammingError):
+        get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)
+
+
 @pytest.mark.parametrize(
     "error",
     [
@@ -270,9 +297,9 @@ class ExplodingEngine(RecordingEngine):
         sqlalchemy.exc.InterfaceError("stmt", None, Exception("network error")),
     ],
 )
-def test_analysis_query_failures_are_not_blamed_on_the_caller(
+def test_other_analysis_query_failures_are_not_blamed_on_the_caller(
     error: sqlalchemy.exc.DBAPIError,
 ):
-    """The geometry has already passed validation, so anything the query raises is ours."""
+    """The geometry has already passed validation, so it is not an error from the caller."""
     with pytest.raises(type(error)):
         get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)

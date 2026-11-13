@@ -59,41 +59,24 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
 
 
 def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
-    """Converts the data from the database into a Dict
-    {locations_area: [{"code": <location_iso>, "protected_area": <area>}],
-    "total_area": <total_area>, "total_protected_area": <area>} response
+    """Converts the stats query's rows into a Dict
+    {locations: [{"code": <location_iso>, "added_area": <area>}],
+    "total_area": <total_area>} response
     """
-    if not data:
-        return {
-            "locations_area": [],
-            "total_area": 0,
-            "total_protected_area": 0,
-        }
-
-    result = {"total_area": data[0]["user_area_km2"]}
     sub_result = {}
-    total_protected_area = 0
     for row in data:
         iso = row["location"]
         if iso is None:
             continue
-        total_protected_area += row["portion_area_km2"]
         if iso not in sub_result:
-            sub_result[iso] = {
-                "code": iso,
-                "protected_area": row["portion_area_km2"],
-            }
+            sub_result[iso] = {"code": iso, "added_area": row["portion_area_km2"]}
         else:
-            sub_result[iso]["protected_area"] += row["portion_area_km2"]
+            sub_result[iso]["added_area"] += row["portion_area_km2"]
 
-    result.update(
-        {
-            "locations_area": list(sub_result.values()),
-            "total_protected_area": total_protected_area,
-        }
-    )
-
-    return result
+    return {
+        "locations": list(sub_result.values()),
+        "total_area": data[0]["user_area_km2"],
+    }
 
 
 def get_locations_stats(
@@ -133,10 +116,9 @@ def get_locations_stats(
                             ) AS portion_area_km2,
                             user_data_stats.user_area_km2
                         FROM
-                            data.{table.value},
                             user_data_stats
-                        WHERE
-                            ST_Intersects(the_geom, user_data_stats.geom)
+                            LEFT JOIN data.{table.value}
+                                ON ST_Intersects(the_geom, user_data_stats.geom)
                     )
                 SELECT
                     location,
@@ -146,6 +128,14 @@ def get_locations_stats(
                 GROUP BY location
                 """
         )
-        data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
+        try:
+            data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
+        except sqlalchemy.exc.DBAPIError as exc:
+            # Raise GEOS topology errors as invalid geometries; other DB errors stay 500s
+            if not exc.connection_invalidated and "TopologyException" in str(exc.orig):
+                raise BadRequestError(
+                    "Invalid geometry: input geometry could not be processed"
+                ) from exc
+            raise
 
     return serialize_response(data_response)
