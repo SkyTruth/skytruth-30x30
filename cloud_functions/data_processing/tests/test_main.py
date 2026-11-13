@@ -57,6 +57,8 @@ def patched_all(monkeypatch, call_log):
         "generate_total_area_minus_pa",
         "generate_location_minus_fhp_mpa",
         "generate_marine_habitat_minus_pa",
+        "generate_raster_habitat_tiles",
+        "update_cb_raster",
         "create_and_update_marine_habitat_tileset",
     ]
     for name in simple_targets:
@@ -160,6 +162,7 @@ def test_protected_planet_pas_receives_the_tolerance(patched_all):
         "generate_gadm_minus_pa",
         "generate_location_minus_mpa",
         "generate_location_minus_fhp_mpa",
+        "generate_terrestrial_habitats_minus_pa",
     ],
 )
 def test_conservation_builder_methods_use_the_pipeline_tolerance(patched_all, method):
@@ -689,6 +692,26 @@ def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained
     """Everything reading the IHO/PA pairs must follow the step that builds them."""
     assert method not in _all_enqueued(chained_jobs("download_mpatlas"))
     assert method in _all_enqueued(chained_jobs("generate_iho_pa_intersections"))
+
+
+def test_terrestrial_habitat_tiles_follow_the_pa_download(patched_all):
+    """The tiles read the terrestrial PAs, so they wait for the step that writes them."""
+    main.run_from_payload({"METHOD": "download_protected_planet_pas", "TRIGGER_NEXT": True})
+
+    launched = [payload["METHOD"] for payload in _next_step_payloads(patched_all)]
+    assert "generate_terrestrial_habitats_minus_pa" in launched
+
+
+def test_terrestrial_habitat_tiles_load_the_folder_they_were_written_to(patched_all):
+    main.run_from_payload({"METHOD": "generate_terrestrial_habitats_minus_pa"})
+    main.run_from_payload({"METHOD": "update_terrestrial_habitats_minus_pa"})
+
+    [generated] = [kw for name, _, kw in patched_all if name == "generate_raster_habitat_tiles"]
+    [updated] = [kw for name, _, kw in patched_all if name == "update_cb_raster"]
+    assert updated["gcs_dir"] == main.CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(
+        habitat=generated["habitat"]
+    )
+    assert updated["table_name"] == "terrestrial_habitats_minus_pa"
 
 
 # Non-invoking / generic flows

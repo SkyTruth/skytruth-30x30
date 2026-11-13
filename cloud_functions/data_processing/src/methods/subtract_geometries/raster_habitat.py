@@ -356,9 +356,6 @@ def process_location_raster_tiles(
         srid = src.crs.to_epsg()
         nodata = src.nodata
 
-        # TODO: the habitat and protected habitat stats per location mask the same
-        # pixels. When we move to Workflows (TECH-3777), compute them from these masks
-        # in the same pass instead of in their own job.
         for pixels, chunk_transform, in_location, in_pa in iter_location_pa_masks(
             src, location_area, location_pa, chunk_size_pixels
         ):

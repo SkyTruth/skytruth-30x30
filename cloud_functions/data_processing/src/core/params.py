@@ -319,6 +319,8 @@ LONG_RUNNING_TASKS = [
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",
+    "generate_terrestrial_habitats_minus_pa",
+    "update_terrestrial_habitats_minus_pa",
     "generate_protected_areas_table",
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",

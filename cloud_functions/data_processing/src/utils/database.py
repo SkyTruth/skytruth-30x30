@@ -1,11 +1,12 @@
 import os
 
 import psycopg
+from google.cloud import storage
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import create_engine, text
 
-from src.core.params import BUCKET
+from src.core.params import BUCKET, PROJECT
 from src.utils.gcp import read_parquet_from_gcs
 from src.utils.logger import Logger
 
@@ -127,6 +128,74 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
             connection.execute(text(f"ANALYZE data.{table_name};"))
             connection.commit()
+
+    except Exception as excep:
+        logger.error({"message": "Failed to update table", "error": str(excep)})
+
+
+def update_cb_raster(table_name, gcs_dir, verbose: bool = False):
+    """
+    Update a Conservation Builder raster table from a GCS folder of tile files.
+
+    The tiles are loaded and indexed in a staging table, which then replaces the
+    live table in one short transaction, so the API keeps reading the previous
+    tiles until the new ones are ready.
+
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    gcs_dir : str
+      GCS folder holding one Parquet per location, with "location" and "rast"
+      columns, the latter as PostGIS raster WKB.
+    verbose : bool
+      Whether to print progress messages.
+    """
+    try:
+        conn = get_connection(format="sqlalchemy")
+        staging = f"{table_name}_new"
+        blobs = [
+            blob.name
+            for blob in storage.Client(project=PROJECT).list_blobs(BUCKET, prefix=f"{gcs_dir}/")
+            if blob.name.endswith(".parquet")
+        ]
+
+        with conn.begin() as connection:
+            connection.execute(text(f"DROP TABLE IF EXISTS data.{staging};"))
+            connection.execute(text(f"CREATE TABLE data.{staging} (location TEXT, rast raster);"))
+
+        if verbose:
+            logger.info({"message": f"Uploading {len(blobs)} files to data.{staging}..."})
+        for blob in blobs:
+            tiles = read_parquet_from_gcs(bucket_name=BUCKET, filename=blob, verbose=verbose)
+            with conn.begin() as connection:
+                connection.execute(
+                    text(f"""
+                    INSERT INTO data.{staging} (location, rast)
+                    VALUES (:location, ST_RastFromWKB(:rast));
+                """),
+                    tiles[["location", "rast"]].to_dict("records"),
+                )
+
+        with conn.begin() as connection:
+            # Create GIST index for fast spatial querying
+            connection.execute(
+                text(f"""
+                CREATE INDEX gist_{staging}_rast
+                ON data.{staging}
+                USING GIST (ST_ConvexHull(rast));
+            """)
+            )
+            connection.execute(text(f"ANALYZE data.{staging};"))
+
+        if verbose:
+            logger.info({"message": f"Replacing data.{table_name} with data.{staging}..."})
+        with conn.begin() as connection:
+            connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name};"))
+            connection.execute(text(f"ALTER TABLE data.{staging} RENAME TO {table_name};"))
+            connection.execute(
+                text(f"ALTER INDEX data.gist_{staging}_rast RENAME TO gist_{table_name}_rast;")
+            )
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})

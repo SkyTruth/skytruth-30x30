@@ -38,11 +38,6 @@ def iter_location_pa_masks(
     Yields a location's raster pixels one chunk at a time, with masks of which
     pixels fall inside the location and which inside its protected areas.
 
-    Chunks are windows on the raster's own grid covering the location's bounds,
-    and those not touching the location are skipped. A pixel is inside a geometry
-    when its centre is, so a pixel is never split between the protected and
-    unprotected parts of a location.
-
     Parameters
     ----------
     src : rasterio.DatasetReader
