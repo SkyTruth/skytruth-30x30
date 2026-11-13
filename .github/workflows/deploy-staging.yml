@@ -8,6 +8,7 @@ on:
     paths:
     - 'frontend/**'
     - 'cms/**'
+    - 'cb_api/**'
     - 'cloud_functions/**'
     - 'cloudrun_jobs/**'
     - '.github/workflows/*'
