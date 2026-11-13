@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react';
+import { ComponentProps, PropsWithChildren } from 'react';
 
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -65,6 +65,8 @@ type StatBlockProps = {
   contribution?: Contribution;
   target?: number;
   status?: StatStatus;
+  // Info tooltip at the right of the heading
+  tooltip?: ComponentProps<typeof TooltipButton>;
   compact?: boolean;
   color?: string;
 };
@@ -79,6 +81,7 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   contribution,
   target,
   status = 'success',
+  tooltip,
   compact = false,
   color,
 }) => {
@@ -97,7 +100,10 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
 
   return (
     <div className={className}>
-      <h4 className={cn('font-bold', compact ? 'text-base' : 'text-sm')}>{title}</h4>
+      <div className="flex items-center justify-between gap-2">
+        <h4 className={cn('font-bold', compact ? 'text-base' : 'text-sm')}>{title}</h4>
+        {tooltip && <TooltipButton {...tooltip} />}
+      </div>
       <StatStatusMessage status={status} />
       {status === 'success' && (
         <ContributionChart className="pt-3" contribution={contribution} target={target} />
@@ -108,6 +114,7 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
 
 StatBlock.messages = [
   ...StatStatusMessage.messages,
+  ...TooltipButton.messages,
   ...ContributionChart.messages,
   ...HabitatContributionChart.messages,
 ];
@@ -159,7 +166,7 @@ type ContributionItemProps = {
   title: string;
   stats: SectionStats;
   // "Fully/Highly Protected" stat; unset on the terrestrial tab
-  fhp?: { status: StatStatus; contribution?: Contribution };
+  fhp?: { status: StatStatus; contribution?: Contribution; tooltip?: StatBlockProps['tooltip'] };
   // "Habitat Protection" rows; unset on the terrestrial tab
   habitats?: Omit<HabitatProtectionProps, 'className'>;
 };
