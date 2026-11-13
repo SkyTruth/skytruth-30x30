@@ -5,6 +5,7 @@ import { isAxiosError } from 'axios';
 import { useSetAtom } from 'jotai';
 
 import { conservationStatsImpressed } from '@/components/analytics/heap';
+import { useFhpAnalysis } from '@/containers/map/sidebar/main-panel/panels/modelling/contributions-widget/use-fhp-contributions';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
@@ -54,11 +55,17 @@ const Modelling: FC = () => {
     }
   );
 
+  // On the marine tab, a shape can add only fully/highly protected area (inside an MPA that
+  // isn't fully/highly protected), so wait for that analysis too and count its locations
+  const fhpAnalysis = useFhpAnalysis(isCbApiActive && tab === 'marine');
+  const hasLocations =
+    data?.locations_area?.length > 0 || fhpAnalysis.data?.locations_area?.length > 0;
+
   useEffect(() => {
-    if (isFetching) {
+    if (isFetching || fhpAnalysis.isFetching) {
       setModellingState((prevState) => ({ ...prevState, status: 'running' }));
     } else if (isSuccess) {
-      if (data?.locations_area?.length > 0) {
+      if (hasLocations) {
         setModellingState((prevState) => ({ ...prevState, status: 'success', data }));
         conservationStatsImpressed({
           countries: data.locations_area.flatMap((loc) => loc.code),
@@ -78,7 +85,7 @@ const Modelling: FC = () => {
         });
       }
     }
-  }, [setModellingState, isFetching, isSuccess, data, tab]);
+  }, [setModellingState, isFetching, isSuccess, data, tab, fhpAnalysis.isFetching, hasLocations]);
 
   return null;
 };

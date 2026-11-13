@@ -10,6 +10,13 @@ import useModellingStat from './use-modelling-stat';
 const FHP_LEVEL = 'fully-highly-protected';
 
 /**
+ * cb_api's fully/highly protected analysis of the drawn shape (marine only): the added area
+ * per location
+ */
+export const useFhpAnalysis = (enabled: boolean) =>
+  useModellingStat('protection-level', { level: FHP_LEVEL, environment: 'marine' }, { enabled });
+
+/**
  * "Fully/Highly Protected" stats for the Conservation Builder panel (marine only), keyed by
  * location code, with `GLOB` for the Global section
  *
@@ -23,11 +30,7 @@ const FHP_LEVEL = 'fully-highly-protected';
  */
 const useFhpContributions = (codes: string[], seaCodes: ReadonlySet<string>, enabled: boolean) => {
   // Added fully/highly protected area per location
-  const analysis = useModellingStat(
-    'protection-level',
-    { level: FHP_LEVEL, environment: 'marine' },
-    { enabled }
-  );
+  const analysis = useFhpAnalysis(enabled);
 
   // Existing fully/highly protected area per location, plus global
   const stats = useGetMpaaProtectionLevelStats<MpaaProtectionLevelStat[]>(
