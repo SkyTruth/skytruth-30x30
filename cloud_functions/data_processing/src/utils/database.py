@@ -1,11 +1,12 @@
 import os
 
 import psycopg
+from google.cloud import storage
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import create_engine, text
 
-from src.core.params import BUCKET
+from src.core.params import BUCKET, PROJECT
 from src.utils.gcp import read_parquet_from_gcs
 from src.utils.logger import Logger
 
@@ -127,6 +128,61 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
             connection.execute(text(f"ANALYZE data.{table_name};"))
             connection.commit()
+
+    except Exception as excep:
+        logger.error({"message": "Failed to update table", "error": str(excep)})
+
+
+def update_cb_raster(table_name, gcs_dir, verbose: bool = False):
+    """
+    Update Conservation Builder raster table from a GCS folder of tile files.
+
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    gcs_dir : str
+      GCS folder holding one Parquet per location, with "location" and "rast"
+      columns, the latter as PostGIS raster WKB.
+    verbose : bool
+      Whether to print progress messages.
+    """
+    try:
+        conn = get_connection(format="sqlalchemy").raw_connection()
+        blobs = [
+            blob.name
+            for blob in storage.Client(project=PROJECT).list_blobs(BUCKET, prefix=f"{gcs_dir}/")
+            if blob.name.endswith(".parquet")
+        ]
+
+        with conn.cursor() as cursor:
+            cursor.execute(f"DROP TABLE IF EXISTS data.{table_name};")
+            cursor.execute(f"CREATE TABLE data.{table_name} (location TEXT, rast raster);")
+            conn.commit()
+
+            # Upload data to PostgreSQL, streaming the tiles as hex WKB
+            if verbose:
+                logger.info({"message": f"Uploading {len(blobs)} files to data.{table_name}..."})
+            for blob in blobs:
+                tiles = read_parquet_from_gcs(bucket_name=BUCKET, filename=blob, verbose=verbose)
+                with cursor.copy(f"COPY data.{table_name} (location, rast) FROM STDIN") as copy:
+                    for location, rast in zip(tiles["location"], tiles["rast"], strict=True):
+                        copy.write_row((location, rast.hex()))
+                conn.commit()
+
+            # Add primary key
+            cursor.execute(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;")
+
+            # Create GIST index for fast spatial querying
+            cursor.execute(f"""
+                CREATE INDEX gist_{table_name}_rast
+                ON data.{table_name}
+                USING GIST (ST_ConvexHull(rast));
+            """)
+
+            cursor.execute(f"ANALYZE data.{table_name};")
+        conn.commit()
+        conn.close()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})

@@ -8,11 +8,17 @@ generic enough to be reused for any location-by-location raster + PA stats job
 import traceback
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import rasterio
+import shapely
 from joblib import Parallel, delayed
+from rasterio.features import rasterize
 from rasterio.transform import rowcol
+from rasterio.windows import Window, from_bounds
+from rasterio.windows import bounds as window_bounds
 from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, box, mapping
+from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import get_cover_areas
@@ -20,6 +26,87 @@ from src.utils.geo import robust_unary_union, tile_geometry
 from src.utils.logger import Logger
 
 logger = Logger()
+
+
+def iter_location_pa_masks(
+    src,
+    location_area: gpd.GeoDataFrame,
+    location_pa: gpd.GeoDataFrame,
+    chunk_size_pixels: int = 8192,
+):
+    """
+    Yields a location's raster pixels one chunk at a time, with masks of which
+    pixels fall inside the location and which inside its protected areas.
+
+    Parameters
+    ----------
+    src : rasterio.DatasetReader
+        Open single-band raster.
+    location_area : gpd.GeoDataFrame
+        The location's geometries, unioned into one.
+    location_pa : gpd.GeoDataFrame
+        The location's protected areas.
+    chunk_size_pixels : int
+        Edge length in pixels of each read from the raster.
+
+    Yields
+    ------
+        Tuples (pixels, transform, in_location, in_pa): the chunk's band 1 values,
+        its affine transform, and two boolean arrays of the same shape.
+    """
+    location_geom = robust_unary_union(
+        location_area.to_crs(src.crs).geometry.apply(make_valid).values
+    )
+    pas = location_pa.to_crs(src.crs).geometry.apply(make_valid)
+
+    if not location_geom.intersects(box(*src.bounds)):
+        return
+
+    shapely.prepare(location_geom)
+    full = (
+        from_bounds(*location_geom.bounds, transform=src.transform)
+        .round_offsets()
+        .round_lengths()
+        .crop(src.height, src.width)
+    )
+    row_end = int(full.row_off + full.height)
+    col_end = int(full.col_off + full.width)
+
+    for chunk_row in range(int(full.row_off), row_end, chunk_size_pixels):
+        for chunk_col in range(int(full.col_off), col_end, chunk_size_pixels):
+            chunk = Window(
+                chunk_col,
+                chunk_row,
+                min(chunk_size_pixels, col_end - chunk_col),
+                min(chunk_size_pixels, row_end - chunk_row),
+            )
+            chunk_box = box(*window_bounds(chunk, src.transform))
+            if not location_geom.intersects(chunk_box):
+                continue
+
+            transform = src.window_transform(chunk)
+            pixels = src.read(1, window=chunk)
+
+            in_location = rasterize(
+                [location_geom],
+                out_shape=pixels.shape,
+                transform=transform,
+                all_touched=False,
+                dtype="uint8",
+            ).astype(bool)
+            chunk_pas = pas.values[pas.sindex.query(chunk_box)]
+            if len(chunk_pas):
+                in_pa = rasterize(
+                    chunk_pas,
+                    out_shape=pixels.shape,
+                    transform=transform,
+                    all_touched=False,
+                    dtype="uint8",
+                ).astype(bool)
+            else:
+                in_pa = np.zeros(pixels.shape, dtype=bool)
+
+            yield pixels, transform, in_location, in_pa
 
 
 def estimate_masked_pixel_count(src, geom):

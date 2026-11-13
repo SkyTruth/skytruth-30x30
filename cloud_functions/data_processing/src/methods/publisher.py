@@ -19,6 +19,7 @@ from src.core.params import (
     CLIMATE_RES_CORAL_SOURCE_FILE,
     CLIMATE_RESILIENT_CORALS_HABITATS,
     CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
+    CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
@@ -38,6 +39,7 @@ from src.core.params import (
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
     MPATLAS_WITH_SEAS_FILE_NAME,
+    PROCESSED_BIOME_RASTER_PATH,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCE,
@@ -82,6 +84,7 @@ from src.methods.subtract_geometries import (
     generate_location_minus_fhp_mpa,
     generate_marine_habitat_minus_pa,
     generate_raster_habitat_minus_pa,
+    generate_raster_habitat_tiles,
     generate_total_area_minus_pa,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
@@ -95,7 +98,7 @@ from src.methods.tileset_processes import (
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
-from src.utils.database import update_cb
+from src.utils.database import update_cb, update_cb_raster
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import release_memory
@@ -434,6 +437,7 @@ def dispatch_publisher(
             step_list = [
                 "generate_iho_pa_intersections",
                 "generate_gadm_minus_pa",
+                "generate_terrestrial_habitats_minus_pa",
             ]
 
         case "generate_iho_pa_intersections":
@@ -579,6 +583,12 @@ def dispatch_publisher(
             )
             step_list = ["update_seagrasses_minus_pa"]
 
+        # TODO: switch to generate_raster_habitat_tiles and update_cb_raster, as for terrestrial
+        # habitats, then remove generate_raster_habitat_minus_pa and the polygonizing behind it.
+        # The tiles skip polygonizing, and the current tiling drops pixels along the seams of
+        # locations wider than one tile. The corals raster is float32 with NaN nodata and 0 as
+        # a real class, so the tiles must read it masked and write uint8 with nodata 255. The
+        # cb_api corals queries then move to the raster query.
         case "generate_climate_resilient_corals_minus_pa":
             generate_raster_habitat_minus_pa(
                 habitat_file_name=CLIMATE_RES_CORAL_SOURCE_FILE,
@@ -589,6 +599,22 @@ def dispatch_publisher(
                 verbose=verbose,
             )
             step_list = ["update_climate_resilient_corals_minus_pa"]
+
+        case "generate_terrestrial_habitats_minus_pa":
+            # TODO: generate_terrestrial_biome_stats_country and generate_terrestrial_biome_stats
+            # mask the same pixels as these tiles, and could share one pass with them. They are
+            # kept separate so the progress tracker and conservation builder sequences stay
+            # independent. Merging them means reordering the sequence so that every step
+            # reading the stats or the tiles runs after the merged step that writes both.
+            generate_raster_habitat_tiles(
+                habitat="terrestrial-habitats",
+                raster_file_name=PROCESSED_BIOME_RASTER_PATH,
+                total_area_file=GADM_FILE_NAME,
+                pa_file=WDPA_TERRESTRIAL_FILE_NAME,
+                tolerance=TOLERANCE,
+                verbose=verbose,
+            )
+            step_list = ["update_terrestrial_habitats_minus_pa"]
 
         # ------------------
         #   Database updates
@@ -637,6 +663,15 @@ def dispatch_publisher(
             update_cb(
                 table_name="gadm_minus_pa_v2",
                 gcs_file=CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+                verbose=verbose,
+            )
+
+        case "update_terrestrial_habitats_minus_pa":
+            update_cb_raster(
+                table_name="terrestrial_habitats_minus_pa",
+                gcs_dir=CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(
+                    habitat="terrestrial-habitats"
+                ),
                 verbose=verbose,
             )
 

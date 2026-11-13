@@ -1,25 +1,34 @@
+import struct
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio
 from joblib import Parallel, delayed
 from rasterio.features import rasterize, shapes
-from rasterio.windows import from_bounds
+from rasterio.windows import Window, from_bounds
+from rasterio.windows import bounds as window_bounds
+from rasterio.windows import transform as window_transform
 from shapely import MultiPolygon
-from shapely.geometry import shape
+from shapely.geometry import box, shape
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
 from src.core.commons import add_tolerance_suffix
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
+    ARCHIVE_CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN,
     BUCKET,
     CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
+    CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN,
     TOLERANCE,
 )
+from src.core.raster_pa_stats import iter_location_pa_masks
 from src.methods.subtract_geometries.io import load_pa_by_location, upload_with_archive
 from src.utils.gcp import (
+    delete_stale_blobs,
     download_file_from_gcs,
+    read_geo_df,  # Reads a .parquet, .json or .geojson file from GCS and returns a GeoDataFrame
     read_parquet_from_gcs,  # Reads a .parquet file from GCS and returns a GeoDataFrame
 )
 from src.utils.geo import robust_unary_union, tile_geometry
@@ -255,3 +264,200 @@ def generate_raster_habitat_minus_pa(
             ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat),
             bucket=bucket,
         )
+
+
+# PostGIS raster WKB band flags: 8-bit unsigned pixels, with a nodata value
+PT_8BUI = 4
+BAND_HAS_NODATA = 0x40
+
+
+def raster_tile_wkb(pixels, transform, srid, nodata):
+    """
+    Encodes one band of 8-bit pixels as PostGIS raster WKB.
+
+    PostGIS reads this format directly (``'\\x...'::raster`` or ``ST_RastFromWKB``),
+    so loading the tiles needs no GDAL driver enabled in the database.
+
+    Parameters
+    ----------
+    pixels : np.ndarray
+        2D uint8 array of the tile's pixels, row by row from the top.
+    transform : Affine
+        Affine transform of the tile's top-left pixel.
+    srid : int
+        EPSG code of the tile's CRS.
+    nodata : int
+        Pixel value standing for no data.
+
+    Returns
+    -------
+        The tile as little-endian PostGIS raster WKB bytes.
+    """
+    height, width = pixels.shape
+    header = struct.pack(
+        "<BHHddddddiHH",
+        1,  # little-endian
+        0,  # WKB version
+        1,  # number of bands
+        transform.a,  # scale x
+        transform.e,  # scale y
+        transform.c,  # upper-left x
+        transform.f,  # upper-left y
+        transform.b,  # skew x
+        transform.d,  # skew y
+        srid,
+        width,
+        height,
+    )
+    band = struct.pack("<BB", PT_8BUI | BAND_HAS_NODATA, int(nodata))
+    return header + band + np.ascontiguousarray(pixels, dtype="uint8").tobytes()
+
+
+def process_location_raster_tiles(
+    location_area: gpd.GeoDataFrame,
+    location_pa: gpd.GeoDataFrame,
+    raster_path: str,
+    tile_size_pixels: int = 256,
+    chunk_size_pixels: int = 8192,
+):
+    """
+    Returns a location's unprotected habitat as PostGIS raster tiles.
+
+    The raster counterpart of ``process_country_raster_habitat`` that skips
+    polygonizing: pixels outside the location or inside its protected areas are set
+    to nodata on the raster's own grid, and what remains is cut into tiles for a
+    PostGIS raster table. The raster is read one chunk at a time and tiles holding
+    only nodata are dropped, so oceans and fully protected areas cost no rows.
+
+    Parameters
+    ----------
+    location_area : gpd.GeoDataFrame
+        Single-location GeoDataFrame carrying a "location" column.
+    location_pa : gpd.GeoDataFrame
+        The location's protected areas.
+    raster_path : str
+        Path to a single-band uint8 habitat raster with a nodata value.
+    tile_size_pixels : int
+        Edge length in pixels of each tile written.
+    chunk_size_pixels : int
+        Edge length in pixels of each read from the raster. A multiple of
+        ``tile_size_pixels``, so tiles never straddle two reads.
+
+    Returns
+    -------
+        GeoDataFrame in the raster's CRS with one row per tile holding any
+        unprotected habitat, columns ["location", "rast", "geometry"]: the tile as
+        PostGIS raster WKB, and its footprint.
+    """
+    location = location_area["location"].iloc[0]
+    locations, rasts, footprints = [], [], []
+
+    with rasterio.open(raster_path) as src:
+        srid = src.crs.to_epsg()
+        nodata = src.nodata
+
+        for pixels, chunk_transform, in_location, in_pa in iter_location_pa_masks(
+            src, location_area, location_pa, chunk_size_pixels
+        ):
+            pixels[~(in_location & ~in_pa)] = nodata
+
+            for row in range(0, pixels.shape[0], tile_size_pixels):
+                for col in range(0, pixels.shape[1], tile_size_pixels):
+                    tile = pixels[row : row + tile_size_pixels, col : col + tile_size_pixels]
+                    if (tile == nodata).all():
+                        continue
+                    tile_window = Window(col, row, tile.shape[1], tile.shape[0])
+                    tile_transform = window_transform(tile_window, chunk_transform)
+                    locations.append(location)
+                    rasts.append(raster_tile_wkb(tile, tile_transform, srid, nodata))
+                    footprints.append(box(*window_bounds(tile_window, chunk_transform)))
+
+        return gpd.GeoDataFrame(
+            {"location": locations, "rast": rasts}, geometry=footprints, crs=src.crs
+        )
+
+
+def generate_raster_habitat_tiles(
+    habitat: str,
+    raster_file_name: str,
+    total_area_file: str,
+    pa_file: str,
+    tolerance=TOLERANCE,
+    bucket: str = BUCKET,
+    n_jobs: int = 4,
+    verbose: bool = True,
+):
+    """
+    Subtracts protected areas from a habitat raster inside each location and saves
+    the unprotected pixels to GCS as PostGIS raster tiles, one Parquet per location.
+
+    Each location's file is uploaded as soon as it is done, so only the locations
+    in progress are held in memory: the global tiles run to many GB uncompressed.
+    Once every location is written, files in the live folder that this run did not
+    write, such as those of a location since dropped or left with no unprotected
+    habitat, are deleted so the load step never picks them up.
+
+    Parameters
+    ----------
+    habitat : str
+        Habitat name used in the output folder names.
+    raster_file_name : str
+        GCS path of the single-band uint8 habitat raster.
+    total_area_file : str
+        Filename of the locations file the habitat is attributed to.
+    pa_file : str
+        Filename of the protected areas file to subtract, carrying an ISO3 column.
+    tolerance : float
+        Tolerance value used in simplification.
+    bucket : str
+        GCS bucket name.
+    n_jobs : int
+        Number of locations processed at once; each holds its tiles in memory.
+    verbose : bool, optional
+        Whether to print verbose logs, by default True.
+
+    Returns
+    -------
+        Names of the live blobs written, one ``{location}.parquet`` per location
+        holding unprotected habitat, each also saved to a dated archive folder.
+    """
+    local_raster = raster_file_name.split("/")[-1]
+    download_file_from_gcs(bucket, raster_file_name, local_raster, verbose=verbose)
+
+    total_area = read_geo_df(
+        bucket_name=bucket,
+        filename=add_tolerance_suffix(total_area_file, tolerance),
+        verbose=verbose,
+    )
+    total_area = total_area[["location", "geometry"]]
+    locations = total_area["location"].unique().tolist()
+
+    pa = load_pa_by_location(read_geo_df, pa_file, tolerance, bucket=bucket, verbose=verbose)
+
+    out_dir = CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(habitat=habitat)
+    archive_dir = ARCHIVE_CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(habitat=habitat)
+
+    def process_and_upload(location):
+        tiles = process_location_raster_tiles(
+            total_area[total_area["location"] == location].reset_index(drop=True),
+            pa[pa["ISO3"] == location].reset_index(drop=True),
+            local_raster,
+        )
+        if tiles.empty:
+            return None
+        out_file = f"{out_dir}/{location}.parquet"
+        upload_with_archive(tiles, out_file, f"{archive_dir}/{location}.parquet", bucket=bucket)
+        return out_file
+
+    if verbose:
+        logger.info({"message": f"Tiling unprotected {habitat} for {len(locations)} locations..."})
+    results = tqdm(
+        Parallel(n_jobs=n_jobs, backend="threading", return_as="generator_unordered")(
+            delayed(process_and_upload)(location) for location in locations
+        ),
+        total=len(locations),
+    )
+    written = {out_file for out_file in results if out_file is not None}
+
+    delete_stale_blobs(bucket, f"{out_dir}/", written, verbose=verbose)
+    return written
