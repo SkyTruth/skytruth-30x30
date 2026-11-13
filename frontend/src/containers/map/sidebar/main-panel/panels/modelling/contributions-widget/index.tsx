@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useAtomValue } from 'jotai';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { Accordion } from '@/components/ui/accordion';
 import Widget from '@/components/widget';
@@ -9,6 +9,7 @@ import { drawStateAtom, modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useLocationName from '@/hooks/use-location-name';
 import { FCWithMessages } from '@/types';
+import { useGetDataInfos } from '@/types/generated/data-info';
 
 import useTooltips from '../useTooltips';
 
@@ -28,6 +29,7 @@ import useFhpContributions from './use-fhp-contributions';
  */
 const ContributionsWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
+  const locale = useLocale();
   const tUploads = useTranslations('services.uploads');
   const getLocationName = useLocationName();
 
@@ -52,11 +54,33 @@ const ContributionsWidget: FCWithMessages = () => {
     [countries, regionsAndSeas]
   );
   const fhp = useFhpContributions(listedCodes, seaCodes, isMarine);
+  // "Fully / Highly Protected" info tooltip with its linked source, from Strapi
+  const { data: fhpTooltip } = useGetDataInfos(
+    { locale, filters: { slug: 'cb-fully-highly-protected' }, populate: 'data_sources' },
+    {
+      query: {
+        enabled: isMarine,
+        select: ({ data }) =>
+          data[0]
+            ? {
+                text: data[0].content,
+                sources: data[0].data_sources?.map(({ documentId, slug, title, url }) => ({
+                  documentId,
+                  slug,
+                  title,
+                  url,
+                })),
+                sourcesLabel: t('fully-highly-protected-sources'),
+              }
+            : undefined,
+      },
+    }
+  );
   const withMarineStats = (title: string, stats: SectionStats) => ({
     title,
     stats,
     ...(isMarine && {
-      fhp: { status: fhp.status, contribution: fhp.byCode.get(stats.code) },
+      fhp: { status: fhp.status, contribution: fhp.byCode.get(stats.code), tooltip: fhpTooltip },
     }),
   });
 

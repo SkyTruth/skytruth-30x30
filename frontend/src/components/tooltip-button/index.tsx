@@ -22,6 +22,8 @@ interface TooltipButtonProps {
   text: string;
   sources?: Source | Source[];
   extraContent?: ReactNode;
+  // Label before the list of sources; "Data sources:" when unset
+  sourcesLabel?: string;
 }
 
 const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
@@ -29,6 +31,7 @@ const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
   text,
   sources,
   extraContent,
+  sourcesLabel,
 }) => {
   const t = useTranslations('components.tooltip-button');
 
@@ -83,7 +86,7 @@ const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
 
         {Array.isArray(sources) && (
           <div className="">
-            <span>{t('data-sources:')} </span>
+            <span>{sourcesLabel ?? t('data-sources:')} </span>
             {sources.map(({ documentId, title, url }, index) => (
               <Fragment key={documentId}>
                 {renderSource(url, title)}

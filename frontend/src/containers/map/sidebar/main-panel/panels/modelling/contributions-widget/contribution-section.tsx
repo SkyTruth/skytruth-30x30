@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react';
+import { ComponentProps, PropsWithChildren } from 'react';
 
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -63,6 +63,8 @@ type StatBlockProps = {
   contribution?: Contribution;
   target?: number;
   status?: StatStatus;
+  // Info tooltip at the right of the heading
+  tooltip?: ComponentProps<typeof TooltipButton>;
 };
 
 /**
@@ -75,12 +77,16 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   contribution,
   target,
   status = 'success',
+  tooltip,
 }) => {
   if (status === 'success' && !contribution) return null;
 
   return (
     <div className={className}>
-      <h4 className="text-sm font-bold">{title}</h4>
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-sm font-bold">{title}</h4>
+        {tooltip && <TooltipButton {...tooltip} />}
+      </div>
       <StatStatusMessage status={status} />
       {status === 'success' && (
         <ContributionChart className="pt-3" contribution={contribution} target={target} />
@@ -89,13 +95,17 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   );
 };
 
-StatBlock.messages = [...StatStatusMessage.messages, ...ContributionChart.messages];
+StatBlock.messages = [
+  ...StatStatusMessage.messages,
+  ...ContributionChart.messages,
+  ...TooltipButton.messages,
+];
 
 type ContributionItemProps = {
   title: string;
   stats: SectionStats;
   // "Fully/Highly Protected" stat; unset on the terrestrial tab
-  fhp?: { status: StatStatus; contribution?: Contribution };
+  fhp?: { status: StatStatus; contribution?: Contribution; tooltip?: StatBlockProps['tooltip'] };
 };
 
 /** One collapsible location in the panel: each shows the legend and stats */
