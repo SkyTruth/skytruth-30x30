@@ -48,6 +48,8 @@ type ContributionBarProps = {
   existingColor?: string;
   // Target line position in %; no line when unset
   target?: number;
+  // Black outline around the existing and added areas
+  outlined?: boolean;
 };
 
 /** Bar of the existing area then the added area (blue), with a dashed line for the rest */
@@ -56,15 +58,22 @@ export const ContributionBar = ({
   contribution: { existingPercentage, addedPercentage },
   existingColor,
   target,
+  outlined = false,
 }: ContributionBarProps) => (
   <div className={cn('relative h-3.5', className)}>
     <span className="absolute top-1/2 h-px w-full border-b border-dashed border-black" />
     <span
-      className={cn('absolute bottom-0 left-0 top-0', { 'bg-existing-area': !existingColor })}
+      className={cn('absolute bottom-0 left-0 top-0', {
+        'bg-existing-area': !existingColor,
+        'border-[1.5px] border-black': outlined && existingPercentage > 0,
+      })}
       style={{ width: toWidth(existingPercentage), backgroundColor: existingColor }}
     />
     <span
-      className="absolute bottom-0 top-0 bg-blue-700"
+      className={cn('absolute bottom-0 top-0 bg-blue-700', {
+        'border-[1.5px] border-black': outlined && addedPercentage > 0,
+        'border-l-0': outlined && existingPercentage > 0,
+      })}
       style={{ left: toWidth(existingPercentage), width: toWidth(addedPercentage) }}
     />
     {target != null && (
