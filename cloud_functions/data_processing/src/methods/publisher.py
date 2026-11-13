@@ -583,6 +583,12 @@ def dispatch_publisher(
             )
             step_list = ["update_seagrasses_minus_pa"]
 
+        # TODO: switch to generate_raster_habitat_tiles and update_cb_raster, as for terrestrial
+        # habitats, then remove generate_raster_habitat_minus_pa and the polygonizing behind it.
+        # The tiles skip polygonizing, and the current tiling drops pixels along the seams of
+        # locations wider than one tile. The corals raster is float32 with NaN nodata and 0 as
+        # a real class, so the tiles must read it masked and write uint8 with nodata 255. The
+        # cb_api corals queries then move to the raster query.
         case "generate_climate_resilient_corals_minus_pa":
             generate_raster_habitat_minus_pa(
                 habitat_file_name=CLIMATE_RES_CORAL_SOURCE_FILE,

@@ -135,11 +135,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
 def update_cb_raster(table_name, gcs_dir, verbose: bool = False):
     """
-    Update a Conservation Builder raster table from a GCS folder of tile files.
-
-    The tiles are loaded and indexed in a staging table, which then replaces the
-    live table in one short transaction, so the API keeps reading the previous
-    tiles until the new ones are ready.
+    Update Conservation Builder raster table from a GCS folder of tile files.
 
     Parameters
     ----------
@@ -152,50 +148,41 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False):
       Whether to print progress messages.
     """
     try:
-        conn = get_connection(format="sqlalchemy")
-        staging = f"{table_name}_new"
+        conn = get_connection(format="sqlalchemy").raw_connection()
         blobs = [
             blob.name
             for blob in storage.Client(project=PROJECT).list_blobs(BUCKET, prefix=f"{gcs_dir}/")
             if blob.name.endswith(".parquet")
         ]
 
-        with conn.begin() as connection:
-            connection.execute(text(f"DROP TABLE IF EXISTS data.{staging};"))
-            connection.execute(text(f"CREATE TABLE data.{staging} (location TEXT, rast raster);"))
+        with conn.cursor() as cursor:
+            cursor.execute(f"DROP TABLE IF EXISTS data.{table_name};")
+            cursor.execute(f"CREATE TABLE data.{table_name} (location TEXT, rast raster);")
+            conn.commit()
 
-        if verbose:
-            logger.info({"message": f"Uploading {len(blobs)} files to data.{staging}..."})
-        for blob in blobs:
-            tiles = read_parquet_from_gcs(bucket_name=BUCKET, filename=blob, verbose=verbose)
-            with conn.begin() as connection:
-                connection.execute(
-                    text(f"""
-                    INSERT INTO data.{staging} (location, rast)
-                    VALUES (:location, ST_RastFromWKB(:rast));
-                """),
-                    tiles[["location", "rast"]].to_dict("records"),
-                )
+            # Upload data to PostgreSQL, streaming the tiles as hex WKB
+            if verbose:
+                logger.info({"message": f"Uploading {len(blobs)} files to data.{table_name}..."})
+            for blob in blobs:
+                tiles = read_parquet_from_gcs(bucket_name=BUCKET, filename=blob, verbose=verbose)
+                with cursor.copy(f"COPY data.{table_name} (location, rast) FROM STDIN") as copy:
+                    for location, rast in zip(tiles["location"], tiles["rast"], strict=True):
+                        copy.write_row((location, rast.hex()))
+                conn.commit()
 
-        with conn.begin() as connection:
+            # Add primary key
+            cursor.execute(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;")
+
             # Create GIST index for fast spatial querying
-            connection.execute(
-                text(f"""
-                CREATE INDEX gist_{staging}_rast
-                ON data.{staging}
+            cursor.execute(f"""
+                CREATE INDEX gist_{table_name}_rast
+                ON data.{table_name}
                 USING GIST (ST_ConvexHull(rast));
             """)
-            )
-            connection.execute(text(f"ANALYZE data.{staging};"))
 
-        if verbose:
-            logger.info({"message": f"Replacing data.{table_name} with data.{staging}..."})
-        with conn.begin() as connection:
-            connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name};"))
-            connection.execute(text(f"ALTER TABLE data.{staging} RENAME TO {table_name};"))
-            connection.execute(
-                text(f"ALTER INDEX data.gist_{staging}_rast RENAME TO gist_{table_name}_rast;")
-            )
+            cursor.execute(f"ANALYZE data.{table_name};")
+        conn.commit()
+        conn.close()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
