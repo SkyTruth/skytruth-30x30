@@ -87,4 +87,4 @@ jobs:
           gcloud functions deploy  ${{ env.CLOUD_FUNCTION_NAME }} \
           --gen2 \
           --region=${{ env.REGION }} \
-          --source=./cloud_functions/data_processing \
+          --source=./cloud_functions/data_processing
