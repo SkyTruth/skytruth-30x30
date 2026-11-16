@@ -80,8 +80,8 @@ def test_get_engine_reads_the_engine_off_app_state():
 def test_analysis_routes_query_with_the_pooled_engine(
     monkeypatch: pytest.MonkeyPatch, path: str, body: dict
 ):
-    """The engine is a placeholder object and the analysis layer a stub, so no database
-    is involved."""
+    """The engine is a placeholder object and the analysis function is replaced with a
+    fake that returns fixed results, so no database is involved."""
     pooled_engine = object()
     engines_used = []
 
