@@ -1,6 +1,6 @@
 # Conservation Builder API
 
-Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area is already protected, broken down by location.
+Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area will have added protection, broken down by location.
 
 It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL PostGIS database. Those tables are produced by `cloud_functions/data_processing`.
 
@@ -9,6 +9,34 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
+| `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
+
+### `POST /coverage`
+
+`geometry` is required and takes a GeoJSON Feature, FeatureCollection or bare geometry;
+it must resolve to a Polygon or MultiPolygon. **Only the first feature of a
+FeatureCollection is used**; any others are ignored, so to analyze several shapes
+together, send them as one MultiPolygon. `environment` is optional and selects the
+table the area is compared against (`marine` by default or `terrestrial`).
+
+```bash
+curl -X POST localhost:8080/coverage \
+  -H 'Content-Type: application/json' \
+  -d '{"environment": "marine", "geometry": {"type": "Polygon", "coordinates": [[[146.9,-39.2],[147,-39.2],[147,-39.1],[146.9,-39.1],[146.9,-39.2]]]}}'
+```
+
+```json
+{
+  "locations": [{ "code": "AUS", "added_area": 34.0 }],
+  "total_area": 96.0
+}
+```
+
+Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `added_area` is the part of it in each location that is not yet protected, which a protected area drawn there would add.
+
+An area that intersects nothing (e.g., a marine request over land) returns an empty `locations`, and `total_area` is still the drawn area.
+
+Unrecognized fields in the body are ignored.
 
 ## Configuration
 
