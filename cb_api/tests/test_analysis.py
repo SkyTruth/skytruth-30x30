@@ -269,35 +269,17 @@ TOPOLOGY_ERROR = {
 }
 
 
-def test_a_topology_error_in_the_analysis_query_is_an_invalid_geometry():
-    error = sqlalchemy.exc.ProgrammingError("stmt", None, Exception(TOPOLOGY_ERROR))
-
-    with pytest.raises(
-        BadRequestError, match="Invalid geometry: input geometry could not be processed"
-    ) as excinfo:
-        get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)
-
-    assert excinfo.value.__cause__ is error, "the database error must stay attached for the log"
-
-
-def test_a_lost_connection_is_not_blamed_on_the_caller_even_mid_topology_error():
-    error = sqlalchemy.exc.ProgrammingError(
-        "stmt", None, Exception(TOPOLOGY_ERROR), connection_invalidated=True
-    )
-
-    with pytest.raises(sqlalchemy.exc.ProgrammingError):
-        get_locations_stats(ExplodingEngine(error), POLYGON, AnalysisTable.MARINE)
-
-
 @pytest.mark.parametrize(
     "error",
     [
         sqlalchemy.exc.ProgrammingError("stmt", None, Exception("GEOSIntersection")),
         sqlalchemy.exc.ProgrammingError("stmt", None, Exception("canceling statement")),
         sqlalchemy.exc.InterfaceError("stmt", None, Exception("network error")),
+        # Only an invalid row in our tables can cause a topology error since the query repairs the user's shape
+        sqlalchemy.exc.ProgrammingError("stmt", None, Exception(TOPOLOGY_ERROR)),
     ],
 )
-def test_other_analysis_query_failures_are_not_blamed_on_the_caller(
+def test_analysis_query_failures_are_not_blamed_on_the_caller(
     error: sqlalchemy.exc.DBAPIError,
 ):
     """The geometry has already passed validation, so it is not an error from the caller."""

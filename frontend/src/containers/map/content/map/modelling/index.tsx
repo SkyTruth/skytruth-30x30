@@ -14,21 +14,13 @@ import {
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { extractPolygons } from '@/lib/utils/file-upload';
-import {
-  toModellingData,
-  type CloudFunctionModellingData,
-  type ModellingData,
-} from '@/types/modelling';
+import { ModellingData } from '@/types/modelling';
 
 const fetchModelling = async (tab: string, feature: Feature) => {
-  const response = await axios.post<ModellingData | CloudFunctionModellingData>(
-    process.env.NEXT_PUBLIC_ANALYSIS_CF_URL,
-    {
-      environment: tab,
-      geometry: feature,
-    }
-  );
-  return { ...response, data: toModellingData(response.data) };
+  return axios.post<ModellingData>(process.env.NEXT_PUBLIC_ANALYSIS_CF_URL, {
+    environment: tab,
+    geometry: feature,
+  });
 };
 
 const Modelling: FC = () => {
@@ -86,10 +78,10 @@ const Modelling: FC = () => {
     if (isFetching) {
       setModellingState((prevState) => ({ ...prevState, status: 'running' }));
     } else if (isSuccess) {
-      if (data?.locations?.length > 0) {
+      if (data?.locations_area?.length > 0) {
         setModellingState((prevState) => ({ ...prevState, status: 'success', data }));
         conservationStatsImpressed({
-          countries: data.locations.flatMap((loc) => loc.code),
+          countries: data.locations_area.flatMap((loc) => loc.code),
           environment: tab,
           area: data.total_area,
         });
