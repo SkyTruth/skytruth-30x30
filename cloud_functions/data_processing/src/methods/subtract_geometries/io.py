@@ -17,7 +17,9 @@ def load_pa_by_location(
     Reads a protected areas file and shapes it for per-location subtraction.
 
     A PA listing several ISO3 codes is exploded into one row per location, so it is
-    subtracted from every location it belongs to. Non-polygonal records are dropped
+    subtracted from every location it belongs to. Codes the boundaries fold into
+    another location are renamed to it: ATA to ABNJ and ALA to FIN. Non-polygonal
+    records are dropped
     and the remaining geometries made valid, since the difference that follows
     rejects both.
 
@@ -48,6 +50,10 @@ def load_pa_by_location(
     pa["ISO3"] = pa["ISO3"].str.split(";")
     pa = pa.explode("ISO3")
     pa["ISO3"] = pa["ISO3"].str.strip()
+
+    # Match the location codes the boundaries use, as country_wrapping does for the
+    # progress tracker: Antarctica is part of ABNJ and Åland of Finland
+    pa["ISO3"] = pa["ISO3"].replace({"ATA": "ABNJ", "ALA": "FIN"})
 
     # Keep only polygon records and make the geometries valid
     pa = pa[pa.geometry.geom_type.isin(["MultiPolygon", "Polygon"])].copy()
