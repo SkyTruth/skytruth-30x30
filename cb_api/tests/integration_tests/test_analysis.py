@@ -1,7 +1,6 @@
 """The spatial query in src/analysis.py, against a PostGIS database."""
 
 import pytest
-from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.analysis import AnalysisTable, get_locations_stats
@@ -69,15 +68,45 @@ def test_a_shape_partly_outside_every_location_lists_only_real_locations(
     assert result["total_area"] == pytest.approx(2 * by_code(result)["AAA"], abs=2)
 
 
-def test_a_self_intersecting_polygon_is_repaired(analysis_tables: Engine):
-    """ST_MakeValid should repair a self-intersecting polygon (bow-tie)."""
-    bowtie = {
+INVALID_USER_GEOMETRIES = {
+    "bow-tie": {
         "type": "Polygon",
         "coordinates": [[[0, 0], [2, 1], [2, 0], [0, 1], [0, 0]]],
-    }
+    },
+    "ring crossing itself several times": {
+        "type": "Polygon",
+        "coordinates": [
+            [[0, 0], [3, 1], [0, 1], [3, 0], [1.5, 1], [1.5, 0], [0, 0.5], [3, 0.5], [0, 0]]
+        ],
+    },
+    "ring touching itself": {
+        "type": "Polygon",
+        "coordinates": [[[0, 0], [2, 0], [1, 0.5], [2, 1], [0, 1], [1, 0.5], [0, 0]]],
+    },
+    "hole crossing the outer ring": {
+        "type": "Polygon",
+        "coordinates": [
+            [[0, 0], [2, 0], [2, 1], [0, 1], [0, 0]],
+            [[1.5, 0.2], [2.5, 0.2], [2.5, 0.8], [1.5, 0.8], [1.5, 0.2]],
+        ],
+    },
+    "overlapping parts of a multipolygon": {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [[[0, 0], [2, 0], [2, 1], [0, 1], [0, 0]]],
+            [[[1, 0], [3, 0], [3, 1], [1, 1], [1, 0]]],
+        ],
+    },
+}
 
-    result = get_locations_stats(analysis_tables, bowtie, AnalysisTable.MARINE)
 
+@pytest.mark.parametrize("geometry", INVALID_USER_GEOMETRIES.values(), ids=INVALID_USER_GEOMETRIES)
+def test_an_invalid_user_geometry_is_repaired(analysis_tables: Engine, geometry: dict):
+    """The query repairs the user's shape before intersecting it, so an invalid shape
+    drawn over valid data gets results rather than an error."""
+    result = get_locations_stats(analysis_tables, geometry, AnalysisTable.MARINE)
+
+    assert result["total_area"] > 0
     assert sum(by_code(result).values()) > 0
 
 
@@ -103,20 +132,3 @@ def test_an_empty_polygon_is_rejected(analysis_tables: Engine):
 def test_unparseable_geojson_is_rejected(analysis_tables: Engine):
     with pytest.raises(BadRequestError, match="Invalid geometry: unable to parse input geometry"):
         get_locations_stats(analysis_tables, {"type": "Nonsense"}, AnalysisTable.MARINE)
-
-
-def test_a_topology_error_is_flagged_as_invalid_geometry(analysis_tables: Engine):
-    """GEOS refuses to intersect a self-intersecting polygon, so flag as invalid geometry."""
-    with analysis_tables.begin() as conn:
-        conn.execute(
-            text(
-                f"INSERT INTO data.{AnalysisTable.MARINE.value} (location, the_geom) VALUES "
-                "('CCC', ST_Multi(ST_GeomFromText("
-                "'POLYGON((10 10, 11 11, 11 10, 10 11, 10 10))', 4326)))"
-            )
-        )
-
-    with pytest.raises(
-        BadRequestError, match="Invalid geometry: input geometry could not be processed"
-    ):
-        get_locations_stats(analysis_tables, box(10.25, 10.25, 10.75, 10.75), AnalysisTable.MARINE)
