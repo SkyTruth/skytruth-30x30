@@ -1,8 +1,10 @@
 import struct
+from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 import pytest
 import rasterio
 from rasterio.transform import from_origin
@@ -297,9 +299,13 @@ def _decode_tile(wkb):
 
 
 def _tiles(country, pas, raster):
-    return raster_habitat.process_location_raster_tiles(
-        country, pas, raster, tile_size_pixels=TILE_PX, chunk_size_pixels=CHUNK_PX
+    out_path = Path(raster).parent / "tiles.parquet"
+    n_tiles = raster_habitat.process_location_raster_tiles(
+        country, pas, raster, out_path, tile_size_pixels=TILE_PX, chunk_size_pixels=CHUNK_PX
     )
+    tiles = pd.read_parquet(out_path)
+    assert len(tiles) == n_tiles
+    return tiles
 
 
 def _pixel_counts(tiles):
@@ -340,15 +346,18 @@ def test_tiles_holding_only_nodata_are_dropped(mock_raster, mock_raster_country,
     assert len(tiles) == 2
 
 
-def test_tile_footprints_match_their_georeference(mock_raster, mock_raster_country, no_pas):
-    tiles = _tiles(mock_raster_country, no_pas, mock_raster)
+def test_tiles_are_written_one_row_group_per_chunk(
+    mock_raster, mock_raster_country, no_pas, tmp_path
+):
+    """The two class blocks fall in different 16-pixel chunks, so each chunk's tiles
+    reach the file on their own and are never all held in memory together."""
+    out_path = tmp_path / "tiles.parquet"
 
-    for wkb, footprint in zip(tiles["rast"], tiles.geometry, strict=True):
-        (_, _, _, scale_x, scale_y, ul_x, ul_y, _, _, srid, width, height), *_ = _decode_tile(wkb)
-        assert srid == 3857
-        assert footprint.bounds == pytest.approx(
-            (ul_x, ul_y + scale_y * height, ul_x + scale_x * width, ul_y)
-        )
+    raster_habitat.process_location_raster_tiles(
+        mock_raster_country, no_pas, mock_raster, out_path, TILE_PX, chunk_size_pixels=16
+    )
+
+    assert pq.ParquetFile(out_path).num_row_groups == 2
 
 
 def test_a_location_outside_the_raster_has_no_tiles(mock_raster, no_pas):
@@ -357,13 +366,28 @@ def test_a_location_outside_the_raster_has_no_tiles(mock_raster, no_pas):
     tiles = _tiles(far, no_pas, mock_raster)
 
     assert tiles.empty
-    assert list(tiles.columns) == ["location", "rast", "geometry"]
+    assert list(tiles.columns) == ["location", "rast"]
 
 
 @pytest.fixture
 def tiles_job_mocks(raster_job_mocks, monkeypatch):
-    """raster_job_mocks, with the locations and PAs served through read_geo_df and the
-    stale-file cleanup captured instead of run."""
+    """raster_job_mocks, with the locations and PAs served through read_geo_df, and the
+    file uploads, archive copies and stale-file cleanup captured instead of run."""
+    uploads = raster_job_mocks
+    monkeypatch.setattr(
+        raster_habitat,
+        "upload_file_to_gcs",
+        lambda bucket, file_name, blob_name, **_: uploads.__setitem__(
+            blob_name, pd.read_parquet(file_name)
+        ),
+    )
+    monkeypatch.setattr(
+        raster_habitat,
+        "duplicate_blob",
+        lambda bucket_name, filename_in, filename_out, **_: uploads.__setitem__(
+            filename_out, uploads[filename_in]
+        ),
+    )
     reads = {
         "locations_0.001.parquet": raster_habitat.read_parquet_from_gcs(
             "mock-bucket", "locations_0.001.parquet"

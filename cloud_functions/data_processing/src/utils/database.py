@@ -1,6 +1,7 @@
 import os
 
 import psycopg
+import pyarrow.parquet as pq
 from google.cloud import storage
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
@@ -134,7 +135,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
         logger.error({"message": "Failed to update table", "error": str(excep)})
 
 
-def update_cb_raster(table_name, gcs_dir, verbose: bool = False):
+def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int = 1000):
     """
     Update Conservation Builder raster table from a GCS folder of tile files.
 
@@ -144,14 +145,17 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False):
       Name of the table to update.
     gcs_dir : str
       GCS folder holding one Parquet per location, with "location" and "rast"
-      columns, the latter as PostGIS raster WKB.
+      columns, the latter as PostGIS raster WKB. Each file is streamed from GCS
+      in batches of ``batch_size`` tiles, so no file is held whole in memory.
     verbose : bool
       Whether to print progress messages.
+    batch_size : int
+      Number of tiles read from a file at a time.
     """
     try:
         conn = get_connection(format="sqlalchemy").raw_connection()
         blobs = [
-            blob.name
+            blob
             for blob in storage.Client(project=PROJECT).list_blobs(BUCKET, prefix=f"{gcs_dir}/")
             if blob.name.endswith(".parquet")
         ]
@@ -165,10 +169,17 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False):
             if verbose:
                 logger.info({"message": f"Uploading {len(blobs)} files to data.{table_name}..."})
             for blob in tqdm(blobs, disable=not verbose):
-                tiles = read_parquet_from_gcs(bucket_name=BUCKET, filename=blob, verbose=False)
-                with cursor.copy(f"COPY data.{table_name} (location, rast) FROM STDIN") as copy:
-                    for location, rast in zip(tiles["location"], tiles["rast"], strict=True):
-                        copy.write_row((location, rast.hex()))
+                with (
+                    blob.open("rb") as parquet,
+                    cursor.copy(f"COPY data.{table_name} (location, rast) FROM STDIN") as copy,
+                ):
+                    for batch in pq.ParquetFile(parquet).iter_batches(
+                        batch_size=batch_size, columns=["location", "rast"]
+                    ):
+                        for location, rast in zip(
+                            batch["location"].to_pylist(), batch["rast"].to_pylist(), strict=True
+                        ):
+                            copy.write_row((location, rast.hex()))
                 conn.commit()
 
             # Add primary key
