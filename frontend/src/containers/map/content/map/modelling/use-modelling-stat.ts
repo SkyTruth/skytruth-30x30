@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Feature } from 'geojson';
 
-import useModellingFeature from '@/containers/map/content/map/modelling/use-modelling-feature';
 import { fetchModellingStat, ModellingStatEndpoint } from '@/lib/utils/fetch-modelling';
+
+import useModellingFeature from './use-modelling-feature';
 
 // Query for one cb_api stat of the drawn shape, cached per endpoint, params and shape
 const getModellingStatQuery = (
@@ -34,5 +35,15 @@ const useModellingStat = (
 
   return useQuery(getModellingStatQuery(endpoint, params, feature, layerId, enabled));
 };
+
+// Slug of the fully/highly protected level, in cb_api and in Strapi
+export const FHP_LEVEL = 'fully-highly-protected';
+
+/**
+ * cb_api's fully/highly protected analysis of the drawn shape (marine only): the added area
+ * per location. Every caller shares one cached request
+ */
+export const useFhpAnalysis = (enabled: boolean) =>
+  useModellingStat('protection-level', { level: FHP_LEVEL, environment: 'marine' }, { enabled });
 
 export default useModellingStat;
