@@ -49,11 +49,9 @@ export const computeContribution = (
 };
 
 // Added area for one location in an analysis result, in km²
-// TODO: TECH-3876, clean up the use_cb_api feature flag: drop the protected_area
-// fallback, which only the analysis cloud function returns
-export const getAddedArea = ({ added_area, protected_area }: ModellingLocationArea) => {
-  const area = added_area ?? protected_area ?? 0;
-
+// TODO: TECH-3876, clean up the use_cb_api feature flag: read cb_api's added_area once
+// ModellingData takes cb_api's format
+export const getAddedArea = ({ protected_area: area }: ModellingLocationArea) => {
   // 0s in the analysis result indicate small overlaps that were rounded to 0,
   // so use EPSILON (a tiny non-zero value) to show "<1 km²" and "+<0.1%" in the frontend
   return area === 0 ? Number.EPSILON : area;

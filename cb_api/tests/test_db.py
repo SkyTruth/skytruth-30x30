@@ -113,5 +113,9 @@ def test_writes_are_rejected_on_a_pooled_connection(
 
 @pytest.mark.integration
 def test_reads_are_allowed(analysis_tables: Engine, read_only_engine: Engine):
+    count = text(f"SELECT count(*) FROM {TABLE}")
+    with analysis_tables.connect() as conn:
+        expected = conn.execute(count).scalar()
+
     with read_only_engine.connect() as conn:
-        assert conn.execute(text(f"SELECT count(*) FROM {TABLE}")).scalar() == 3
+        assert conn.execute(count).scalar() == expected > 0
