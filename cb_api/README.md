@@ -12,12 +12,13 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
 | `POST` | `/protection-level` | The same, for protection at a given level |
 | `POST` | `/habitats` | The same, for one habitat |
-| `POST` | `/` | Deprecated alias for `/coverage` |
 
 ### `POST /coverage`
 
 `geometry` is required and takes a GeoJSON Feature, FeatureCollection or bare geometry;
-it must resolve to a Polygon or MultiPolygon. `environment` is optional and selects the
+it must resolve to a Polygon or MultiPolygon. **Only the first feature of a
+FeatureCollection is used**; any others are ignored, so to analyze several shapes
+together, send them as one MultiPolygon. `environment` is optional and selects the
 table the area is compared against (`marine` by default or `terrestrial`).
 
 ```bash
@@ -28,14 +29,14 @@ curl -X POST localhost:8080/coverage \
 
 ```json
 {
-  "locations_area": [{ "code": "AUS", "added_area": 34.0 }],
+  "locations": [{ "code": "AUS", "added_area": 34.0 }],
   "total_area": 96.0
 }
 ```
 
 Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `added_area` is the part of it in each location that is not yet protected, which a protected area drawn there would add.
 
-An area that intersects nothing (e.g., a marine request over land) returns an empty `locations_area` and a `total_area` of 0.
+An area that intersects nothing (e.g., a marine request over land) returns an empty `locations`, and `total_area` is still the drawn area.
 
 Unrecognized fields in the body are ignored.
 
@@ -64,12 +65,6 @@ curl -X POST localhost:8080/habitats \
   -H 'Content-Type: application/json' \
   -d '{"habitat": "seagrasses", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
 ```
-
-### `POST /` is temporary
-
-The load balancer rewrites the public path to the service root, so the same handler is
-registered at `/` as well and is marked deprecated in the schema. It will be removed
-once nothing posts to it. New callers should use `/coverage`.
 
 ## Configuration
 
