@@ -22,6 +22,23 @@ class AnalysisTable(StrEnum):
     OTHER_CORALS = "other_corals_minus_pa"
 
 
+# PostGIS raster table of unprotected terrestrial habitat, one row per tile
+TERRESTRIAL_HABITATS_TABLE = "terrestrial_habitats_minus_pa"
+
+# Pixel value of each terrestrial habitat in TERRESTRIAL_HABITATS_TABLE. "Other" (255)
+# is left out, as it is in the progress tracker.
+TERRESTRIAL_HABITAT_CLASSES = {
+    1: "forest",
+    2: "savanna",
+    3: "shrubland",
+    4: "grassland",
+    5: "wetlands-open-waters",
+    6: "rocky-mountains",
+    7: "desert",
+    8: "artificial",
+}
+
+
 def get_geojson(geojson: JSON) -> dict:
     if not isinstance(geojson, dict):
         raise BadRequestError("Invalid geometry: unable to parse input geometry")
@@ -138,3 +155,107 @@ def get_locations_stats(
         data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
 
     return serialize_response(data_response)
+
+
+def serialize_raster_habitats_response(
+    data: Sequence[Mapping[str, Any]], classes: Mapping[int, str]
+) -> dict:
+    """Converts the raster habitats query's rows into a Dict
+    {habitats: [{"habitat": <slug>, "locations": [{"code": <location_iso>,
+    "added_area": <area>}]}], "total_area": <total_area>} response.
+
+    Every habitat in `classes` is listed, with no locations when the drawn area holds
+    none of it.
+    """
+    locations = {habitat: [] for habitat in classes.values()}
+    for row in data:
+        if row["location"] is None:
+            continue
+        locations[classes[row["value"]]].append(
+            {"code": row["location"], "added_area": row["portion_area_km2"]}
+        )
+
+    return {
+        "habitats": [
+            {"habitat": habitat, "locations": habitat_locations}
+            for habitat, habitat_locations in locations.items()
+        ],
+        "total_area": data[0]["user_area_km2"],
+    }
+
+
+def get_raster_habitats_stats(
+    engine: sqlalchemy.engine.base.Engine,
+    geojson: JSON,
+    table: str,
+    classes: Mapping[int, str],
+) -> dict:
+    """How much of each habitat in the drawn area is not yet protected, by location,
+    counted from the unprotected habitat pixels of a PostGIS raster table under it.
+
+    A pixel counts when its centre falls inside the drawn area. Its area is taken from
+    its tile's footprint on the ellipsoid, divided evenly between the tile's pixels.
+
+    Parameters
+    ----------
+    engine : sqlalchemy.engine.base.Engine
+        Database engine.
+    geojson : JSON
+        The drawn area, as a GeoJSON Feature, FeatureCollection or geometry.
+    table : str
+        Raster table in the data schema, with "location" and "rast" columns, holding
+        only unprotected habitat pixels.
+    classes : Mapping[int, str]
+        Habitat slug of each pixel value to report; other values are left out.
+    """
+    geometry = get_geojson(geojson)
+    with engine.connect() as conn:
+        validate_geometry_topology(conn, geometry)
+        stmt = sqlalchemy.text(
+            f"""
+                WITH
+                    user_data AS (
+                        SELECT ST_MakeValid(ST_UnaryUnion(ST_GeomFromGeoJSON(:geometry))) AS geom
+                    ),
+                    user_data_stats AS (
+                        SELECT *,
+                            ROUND((ST_Area(ST_Transform(geom,
+                                '+proj=longlat +datum=WGS84 +no_defs +type=crs',
+                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
+                            ) AS user_area_km2
+                        FROM user_data
+                    ),
+                    stats AS (
+                        SELECT
+                            location,
+                            vc.value,
+                            vc.count * ST_Area(ST_Envelope(rast)::geography) / 1e6
+                                / (ST_Width(rast) * ST_Height(rast)) AS portion_area_km2
+                        FROM
+                            data.{table},
+                            user_data_stats,
+                            LATERAL ST_ValueCount(
+                                ST_Clip(rast, user_data_stats.geom), 1, true
+                            ) AS vc
+                        WHERE
+                            ST_Intersects(ST_ConvexHull(rast), user_data_stats.geom)
+                            AND vc.value = ANY(:classes)
+                    )
+                SELECT
+                    location,
+                    value,
+                    ROUND(SUM(portion_area_km2)) AS portion_area_km2,
+                    AVG(user_area_km2) AS user_area_km2
+                FROM
+                    user_data_stats
+                    LEFT JOIN stats ON true
+                GROUP BY location, value
+                """
+        )
+        data_response = (
+            conn.execute(stmt, parameters={"geometry": geometry, "classes": list(classes)})
+            .mappings()
+            .all()
+        )
+
+    return serialize_raster_habitats_response(data_response, classes)
