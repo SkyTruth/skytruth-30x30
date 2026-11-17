@@ -239,6 +239,9 @@ def get_raster_habitats_stats(
                             ) AS vc
                         WHERE
                             ST_Intersects(ST_ConvexHull(rast), user_data_stats.geom)
+                            -- A tile the drawing only touches along an edge would be
+                            -- clipped to a line, which counts every pixel on it
+                            AND NOT ST_Touches(ST_ConvexHull(rast), user_data_stats.geom)
                             AND vc.value = ANY(:classes)
                     )
                 SELECT

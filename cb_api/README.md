@@ -12,6 +12,7 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
 | `POST` | `/protection-level` | The same, for protection at a given level |
 | `POST` | `/habitats` | The same, for one habitat |
+| `POST` | `/terrestrial-habitats` | The same, for every terrestrial habitat at once |
 
 ### `POST /coverage`
 
@@ -65,6 +66,41 @@ curl -X POST localhost:8080/habitats \
   -H 'Content-Type: application/json' \
   -d '{"habitat": "seagrasses", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
 ```
+
+### `POST /terrestrial-habitats`
+**Terrestrial only.**
+
+The same as `/habitats`, but for every terrestrial habitat in one request: `forest`, `savanna`,
+`shrubland`, `grassland`, `wetlands-open-waters`, `rocky-mountains`, `desert` and `artificial`.
+Takes only `geometry`.
+
+```bash
+curl -X POST localhost:8080/terrestrial-habitats \
+  -H 'Content-Type: application/json' \
+  -d '{"geometry": {"type": "Polygon", "coordinates": [[[-72.6,7.0],[-72.2,7.0],[-72.2,7.4],[-72.6,7.4],[-72.6,7.0]]]}}'
+```
+
+```json
+{
+  "habitats": [
+    {
+      "habitat": "forest",
+      "locations": [{ "code": "VEN", "added_area": 0.0 }, { "code": "COL", "added_area": 1075.0 }]
+    },
+    { "habitat": "savanna", "locations": [{ "code": "COL", "added_area": 5.0 }] },
+    { "habitat": "rocky-mountains", "locations": [] }
+  ],
+  "total_area": 1967.0
+}
+```
+
+(Shortened: every habitat is always listed, with an empty `locations` when the drawn area adds none of it.)
+
+The habitats come from a ~100 m land-cover raster, stored in PostGIS as tiles of the pixels not
+yet protected (`data.terrestrial_habitats_minus_pa`, which needs the `postgis_raster`
+extension). A pixel counts when its centre is inside the drawn area, so small drawings are
+approximate. `total_area` is computed as for `/coverage`. The "Other" land-cover class is left
+out, as it is in the progress tracker.
 
 ## Configuration
 
@@ -124,6 +160,6 @@ poetry run ruff check --fix
 | `src/main.py` | App, lifespan, CORS, routes |
 | `src/config.py` | Settings |
 | `src/db.py` | Engine and connection pool |
-| `src/analysis.py` | The spatial query and its result shaping |
+| `src/analysis.py` | The spatial queries, vector and raster, and their result shaping |
 | `src/schemas.py` | Request and response models |
 | `src/errors.py` | Exception handlers |

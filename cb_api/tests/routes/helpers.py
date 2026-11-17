@@ -13,17 +13,27 @@ STATS = {
     "total_area": 100.0,
 }
 
+# The results the habitats-at-once routes get back
+HABITATS_STATS = {
+    "habitats": [
+        {"habitat": "forest", "locations": [{"code": "ESP", "added_area": 30.0}]},
+        {"habitat": "desert", "locations": []},
+    ],
+    "total_area": 100.0,
+}
+
 # Stands in for the pooled engine
 ENGINE = object()
 
 
 @dataclass
 class RouteTestClient:
-    """Sends requests to the app and records each call to the analysis function.
+    """Sends requests to the app and records each call to the analysis functions.
 
-    The analysis function is replaced with a fake that returns STATS, so the tests
-    don't need a database.
+    The analysis functions are replaced with fakes that return STATS or
+    HABITATS_STATS, so the tests don't need a database. A call is recorded as
+    (engine, geometry, table), plus the class map for raster habitats.
     """
 
     client: TestClient
-    calls: list[tuple[Any, Any, Any]] = field(default_factory=list)
+    calls: list[tuple[Any, ...]] = field(default_factory=list)
