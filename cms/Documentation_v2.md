@@ -358,6 +358,8 @@ Per-habitat protection figures by location and year. Habitats include marine eco
 | protected_area | Number      | Protected area of this habitat in this location, in km².                  |
 | total_area     | Number      | Total area of this habitat in this location, in km² (use as denominator). |
 
+Stats for retired habitats (see [Habitat][habitat] `is_retired`) are still returned here; filter with `filters[habitat][is_retired][$ne]=true` to exclude them.
+
 ### Endpoints
 
 - `GET /habitat-stats`
@@ -460,9 +462,9 @@ This endpoint returns its own custom shape — it does **not** follow the per-re
 - `stats` — Comma-separated list of stat types to compute. Default: `protection_coverage`. Valid values: `protection_coverage`, `habitat`, `mpaa_protection_level`, `fishing_protection_level`.
 - `year` — 4-digit year. Only meaningful for `protection_coverage` and `habitat`. Omit to receive all years grouped by year.
 - `environment` — `marine` or `terrestrial`. Only meaningful for `protection_coverage` and `habitat`. Omit to receive both environments grouped by environment.
-- `habitat` — Habitat slug to scope to. Only meaningful for `habitat`. Omit to receive every habitat grouped by habitat. Valid options depend on environment:
+- `habitat` — Habitat slug to scope to. Only meaningful for `habitat`. Omit to receive every habitat grouped by habitat. Habitats with `is_retired = true` are never returned. Valid options depend on environment:
   - Terrestrial: `artificial`, `desert`, `forest`, `grassland`, `rocky-mountains`, `savanna`
-  - Marine: `cold-water-corals`, `mangroves`, `saltmarshes`, `seagrasses`, `seamounts`, `warm-water-corals`, `wetland-open-waters`
+  - Marine: `climate-resilient-corals`, `cold-water-corals`, `mangroves`, `other-corals`, `saltmarshes`, `seagrasses`, `seamounts`, `wetland-open-waters`
 - `fishing_protection_level` — Slug. Only meaningful for `fishing_protection_level`. Omit to receive each level grouped by level. Valid options: `highly`, `less`, `moderately`.
 - `mpaa_protection_level` — Slug. Only meaningful for `mpaa_protection_level`. Omit to receive each level grouped by level. Valid options: `full`, `high`, `fully-highly-protected`, `light`, `minimal`, `unknown`, `incompatible`.
 - `locale` — `en | es | fr | pt`. Translates labels in the response.
@@ -476,7 +478,7 @@ This endpoint returns its own custom shape — it does **not** follow the per-re
       {
         "year": 2025,
         "environment": "marine",
-        "habitat": "warm-water-corals",
+        "habitat": "climate-resilient-corals",
         "locations": ["MEX", "USA"],
         "protected_area": 4663.12,
         "total_area": 5650.45,
@@ -532,11 +534,12 @@ Marine vs terrestrial.
 
 Habitats used by [Habitat Stats][habitat_stats].
 
-| Name | Type | Description                                              |
-| ---- | ---- | -------------------------------------------------------- |
-| slug | Text | Programmatic identifier (e.g. `mangroves`, `seamounts`). |
-| name | Text | Localized name.                                          |
-| info | Text | Longer description of the habitat (localized).           |
+| Name       | Type    | Description                                                                                                   |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| slug       | Text    | Programmatic identifier (e.g. `mangroves`, `seamounts`).                                                      |
+| name       | Text    | Localized name.                                                                                               |
+| info       | Text    | Longer description of the habitat (localized).                                                                |
+| is_retired | Boolean | `true` if the habitat is no longer reported. Its stats are kept but left out of [Aggregated Stats][aggregated_stats]. |
 
 ### Fishing Protection Level
 
