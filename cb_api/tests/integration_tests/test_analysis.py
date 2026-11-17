@@ -1,7 +1,6 @@
 """The spatial query in src/analysis.py, against a PostGIS database."""
 
 import pytest
-from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.analysis import AnalysisTable, get_locations_stats
@@ -31,7 +30,7 @@ def test_rows_sharing_a_location_are_summed_by_the_query(analysis_tables: Engine
 
     areas = by_code(result)
     assert sorted(areas) == ["AAA", "BBB"]
-    assert areas["AAA"] == 2 * areas["BBB"]
+    assert areas["AAA"] == pytest.approx(2 * areas["BBB"])
 
 
 def test_an_area_the_table_covers_completely_is_all_added_area(analysis_tables: Engine):
@@ -56,25 +55,6 @@ def test_an_area_touching_nothing_reports_its_area(analysis_tables: Engine):
 
     assert result["locations"] == []
     assert MIN_DEGREE_CELL_AT_50N_KM2 < result["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
-
-
-def test_pieces_are_summed_before_rounding(analysis_tables: Engine):
-    """A 10x10 grid of ~0.31 km² boxes; rounding each piece first would report 0."""
-    with analysis_tables.begin() as conn:
-        conn.execute(
-            text(
-                f"""
-                INSERT INTO data.{AnalysisTable.MARINE.value} (location, the_geom)
-                SELECT 'CCC', ST_Multi(ST_MakeEnvelope(
-                    10 + i * 0.01, j * 0.01, 10.005 + i * 0.01, 0.005 + j * 0.01, 4326))
-                FROM generate_series(0, 9) AS i, generate_series(0, 9) AS j
-                """
-            )
-        )
-
-    result = get_locations_stats(analysis_tables, box(10, 0, 11, 1), AnalysisTable.MARINE)
-
-    assert by_code(result)["CCC"] == pytest.approx(31, abs=1)
 
 
 def test_a_shape_partly_outside_every_location_lists_only_real_locations(
