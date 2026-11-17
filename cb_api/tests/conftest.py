@@ -55,9 +55,13 @@ def analysis_tables(postgis: Engine) -> Iterator[Engine]:
                     INSERT INTO data.{table.value} (location, the_geom) VALUES
                         ('AAA', ST_Multi(ST_MakeEnvelope(0, 0, 1, 1, 4326))),
                         ('BBB', ST_Multi(ST_MakeEnvelope(1, 0, 2, 1, 4326))),
-                        ('AAA', ST_Multi(ST_MakeEnvelope(2, 0, 3, 1, 4326)))
+                        ('AAA', ST_Multi(ST_MakeEnvelope(2, 0, 3, 1, 4326))),
+                        -- Named after its own table, so a request over this box shows
+                        -- which table was read
+                        (:table, ST_Multi(ST_MakeEnvelope(10, 0, 11, 1, 4326)))
                     """
-                )
+                ),
+                {"table": table.value},
             )
 
     try:

@@ -350,9 +350,7 @@ module "cb_api_cloudrun" {
   max_scale             = 2
   memory                = "512Mi"
   timeout_seconds       = 600
-
-  # Switch to var.use_hello_world_image once both cb_api repos have an image
-  use_hello_world_image = true
+  use_hello_world_image = var.use_hello_world_image
 }
 
 resource "google_storage_bucket" "data_bucket" {

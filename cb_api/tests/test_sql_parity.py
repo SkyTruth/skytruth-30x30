@@ -1,4 +1,5 @@
-"""Guards that the ported analysis still sends the cloud function's exact SQL.
+"""Guards that the ported analysis still sends the cloud function's SQL, apart from
+one intended change to the stats query's join.
 
 Compares the strings input to sqlalchemy.text() at runtime,
 so src/analysis.py can be reformatted as long as the statements the database
@@ -26,9 +27,31 @@ ORIGINAL = (
 GEOMETRY = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 TABLE = "eez_minus_mpa_v2"
 
+CLOUD_FUNCTION_JOIN = f"""                        FROM
+                            data.{TABLE},
+                            user_data_stats
+                        WHERE
+                            ST_Intersects(the_geom, user_data_stats.geom)
+"""
+CB_API_JOIN = f"""                        FROM
+                            user_data_stats
+                            LEFT JOIN data.{TABLE}
+                                ON ST_Intersects(the_geom, user_data_stats.geom)
+"""
+
 pytestmark = pytest.mark.skipif(
     not ORIGINAL.exists(), reason="the analysis cloud function has been removed"
 )
+
+
+class FakeRow(dict):
+    """A result row readable by name, as cb_api reads it, and by position, as the cloud
+    function reads it."""
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
 
 
 class FakeResult:
@@ -39,7 +62,8 @@ class FakeResult:
         return {"geom_type": "ST_Polygon", "is_empty": False}
 
     def all(self):
-        return []
+        # What the stats query returns when nothing intersects
+        return [FakeRow(location=None, portion_area_km2=None, user_area_km2=0.0)]
 
 
 class FakeConnection:
@@ -90,7 +114,11 @@ def test_runtime_sql_is_identical_to_the_cloud_function():
     )
 
     assert len(ported) == len(original) == 2, "expected a topology check and a stats query"
-    assert ported == original
+    assert ported[0] == original[0]
+    # The one intended difference: a LEFT JOIN instead of a comma join and WHERE, so a
+    # shape that intersects nothing still returns a row carrying its drawn area
+    assert ported[1] == original[1].replace(CLOUD_FUNCTION_JOIN, CB_API_JOIN)
+    assert CLOUD_FUNCTION_JOIN in original[1], "the cloud function's join has changed"
 
 
 def test_the_table_name_reaches_the_statement():

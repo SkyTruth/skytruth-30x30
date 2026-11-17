@@ -131,6 +131,18 @@ jobs:
     with:
       target_env: PRODUCTION
 
+  prod_cb_api:
+    if: |
+      inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      id-token: write
+    needs: [staging_complete]
+    uses: ./.github/workflows/deploy-cb-api.yml
+    secrets: inherit
+    with:
+      target_env: PRODUCTION
+
   prod_analysis_cloud_functions:
     if: |
       inputs.deploy_to_prod && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')

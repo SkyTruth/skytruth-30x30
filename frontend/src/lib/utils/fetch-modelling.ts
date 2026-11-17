@@ -1,7 +1,11 @@
 import axios from 'axios';
 import type { Feature } from 'geojson';
 
-import { ModellingData } from '@/types/modelling';
+import {
+  fromCbApiModellingData,
+  type CbApiModellingData,
+  type ModellingData,
+} from '@/types/modelling';
 
 // Strapi feature flag that sends modelling requests to cb_api
 // TODO: TECH-3876, clean up the use_cb_api feature flag so cb_api is the only
@@ -19,24 +23,30 @@ export const getModellingQueryKey = (tab: string, layerId: string, isCbApiActive
 const getCbApiUrl = (endpoint: string) =>
   `${process.env.NEXT_PUBLIC_CB_API_URL.replace(/\/+$/, '')}/${endpoint}`;
 
-export const fetchModelling = (tab: string, feature: Feature, isCbApiActive: boolean) => {
-  // TODO: TECH-3876, clean up the use_cb_api feature flag: remove NEXT_PUBLIC_ANALYSIS_CF_URL
-  const url = isCbApiActive ? getCbApiUrl('coverage') : process.env.NEXT_PUBLIC_ANALYSIS_CF_URL;
+export const fetchModelling = async (tab: string, feature: Feature, isCbApiActive: boolean) => {
+  const body = { environment: tab, geometry: feature };
 
-  return axios.post<ModellingData>(url, {
-    environment: tab,
-    geometry: feature,
-  });
+  // TODO: TECH-3876, clean up the use_cb_api feature flag: remove NEXT_PUBLIC_ANALYSIS_CF_URL
+  if (!isCbApiActive) {
+    return axios.post<ModellingData>(process.env.NEXT_PUBLIC_ANALYSIS_CF_URL, body);
+  }
+
+  const response = await axios.post<CbApiModellingData>(getCbApiUrl('coverage'), body);
+  return { ...response, data: fromCbApiModellingData(response.data) };
 };
 
 export type ModellingStatEndpoint = 'protection-level' | 'habitats';
 
-export const fetchModellingStat = (
+// One cb_api stat for the drawn shape (e.g. fully/highly protected), converted to the
+// same format as the coverage results
+export const fetchModellingStat = async (
   endpoint: ModellingStatEndpoint,
   feature: Feature,
   params: Record<string, string>
-) =>
-  axios.post<ModellingData>(getCbApiUrl(endpoint), {
+) => {
+  const response = await axios.post<CbApiModellingData>(getCbApiUrl(endpoint), {
     ...params,
     geometry: feature,
   });
+  return { ...response, data: fromCbApiModellingData(response.data) };
+};
