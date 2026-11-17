@@ -62,6 +62,20 @@
           "sortable": true
         }
       },
+      "is_retired": {
+        "edit": {
+          "label": "is_retired",
+          "description": "",
+          "placeholder": "",
+          "visible": true,
+          "editable": true
+        },
+        "list": {
+          "label": "is_retired",
+          "searchable": true,
+          "sortable": true
+        }
+      },
       "createdAt": {
         "edit": {
           "label": "createdAt",
@@ -151,6 +165,10 @@
           {
             "name": "info",
             "size": 6
+          },
+          {
+            "name": "is_retired",
+            "size": 4
           }
         ]
       ]
