@@ -26,11 +26,7 @@ export type Contribution = {
  * The added area is capped at the unprotected area: rounding and differences in data
  * resolution can make the analysis report more added area than is left unprotected
  */
-export const computeContribution = (
-  existing: number,
-  added: number,
-  total: number
-): Contribution => {
+const computeContribution = (existing: number, added: number, total: number): Contribution => {
   const unprotected = Math.max(total - existing, 0);
   const cappedAdded = Math.min(Math.max(added, 0), unprotected);
 
@@ -51,14 +47,14 @@ export const computeContribution = (
 // Added area for one location in an analysis result, in km²
 // TODO: TECH-3876, clean up the use_cb_api feature flag: read cb_api's added_area once
 // ModellingData takes cb_api's format
-export const getAddedArea = ({ protected_area: area }: ModellingLocationArea) => {
+const getAddedArea = ({ protected_area: area }: ModellingLocationArea) => {
   // 0s in the analysis result indicate small overlaps that were rounded to 0,
   // so use EPSILON (a tiny non-zero value) to show "<1 km²" and "+<0.1%" in the frontend
   return area === 0 ? Number.EPSILON : area;
 };
 
 // Total added area across locations
-export const sumAddedArea = (
+const sumAddedArea = (
   locations: ModellingLocationArea[],
   exclude: ReadonlySet<string> = new Set()
 ) =>
