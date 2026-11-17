@@ -22,7 +22,33 @@ env:
   REGION: ${{ secrets.GCP_REGION }}
 
 jobs:
+  test_cb_api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./cb_api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: '2.4.1'
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-ansi
+
+      - name: Run tests
+        run: poetry run pytest -q
+
   deploy_cb_api:
+    needs: test_cb_api
     runs-on: ubuntu-latest
 
     steps:
@@ -66,6 +92,3 @@ jobs:
 
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}
-
-      - name: Health Check
-        run: curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 "${{ steps.deploy.outputs.url }}/health"

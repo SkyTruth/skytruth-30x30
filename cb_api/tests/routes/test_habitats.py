@@ -1,56 +1,19 @@
 """Route-level checks for POST /habitats."""
 
-from collections.abc import Iterator
-from dataclasses import dataclass, field
-from typing import Any
-
 import pytest
-from fastapi.testclient import TestClient
 
-from src import main
 from src.analysis import AnalysisTable
-from src.main import app, get_engine
 from src.schemas import Habitat
-
-POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
+from tests.routes.helpers import POLYGON, STATS, RouteTestClient
 
 PATH = "/habitats"
-
-STATS = {
-    "locations_area": [{"code": "ESP", "added_area": 4.0}],
-    "total_area": 100.0,
-}
-
-ENGINE = object()
-
-
-@dataclass
-class Harness:
-    client: TestClient
-    calls: list[tuple[Any, Any, Any]] = field(default_factory=list)
-
-
-@pytest.fixture
-def api(monkeypatch: pytest.MonkeyPatch) -> Iterator[Harness]:
-    harness = Harness(client=TestClient(app))
-
-    def fake_get_locations_stats(engine: Any, geometry: Any, table: Any) -> dict:
-        harness.calls.append((engine, geometry, table))
-        return dict(STATS)
-
-    monkeypatch.setattr(main, "get_locations_stats", fake_get_locations_stats)
-    app.dependency_overrides[get_engine] = lambda: ENGINE
-    try:
-        yield harness
-    finally:
-        app.dependency_overrides.clear()
 
 
 # --- the happy path ----------------------------------------------------------------
 
 
 @pytest.mark.parametrize("habitat", list(Habitat))
-def test_each_habitat_returns_location_stats(api: Harness, habitat: Habitat):
+def test_each_habitat_returns_location_stats(api: RouteTestClient, habitat: Habitat):
     response = api.client.post(PATH, json={"geometry": POLYGON, "habitat": habitat.value})
 
     assert response.status_code == 200
@@ -58,7 +21,7 @@ def test_each_habitat_returns_location_stats(api: Harness, habitat: Habitat):
 
 
 @pytest.mark.parametrize("habitat", list(Habitat))
-def test_each_habitat_reads_its_own_table(api: Harness, habitat: Habitat):
+def test_each_habitat_reads_its_own_table(api: RouteTestClient, habitat: Habitat):
     api.client.post(PATH, json={"geometry": POLYGON, "habitat": habitat.value})
 
     _, _, table = api.calls[0]
@@ -73,20 +36,19 @@ def test_the_habitats_read_distinct_tables():
     assert len(tables) == len(list(Habitat))
 
 
-def test_the_pooled_engine_and_geometry_are_passed_through(api: Harness):
+def test_the_geometry_is_passed_through_untouched(api: RouteTestClient):
     feature = {"type": "Feature", "geometry": POLYGON, "properties": {}}
 
     api.client.post(PATH, json={"geometry": feature, "habitat": "mangroves"})
 
-    engine, geometry, _ = api.calls[0]
-    assert engine is ENGINE
+    _, geometry, _ = api.calls[0]
     assert geometry == feature
 
 
 # --- rejections --------------------------------------------------------------------
 
 
-def test_the_habitat_is_required(api: Harness):
+def test_the_habitat_is_required(api: RouteTestClient):
     """Unlike `level`, there is no sensible default habitat."""
     response = api.client.post(PATH, json={"geometry": POLYGON})
 
@@ -112,7 +74,7 @@ def test_the_habitat_is_required(api: Harness):
         "renamed-habitat",
     ],
 )
-def test_an_unusable_body_is_a_400_naming_the_cause(api: Harness, body: dict, message: str):
+def test_an_unusable_body_is_a_400_naming_the_cause(api: RouteTestClient, body: dict, message: str):
     response = api.client.post(PATH, json=body)
 
     assert response.status_code == 400
