@@ -122,21 +122,17 @@ StatBlock.messages = [
 type HabitatProtectionProps = {
   className?: string;
   status: StatStatus;
-  habitats: HabitatContribution[];
+  rows: HabitatContribution[];
 };
 
 /**
  * "Habitat Protection" inside a location: one row per habitat found there, each loading on
  * its own. Shows nothing if the location has none of the habitats
  */
-const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
-  className,
-  status,
-  habitats,
-}) => {
+const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, status, rows }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
-  if (status === 'success' && !habitats.length) return null;
+  if (status === 'success' && !rows.length) return null;
 
   return (
     <div className={className}>
@@ -147,7 +143,7 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
           <ul className="pt-3 font-mono text-xs">
             <LegendItem className="bg-blue-700">{t('newly-protected-habitat')}</LegendItem>
           </ul>
-          {habitats.map(({ slug, name, ...habitat }) => (
+          {rows.map(({ slug, name, ...habitat }) => (
             <StatBlock key={slug} className="pt-4" compact title={name} {...habitat} />
           ))}
         </>

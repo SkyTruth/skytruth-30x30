@@ -106,12 +106,17 @@ const useHabitatContributions = (
     }
   );
 
-  // Habitat names in the current language
+  // Names of the panel's habitats in the current language
   const { data: habitatNames } = useGetHabitats<Record<string, string>>(
     {
       locale,
       // @ts-ignore
       fields: ['slug', 'name'],
+      filters: {
+        slug: {
+          $in: HABITATS.map(({ strapiSlug }) => strapiSlug),
+        },
+      },
     },
     {
       query: {

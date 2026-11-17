@@ -61,7 +61,7 @@ const ContributionsWidget: FCWithMessages = () => {
       fhp: { status: fhp.status, contribution: fhp.byCode.get(stats.code), tooltip: fhp.tooltip },
       habitats: {
         status: habitats.status,
-        habitats: habitats.habitatsByCode.get(stats.code) ?? [],
+        rows: habitats.habitatsByCode.get(stats.code) ?? [],
       },
     }),
   });
