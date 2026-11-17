@@ -8,6 +8,7 @@ from sqlalchemy.engine import Engine
 
 from src.analysis import AnalysisTable
 from src.main import app, get_engine
+from src.schemas import Habitat
 from tests.integration_tests.helpers import MAX_DEGREE_CELL_KM2, MIN_DEGREE_CELL_KM2, box
 
 pytestmark = pytest.mark.integration
@@ -24,6 +25,10 @@ ROUTES = {
         AnalysisTable.TERRESTRIAL,
     ),
     "protection-level": ("/protection-level", {}, AnalysisTable.FULLY_HIGHLY_PROTECTED),
+    **{
+        f"habitats, {habitat}": ("/habitats", {"habitat": habitat.value}, habitat.table)
+        for habitat in Habitat
+    },
 }
 
 
