@@ -155,7 +155,7 @@ const useCoverageContributions = () => {
 
     // Global: the world's coverage plus the shape's added area summed across locations
     const global =
-      countries.length && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
+      countries.length > 0 && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
 
     return { countries, global };
   }, [coverageStats, locationsArea, seaCodes, isIhoActive, tab]);
