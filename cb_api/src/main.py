@@ -7,7 +7,12 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.engine import Engine
 
-from src.analysis import get_locations_stats
+from src.analysis import (
+    TERRESTRIAL_HABITAT_CLASSES,
+    TERRESTRIAL_HABITATS_TABLE,
+    get_locations_stats,
+    get_raster_habitats_stats,
+)
 from src.config import ALLOWED_ORIGINS, get_settings
 from src.db import create_db_engine
 from src.errors import BadRequestError, register_error_handlers
@@ -15,8 +20,10 @@ from src.schemas import (
     AnalysisRequest,
     Environment,
     HabitatRequest,
+    HabitatsStats,
     LocationStats,
     ProtectionLevelRequest,
+    TerrestrialHabitatsRequest,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -85,3 +92,13 @@ def habitats(body: HabitatRequest, engine: PooledEngine) -> dict:
     broken down by location.
     """
     return get_locations_stats(engine, body.geometry, body.habitat.table)
+
+
+@app.post("/terrestrial-habitats", response_model=HabitatsStats)
+def terrestrial_habitats(body: TerrestrialHabitatsRequest, engine: PooledEngine) -> dict:
+    """How much of the given area's terrestrial habitats will have added protection,
+    broken down by habitat and location.
+    """
+    return get_raster_habitats_stats(
+        engine, body.geometry, TERRESTRIAL_HABITATS_TABLE, TERRESTRIAL_HABITAT_CLASSES
+    )

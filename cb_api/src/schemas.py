@@ -78,6 +78,13 @@ class HabitatRequest(GeometryRequest):
     habitat: Habitat
 
 
+class TerrestrialHabitatsRequest(GeometryRequest):
+    """Request body for POST /terrestrial-habitats.
+
+    No habitat: every terrestrial habitat is reported at once.
+    """
+
+
 class Location(BaseModel):
     code: str
     added_area: float = Field(
@@ -89,4 +96,18 @@ class LocationStats(BaseModel):
     """Response body for POST /coverage, POST /protection-level and POST /habitats."""
 
     locations: list[Location]
+    total_area: float = Field(description="Area of the drawn shape, in km²")
+
+
+class HabitatLocations(BaseModel):
+    habitat: str
+    locations: list[Location] = Field(
+        description="Every location the drawn shape adds this habitat in; empty when it adds none"
+    )
+
+
+class HabitatsStats(BaseModel):
+    """Response body for POST /terrestrial-habitats."""
+
+    habitats: list[HabitatLocations]
     total_area: float = Field(description="Area of the drawn shape, in km²")
