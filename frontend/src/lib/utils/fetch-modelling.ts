@@ -37,12 +37,16 @@ export const fetchModelling = async (tab: string, feature: Feature, isCbApiActiv
 
 export type ModellingStatEndpoint = 'protection-level';
 
-export const fetchModellingStat = (
+// One cb_api stat for the drawn shape (e.g. fully/highly protected), converted to the
+// same format as the coverage results
+export const fetchModellingStat = async (
   endpoint: ModellingStatEndpoint,
   feature: Feature,
   params: Record<string, string>
-) =>
-  axios.post<ModellingData>(getCbApiUrl(endpoint), {
+) => {
+  const response = await axios.post<CbApiModellingData>(getCbApiUrl(endpoint), {
     ...params,
     geometry: feature,
   });
+  return { ...response, data: fromCbApiModellingData(response.data) };
+};
