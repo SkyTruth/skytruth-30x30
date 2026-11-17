@@ -5,13 +5,13 @@ import { isAxiosError } from 'axios';
 import { useSetAtom } from 'jotai';
 
 import { conservationStatsImpressed } from '@/components/analytics/heap';
-import { useFhpAnalysis } from '@/containers/map/sidebar/main-panel/panels/modelling/contributions-widget/use-fhp-contributions';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { CB_API_FLAG, fetchModelling, getModellingQueryKey } from '@/lib/utils/fetch-modelling';
 
 import useModellingFeature from './use-modelling-feature';
+import { useFhpAnalysis } from './use-modelling-stat';
 
 const Modelling: FC = () => {
   const { feature, layerId: modellingLayerId } = useModellingFeature();

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useLocale } from 'next-intl';
 
+import { useFhpAnalysis } from '@/containers/map/content/map/modelling/use-modelling-stat';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
@@ -10,8 +11,6 @@ import { Contribution, GLOBAL_CODE, buildContributions } from '@/lib/utils/model
 import { useGetLocations } from '@/types/generated/location';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { Location, ProtectionCoverageStat } from '@/types/generated/strapi.schemas';
-
-import { useFhpAnalysis } from './use-fhp-contributions';
 
 const HIGH_SEAS_TYPE = 'highseas';
 
@@ -172,7 +171,7 @@ const useCoverageContributions = () => {
 
     // Global: the world's coverage plus the shape's added area summed across locations
     const global =
-      locations.length && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
+      locations.length > 0 && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
 
     return { countries, regionsAndSeas, global };
   }, [coverageStats, locationsArea, locationCodes, seaCodes, isIhoActive, tab]);

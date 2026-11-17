@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { useLocale } from 'next-intl';
 
 import { MARINE_HABITAT_CHART_COLORS } from '@/constants/habitat-chart-colors';
+import { useModellingStats } from '@/containers/map/content/map/modelling/use-modelling-stat';
 import {
   Baseline,
   Contribution,
@@ -14,7 +15,6 @@ import { useGetHabitatStats } from '@/types/generated/habitat-stat';
 import { HabitatStat } from '@/types/generated/strapi.schemas';
 
 import { StatStatus, toStatus } from './stat-status';
-import { useModellingStats } from './use-modelling-stat';
 
 // Habitats cb_api can analyze, in the order the panel lists them
 // `strapiSlug` is the habitat's slug in Strapi and in MARINE_HABITAT_CHART_COLORS
