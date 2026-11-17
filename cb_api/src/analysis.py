@@ -219,10 +219,10 @@ def get_raster_habitats_stats(
                     ),
                     user_data_stats AS (
                         SELECT *,
-                            ROUND((ST_Area(ST_Transform(geom,
+                            ST_Area(ST_Transform(geom,
                                 '+proj=longlat +datum=WGS84 +no_defs +type=crs',
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
-                            ) AS user_area_km2
+                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6
+                            AS user_area_km2
                         FROM user_data
                     ),
                     stats AS (
@@ -247,7 +247,7 @@ def get_raster_habitats_stats(
                 SELECT
                     location,
                     value,
-                    ROUND(SUM(portion_area_km2)) AS portion_area_km2,
+                    SUM(portion_area_km2) AS portion_area_km2,
                     AVG(user_area_km2) AS user_area_km2
                 FROM
                     user_data_stats
