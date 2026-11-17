@@ -102,7 +102,7 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
     <div className={className}>
       <div className="flex items-center justify-between gap-2">
         <h4 className={cn('font-bold', compact ? 'text-base' : 'text-sm')}>{title}</h4>
-        {tooltip && <TooltipButton {...tooltip} />}
+        {tooltip && <TooltipButton side="right" {...tooltip} />}
       </div>
       <StatStatusMessage status={status} />
       {status === 'success' && (
