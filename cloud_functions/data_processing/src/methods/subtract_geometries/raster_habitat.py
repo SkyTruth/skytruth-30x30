@@ -19,7 +19,6 @@ from tqdm.auto import tqdm
 from src.core.commons import add_tolerance_suffix
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
-    ARCHIVE_CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN,
     BUCKET,
     CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
     CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN,
@@ -30,7 +29,6 @@ from src.methods.subtract_geometries.io import load_pa_by_location, upload_with_
 from src.utils.gcp import (
     delete_stale_blobs,
     download_file_from_gcs,
-    duplicate_blob,
     read_geo_df,  # Reads a .parquet, .json or .geojson file from GCS and returns a GeoDataFrame
     read_parquet_from_gcs,  # Reads a .parquet file from GCS and returns a GeoDataFrame
     upload_file_to_gcs,
@@ -403,7 +401,7 @@ def generate_raster_habitat_tiles(
     the unprotected pixels to GCS as PostGIS raster tiles, one Parquet per location.
 
     Each location's tiles are written to a local temporary Parquet one raster chunk
-    at a time, uploaded, copied server-side to the archive, then deleted, so neither
+    at a time, uploaded, then deleted, so neither
     a location's tiles nor its file is ever held whole in memory: the global tiles
     run to many GB uncompressed. Once every location is written, files in the live
     folder that this run did not write, such as those of a location since dropped or
@@ -412,7 +410,7 @@ def generate_raster_habitat_tiles(
     Parameters
     ----------
     habitat : str
-        Habitat name used in the output folder names.
+        Habitat name used in the output folder name.
     raster_file_name : str
         GCS path of the single-band uint8 habitat raster.
     total_area_file : str
@@ -431,7 +429,7 @@ def generate_raster_habitat_tiles(
     Returns
     -------
         Names of the live blobs written, one ``{location}.parquet`` per location
-        holding unprotected habitat, each also saved to a dated archive folder.
+        holding unprotected habitat.
     """
     local_raster = raster_file_name.split("/")[-1]
     download_file_from_gcs(bucket, raster_file_name, local_raster, verbose=verbose)
@@ -447,7 +445,6 @@ def generate_raster_habitat_tiles(
     pa = load_pa_by_location(read_geo_df, pa_file, tolerance, bucket=bucket, verbose=verbose)
 
     out_dir = CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(habitat=habitat)
-    archive_dir = ARCHIVE_CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(habitat=habitat)
 
     def process_and_upload(location):
         with tempfile.NamedTemporaryFile(suffix=".parquet") as tmp_file:
@@ -461,7 +458,6 @@ def generate_raster_habitat_tiles(
                 return None
             out_file = f"{out_dir}/{location}.parquet"
             upload_file_to_gcs(bucket, tmp_file.name, out_file)
-        duplicate_blob(bucket, out_file, f"{archive_dir}/{location}.parquet", verbose=False)
         return out_file
 
     if verbose:

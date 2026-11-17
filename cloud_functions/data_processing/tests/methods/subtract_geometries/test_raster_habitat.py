@@ -14,7 +14,6 @@ import src.methods.subtract_geometries.io as subtract_io
 import src.methods.subtract_geometries.raster_habitat as raster_habitat
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
-    ARCHIVE_CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN,
 )
 
 RASTER_HABITATS = ("other-corals", "climate-resilient-corals")
@@ -372,20 +371,13 @@ def test_a_location_outside_the_raster_has_no_tiles(mock_raster, no_pas):
 @pytest.fixture
 def tiles_job_mocks(raster_job_mocks, monkeypatch):
     """raster_job_mocks, with the locations and PAs served through read_geo_df, and the
-    file uploads, archive copies and stale-file cleanup captured instead of run."""
+    file uploads and stale-file cleanup captured instead of run."""
     uploads = raster_job_mocks
     monkeypatch.setattr(
         raster_habitat,
         "upload_file_to_gcs",
         lambda bucket, file_name, blob_name, **_: uploads.__setitem__(
             blob_name, pd.read_parquet(file_name)
-        ),
-    )
-    monkeypatch.setattr(
-        raster_habitat,
-        "duplicate_blob",
-        lambda bucket_name, filename_in, filename_out, **_: uploads.__setitem__(
-            filename_out, uploads[filename_in]
         ),
     )
     reads = {
@@ -423,19 +415,13 @@ def _run_tiles_job():
     )
 
 
-def test_each_location_with_habitat_gets_a_live_and_an_archive_file(tiles_job_mocks):
+def test_each_location_with_habitat_gets_a_file(tiles_job_mocks):
     """BBB lies outside the raster, so it gets no file."""
     uploads, _ = tiles_job_mocks
 
     _run_tiles_job()
 
-    assert set(uploads) == {
-        "conservation_builder/terrestrial-habitats_minus_pa_tiles/AAA.parquet",
-        ARCHIVE_CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(
-            habitat="terrestrial-habitats"
-        )
-        + "/AAA.parquet",
-    }
+    assert set(uploads) == {"conservation_builder/terrestrial-habitats_minus_pa_tiles/AAA.parquet"}
 
 
 def test_stale_files_are_cleared_against_this_runs_files(tiles_job_mocks):
