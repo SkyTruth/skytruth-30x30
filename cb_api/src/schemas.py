@@ -16,45 +16,77 @@ class Environment(StrEnum):
         return AnalysisTable.MARINE
 
 
-class Stat(StrEnum):
-    """Optional extra statistics a request can ask for."""
-
+class ProtectionLevel(StrEnum):
     FULLY_HIGHLY_PROTECTED = "fully-highly-protected"
 
-
-class AnalysisRequest(BaseModel):
-    """Request body for POST /."""
-
-    geometry: dict
-    environment: Environment = Environment.MARINE
-    stats: list[Stat] = Field(default_factory=list)
-
-    @field_validator("stats", mode="before")
-    @classmethod
-    def _accept_comma_separated(cls, value: object) -> object:
-        """Accept stats=a,b as well as a list."""
-        if isinstance(value, str):
-            return [stat for stat in value.split(",") if stat]
-        return value
+    @property
+    def table(self) -> AnalysisTable:
+        return AnalysisTable.FULLY_HIGHLY_PROTECTED
 
     @property
-    def include_fully_highly_protected(self) -> bool:
-        """The fhp table only covers marine areas."""
-        return Stat.FULLY_HIGHLY_PROTECTED in self.stats and self.environment is Environment.MARINE
+    def marine_only(self) -> bool:
+        """No protection level has a terrestrial table yet."""
+        return True
 
 
-class LocationArea(BaseModel):
+class Habitat(StrEnum):
+    MANGROVES = "mangroves"
+    SALTMARSHES = "saltmarshes"
+    SEAGRASSES = "seagrasses"
+    SEAMOUNTS = "seamounts"
+    COLD_WATER_CORALS = "cold-water-corals"
+    CLIMATE_RESILIENT_CORALS = "climate-resilient-corals"
+    OTHER_CORALS = "other-corals"
+
+    @property
+    def table(self) -> AnalysisTable:
+        return AnalysisTable[self.name]
+
+
+class GeometryRequest(BaseModel):
+    """The area to analyze, shared by every endpoint."""
+
+    geometry: dict
+
+    @field_validator("geometry")
+    @classmethod
+    def _geometry_is_not_empty(cls, value: dict) -> dict:
+        """An empty object is treated as no geometry at all."""
+        if not value:
+            raise ValueError("Geometry is required")
+        return value
+
+
+class AnalysisRequest(GeometryRequest):
+    """Request body for POST /coverage."""
+
+    environment: Environment = Environment.MARINE
+
+
+class ProtectionLevelRequest(AnalysisRequest):
+    """Request body for POST /protection-level."""
+
+    level: ProtectionLevel = ProtectionLevel.FULLY_HIGHLY_PROTECTED
+
+
+class HabitatRequest(GeometryRequest):
+    """Request body for POST /habitats.
+
+    No environment: each habitat has exactly one table.
+    """
+
+    habitat: Habitat
+
+
+class Location(BaseModel):
     code: str
-    protected_area: float
+    added_area: float = Field(
+        description="Area of the drawn shape in this location that is not yet protected, in km²"
+    )
 
 
 class LocationStats(BaseModel):
-    locations_area: list[LocationArea]
-    total_area: float
-    total_protected_area: float
+    """Response body for POST /coverage, POST /protection-level and POST /habitats."""
 
-
-class AnalysisResponse(LocationStats):
-    """Response body for POST /."""
-
-    fully_highly_protected: LocationStats | None = None
+    locations: list[Location]
+    total_area: float = Field(description="Area of the drawn shape, in km²")
