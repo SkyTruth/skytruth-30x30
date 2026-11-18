@@ -80,30 +80,14 @@ curl -X POST localhost:8080/terrestrial-habitats \
   -d '{"geometry": {"type": "Polygon", "coordinates": [[[-72.6,7.0],[-72.2,7.0],[-72.2,7.4],[-72.6,7.4],[-72.6,7.0]]]}}'
 ```
 
-```json
-{
-  "habitats": [
-    {
-      "habitat": "forest",
-      "locations": [
-        { "code": "VEN", "added_area": 0.44348077948704073 },
-        { "code": "COL", "added_area": 1075.191010143956 }
-      ]
-    },
-    { "habitat": "savanna", "locations": [{ "code": "COL", "added_area": 5.292090380532889 }] },
-    { "habitat": "rocky-mountains", "locations": [] }
-  ],
-  "total_area": 1967.0812789548097
-}
-```
+The response is shaped like the one for `/coverage`, with `locations` nested per habitat:
+`{"habitats": [{"habitat": "forest", "locations": [...]}, ...], "total_area": ...}`. Every
+habitat is listed, with an empty `locations` when the drawn area adds none of it.
 
-(Shortened: every habitat is always listed, with an empty `locations` when the drawn area adds none of it.)
-
-The habitats come from a ~100 m land-cover raster, stored in PostGIS as tiles of the pixels not
-yet protected (`data.terrestrial_habitats_minus_pa`, which needs the `postgis_raster`
-extension). A pixel counts when its centre is inside the drawn area, so small drawings are
-approximate. `total_area` is computed as for `/coverage`. The "Other" land-cover class is left
-out, as it is in the progress tracker.
+The habitats come from a ~100 m land-cover raster (`data.terrestrial_habitats_minus_pa`, which
+needs the `postgis_raster` extension). A pixel counts when its centre is inside the drawn area,
+so small drawings are approximate. The "Other" land-cover class is left out, as it is in the
+progress tracker.
 
 ## Configuration
 
