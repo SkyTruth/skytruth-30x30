@@ -85,12 +85,15 @@ curl -X POST localhost:8080/terrestrial-habitats \
   "habitats": [
     {
       "habitat": "forest",
-      "locations": [{ "code": "VEN", "added_area": 0.0 }, { "code": "COL", "added_area": 1075.0 }]
+      "locations": [
+        { "code": "VEN", "added_area": 0.44348077948704073 },
+        { "code": "COL", "added_area": 1075.191010143956 }
+      ]
     },
-    { "habitat": "savanna", "locations": [{ "code": "COL", "added_area": 5.0 }] },
+    { "habitat": "savanna", "locations": [{ "code": "COL", "added_area": 5.292090380532889 }] },
     { "habitat": "rocky-mountains", "locations": [] }
   ],
-  "total_area": 1967.0
+  "total_area": 1967.0812789548097
 }
 ```
 
