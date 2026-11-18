@@ -74,7 +74,11 @@ export default {
           environment, 
           year,
           subFieldName: 'habitat',
-          subFieldValue: habitat
+          subFieldValue: habitat,
+          // Habitats that existed before is_retired was added have it unset, not false.
+          subFieldWhere: {
+            $or: [{ is_retired: false }, { is_retired: { $null: true } }],
+          },
         },
         [Stats.FishingProtectionLevel]: {
           locations: formattedLocs,

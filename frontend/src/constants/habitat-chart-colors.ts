@@ -2,7 +2,6 @@
 export const MARINE_HABITAT_CHART_COLORS = {
   'climate-resilient-corals': '#CC00CC',
   'other-corals': '#FF66FF',
-  'warm-water corals': '#EC7667',
   'cold-water corals': '#3ACBF9',
   mangroves: '#DFC700',
   seagrasses: '#2DBA66',

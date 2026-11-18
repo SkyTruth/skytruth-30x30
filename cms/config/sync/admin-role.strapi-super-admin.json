@@ -1355,7 +1355,8 @@
         "fields": [
           "slug",
           "name",
-          "info"
+          "info",
+          "is_retired"
         ],
         "locales": [
           "en",
@@ -1411,7 +1412,8 @@
         "fields": [
           "slug",
           "name",
-          "info"
+          "info",
+          "is_retired"
         ],
         "locales": [
           "en",
@@ -1433,7 +1435,8 @@
         "fields": [
           "slug",
           "name",
-          "info"
+          "info",
+          "is_retired"
         ],
         "locales": [
           "en",
