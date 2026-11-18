@@ -10,7 +10,8 @@ type AggregatedStatsParams = {
     environment?: string, 
     year?: number,
     subFieldName?: string,
-    subFieldValue?: string
+    subFieldValue?: string,
+    subFieldWhere?: Record<string, unknown>
   }
 
 
@@ -22,8 +23,13 @@ export default () => ({
     environment = null, 
     year = null,
     subFieldName = null,
-    subFieldValue = null
+    subFieldValue = null,
+    subFieldWhere = {}
   }: AggregatedStatsParams): Promise<AggregatedStats[]> {
+     const subFieldFilters = {
+       ...(subFieldValue ? { slug: subFieldValue } : {}),
+       ...subFieldWhere,
+     };
      const stats = await strapi.db.query(apiNamespace).findMany({
       where: {
         location: {
@@ -33,10 +39,8 @@ export default () => ({
         },
         ...(year ? { year } : {}),
         ...(environment ? { environment: { slug: environment } } : {}),
-        ...(subFieldName && subFieldValue ? {
-          [subFieldName]: {
-              slug: subFieldValue,
-          },
+        ...(subFieldName && Object.keys(subFieldFilters).length ? {
+          [subFieldName]: subFieldFilters,
         } : {})
       },
       populate: {
