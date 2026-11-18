@@ -63,7 +63,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     Update Conservation Builder table from GCS file.
 
-    The data is loaded and indexed in a staging table, which then replaces the
+    The data is loaded and indexed in an intermediate table, which then replaces the
     live table in one short transaction, so the API keeps reading the previous
     data until the new data is ready.
 
@@ -78,7 +78,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     try:
         conn = get_connection(format="sqlalchemy")
-        staging = f"{table_name}_new"
+        intermediate = f"{table_name}_new"
 
         if verbose:
             logger.info({"message": f"Loading {gcs_file}..."})
@@ -93,9 +93,9 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
         # Upload data to PostgreSQL
         if verbose:
-            logger.info({"message": f"Uploading data to PostgreSQL at data.{staging}..."})
+            logger.info({"message": f"Uploading data to PostgreSQL at data.{intermediate}..."})
         gdf.to_postgis(
-            name=staging,
+            name=intermediate,
             schema="data",
             con=conn,
             if_exists="replace",
@@ -108,11 +108,11 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             connection.execute(
                 text(f"""
             WITH complex_areas AS (
-                DELETE from data.{staging}
+                DELETE from data.{intermediate}
                 WHERE ST_NPoints(the_geom) > 10000
                 RETURNING location, the_geom
             )
-            INSERT INTO data.{staging} (location, the_geom)
+            INSERT INTO data.{intermediate} (location, the_geom)
                 SELECT location,
                     ST_Multi(ST_Subdivide(the_geom, 10000)) as the_geom
                 FROM complex_areas;
@@ -121,42 +121,30 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
             # Add primary key
             connection.execute(
-                text(f"ALTER TABLE data.{staging} ADD COLUMN id SERIAL PRIMARY KEY;")
+                text(f"ALTER TABLE data.{intermediate} ADD COLUMN id SERIAL PRIMARY KEY;")
             )
 
-            # Create GIST index for fast spatial querying
-            connection.execute(
-                text(f"""
-                CREATE INDEX gist_{staging}_geom
-                ON data.{staging}
-                USING GIST (the_geom);
-            """)
-            )
-
-            connection.execute(text(f"ANALYZE data.{staging};"))
+            connection.execute(text(f"ANALYZE data.{intermediate};"))
             connection.commit()
 
-            # Swap the staging table in, renaming the objects tied to its name so
-            # the next run's staging table can reuse them
+            # Swap the intermediate table in, renaming the objects tied to its name so
+            # the next run's intermediate table can reuse them
             if verbose:
-                logger.info({"message": f"Replacing data.{table_name} with data.{staging}..."})
+                logger.info({"message": f"Replacing data.{table_name} with data.{intermediate}..."})
             connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name};"))
-            connection.execute(text(f"ALTER TABLE data.{staging} RENAME TO {table_name};"))
+            connection.execute(text(f"ALTER TABLE data.{intermediate} RENAME TO {table_name};"))
             connection.execute(
                 text(
                     f"ALTER TABLE data.{table_name} "
-                    f"RENAME CONSTRAINT {staging}_pkey TO {table_name}_pkey;"
+                    f"RENAME CONSTRAINT {intermediate}_pkey TO {table_name}_pkey;"
                 )
             )
             connection.execute(
-                text(f"ALTER SEQUENCE data.{staging}_id_seq RENAME TO {table_name}_id_seq;")
-            )
-            connection.execute(
-                text(f"ALTER INDEX data.gist_{staging}_geom RENAME TO gist_{table_name}_geom;")
+                text(f"ALTER SEQUENCE data.{intermediate}_id_seq RENAME TO {table_name}_id_seq;")
             )
             connection.execute(
                 text(
-                    f"ALTER INDEX IF EXISTS data.idx_{staging}_the_geom "
+                    f"ALTER INDEX data.idx_{intermediate}_the_geom "
                     f"RENAME TO idx_{table_name}_the_geom;"
                 )
             )
@@ -170,7 +158,7 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
     """
     Update Conservation Builder raster table from a GCS folder of tile files.
 
-    The tiles are loaded and indexed in a staging table, which then replaces the
+    The tiles are loaded and indexed in an intermediate table, which then replaces the
     live table in one short transaction, so the API keeps reading the previous
     tiles until the new ones are ready.
 
@@ -189,7 +177,7 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
     """
     try:
         conn = get_connection(format="sqlalchemy").raw_connection()
-        staging = f"{table_name}_new"
+        intermediate = f"{table_name}_new"
         blobs = [
             blob
             for blob in storage.Client(project=PROJECT).list_blobs(BUCKET, prefix=f"{gcs_dir}/")
@@ -197,17 +185,17 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
         ]
 
         with conn.cursor() as cursor:
-            cursor.execute(f"DROP TABLE IF EXISTS data.{staging};")
-            cursor.execute(f"CREATE TABLE data.{staging} (location TEXT, rast raster);")
+            cursor.execute(f"DROP TABLE IF EXISTS data.{intermediate};")
+            cursor.execute(f"CREATE TABLE data.{intermediate} (location TEXT, rast raster);")
             conn.commit()
 
             # Upload data to PostgreSQL, streaming the tiles as hex WKB
             if verbose:
-                logger.info({"message": f"Uploading {len(blobs)} files to data.{staging}..."})
+                logger.info({"message": f"Uploading {len(blobs)} files to data.{intermediate}..."})
             for blob in tqdm(blobs, disable=not verbose):
                 with (
                     blob.open("rb") as parquet,
-                    cursor.copy(f"COPY data.{staging} (location, rast) FROM STDIN") as copy,
+                    cursor.copy(f"COPY data.{intermediate} (location, rast) FROM STDIN") as copy,
                 ):
                     for batch in pq.ParquetFile(parquet).iter_batches(
                         batch_size=batch_size, columns=["location", "rast"]
@@ -219,31 +207,33 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
                 conn.commit()
 
             # Add primary key
-            cursor.execute(f"ALTER TABLE data.{staging} ADD COLUMN id SERIAL PRIMARY KEY;")
+            cursor.execute(f"ALTER TABLE data.{intermediate} ADD COLUMN id SERIAL PRIMARY KEY;")
 
             # Create GIST index for fast spatial querying
             cursor.execute(f"""
-                CREATE INDEX gist_{staging}_rast
-                ON data.{staging}
+                CREATE INDEX gist_{intermediate}_rast
+                ON data.{intermediate}
                 USING GIST (ST_ConvexHull(rast));
             """)
 
-            cursor.execute(f"ANALYZE data.{staging};")
+            cursor.execute(f"ANALYZE data.{intermediate};")
             conn.commit()
 
-            # Swap the staging table in, renaming the objects tied to its name so
-            # the next run's staging table can reuse them
+            # Swap the intermediate table in, renaming the objects tied to its name so
+            # the next run's intermediate table can reuse them
             if verbose:
-                logger.info({"message": f"Replacing data.{table_name} with data.{staging}..."})
+                logger.info({"message": f"Replacing data.{table_name} with data.{intermediate}..."})
             cursor.execute(f"DROP TABLE IF EXISTS data.{table_name};")
-            cursor.execute(f"ALTER TABLE data.{staging} RENAME TO {table_name};")
+            cursor.execute(f"ALTER TABLE data.{intermediate} RENAME TO {table_name};")
             cursor.execute(
                 f"ALTER TABLE data.{table_name} "
-                f"RENAME CONSTRAINT {staging}_pkey TO {table_name}_pkey;"
+                f"RENAME CONSTRAINT {intermediate}_pkey TO {table_name}_pkey;"
             )
-            cursor.execute(f"ALTER SEQUENCE data.{staging}_id_seq RENAME TO {table_name}_id_seq;")
             cursor.execute(
-                f"ALTER INDEX data.gist_{staging}_rast RENAME TO gist_{table_name}_rast;"
+                f"ALTER SEQUENCE data.{intermediate}_id_seq RENAME TO {table_name}_id_seq;"
+            )
+            cursor.execute(
+                f"ALTER INDEX data.gist_{intermediate}_rast RENAME TO gist_{table_name}_rast;"
             )
         conn.commit()
         conn.close()
