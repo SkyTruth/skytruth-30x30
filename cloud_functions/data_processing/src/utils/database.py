@@ -63,6 +63,10 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     Update Conservation Builder table from GCS file.
 
+    The data is loaded and indexed in a staging table, which then replaces the
+    live table in one short transaction, so the API keeps reading the previous
+    data until the new data is ready.
+
     Parameters
     ----------
     table_name : str
@@ -74,6 +78,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     try:
         conn = get_connection(format="sqlalchemy")
+        staging = f"{table_name}_new"
 
         if verbose:
             logger.info({"message": f"Loading {gcs_file}..."})
@@ -88,9 +93,9 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
         # Upload data to PostgreSQL
         if verbose:
-            logger.info({"message": f"Uploading data to PostgreSQL at data.{table_name}..."})
+            logger.info({"message": f"Uploading data to PostgreSQL at data.{staging}..."})
         gdf.to_postgis(
-            name=table_name,
+            name=staging,
             schema="data",
             con=conn,
             if_exists="replace",
@@ -103,11 +108,11 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             connection.execute(
                 text(f"""
             WITH complex_areas AS (
-                DELETE from data.{table_name}
+                DELETE from data.{staging}
                 WHERE ST_NPoints(the_geom) > 10000
                 RETURNING location, the_geom
             )
-            INSERT INTO data.{table_name} (location, the_geom)
+            INSERT INTO data.{staging} (location, the_geom)
                 SELECT location,
                     ST_Multi(ST_Subdivide(the_geom, 10000)) as the_geom
                 FROM complex_areas;
@@ -116,19 +121,45 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
             # Add primary key
             connection.execute(
-                text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;")
+                text(f"ALTER TABLE data.{staging} ADD COLUMN id SERIAL PRIMARY KEY;")
             )
 
             # Create GIST index for fast spatial querying
             connection.execute(
                 text(f"""
-                CREATE INDEX gist_{table_name}_geom
-                ON data.{table_name}
+                CREATE INDEX gist_{staging}_geom
+                ON data.{staging}
                 USING GIST (the_geom);
             """)
             )
 
-            connection.execute(text(f"ANALYZE data.{table_name};"))
+            connection.execute(text(f"ANALYZE data.{staging};"))
+            connection.commit()
+
+            # Swap the staging table in, renaming the objects tied to its name so
+            # the next run's staging table can reuse them
+            if verbose:
+                logger.info({"message": f"Replacing data.{table_name} with data.{staging}..."})
+            connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name};"))
+            connection.execute(text(f"ALTER TABLE data.{staging} RENAME TO {table_name};"))
+            connection.execute(
+                text(
+                    f"ALTER TABLE data.{table_name} "
+                    f"RENAME CONSTRAINT {staging}_pkey TO {table_name}_pkey;"
+                )
+            )
+            connection.execute(
+                text(f"ALTER SEQUENCE data.{staging}_id_seq RENAME TO {table_name}_id_seq;")
+            )
+            connection.execute(
+                text(f"ALTER INDEX data.gist_{staging}_geom RENAME TO gist_{table_name}_geom;")
+            )
+            connection.execute(
+                text(
+                    f"ALTER INDEX IF EXISTS data.idx_{staging}_the_geom "
+                    f"RENAME TO idx_{table_name}_the_geom;"
+                )
+            )
             connection.commit()
 
     except Exception as excep:
