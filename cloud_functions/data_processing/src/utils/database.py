@@ -139,6 +139,10 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
     """
     Update Conservation Builder raster table from a GCS folder of tile files.
 
+    The tiles are loaded and indexed in a staging table, which then replaces the
+    live table in one short transaction, so the API keeps reading the previous
+    tiles until the new ones are ready.
+
     Parameters
     ----------
     table_name : str
@@ -154,6 +158,7 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
     """
     try:
         conn = get_connection(format="sqlalchemy").raw_connection()
+        staging = f"{table_name}_new"
         blobs = [
             blob
             for blob in storage.Client(project=PROJECT).list_blobs(BUCKET, prefix=f"{gcs_dir}/")
@@ -161,17 +166,17 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
         ]
 
         with conn.cursor() as cursor:
-            cursor.execute(f"DROP TABLE IF EXISTS data.{table_name};")
-            cursor.execute(f"CREATE TABLE data.{table_name} (location TEXT, rast raster);")
+            cursor.execute(f"DROP TABLE IF EXISTS data.{staging};")
+            cursor.execute(f"CREATE TABLE data.{staging} (location TEXT, rast raster);")
             conn.commit()
 
             # Upload data to PostgreSQL, streaming the tiles as hex WKB
             if verbose:
-                logger.info({"message": f"Uploading {len(blobs)} files to data.{table_name}..."})
+                logger.info({"message": f"Uploading {len(blobs)} files to data.{staging}..."})
             for blob in tqdm(blobs, disable=not verbose):
                 with (
                     blob.open("rb") as parquet,
-                    cursor.copy(f"COPY data.{table_name} (location, rast) FROM STDIN") as copy,
+                    cursor.copy(f"COPY data.{staging} (location, rast) FROM STDIN") as copy,
                 ):
                     for batch in pq.ParquetFile(parquet).iter_batches(
                         batch_size=batch_size, columns=["location", "rast"]
@@ -183,16 +188,32 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
                 conn.commit()
 
             # Add primary key
-            cursor.execute(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;")
+            cursor.execute(f"ALTER TABLE data.{staging} ADD COLUMN id SERIAL PRIMARY KEY;")
 
             # Create GIST index for fast spatial querying
             cursor.execute(f"""
-                CREATE INDEX gist_{table_name}_rast
-                ON data.{table_name}
+                CREATE INDEX gist_{staging}_rast
+                ON data.{staging}
                 USING GIST (ST_ConvexHull(rast));
             """)
 
-            cursor.execute(f"ANALYZE data.{table_name};")
+            cursor.execute(f"ANALYZE data.{staging};")
+            conn.commit()
+
+            # Swap the staging table in, renaming the objects tied to its name so
+            # the next run's staging table can reuse them
+            if verbose:
+                logger.info({"message": f"Replacing data.{table_name} with data.{staging}..."})
+            cursor.execute(f"DROP TABLE IF EXISTS data.{table_name};")
+            cursor.execute(f"ALTER TABLE data.{staging} RENAME TO {table_name};")
+            cursor.execute(
+                f"ALTER TABLE data.{table_name} "
+                f"RENAME CONSTRAINT {staging}_pkey TO {table_name}_pkey;"
+            )
+            cursor.execute(f"ALTER SEQUENCE data.{staging}_id_seq RENAME TO {table_name}_id_seq;")
+            cursor.execute(
+                f"ALTER INDEX data.gist_{staging}_rast RENAME TO gist_{table_name}_rast;"
+            )
         conn.commit()
         conn.close()
 
