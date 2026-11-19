@@ -6,7 +6,6 @@ const TOOLTIP_MAPPING = {
   administrativeBoundary: 'administrative-boundary',
   contributionDetails: 'contribution-details',
   globalContribution: 'global-contribution-model',
-  regionsAndSeas: 'cb-regions-and-seas-contribution',
 };
 
 const useTooltips = () => {
