@@ -67,7 +67,7 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-bold">{title}</h4>
+        <h4 className="text-base font-bold">{title}</h4>
         {tooltip && <TooltipButton side="right" {...tooltip} />}
       </div>
       <ContributionChart className="pt-3" contribution={contribution} target={target} />
