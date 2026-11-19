@@ -24,6 +24,9 @@ type StackedHorizontalBarChartProps = {
   showTarget?: boolean;
 };
 
+// Only used by the legacy Conservation Builder stats panel
+// TODO: TECH-3876, clean up the use_cb_api feature flag so the contribution chart is
+// the default, then delete this component and its translation keys
 const StackedHorizontalBarChart: FCWithMessages<StackedHorizontalBarChartProps> = ({
   className,
   data,
