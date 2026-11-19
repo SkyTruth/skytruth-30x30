@@ -893,7 +893,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
         else:
             msg = f"METHOD {method} failed after {attempt} attempts"
             logger.error({"message": msg, "error": str(e)})
-            send_slack_alert(webhook_url, f"{msg} on {env.upper()}")
+            send_slack_alert(webhook_url, f"{msg} on {env.upper()}: {e}")
             return f"{msg}: {e}", 500
 
     except Exception as e:
@@ -922,7 +922,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
                     "traceback": traceback.format_exc(),
                 }
             )
-            send_slack_alert(webhook_url, f"METHOD {method} failed on {env.upper()}")
+            send_slack_alert(webhook_url, f"METHOD {method} failed on {env.upper()}: {e}")
             return f"METHOD {method} failed after {attempt} attempts: {e}", 500
 
     finally:

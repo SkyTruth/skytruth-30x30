@@ -38,6 +38,10 @@ from src.utils.logger import Logger
 
 logger = Logger()
 
+# PostGIS raster WKB band flags: 8-bit unsigned pixels, with a nodata value
+PT_8BUI = 4
+BAND_HAS_NODATA = 0x40
+
 
 def process_poly_raster_habitat(
     src, raster_crs, tile_geom, pas, empty, location, class_map, connectivity=4
@@ -266,11 +270,6 @@ def generate_raster_habitat_minus_pa(
             ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat),
             bucket=bucket,
         )
-
-
-# PostGIS raster WKB band flags: 8-bit unsigned pixels, with a nodata value
-PT_8BUI = 4
-BAND_HAS_NODATA = 0x40
 
 
 def raster_tile_wkb(pixels, transform, srid, nodata):

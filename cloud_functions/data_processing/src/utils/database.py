@@ -57,6 +57,7 @@ def get_connection(format: str = "psycopg"):
         logger.error(
             {"message": "Failed to establish connection with database", "error": str(excep)}
         )
+        raise
 
 
 def update_cb(table_name, gcs_file, verbose: bool = False):
@@ -125,7 +126,6 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             )
 
             connection.execute(text(f"ANALYZE data.{intermediate};"))
-            connection.commit()
 
             # Swap the intermediate table in, renaming the objects tied to its name so
             # the next run's intermediate table can reuse them
@@ -152,6 +152,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
+        raise
 
 
 def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int = 1000):
@@ -175,8 +176,8 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
     batch_size : int
       Number of tiles read from a file at a time.
     """
+    conn = get_connection(format="sqlalchemy").raw_connection()
     try:
-        conn = get_connection(format="sqlalchemy").raw_connection()
         intermediate = f"{table_name}_new"
         blobs = [
             blob
@@ -204,7 +205,6 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
                             batch["location"].to_pylist(), batch["rast"].to_pylist(), strict=True
                         ):
                             copy.write_row((location, rast.hex()))
-                conn.commit()
 
             # Add primary key
             cursor.execute(f"ALTER TABLE data.{intermediate} ADD COLUMN id SERIAL PRIMARY KEY;")
@@ -236,10 +236,12 @@ def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int
                 f"ALTER INDEX data.gist_{intermediate}_rast RENAME TO gist_{table_name}_rast;"
             )
         conn.commit()
-        conn.close()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
+        raise
+    finally:
+        conn.close()
 
 
 def get_pas(verbose: bool = False) -> list[dict]:
@@ -362,3 +364,4 @@ def get_pas(verbose: bool = False) -> list[dict]:
         return rows
     except Exception as excep:
         logger.error({"message": "Failed to read PAs from the Database", "error": str(excep)})
+        raise
