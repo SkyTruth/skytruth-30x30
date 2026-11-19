@@ -6,10 +6,6 @@ const TOOLTIP_MAPPING = {
   administrativeBoundary: 'administrative-boundary',
   contributionDetails: 'contribution-details',
   globalContribution: 'global-contribution-model',
-  // Section headings of the Conservation Builder panel shown while use_cb_api is on
-  countries: 'cb-countries-contribution',
-  regionsAndSeas: 'cb-regions-and-seas-contribution',
-  global: 'cb-global-contribution',
 };
 
 const useTooltips = () => {

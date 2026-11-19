@@ -10,15 +10,13 @@ import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useLocationName from '@/hooks/use-location-name';
 import { FCWithMessages } from '@/types';
 
-import useTooltips from '../useTooltips';
-
 import ContributionSection from './contribution-section';
 import useCoverageContributions, { SectionStats } from './use-coverage-contributions';
 import useFhpContributions from './use-fhp-contributions';
 
 /**
  * Stats in the Conservation Builder panel once a shape is drawn or uploaded, grouped into
- * sections (e.g. "Countries", "Global"), each a list of collapsible locations. A section is
+ * sections (e.g. "National Level Contribution"), each a list of collapsible locations. A section is
  * hidden if the shape doesn't intersect any of its locations. Also shows the loading, error
  * and no-data states
  *
@@ -39,8 +37,6 @@ const ContributionsWidget: FCWithMessages = () => {
   const errorMessage = errorMessageKey
     ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0], { environment: tab })
     : undefined;
-
-  const tooltips = useTooltips();
 
   const { countries, regionsAndSeas, global, seaCodes, isLoading } = useCoverageContributions();
   const hasLocations = countries.length > 0 || regionsAndSeas.length > 0;
@@ -83,7 +79,6 @@ const ContributionsWidget: FCWithMessages = () => {
         {countries.length > 0 && (
           <ContributionSection
             title={t('countries-section')}
-            tooltip={tooltips?.['countries']}
             items={countries.map((stats) =>
               withMarineStats(getLocationName(stats.location), stats)
             )}
@@ -92,7 +87,6 @@ const ContributionsWidget: FCWithMessages = () => {
         {regionsAndSeas.length > 0 && (
           <ContributionSection
             title={t('regions-and-seas-section')}
-            tooltip={tooltips?.['regionsAndSeas']}
             items={regionsAndSeas.map((stats) =>
               withMarineStats(getLocationName(stats.location), stats)
             )}
@@ -101,7 +95,6 @@ const ContributionsWidget: FCWithMessages = () => {
         {global && (
           <ContributionSection
             title={t('global-section')}
-            tooltip={tooltips?.['global']}
             items={[withMarineStats(t('globe'), global)]}
           />
         )}
