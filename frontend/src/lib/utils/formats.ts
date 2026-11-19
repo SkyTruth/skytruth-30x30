@@ -18,18 +18,21 @@ export function formatPercentage(
     style: displayPercentageSign ? 'percent' : 'decimal',
     ...intlNumberFormatOptions,
   });
+  // Formats a percentage from 0 to 100 (the percent style expects a fraction from 0 to 1)
+  const format = (percentage: number) =>
+    v.format(displayPercentageSign ? percentage / 100 : percentage);
 
   if (value < 0.1 && (!displayZeroValue || (displayZeroValue && value > 0))) {
-    return `<${v.format(0.1)}`;
+    return `<${format(0.1)}`;
   }
 
   // Sanity check to prevent the display of percentages over 100.
   // This should never be true, but data can be wonky hence this last resort check.
   if (value > 100) {
-    return v.format(100);
+    return format(100);
   }
 
-  return v.format(displayPercentageSign ? value / 100 : value);
+  return format(value);
 }
 
 export function formatNumber(locale: string, value: number, options?: Intl.NumberFormatOptions) {
