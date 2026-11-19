@@ -3,7 +3,8 @@ one intended change to the stats query's join.
 
 Compares the strings input to sqlalchemy.text() at runtime,
 so src/analysis.py can be reformatted as long as the statements the database
-receives are unchanged. Delete once the cloud function is removed.
+receives are unchanged, apart from the stats query's whitespace. Delete once the
+cloud function is removed.
 """
 
 import importlib.util
@@ -116,8 +117,12 @@ def test_runtime_sql_is_identical_to_the_cloud_function():
     assert len(ported) == len(original) == 2, "expected a topology check and a stats query"
     assert ported[0] == original[0]
     # The one intended difference: a LEFT JOIN instead of a comma join and WHERE, so a
-    # shape that intersects nothing still returns a row carrying its drawn area
-    assert ported[1] == original[1].replace(CLOUD_FUNCTION_JOIN, CB_API_JOIN)
+    # shape that intersects nothing still returns a row carrying its drawn area.
+    # Whitespace is ignored, as the CTEs shared with the raster query are indented
+    # differently.
+    assert " ".join(ported[1].split()) == " ".join(
+        original[1].replace(CLOUD_FUNCTION_JOIN, CB_API_JOIN).split()
+    )
     assert CLOUD_FUNCTION_JOIN in original[1], "the cloud function's join has changed"
 
 

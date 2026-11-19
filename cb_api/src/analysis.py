@@ -38,6 +38,21 @@ TERRESTRIAL_HABITAT_CLASSES = {
     8: "artificial",
 }
 
+# SQL CTEs parsing the :geometry parameter into user_data_stats, with the drawn area's
+# geometry (geom) and its Mollweide area (user_area_km2)
+USER_DATA_CTES = """
+    user_data AS (
+        SELECT ST_MakeValid(ST_UnaryUnion(ST_GeomFromGeoJSON(:geometry))) AS geom
+    ),
+    user_data_stats AS (
+        SELECT *,
+            ST_Area(ST_Transform(geom,
+                '+proj=longlat +datum=WGS84 +no_defs +type=crs',
+                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6
+            AS user_area_km2
+        FROM user_data
+    )"""
+
 
 def get_geojson(geojson: JSON) -> dict:
     if not isinstance(geojson, dict):
@@ -119,17 +134,7 @@ def get_locations_stats(
         stmt = sqlalchemy.text(
             f"""
                 WITH
-                    user_data AS (
-                        SELECT ST_MakeValid(ST_UnaryUnion(ST_GeomFromGeoJSON(:geometry))) AS geom
-                    ),
-                    user_data_stats AS (
-                        SELECT *,
-                            ST_Area(ST_Transform(geom,
-                                '+proj=longlat +datum=WGS84 +no_defs +type=crs',
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6
-                            AS user_area_km2
-                        FROM user_data
-                    ),
+                    {USER_DATA_CTES},
                     stats AS (
                         SELECT
                             location,
@@ -215,17 +220,7 @@ def get_raster_habitats_stats(
         stmt = sqlalchemy.text(
             f"""
                 WITH
-                    user_data AS (
-                        SELECT ST_MakeValid(ST_UnaryUnion(ST_GeomFromGeoJSON(:geometry))) AS geom
-                    ),
-                    user_data_stats AS (
-                        SELECT *,
-                            ST_Area(ST_Transform(geom,
-                                '+proj=longlat +datum=WGS84 +no_defs +type=crs',
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6
-                            AS user_area_km2
-                        FROM user_data
-                    ),
+                    {USER_DATA_CTES},
                     stats AS (
                         SELECT
                             location,
@@ -236,7 +231,9 @@ def get_raster_habitats_stats(
                             data.{table},
                             user_data_stats,
                             LATERAL ST_ValueCount(
-                                ST_Clip(rast, user_data_stats.geom), 1, true
+                                ST_Clip(rast, ST_CollectionExtract(
+                                    ST_Intersection(user_data_stats.geom, ST_ConvexHull(rast)), 3
+                                )), 1, true
                             ) AS vc
                         WHERE
                             ST_Intersects(ST_ConvexHull(rast), user_data_stats.geom)
