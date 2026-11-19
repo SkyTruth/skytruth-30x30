@@ -59,7 +59,7 @@ def iter_location_pa_masks(
     )
     if not location_geom.intersects(box(*src.bounds)):
         return
-    
+
     pas = location_pa.to_crs(src.crs).geometry.apply(make_valid)
 
     shapely.prepare(location_geom)
