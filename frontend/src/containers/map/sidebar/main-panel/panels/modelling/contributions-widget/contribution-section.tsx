@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react';
+import { ComponentProps, PropsWithChildren } from 'react';
 
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -17,6 +17,11 @@ import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
 import { SectionStats } from './use-coverage-contributions';
+import useDataInfoTooltips from './use-data-info-tooltips';
+
+// Strapi data-info entry for the coverage tooltip, shared with the Progress Tracker's
+// coverage widgets
+const COVERAGE_TOOLTIP_SLUG = 'coverage-widget';
 
 /** One legend entry: a colored square (`className` sets its color) and its label */
 const LegendItem = ({ className, children }: PropsWithChildren<{ className: string }>) => (
@@ -45,21 +50,32 @@ type StatBlockProps = {
   title: string;
   contribution?: Contribution;
   target?: number;
+  // Info tooltip at the right of the heading
+  tooltip?: ComponentProps<typeof TooltipButton>;
 };
 
 /** One section inside a location, with heading and chart */
-const StatBlock: FCWithMessages<StatBlockProps> = ({ className, title, contribution, target }) => {
+const StatBlock: FCWithMessages<StatBlockProps> = ({
+  className,
+  title,
+  contribution,
+  target,
+  tooltip,
+}) => {
   if (!contribution) return null;
 
   return (
     <div className={className}>
-      <h4 className="text-sm font-bold">{title}</h4>
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-sm font-bold">{title}</h4>
+        {tooltip && <TooltipButton side="right" {...tooltip} />}
+      </div>
       <ContributionChart className="pt-3" contribution={contribution} target={target} />
     </div>
   );
 };
 
-StatBlock.messages = [...ContributionChart.messages];
+StatBlock.messages = [...TooltipButton.messages, ...ContributionChart.messages];
 
 type ContributionItemProps = {
   title: string;
@@ -70,6 +86,7 @@ type ContributionItemProps = {
 const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
+  const tooltips = useDataInfoTooltips([COVERAGE_TOOLTIP_SLUG]);
 
   return (
     <AccordionItem value={stats.code} className="border-b border-black">
@@ -93,6 +110,7 @@ const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats 
           }
           contribution={stats.coverage}
           target={stats.coverageTarget}
+          tooltip={tooltips[COVERAGE_TOOLTIP_SLUG]}
         />
       </AccordionContent>
     </AccordionItem>
@@ -107,30 +125,19 @@ ContributionItem.messages = [
 
 type ContributionSectionProps = {
   title: string;
-  tooltip?: string;
   items: ContributionItemProps[];
 };
 
-/**
- * One section of the panel, the heading with an info tooltip,
- * then one collapsible per location
- */
-const ContributionSection: FCWithMessages<ContributionSectionProps> = ({
-  title,
-  tooltip,
-  items,
-}) => (
+/** One section of the panel: its heading, then one collapsible per location */
+const ContributionSection: FCWithMessages<ContributionSectionProps> = ({ title, items }) => (
   <section className="pt-6">
-    <div className="flex items-center">
-      <h3 className="font-mono text-xs uppercase">{title}</h3>
-      {tooltip && <TooltipButton className="-mt-1" text={tooltip} />}
-    </div>
+    <h3 className="font-mono text-xs uppercase">{title}</h3>
     {items.map((item) => (
       <ContributionItem key={item.stats.code} {...item} />
     ))}
   </section>
 );
 
-ContributionSection.messages = [...ContributionItem.messages, ...TooltipButton.messages];
+ContributionSection.messages = [...ContributionItem.messages];
 
 export default ContributionSection;

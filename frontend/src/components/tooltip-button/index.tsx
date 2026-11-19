@@ -1,4 +1,4 @@
-import { Fragment, ReactNode, useState } from 'react';
+import { ComponentProps, Fragment, ReactNode, useState } from 'react';
 
 import Linkify from 'react-linkify';
 
@@ -22,6 +22,8 @@ interface TooltipButtonProps {
   text: string;
   sources?: Source | Source[];
   extraContent?: ReactNode;
+  // Side of the button the tooltip opens on; below when unset
+  side?: ComponentProps<typeof PopoverContent>['side'];
 }
 
 const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
@@ -29,6 +31,7 @@ const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
   text,
   sources,
   extraContent,
+  side,
 }) => {
   const t = useTranslations('components.tooltip-button');
 
@@ -58,6 +61,7 @@ const TooltipButton: FCWithMessages<TooltipButtonProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        side={side}
         align="center"
         className="flex max-w-[300px] flex-col gap-6 font-mono text-xs"
       >
