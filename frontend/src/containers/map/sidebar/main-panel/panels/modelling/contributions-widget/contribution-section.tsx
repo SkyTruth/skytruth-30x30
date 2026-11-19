@@ -1,7 +1,7 @@
 import { ComponentProps, PropsWithChildren } from 'react';
 
 import { ChevronDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import ContributionChart from '@/components/charts/contribution-chart';
 import HabitatContributionChart from '@/components/charts/habitat-contribution-chart';
@@ -72,8 +72,6 @@ type StatBlockProps = {
   status?: StatStatus;
   // Info tooltip at the right of the heading
   tooltip?: ComponentProps<typeof TooltipButton>;
-  compact?: boolean;
-  color?: string;
 };
 
 /**
@@ -87,27 +85,13 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   target,
   status = 'success',
   tooltip,
-  compact = false,
-  color,
 }) => {
   if (status === 'success' && !contribution) return null;
-
-  if (compact && status === 'success') {
-    return (
-      <HabitatContributionChart
-        className={className}
-        title={title}
-        color={color}
-        contribution={contribution}
-        tooltip={tooltip}
-      />
-    );
-  }
 
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-2">
-        <h4 className={cn('font-bold', compact ? 'text-base' : 'text-sm')}>{title}</h4>
+        <h4 className="text-sm font-bold">{title}</h4>
         {tooltip && <TooltipButton side="right" {...tooltip} />}
       </div>
       <StatStatusMessage status={status} />
@@ -122,7 +106,6 @@ StatBlock.messages = [
   ...StatStatusMessage.messages,
   ...TooltipButton.messages,
   ...ContributionChart.messages,
-  ...HabitatContributionChart.messages,
 ];
 
 type HabitatProtectionProps = {
@@ -132,13 +115,25 @@ type HabitatProtectionProps = {
 };
 
 /**
- * "Habitat Protection" inside a location: one row per habitat found there, each loading on
- * its own. Shows nothing if the location has none of the habitats
+ * "Habitat Protection" inside a location. Each habitat appears once its request finishes.
+ * A line at the bottom states which habitats are still loading, or says when some failed
+ * or none gained protection. Shows nothing if the location has none of the habitats
  */
 const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, status, rows }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
+  const locale = useLocale();
 
   if (status === 'success' && !rows.length) return null;
+
+  const addedRows = rows.filter(
+    ({ status, contribution }) => status === 'success' && contribution?.added > 0
+  );
+  // Line about which habitats are still loading
+  const loadingNames = rows
+    .filter(({ status }) => status === 'loading')
+    .map(({ name }) => name.toLocaleLowerCase(locale));
+  const isLoading = loadingNames.length > 0;
+  const hasError = rows.some(({ status }) => status === 'error');
 
   return (
     <div className={className}>
@@ -146,12 +141,29 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, 
       <StatStatusMessage status={status} />
       {status === 'success' && (
         <>
-          <ul className="pt-3 font-mono text-xs">
-            <LegendItem className="bg-blue-700">{t('newly-protected-habitat')}</LegendItem>
-          </ul>
-          {rows.map(({ slug, name, ...habitat }) => (
-            <StatBlock key={slug} className="pt-4" compact title={name} {...habitat} />
+          {addedRows.length > 0 && (
+            <ul className="pt-3 font-mono text-xs">
+              <LegendItem className="bg-blue-700">{t('newly-protected-habitat')}</LegendItem>
+            </ul>
+          )}
+          {addedRows.map(({ slug, name, color, contribution, tooltip }) => (
+            <HabitatContributionChart
+              key={slug}
+              className="pt-4"
+              title={name}
+              color={color}
+              contribution={contribution}
+              tooltip={tooltip}
+            />
           ))}
+          <p aria-live="polite" className="pt-3 font-mono text-xs empty:hidden">
+            {isLoading &&
+              t('still-checking-habitats', {
+                habitats: new Intl.ListFormat(locale, { type: 'conjunction' }).format(loadingNames),
+              })}
+            {!isLoading && hasError && t('habitat-data-error')}
+            {!isLoading && !hasError && !addedRows.length && t('no-habitat-protection-added')}
+          </p>
         </>
       )}
     </div>
@@ -161,7 +173,7 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, 
 HabitatProtection.messages = [
   'containers.map-sidebar-main-panel',
   ...StatStatusMessage.messages,
-  ...StatBlock.messages,
+  ...HabitatContributionChart.messages,
 ];
 
 type ContributionItemProps = {

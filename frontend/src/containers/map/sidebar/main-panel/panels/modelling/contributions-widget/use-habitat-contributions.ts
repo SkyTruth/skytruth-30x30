@@ -45,8 +45,8 @@ export type HabitatContribution = {
 
 /**
  * "Habitat Protection" stats for the Conservation Builder panel (marine only), keyed by
- * location code, with `GLOB` for the Global section. Lists only the habitats the drawn shape
- * adds protection to
+ * location code, with `GLOB` for the Global section. Lists every habitat found in the
+ * location, with the state of its request
  *
  * @param codes locations listed in the panel
  * @param seaCodes IHO seas, left out of the Global sum because they overlap national waters
@@ -162,8 +162,6 @@ const useHabitatContributions = (
 
       baselines.forEach(({ code }) => {
         const contribution = contributions?.get(code);
-        // Leave out habitats the shape adds no protection to
-        if (contribution && contribution.added <= 0) return;
 
         rowsByCode.set(code, [
           ...(rowsByCode.get(code) ?? []),
