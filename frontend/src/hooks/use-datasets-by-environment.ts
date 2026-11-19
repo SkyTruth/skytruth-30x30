@@ -3,15 +3,11 @@ import { useMemo } from 'react';
 import { useLocale } from 'next-intl';
 
 import { ENVIRONMENTS } from '@/constants/environments';
-import { useFeatureFlag } from '@/hooks/use-feature-flag'; // TECH-3472: remove feature flag (climate resilient corals)
 import { useGetDatasets } from '@/types/generated/dataset';
 import { Dataset } from '@/types/generated/strapi.schemas';
 
 export default function useDatasetsByEnvironment() {
   const locale = useLocale();
-
-  // TECH-3472: remove feature flag (climate resilient corals layer gate)
-  const isClimateResCoralsActive = useFeatureFlag('is_climate_res_corals_active');
 
   const { data, isFetching } = useGetDatasets<Dataset[]>(
     {
@@ -43,14 +39,7 @@ export default function useDatasetsByEnvironment() {
     // A dataset can contain layers with different environments assigned, we want
     // to pick only the layers for the environment we're displaying.
     const filterLayersByEnvironment = (layers, environment) => {
-      return (
-        layers?.filter((item) => {
-          // TECH-3472: remove feature flag (climate resilient corals layer gate)
-          if (item.slug === 'crc' && !isClimateResCoralsActive) return false;
-          if (item.slug === 'wwc' && isClimateResCoralsActive) return false;
-          return item.environment?.slug === environment;
-        }) || []
-      );
+      return layers?.filter((item) => item.environment?.slug === environment) || [];
     };
 
     const parseDatasetsByEnvironment = (datasets: Dataset[], environment: string) => {
@@ -83,8 +72,7 @@ export default function useDatasetsByEnvironment() {
       marine: marineDataset,
       basemap: basemapDataset,
     };
-    // TECH-3472: remove `isClimateResCoralsActive` from deps when feature flag is removed
-  }, [data, isClimateResCoralsActive]);
+  }, [data]);
 
   return [datasets, { isLoading: isFetching }] as const;
 }
