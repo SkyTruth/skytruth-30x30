@@ -19,7 +19,12 @@ import { FCWithMessages } from '@/types';
 
 import type { StatStatus } from './stat-status';
 import { SectionStats } from './use-coverage-contributions';
+import useDataInfoTooltips from './use-data-info-tooltips';
 import type { HabitatContribution } from './use-habitat-contributions';
+
+// Strapi data-info entry for the coverage tooltip, shared with the Progress Tracker's
+// coverage widgets
+const COVERAGE_TOOLTIP_SLUG = 'coverage-widget';
 
 /** One legend entry: a colored square (`className` sets its color) and its label */
 const LegendItem = ({ className, children }: PropsWithChildren<{ className: string }>) => (
@@ -176,6 +181,7 @@ const ContributionItem: FCWithMessages<ContributionItemProps> = ({
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
+  const tooltips = useDataInfoTooltips([COVERAGE_TOOLTIP_SLUG]);
 
   return (
     <AccordionItem value={stats.code} className="border-b border-black">
@@ -199,6 +205,7 @@ const ContributionItem: FCWithMessages<ContributionItemProps> = ({
           }
           contribution={stats.coverage}
           target={stats.coverageTarget}
+          tooltip={tooltips[COVERAGE_TOOLTIP_SLUG]}
         />
         {fhp && <StatBlock className="pt-6" title={t('fully-highly-protected')} {...fhp} />}
         {habitats && <HabitatProtection className="pt-6" {...habitats} />}
@@ -216,30 +223,19 @@ ContributionItem.messages = [
 
 type ContributionSectionProps = {
   title: string;
-  tooltip?: string;
   items: ContributionItemProps[];
 };
 
-/**
- * One section of the panel, the heading with an info tooltip,
- * then one collapsible per location
- */
-const ContributionSection: FCWithMessages<ContributionSectionProps> = ({
-  title,
-  tooltip,
-  items,
-}) => (
+/** One section of the panel: its heading, then one collapsible per location */
+const ContributionSection: FCWithMessages<ContributionSectionProps> = ({ title, items }) => (
   <section className="pt-6">
-    <div className="flex items-center">
-      <h3 className="font-mono text-xs uppercase">{title}</h3>
-      {tooltip && <TooltipButton className="-mt-1" text={tooltip} />}
-    </div>
+    <h3 className="font-mono text-xs uppercase">{title}</h3>
     {items.map((item) => (
       <ContributionItem key={item.stats.code} {...item} />
     ))}
   </section>
 );
 
-ContributionSection.messages = [...ContributionItem.messages, ...TooltipButton.messages];
+ContributionSection.messages = [...ContributionItem.messages];
 
 export default ContributionSection;
