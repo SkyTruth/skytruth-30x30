@@ -187,8 +187,8 @@ def serialize_raster_habitats_response(
 def get_raster_habitats_stats(
     engine: sqlalchemy.engine.base.Engine,
     geojson: JSON,
-    table: str,
-    classes: Mapping[int, str],
+    table: str = TERRESTRIAL_HABITATS_TABLE,
+    classes: Mapping[int, str] = TERRESTRIAL_HABITAT_CLASSES,
 ) -> dict:
     """How much of each habitat in the drawn area is not yet protected, by location,
     counted from the unprotected habitat pixels of a PostGIS raster table under it.
@@ -204,9 +204,10 @@ def get_raster_habitats_stats(
         The drawn area, as a GeoJSON Feature, FeatureCollection or geometry.
     table : str
         Raster table in the data schema, with "location" and "rast" columns, holding
-        only unprotected habitat pixels.
+        only unprotected habitat pixels. Defaults to the terrestrial habitats table.
     classes : Mapping[int, str]
-        Habitat slug of each pixel value to report; other values are left out.
+        Habitat slug of each pixel value to report; other values are left out. Defaults
+        to the terrestrial habitats.
     """
     geometry = get_geojson(geojson)
     with engine.connect() as conn:

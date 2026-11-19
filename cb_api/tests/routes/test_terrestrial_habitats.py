@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.analysis import TERRESTRIAL_HABITAT_CLASSES, TERRESTRIAL_HABITATS_TABLE
+from src.analysis import TERRESTRIAL_HABITAT_CLASSES
 from tests.routes.helpers import ENGINE, HABITATS_STATS, POLYGON, RouteTestClient
 
 PATH = "/terrestrial-habitats"
@@ -18,10 +18,10 @@ def test_returns_habitats_stats(api: RouteTestClient):
     assert response.json() == HABITATS_STATS
 
 
-def test_reads_the_terrestrial_raster_table_with_its_classes(api: RouteTestClient):
+def test_queries_with_the_default_terrestrial_table_and_classes(api: RouteTestClient):
     api.client.post(PATH, json={"geometry": POLYGON})
 
-    assert api.calls == [(ENGINE, POLYGON, TERRESTRIAL_HABITATS_TABLE, TERRESTRIAL_HABITAT_CLASSES)]
+    assert api.calls == [(ENGINE, POLYGON)]
 
 
 def test_the_geometry_is_passed_through_untouched(api: RouteTestClient):
@@ -29,7 +29,7 @@ def test_the_geometry_is_passed_through_untouched(api: RouteTestClient):
 
     api.client.post(PATH, json={"geometry": feature})
 
-    _, geometry, _, _ = api.calls[0]
+    _, geometry = api.calls[0]
     assert geometry == feature
 
 
