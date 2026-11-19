@@ -142,7 +142,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             connection.execute(
                 text(f"ALTER SEQUENCE data.{intermediate}_id_seq RENAME TO {table_name}_id_seq;")
             )
-            # geoalchemy2's to_postgis automatically adds a spatial index on the_geom named after 
+            # geoalchemy2's to_postgis automatically adds a spatial index on the_geom named after
             # the table, and this renames it so it doesn't include the intermediate table name
             connection.execute(
                 text(
