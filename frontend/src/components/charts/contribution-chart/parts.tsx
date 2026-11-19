@@ -65,13 +65,13 @@ export const ContributionBar = ({
     <span
       className={cn('absolute bottom-0 left-0 top-0', {
         'bg-existing-area': !existingColor,
-        'border-[1.5px] border-black': outlined && existingPercentage > 0,
+        'border border-black': outlined && existingPercentage > 0,
       })}
       style={{ width: toWidth(existingPercentage), backgroundColor: existingColor }}
     />
     <span
       className={cn('absolute bottom-0 top-0 bg-blue-700', {
-        'border-[1.5px] border-black': outlined && addedPercentage > 0,
+        'border border-black': outlined && addedPercentage > 0,
         'border-l-0': outlined && existingPercentage > 0,
       })}
       style={{ left: toWidth(existingPercentage), width: toWidth(addedPercentage) }}
