@@ -99,6 +99,7 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
         title={title}
         color={color}
         contribution={contribution}
+        tooltip={tooltip}
       />
     );
   }

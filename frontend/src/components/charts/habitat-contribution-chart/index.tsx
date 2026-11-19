@@ -1,3 +1,5 @@
+import { ComponentProps } from 'react';
+
 import { useLocale, useTranslations } from 'next-intl';
 
 import {
@@ -6,6 +8,7 @@ import {
   MAX_PERCENTAGE,
   ProtectedAreaText,
 } from '@/components/charts/contribution-chart/parts';
+import TooltipButton from '@/components/tooltip-button';
 import { formatPercentage } from '@/lib/utils/formats';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
@@ -15,6 +18,8 @@ type HabitatContributionChartProps = {
   title: string;
   color: string;
   contribution: Contribution;
+  // Info tooltip at the right end of the row
+  tooltip?: ComponentProps<typeof TooltipButton>;
 };
 
 /**
@@ -27,6 +32,7 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
   title,
   color,
   contribution,
+  tooltip,
 }) => {
   const t = useTranslations('components.chart-contribution');
   const locale = useLocale();
@@ -48,6 +54,7 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
               percentage={addedPercentage}
             />
           )}
+          {tooltip && <TooltipButton side="right" {...tooltip} />}
         </div>
       </div>
       <div className="flex items-center gap-1 pt-2 font-mono">
@@ -64,6 +71,6 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
   );
 };
 
-HabitatContributionChart.messages = ['components.chart-contribution'];
+HabitatContributionChart.messages = ['components.chart-contribution', ...TooltipButton.messages];
 
 export default HabitatContributionChart;

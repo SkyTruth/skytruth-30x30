@@ -15,6 +15,7 @@ import { useGetHabitatStats } from '@/types/generated/habitat-stat';
 import { HabitatStat } from '@/types/generated/strapi.schemas';
 
 import { StatStatus, toStatus } from './stat-status';
+import useDataInfoTooltips, { DataInfoTooltip } from './use-data-info-tooltips';
 
 // Habitats cb_api can analyze, in the order the panel lists them
 // `strapiSlug` is the habitat's slug in Strapi and in MARINE_HABITAT_CHART_COLORS
@@ -38,6 +39,8 @@ export type HabitatContribution = {
   color: string;
   status: StatStatus;
   contribution?: Contribution;
+  // The habitat's info tooltip, from the same entry as in the Progress Tracker
+  tooltip?: DataInfoTooltip;
 };
 
 /**
@@ -126,6 +129,12 @@ const useHabitatContributions = (
     }
   );
 
+  // Info tooltip per habitat, from the entries the Progress Tracker's habitat chart uses
+  const tooltips = useDataInfoTooltips(
+    HABITATS.map(({ strapiSlug }) => strapiSlug),
+    { enabled }
+  );
+
   const habitatsByCode = useMemo(() => {
     const rowsByCode = new Map<string, HabitatContribution[]>();
     if (!stats.data) return rowsByCode;
@@ -164,13 +173,14 @@ const useHabitatContributions = (
             color: MARINE_HABITAT_CHART_COLORS[strapiSlug],
             status: toStatus(analysis),
             contribution,
+            tooltip: tooltips[strapiSlug],
           },
         ]);
       });
     });
 
     return rowsByCode;
-  }, [stats.data, analyses, codes, seaCodes, habitatNames]);
+  }, [stats.data, analyses, codes, seaCodes, habitatNames, tooltips]);
 
   return { habitatsByCode, status: toStatus(stats) };
 };
