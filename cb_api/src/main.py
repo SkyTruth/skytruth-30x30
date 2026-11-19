@@ -7,7 +7,6 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.engine import Engine
 
-from src.analysis import get_locations_stats, get_raster_habitats_stats
 from src.config import ALLOWED_ORIGINS, get_settings
 from src.db import create_db_engine
 from src.errors import BadRequestError, register_error_handlers
@@ -20,6 +19,8 @@ from src.schemas import (
     ProtectionLevelRequest,
     TerrestrialHabitatsRequest,
 )
+from src.services.raster import get_raster_habitats_stats
+from src.services.vector import get_locations_stats
 
 logging.basicConfig(level=logging.INFO)
 

@@ -1,4 +1,4 @@
-"""The raster habitats query in src/analysis.py, against a PostGIS database."""
+"""The raster habitats query in src/services/raster.py, against a PostGIS database."""
 
 from collections.abc import Iterator
 
@@ -7,12 +7,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-from src.analysis import (
+from src.main import app, get_engine
+from src.services.raster import (
     TERRESTRIAL_HABITAT_CLASSES,
     TERRESTRIAL_HABITATS_TABLE,
     get_raster_habitats_stats,
 )
-from src.main import app, get_engine
 from tests.integration_tests.helpers import (
     MAX_DEGREE_CELL_AT_50N_KM2,
     MIN_DEGREE_CELL_AT_50N_KM2,

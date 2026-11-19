@@ -147,6 +147,8 @@ poetry run ruff check --fix
 | `src/main.py` | App, lifespan, CORS, routes |
 | `src/config.py` | Settings |
 | `src/db.py` | Engine and connection pool |
-| `src/analysis.py` | The spatial queries, vector and raster, and their result shaping |
+| `src/services/geometry.py` | Parsing and validating the drawn area, shared by the queries |
+| `src/services/vector.py` | The vector table queries and their result shaping |
+| `src/services/raster.py` | The raster habitats query and its result shaping |
 | `src/schemas.py` | Request and response models |
 | `src/errors.py` | Exception handlers |

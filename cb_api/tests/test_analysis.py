@@ -1,14 +1,9 @@
 import pytest
 import sqlalchemy
 
-from src.analysis import (
-    AnalysisTable,
-    get_geojson,
-    get_locations_stats,
-    serialize_response,
-    validate_geometry_topology,
-)
 from src.errors import BadRequestError
+from src.services.geometry import get_geojson, validate_geometry_topology
+from src.services.vector import AnalysisTable, get_locations_stats, serialize_response
 
 POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 

@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from testcontainers.community.postgres import PostgresContainer
 
-from src.analysis import AnalysisTable
+from src.services.vector import AnalysisTable
 
 POSTGIS_IMAGE = "postgis/postgis:14-3.4"
 

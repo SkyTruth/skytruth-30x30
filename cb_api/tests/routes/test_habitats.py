@@ -2,8 +2,8 @@
 
 import pytest
 
-from src.analysis import AnalysisTable
 from src.schemas import Habitat
+from src.services.vector import AnalysisTable
 from tests.routes.helpers import POLYGON, STATS, RouteTestClient
 
 PATH = "/habitats"

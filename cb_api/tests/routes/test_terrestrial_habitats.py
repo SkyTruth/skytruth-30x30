@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.analysis import TERRESTRIAL_HABITAT_CLASSES
+from src.services.raster import TERRESTRIAL_HABITAT_CLASSES
 from tests.routes.helpers import ENGINE, HABITATS_STATS, POLYGON, RouteTestClient
 
 PATH = "/terrestrial-habitats"

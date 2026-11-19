@@ -2,7 +2,7 @@
 one intended change to the stats query's join.
 
 Compares the strings input to sqlalchemy.text() at runtime,
-so src/analysis.py can be reformatted as long as the statements the database
+so src/services/vector.py can be reformatted as long as the statements the database
 receives are unchanged, apart from the stats query's whitespace. Delete once the
 cloud function is removed.
 """
@@ -15,7 +15,7 @@ from types import ModuleType
 import pytest
 import sqlalchemy
 
-from src.analysis import get_locations_stats
+from src.services.vector import get_locations_stats
 
 ORIGINAL = (
     pathlib.Path(__file__).resolve().parents[2]

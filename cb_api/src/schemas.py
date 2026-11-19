@@ -2,7 +2,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.analysis import AnalysisTable
+from src.services.vector import AnalysisTable
 
 
 class Environment(StrEnum):
