@@ -18,7 +18,7 @@ type HabitatContributionChartProps = {
   title: string;
   color: string;
   contribution: Contribution;
-  // Info tooltip at the right end of the row
+  // Info tooltip next to the habitat name
   tooltip?: ComponentProps<typeof TooltipButton>;
 };
 
@@ -42,7 +42,10 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-4">
-        <span className="text-base font-bold">{title}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-base font-bold">{title}</span>
+          {tooltip && <TooltipButton side="right" {...tooltip} />}
+        </div>
         <div className="flex items-center gap-2 font-mono">
           <span className="pt-[0.2em] text-base font-bold leading-none">
             {formatPercentage(locale, totalPercentage, { displayPercentageSign: false })}
@@ -54,7 +57,6 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
               percentage={addedPercentage}
             />
           )}
-          {tooltip && <TooltipButton side="right" {...tooltip} />}
         </div>
       </div>
       <div className="flex items-center gap-1 pt-2 font-mono">

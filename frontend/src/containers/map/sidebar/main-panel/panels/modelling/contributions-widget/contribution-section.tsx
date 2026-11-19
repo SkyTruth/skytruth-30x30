@@ -91,7 +91,7 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-bold">{title}</h4>
+        <h4 className="text-base font-bold">{title}</h4>
         {tooltip && <TooltipButton side="right" {...tooltip} />}
       </div>
       <StatStatusMessage status={status} />
@@ -115,15 +115,14 @@ type HabitatProtectionProps = {
 };
 
 /**
- * "Habitat Protection" inside a location. Each habitat appears once its request finishes.
- * A line at the bottom states which habitats are still loading, or says when some failed
- * or none gained protection. Shows nothing if the location has none of the habitats
+ * "Habitat Protection" inside a location. Shows once a habitat gains protection,
+ * so a shape that adds no habitat protection never shows the section. Each habitat
+ * appears once its request finishes, and a line at the bottom states which habitats are
+ * still loading, or says when some failed
  */
 const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, status, rows }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
-
-  if (status === 'success' && !rows.length) return null;
 
   const addedRows = rows.filter(
     ({ status, contribution }) => status === 'success' && contribution?.added > 0
@@ -135,9 +134,11 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, 
   const isLoading = loadingNames.length > 0;
   const hasError = rows.some(({ status }) => status === 'error');
 
+  if (!addedRows.length && status !== 'error' && (isLoading || !hasError)) return null;
+
   return (
     <div className={className}>
-      <h4 className="text-sm font-bold">{t('habitat-protection')}</h4>
+      <h4 className="text-base font-bold">{t('habitat-protection')}</h4>
       <StatStatusMessage status={status} />
       {status === 'success' && (
         <>
@@ -156,13 +157,12 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, 
               tooltip={tooltip}
             />
           ))}
-          <p aria-live="polite" className="pt-3 font-mono text-xs empty:hidden">
+          <p aria-live="polite" className="pt-3 text-xs empty:hidden">
             {isLoading &&
-              t('still-checking-habitats', {
+              t('still-calculating-habitats', {
                 habitats: new Intl.ListFormat(locale, { type: 'conjunction' }).format(loadingNames),
               })}
             {!isLoading && hasError && t('habitat-data-error')}
-            {!isLoading && !hasError && !addedRows.length && t('no-habitat-protection-added')}
           </p>
         </>
       )}
