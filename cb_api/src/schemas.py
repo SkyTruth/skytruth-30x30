@@ -99,15 +99,23 @@ class LocationStats(BaseModel):
     total_area: float = Field(description="Area of the drawn shape, in km²")
 
 
-class HabitatLocations(BaseModel):
+class HabitatArea(BaseModel):
     habitat: str
-    locations: list[Location] = Field(
-        description="Every location the drawn shape adds this habitat in; empty when it adds none"
+    added_area: float = Field(
+        description="Area of this habitat in the drawn shape and location that is not yet "
+        "protected, in km²"
+    )
+
+
+class LocationHabitats(BaseModel):
+    code: str
+    habitats: list[HabitatArea] = Field(
+        description="Every habitat the drawn shape adds in this location"
     )
 
 
 class HabitatsStats(BaseModel):
     """Response body for POST /terrestrial-habitats."""
 
-    habitats: list[HabitatLocations]
+    locations: list[LocationHabitats]
     total_area: float = Field(description="Area of the drawn shape, in km²")

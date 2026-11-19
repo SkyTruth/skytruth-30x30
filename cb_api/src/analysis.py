@@ -166,24 +166,23 @@ def serialize_raster_habitats_response(
     data: Sequence[Mapping[str, Any]], classes: Mapping[int, str]
 ) -> dict:
     """Converts the raster habitats query's rows into a Dict
-    {habitats: [{"habitat": <slug>, "locations": [{"code": <location_iso>,
+    {locations: [{"code": <location_iso>, "habitats": [{"habitat": <slug>,
     "added_area": <area>}]}], "total_area": <total_area>} response.
 
-    Every habitat in `classes` is listed, with no locations when the drawn area holds
-    none of it.
+    Each location lists only the habitats the drawn area adds in it.
     """
-    locations = {habitat: [] for habitat in classes.values()}
+    habitats = {}
     for row in data:
         if row["location"] is None:
             continue
-        locations[classes[row["value"]]].append(
-            {"code": row["location"], "added_area": row["portion_area_km2"]}
+        habitats.setdefault(row["location"], []).append(
+            {"habitat": classes[row["value"]], "added_area": row["portion_area_km2"]}
         )
 
     return {
-        "habitats": [
-            {"habitat": habitat, "locations": habitat_locations}
-            for habitat, habitat_locations in locations.items()
+        "locations": [
+            {"code": code, "habitats": location_habitats}
+            for code, location_habitats in habitats.items()
         ],
         "total_area": data[0]["user_area_km2"],
     }
@@ -251,6 +250,7 @@ def get_raster_habitats_stats(
                     user_data_stats
                     LEFT JOIN stats ON true
                 GROUP BY location, value
+                ORDER BY location, value
                 """
         )
         data_response = (

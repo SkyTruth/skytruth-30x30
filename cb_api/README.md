@@ -80,9 +80,9 @@ curl -X POST localhost:8080/terrestrial-habitats \
   -d '{"geometry": {"type": "Polygon", "coordinates": [[[-72.6,7.0],[-72.2,7.0],[-72.2,7.4],[-72.6,7.4],[-72.6,7.0]]]}}'
 ```
 
-The response is shaped like the one for `/coverage`, with `locations` nested per habitat:
-`{"habitats": [{"habitat": "forest", "locations": [...]}, ...], "total_area": ...}`. Every
-habitat is listed, with an empty `locations` when the drawn area adds none of it.
+The response is shaped like the one for `/habitats`, with each location's area broken down by
+habitat: `{"locations": [{"code": "COL", "habitats": [{"habitat": "forest", "added_area": ...},
+...]}, ...], "total_area": ...}`. Each location lists only the habitats the drawn area adds in it.
 
 The habitats come from a ~100 m land-cover raster (`data.terrestrial_habitats_minus_pa`, which
 needs the `postgis_raster` extension). A pixel counts when its centre is inside the drawn area,

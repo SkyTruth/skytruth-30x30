@@ -77,10 +77,11 @@ def stats(engine: Engine, geometry: dict) -> dict:
 
 
 def by_habitat(result: dict) -> dict[str, dict[str, float]]:
-    return {
-        habitat["habitat"]: {area["code"]: area["added_area"] for area in habitat["locations"]}
-        for habitat in result["habitats"]
-    }
+    habitats = {}
+    for location in result["locations"]:
+        for area in location["habitats"]:
+            habitats.setdefault(area["habitat"], {})[location["code"]] = area["added_area"]
+    return habitats
 
 
 def test_each_habitat_gets_its_share_of_the_pixels(raster_habitats: Engine):
@@ -101,12 +102,14 @@ def test_other_and_protected_pixels_are_left_out(raster_habitats: Engine):
     assert reported == pytest.approx(0.8 * result["total_area"], rel=0.01)
 
 
-def test_every_habitat_is_listed_even_when_absent(raster_habitats: Engine):
+def test_each_location_lists_only_its_habitats_in_class_order(raster_habitats: Engine):
     result = stats(raster_habitats, box(0, 0, 1, 1))
 
-    habitats = by_habitat(result)
-    assert list(habitats) == list(TERRESTRIAL_HABITAT_CLASSES.values())
-    assert habitats["desert"] == {}
+    assert result["locations"][0]["code"] == "AAA"
+    assert [area["habitat"] for area in result["locations"][0]["habitats"]] == [
+        "forest",
+        "savanna",
+    ]
 
 
 def test_each_location_is_reported_separately(raster_habitats: Engine):
@@ -124,13 +127,13 @@ def test_only_pixels_centred_inside_the_drawing_count(raster_habitats: Engine):
 
     habitats = by_habitat(result)
     assert habitats["forest"]["AAA"] == pytest.approx(result["total_area"], rel=0.01)
-    assert habitats["savanna"] == {}
+    assert "savanna" not in habitats
 
 
-def test_an_area_touching_no_habitat_lists_every_habitat_empty(raster_habitats: Engine):
+def test_an_area_touching_no_habitat_lists_no_locations(raster_habitats: Engine):
     result = stats(raster_habitats, box(50, 50, 51, 51))
 
-    assert all(habitat["locations"] == [] for habitat in result["habitats"])
+    assert result["locations"] == []
     assert MIN_DEGREE_CELL_AT_50N_KM2 < result["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
 
 

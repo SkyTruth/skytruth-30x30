@@ -15,9 +15,14 @@ STATS = {
 
 # The results the habitats-at-once routes get back
 HABITATS_STATS = {
-    "habitats": [
-        {"habitat": "forest", "locations": [{"code": "ESP", "added_area": 30.0}]},
-        {"habitat": "desert", "locations": []},
+    "locations": [
+        {
+            "code": "ESP",
+            "habitats": [
+                {"habitat": "forest", "added_area": 30.0},
+                {"habitat": "desert", "added_area": 5.0},
+            ],
+        },
     ],
     "total_area": 100.0,
 }
