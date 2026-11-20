@@ -284,6 +284,13 @@
       "percentage": "{percentage}%",
       "new-added-area": "{area} km² of new added area"
     },
+    "chart-contribution": {
+      "added-percentage": "+{percentage}",
+      "previous-percentage": "was {percentage}",
+      "protected-area": "<added>+{addedArea} km²</added> {protectedArea} km² of <total>{totalArea} km² protected</total>",
+      "target": "{percentage}% target",
+      "percentage": "{percentage}%"
+    },
     "tooltip-button": {
       "info": "Info",
       "data-source": "Data source",
