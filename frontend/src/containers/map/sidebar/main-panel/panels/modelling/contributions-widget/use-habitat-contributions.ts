@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 
 import { useLocale } from 'next-intl';
 
-import { MARINE_HABITAT_CHART_COLORS } from '@/constants/habitat-chart-colors';
+import {
+  MARINE_HABITAT_CHART_COLORS,
+  TERRESTRIAL_HABITAT_CHART_COLORS,
+} from '@/constants/habitat-chart-colors';
 import { useModellingStats } from '@/containers/map/content/map/modelling/use-modelling-stat';
 import {
   Baseline,
@@ -17,17 +20,51 @@ import { HabitatStat } from '@/types/generated/strapi.schemas';
 import { StatStatus, toStatus } from './stat-status';
 import useDataInfoTooltips, { DataInfoTooltip } from './use-data-info-tooltips';
 
-// Habitats cb_api can analyze, in the order the panel lists them
-// `strapiSlug` is the habitat's slug in Strapi and in MARINE_HABITAT_CHART_COLORS
-const HABITATS = [
-  { slug: 'climate-resilient-corals', strapiSlug: 'climate-resilient-corals' },
-  { slug: 'other-corals', strapiSlug: 'other-corals' },
-  { slug: 'cold-water-corals', strapiSlug: 'cold-water corals' },
-  { slug: 'mangroves', strapiSlug: 'mangroves' },
-  { slug: 'seagrasses', strapiSlug: 'seagrasses' },
-  { slug: 'saltmarshes', strapiSlug: 'saltmarshes' },
-  { slug: 'seamounts', strapiSlug: 'seamounts' },
-];
+export type HabitatEnvironment = 'marine' | 'terrestrial';
+
+type HabitatConfig = {
+  // The habitat's slug in cb_api's response
+  slug: string;
+  // The habitat's slug in Strapi and in the habitat chart colors
+  strapiSlug: string;
+  // The `habitat` sent to cb_api's /habitats to get this habitat
+  request: string;
+};
+
+// Habitats that cb_api can analyze on each tab, in the order the panel lists them
+const HABITATS: Record<HabitatEnvironment, HabitatConfig[]> = {
+  marine: [
+    { slug: 'climate-resilient-corals', strapiSlug: 'climate-resilient-corals' },
+    { slug: 'other-corals', strapiSlug: 'other-corals' },
+    { slug: 'cold-water-corals', strapiSlug: 'cold-water corals' },
+    { slug: 'mangroves', strapiSlug: 'mangroves' },
+    { slug: 'seagrasses', strapiSlug: 'seagrasses' },
+    { slug: 'saltmarshes', strapiSlug: 'saltmarshes' },
+    { slug: 'seamounts', strapiSlug: 'seamounts' },
+  ].map((habitat) => ({ ...habitat, request: habitat.slug })),
+  terrestrial: Object.keys(TERRESTRIAL_HABITAT_CHART_COLORS).map((slug) => ({
+    slug,
+    strapiSlug: slug,
+    request: 'terrestrial-habitats',
+  })),
+};
+
+// The requests each tab sends to cb_api's /habitats, one per distinct `request`
+const toRequests = (habitats: HabitatConfig[]) =>
+  [...new Set(habitats.map(({ request }) => request))].map((habitat) => ({ habitat }));
+
+const HABITAT_REQUESTS: Record<HabitatEnvironment, { habitat: string }[]> = {
+  marine: toRequests(HABITATS.marine),
+  terrestrial: toRequests(HABITATS.terrestrial),
+};
+
+const HABITAT_COLORS: Record<HabitatEnvironment, Record<string, string>> = {
+  marine: MARINE_HABITAT_CHART_COLORS,
+  terrestrial: TERRESTRIAL_HABITAT_CHART_COLORS,
+};
+
+// Terrestrial habitats come from one source, so they share a tooltip at the top
+const TERRESTRIAL_TOOLTIP_SLUG = 'habitat-widget-terrestrial';
 
 // The CMS's maximum page size, so no row is cut off when locations have several update years
 const ALL_ROWS = 100_000;
@@ -39,32 +76,31 @@ export type HabitatContribution = {
   color: string;
   status: StatStatus;
   contribution?: Contribution;
-  // The habitat's info tooltip, from the same entry as in the Progress Tracker
+  // Marine only; each marine habitat lists a different source
   tooltip?: DataInfoTooltip;
 };
 
 /**
- * "Habitat Protection" stats for the Conservation Builder panel (marine only), keyed by
- * location code, with `GLOB` for the Global section. Lists every habitat found in the
- * location, with the state of its request
+ * "Habitat Protection" stats for the Conservation Builder panel, keyed by location code,
+ * with `GLOB` for the Global section. Lists every habitat found in the location, with the
+ * state of its request
  *
  * @param codes locations listed in the panel
  * @param seaCodes IHO seas, left out of the Global sum because they overlap national waters
- * @param enabled false on the terrestrial tab
+ * @param environment the panel's tab
  */
 const useHabitatContributions = (
   codes: string[],
   seaCodes: ReadonlySet<string>,
-  enabled: boolean
+  environment: HabitatEnvironment
 ) => {
   const locale = useLocale();
+  const habitats = HABITATS[environment];
+  const requests = HABITAT_REQUESTS[environment];
+  const strapiSlugs = useMemo(() => habitats.map(({ strapiSlug }) => strapiSlug), [habitats]);
 
-  // Added habitat area per location, one request per habitat
-  const analyses = useModellingStats(
-    'habitats',
-    HABITATS.map(({ slug }) => ({ habitat: slug })),
-    { enabled }
-  );
+  // Added habitat area per location and habitat, in the order of `requests`
+  const analyses = useModellingStats('habitats', requests);
 
   // Existing protected habitat area and habitat extent per location
   const stats = useGetHabitatStats<HabitatStat[]>(
@@ -77,12 +113,12 @@ const useHabitatContributions = (
         },
         environment: {
           slug: {
-            $eq: 'marine',
+            $eq: environment,
           },
         },
         habitat: {
           slug: {
-            $in: HABITATS.map(({ strapiSlug }) => strapiSlug),
+            $in: strapiSlugs,
           },
         },
       },
@@ -102,14 +138,14 @@ const useHabitatContributions = (
     },
     {
       query: {
-        enabled: enabled && codes.length > 0,
+        enabled: codes.length > 0,
         select: ({ data }) => data ?? [],
         refetchOnWindowFocus: false,
       },
     }
   );
 
-  // Names of the panel's habitats in the current language
+  // Names of the tab's habitats in the current language
   const { data: habitatNames } = useGetHabitats<Record<string, string>>(
     {
       locale,
@@ -117,22 +153,19 @@ const useHabitatContributions = (
       fields: ['slug', 'name'],
       filters: {
         slug: {
-          $in: HABITATS.map(({ strapiSlug }) => strapiSlug),
+          $in: strapiSlugs,
         },
       },
     },
     {
       query: {
-        enabled,
         select: ({ data }) => Object.fromEntries(data.map(({ slug, name }) => [slug, name])),
       },
     }
   );
 
-  // Info tooltip per habitat, from the entries the Progress Tracker's habitat chart uses
   const tooltips = useDataInfoTooltips(
-    HABITATS.map(({ strapiSlug }) => strapiSlug),
-    { enabled }
+    environment === 'marine' ? strapiSlugs : [TERRESTRIAL_TOOLTIP_SLUG]
   );
 
   const habitatsByCode = useMemo(() => {
@@ -146,8 +179,8 @@ const useHabitatContributions = (
       if (!latestStats.has(key)) latestStats.set(key, stat);
     });
 
-    HABITATS.forEach(({ slug, strapiSlug }, index) => {
-      const analysis = analyses[index];
+    habitats.forEach(({ slug, strapiSlug, request }) => {
+      const analysis = analyses[requests.findIndex(({ habitat }) => habitat === request)];
 
       // Locations where the habitat exists
       const baselines = [...codes, GLOBAL_CODE].flatMap((code): Baseline[] => {
@@ -156,8 +189,9 @@ const useHabitatContributions = (
           ? [{ code, existing: Number(stat.protected_area), total: Number(stat.total_area) }]
           : [];
       });
+      // A habitat missing from the response gains nothing in any location
       const contributions = analysis.data
-        ? buildContributions(baselines, analysis.data.locations_area, seaCodes)
+        ? buildContributions(baselines, analysis.data[slug]?.locations_area ?? [], seaCodes)
         : undefined;
 
       baselines.forEach(({ code }) => {
@@ -168,7 +202,7 @@ const useHabitatContributions = (
           {
             slug,
             name: habitatNames?.[strapiSlug] ?? strapiSlug,
-            color: MARINE_HABITAT_CHART_COLORS[strapiSlug],
+            color: HABITAT_COLORS[environment][strapiSlug],
             status: toStatus(analysis),
             contribution,
             tooltip: tooltips[strapiSlug],
@@ -178,9 +212,24 @@ const useHabitatContributions = (
     });
 
     return rowsByCode;
-  }, [stats.data, analyses, codes, seaCodes, habitatNames, tooltips]);
+  }, [
+    stats.data,
+    habitats,
+    requests,
+    analyses,
+    codes,
+    seaCodes,
+    environment,
+    habitatNames,
+    tooltips,
+  ]);
 
-  return { habitatsByCode, status: toStatus(stats) };
+  return {
+    habitatsByCode,
+    status: toStatus(stats),
+    // Terrestrial only; tooltip on the heading instead of for each source
+    tooltip: tooltips[TERRESTRIAL_TOOLTIP_SLUG],
+  };
 };
 
 export default useHabitatContributions;

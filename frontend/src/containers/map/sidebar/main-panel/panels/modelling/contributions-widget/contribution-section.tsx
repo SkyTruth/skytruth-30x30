@@ -112,6 +112,7 @@ type HabitatProtectionProps = {
   className?: string;
   status: StatStatus;
   rows: HabitatContribution[];
+  tooltip?: ComponentProps<typeof TooltipButton>;
 };
 
 /**
@@ -120,7 +121,12 @@ type HabitatProtectionProps = {
  * appears once its request finishes, and a line at the bottom states which habitats are
  * still loading, or says when some failed
  */
-const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, status, rows }) => {
+const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
+  className,
+  status,
+  rows,
+  tooltip,
+}) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
 
@@ -138,7 +144,10 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({ className, 
 
   return (
     <div className={className}>
-      <h4 className="text-base font-bold">{t('habitat-protection')}</h4>
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-base font-bold">{t('habitat-protection')}</h4>
+        {tooltip && <TooltipButton side="right" {...tooltip} />}
+      </div>
       <StatStatusMessage status={status} />
       {status === 'success' && (
         <>
@@ -181,7 +190,7 @@ type ContributionItemProps = {
   stats: SectionStats;
   // "Fully/Highly Protected" stat; unset on the terrestrial tab
   fhp?: { status: StatStatus; contribution?: Contribution; tooltip?: StatBlockProps['tooltip'] };
-  // "Habitat Protection" rows; unset on the terrestrial tab
+  // "Habitat Protection" rows
   habitats?: Omit<HabitatProtectionProps, 'className'>;
 };
 

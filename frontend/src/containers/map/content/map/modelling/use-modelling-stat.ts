@@ -1,13 +1,17 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import type { Feature } from 'geojson';
 
-import { fetchModellingStat, ModellingStatEndpoint } from '@/lib/utils/fetch-modelling';
+import {
+  fetchModellingStat,
+  ModellingStatData,
+  ModellingStatEndpoint,
+} from '@/lib/utils/fetch-modelling';
 
 import useModellingFeature from './use-modelling-feature';
 
 // Query for one cb_api stat of the drawn shape, cached per endpoint, params and shape
-const getModellingStatQuery = (
-  endpoint: ModellingStatEndpoint,
+const getModellingStatQuery = <E extends ModellingStatEndpoint>(
+  endpoint: E,
   params: Record<string, string>,
   feature: Feature | null,
   layerId: string,
@@ -16,7 +20,7 @@ const getModellingStatQuery = (
   queryKey: ['modelling-stat', endpoint, params, layerId],
   queryFn: () => fetchModellingStat(endpoint, feature, params),
   enabled: enabled && Boolean(feature),
-  select: ({ data }: Awaited<ReturnType<typeof fetchModellingStat>>) => data,
+  select: ({ data }: { data: ModellingStatData<E> }) => data,
   refetchOnWindowFocus: false,
   staleTime: Infinity,
   retry: false,
@@ -26,8 +30,8 @@ const getModellingStatQuery = (
  * Added area per location for one cb_api stat (e.g. fully/highly protected) of the drawn
  * shape. Runs alongside the coverage request and loads and fails on its own
  */
-const useModellingStat = (
-  endpoint: ModellingStatEndpoint,
+const useModellingStat = <E extends ModellingStatEndpoint>(
+  endpoint: E,
   params: Record<string, string>,
   { enabled = true }: { enabled?: boolean } = {}
 ) => {
@@ -48,10 +52,10 @@ export const useFhpAnalysis = (enabled: boolean) =>
 
 /**
  * The same as `useModellingStat` for several requests to one endpoint in parallel (e.g. one
- * per habitat), each loading and failing on its own. Results are in the order of `paramsList`
+ * per marine habitat), each loading and failing on its own. Results are in the order of `paramsList`
  */
-export const useModellingStats = (
-  endpoint: ModellingStatEndpoint,
+export const useModellingStats = <E extends ModellingStatEndpoint>(
+  endpoint: E,
   paramsList: Record<string, string>[],
   { enabled = true }: { enabled?: boolean } = {}
 ) => {
