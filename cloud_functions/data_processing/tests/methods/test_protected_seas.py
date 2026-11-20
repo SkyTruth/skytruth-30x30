@@ -310,19 +310,26 @@ def test_upsert_protected_seas_sites_replaces_changes_and_removes_retired_sites(
             "site_name": ["New name"],
             "country": ["B"],
             "lfp": [2],
+            "wdpa_id": ["12345"],
+            "type": ["MPA"],
+            "category_id": [9],
         },
         geometry=[Point(10, 0)],
         crs="EPSG:4326",
     )
 
     result = protected_seas.upsert_protected_seas_sites(local, changed, removed_ids=[3])
-    by_id = result.assign(_id=result["ps_id"].astype(str)).set_index("_id")
+    by_id = result.set_index("ps_id")
 
     assert set(by_id.index) == {"1", "2"}
     assert by_id.loc["1", "site_name"] == "Keep"
+    assert pd.isna(by_id.loc["1", "wdpa_id"])
     assert by_id.loc["2", "site_name"] == "New name"
     assert by_id.loc["2", "fishing_protection_level"] == "less"
+    assert by_id.loc["2", "wdpa_id"] == "12345"
+    assert by_id.loc["2", "type"] == "MPA"
     assert by_id.loc["2", "geometry"].equals(Point(10, 0))
+    assert "category_id" not in result.columns
     assert result.crs == local.crs
 
 
@@ -396,3 +403,38 @@ def test_update_protected_seas_data_archives_then_updates_current(monkeypatch):
     assert set(calls[0][3]["last_updated"]) == {"2026-02-03"}
     assert calls[0][1:3] == ("bucket", "archive.parquet")
     assert calls[1][1:4] == ("bucket", "archive.parquet", "current.parquet")
+
+
+def test_update_protected_seas_data_writes_only_known_columns(monkeypatch):
+    """Drop unknown columns and write every known one, even if empty."""
+    current = gpd.GeoDataFrame(
+        {
+            "ps_id": ["1"],
+            "lfp": [5],
+            "fishing_protection_level": ["highly"],
+            "last_updated": ["2026-01-01"],
+            "stray": ["x"],
+        },
+        geometry=[Point(0, 0)],
+        crs="EPSG:4326",
+    )
+    changed = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
+    changed.attrs["failures"] = []
+    monkeypatch.setattr(protected_seas, "read_parquet_from_gcs", lambda *_, **__: current.copy())
+    monkeypatch.setattr(
+        protected_seas, "fetch_updated_site_details", lambda _: (changed, [], pd.DataFrame())
+    )
+    uploads = []
+    monkeypatch.setattr(
+        protected_seas, "upload_gdf", lambda bucket, gdf, filename, **_: uploads.append(gdf)
+    )
+    monkeypatch.setattr(protected_seas, "duplicate_blob", lambda *_, **__: None)
+
+    protected_seas.update_protected_seas_data(verbose=False)
+
+    assert list(uploads[0].columns) == [
+        *protected_seas.SITE_ATTRIBUTE_COLUMNS,
+        "geometry",
+        "fishing_protection_level",
+        "last_updated",
+    ]

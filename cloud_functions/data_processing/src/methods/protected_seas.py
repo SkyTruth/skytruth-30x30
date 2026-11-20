@@ -27,9 +27,28 @@ logger = Logger()
 # lfp=0 (unprotected) has no bucket and maps to NaN.
 FISHING_PROTECTION_MAPPING = {1: "less", 2: "less", 3: "moderately", 4: "highly", 5: "highly"}
 
+# Site attributes kept alongside geometry, fishing_protection_level, and last_updated
+# Only ps_id and lfp are required, the others are kept when the source has them
+SITE_ATTRIBUTE_COLUMNS = [
+    "ps_id",
+    "site_name",
+    "country",
+    "lfp",
+    "wdpa_id",
+    "type",
+    "last_boundary_update",
+]
+
 
 def force_2d(geom):
     return transform(lambda x, y, z=None: (x, y), geom)
+
+
+def _normalize_site_attributes(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize site attribute types in place and return `df`"""
+    df["ps_id"] = df["ps_id"].astype(str)
+    df["lfp"] = df["lfp"].astype(int)
+    return df
 
 
 def seed_protected_seas_sites(
@@ -40,29 +59,26 @@ def seed_protected_seas_sites(
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    """Create the initial Protected Seas sites dataset from local Navigator exports.
+    """Create the Protected Seas sites dataset from local Navigator exports.
 
-    This one-time bootstrap reads every ``*LFP[0-5]*.json`` file in ``json_dir``,
-    combines the site geometries, normalizes the fields used by the incremental
-    update workflow, and maps each numeric LFP value to a fishing-protection
-    bucket. The export date encoded as ``MMDDYY`` in the first filename becomes
-    the dataset's ``last_updated`` value.
+    Combines every `*LFP[0-5]*.json` file in `json_dir`, keeps the
+    `SITE_ATTRIBUTE_COLUMNS` the export has and maps LFP to a fishing protection
+    level. The `MMDDYY` date in the first filename becomes `last_updated`, so the
+    next update fetches changes since the export.
 
-    The resulting GeoDataFrame is uploaded to ``archive_file_name`` in Cloud
-    Storage, then that object is copied to ``sites_file_name`` to establish the
-    current dataset used by :func:`update_protected_seas_data`.
+    Uploads a dated archive, then copies it to `sites_file_name`
 
     Args:
-        json_dir: Local directory containing the Navigator LFP GeoJSON exports.
-        sites_file_name: Cloud Storage object name for the current dataset.
-        archive_file_name: Cloud Storage object name for the dated seed snapshot.
-        bucket: Cloud Storage bucket containing the datasets.
-        project: Google Cloud project used for storage operations.
-        verbose: Whether storage helpers should emit progress messages.
+        json_dir: Local directory with the Navigator LFP GeoJSON exports
+        sites_file_name: Cloud Storage object for the current dataset
+        archive_file_name: Cloud Storage object for the dated snapshot
+        bucket: Cloud Storage bucket for the datasets
+        project: Google Cloud project for storage operations
+        verbose: Whether storage helpers log progress
 
     Raises:
-        FileNotFoundError: If ``json_dir`` contains no matching LFP export files.
-        ValueError: If the date cannot be parsed from the first export filename.
+        FileNotFoundError: If `json_dir` has no LFP export files
+        ValueError: If the first filename has no `MMDDYY` date
     """
     site_files = sorted(glob.glob(f"{json_dir}/*LFP[0-5]*.json"))
     if not site_files:
@@ -77,15 +93,14 @@ def seed_protected_seas_sites(
     gdf = gpd.GeoDataFrame(
         pd.concat(parts, ignore_index=True), geometry="geometry", crs=parts[0].crs
     )
-    gdf = gdf.rename(columns={"SITE_ID": "ps_id"})[
-        ["ps_id", "site_name", "country", "lfp", "geometry"]
-    ]
-    gdf["lfp"] = gdf["lfp"].astype(int)
+    gdf = gdf.rename(columns={"SITE_ID": "ps_id"})
+    columns = [c for c in SITE_ATTRIBUTE_COLUMNS if c in gdf.columns]
+    gdf = _normalize_site_attributes(gdf[[*columns, "geometry"]].copy())
     gdf["fishing_protection_level"] = gdf["lfp"].map(FISHING_PROTECTION_MAPPING)
 
     gdf["last_updated"] = last_updated
 
-    # Save the dated archive snapshot, then duplicate it to the current file.
+    # Save the dated archive, then copy it to the current file
     upload_gdf(bucket, gdf, archive_file_name, project_id=project, verbose=verbose)
     duplicate_blob(bucket, archive_file_name, sites_file_name, project_id=project, verbose=verbose)
 
@@ -261,9 +276,9 @@ def upsert_protected_seas_sites(
         return local_gdf
 
     if not changed_gdf.empty:
-        changed = changed_gdf[["ps_id", "site_name", "country", "lfp", "geometry"]].copy()
-        changed["lfp"] = changed["lfp"].astype(int)
-        changed_ids = set(changed[id_col].astype(str))
+        columns = [c for c in SITE_ATTRIBUTE_COLUMNS if c in changed_gdf.columns]
+        changed = _normalize_site_attributes(changed_gdf[[*columns, "geometry"]].copy())
+        changed_ids = set(changed[id_col])
     else:
         changed = None
         changed_ids = set()
@@ -307,6 +322,11 @@ def update_protected_seas_data(
     # Advance the baseline so the next run fetches changes since this run.
     today = datetime.date.today().isoformat()
     updated["last_updated"] = today
+
+    # Write only the known columns
+    updated = updated.reindex(
+        columns=[*SITE_ATTRIBUTE_COLUMNS, "geometry", "fishing_protection_level", "last_updated"]
+    )
 
     # Save the dated archive snapshot, then duplicate it to the current file.
     if verbose:
