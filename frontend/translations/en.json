@@ -298,6 +298,8 @@
       "new-added-area": "{area} km² of new added area"
     },
     "chart-contribution": {
+      "added": "Added",
+      "total": "Total",
       "added-percentage": "+{percentage}",
       "previous-percentage": "was {percentage}",
       "protected-area": "{protectedArea} km² (<added>+{addedArea} km²</added>) of {totalArea} km² protected",

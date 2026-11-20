@@ -4,7 +4,9 @@ import { ChevronDown } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import ContributionChart from '@/components/charts/contribution-chart';
-import HabitatContributionChart from '@/components/charts/habitat-contribution-chart';
+import HabitatContributionChart, {
+  HabitatContributionList,
+} from '@/components/charts/habitat-contribution-chart';
 import TooltipButton from '@/components/tooltip-button';
 import {
   AccordionContent,
@@ -170,16 +172,20 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
               <LegendItem className="bg-blue-700">{t('newly-protected-habitat')}</LegendItem>
             </ul>
           )}
-          {addedRows.map(({ slug, name, color, contribution, tooltip }) => (
-            <HabitatContributionChart
-              key={slug}
-              className="pt-4"
-              title={name}
-              color={color}
-              contribution={contribution}
-              tooltip={tooltip}
-            />
-          ))}
+          {addedRows.length > 0 && (
+            <HabitatContributionList className="pt-3">
+              {addedRows.map(({ slug, name, color, contribution, tooltip }, index) => (
+                <HabitatContributionChart
+                  key={slug}
+                  className={index === 0 ? 'pt-1' : 'pt-4'}
+                  title={name}
+                  color={color}
+                  contribution={contribution}
+                  tooltip={tooltip}
+                />
+              ))}
+            </HabitatContributionList>
+          )}
           <p aria-live="polite" className="pt-3 text-xs empty:hidden">
             {isLoading &&
               t('still-calculating-habitats', {
@@ -196,6 +202,7 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
 HabitatProtection.messages = [
   'containers.map-sidebar-main-panel',
   ...StatStatusMessage.messages,
+  ...HabitatContributionList.messages,
   ...HabitatContributionChart.messages,
 ];
 
