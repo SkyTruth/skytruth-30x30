@@ -13,7 +13,7 @@ STATS = {
     "total_area": 100.0,
 }
 
-# The results the habitats-at-once routes get back
+# The results the raster habitats query gets back
 HABITATS_STATS = {
     "locations": [
         {
@@ -37,7 +37,7 @@ class RouteTestClient:
 
     The analysis functions are replaced with fakes that return STATS or
     HABITATS_STATS, so the tests don't need a database. A call is recorded as
-    (engine, geometry, table), plus the class map for raster habitats.
+    (engine, geometry, table), or (engine, geometry) for the raster habitats.
     """
 
     client: TestClient

@@ -37,9 +37,12 @@ class Habitat(StrEnum):
     COLD_WATER_CORALS = "cold-water-corals"
     CLIMATE_RESILIENT_CORALS = "climate-resilient-corals"
     OTHER_CORALS = "other-corals"
+    JUNG_HABITATS = "jung-habitats"
 
     @property
     def table(self) -> AnalysisTable:
+        """The vector table of a marine habitat. jung-habitats is read from the terrestrial
+        habitats raster instead, and has none."""
         return AnalysisTable[self.name]
 
 
@@ -72,17 +75,11 @@ class ProtectionLevelRequest(AnalysisRequest):
 class HabitatRequest(GeometryRequest):
     """Request body for POST /habitats.
 
-    No environment: each habitat has exactly one table.
+    No environment: each marine habitat has exactly one table, and jung-habitats reports
+    every terrestrial habitat at once.
     """
 
     habitat: Habitat
-
-
-class TerrestrialHabitatsRequest(GeometryRequest):
-    """Request body for POST /terrestrial-habitats.
-
-    No habitat: every terrestrial habitat is reported at once.
-    """
 
 
 class Location(BaseModel):
@@ -93,7 +90,7 @@ class Location(BaseModel):
 
 
 class LocationStats(BaseModel):
-    """Response body for POST /coverage, POST /protection-level and POST /habitats."""
+    """Response body for POST /coverage and POST /protection-level."""
 
     locations: list[Location]
     total_area: float = Field(description="Area of the drawn shape, in km²")
@@ -115,7 +112,7 @@ class LocationHabitats(BaseModel):
 
 
 class HabitatsStats(BaseModel):
-    """Response body for POST /terrestrial-habitats."""
+    """Response body for POST /habitats."""
 
     locations: list[LocationHabitats]
     total_area: float = Field(description="Area of the drawn shape, in km²")

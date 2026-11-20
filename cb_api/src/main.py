@@ -13,11 +13,11 @@ from src.errors import BadRequestError, register_error_handlers
 from src.schemas import (
     AnalysisRequest,
     Environment,
+    Habitat,
     HabitatRequest,
     HabitatsStats,
     LocationStats,
     ProtectionLevelRequest,
-    TerrestrialHabitatsRequest,
 )
 from src.services.raster import get_raster_habitats_stats
 from src.services.vector import get_locations_stats
@@ -82,17 +82,22 @@ def protection_level(body: ProtectionLevelRequest, engine: PooledEngine) -> dict
     return get_locations_stats(engine, body.geometry, body.level.table)
 
 
-@app.post("/habitats", response_model=LocationStats)
+@app.post("/habitats", response_model=HabitatsStats)
 def habitats(body: HabitatRequest, engine: PooledEngine) -> dict:
-    """How much of the given area's `habitat` will have added protection,
-    broken down by location.
+    """How much of the given area's `habitat` will have added protection, broken down by
+    location and habitat. `jung-habitats` reports every terrestrial habitat at once.
     """
-    return get_locations_stats(engine, body.geometry, body.habitat.table)
+    if body.habitat is Habitat.JUNG_HABITATS:
+        return get_raster_habitats_stats(engine, body.geometry)
 
-
-@app.post("/terrestrial-habitats", response_model=HabitatsStats)
-def terrestrial_habitats(body: TerrestrialHabitatsRequest, engine: PooledEngine) -> dict:
-    """How much of the given area's terrestrial habitats will have added protection,
-    broken down by habitat and location.
-    """
-    return get_raster_habitats_stats(engine, body.geometry)
+    stats = get_locations_stats(engine, body.geometry, body.habitat.table)
+    return {
+        "locations": [
+            {
+                "code": location["code"],
+                "habitats": [{"habitat": body.habitat.value, "added_area": location["added_area"]}],
+            }
+            for location in stats["locations"]
+        ],
+        "total_area": stats["total_area"],
+    }

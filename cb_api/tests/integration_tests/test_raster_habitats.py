@@ -134,7 +134,9 @@ def test_an_area_touching_no_habitat_lists_no_locations(raster_habitats: Engine)
 def test_the_route_reads_the_raster_table(raster_habitats: Engine):
     app.dependency_overrides[get_engine] = lambda: raster_habitats
     try:
-        response = TestClient(app).post("/terrestrial-habitats", json={"geometry": box(0, 0, 1, 1)})
+        response = TestClient(app).post(
+            "/habitats", json={"geometry": box(0, 0, 1, 1), "habitat": "jung-habitats"}
+        )
     finally:
         app.dependency_overrides.clear()
 
