@@ -1,10 +1,10 @@
-"""The spatial query in src/analysis.py, against a PostGIS database."""
+"""The vector query in src/services/vector.py, against a PostGIS database."""
 
 import pytest
 from sqlalchemy.engine import Engine
 
-from src.analysis import AnalysisTable, get_locations_stats
 from src.errors import BadRequestError
+from src.services.vector import AnalysisTable, get_locations_stats
 from tests.integration_tests.helpers import (
     MAX_DEGREE_CELL_AT_50N_KM2,
     MAX_DEGREE_CELL_KM2,
@@ -30,7 +30,7 @@ def test_rows_sharing_a_location_are_summed_by_the_query(analysis_tables: Engine
 
     areas = by_code(result)
     assert sorted(areas) == ["AAA", "BBB"]
-    assert areas["AAA"] == 2 * areas["BBB"]
+    assert areas["AAA"] == pytest.approx(2 * areas["BBB"])
 
 
 def test_an_area_the_table_covers_completely_is_all_added_area(analysis_tables: Engine):

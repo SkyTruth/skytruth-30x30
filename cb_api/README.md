@@ -11,7 +11,7 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
 | `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
 | `POST` | `/protection-level` | The same, for protection at a given level |
-| `POST` | `/habitats` | The same, for one habitat |
+| `POST` | `/habitats` | The same, for one marine habitat or every terrestrial habitat, by location and habitat |
 
 ### `POST /coverage`
 
@@ -34,7 +34,7 @@ curl -X POST localhost:8080/coverage \
 }
 ```
 
-Areas are square kilometers, computed in a Mollweide equal-area projection and rounded. `total_area` is the drawn area. `added_area` is the part of it in each location that is not yet protected, which a protected area drawn there would add.
+Areas are square kilometers, computed in a Mollweide equal-area projection. `total_area` is the drawn area. `added_area` is the part of it in each location that is not yet protected, which a protected area drawn there would add.
 
 An area that intersects nothing (e.g., a marine request over land) returns an empty `locations`, and `total_area` is still the drawn area.
 
@@ -55,16 +55,38 @@ The response is shaped like the one for `/coverage`.
 
 ### `POST /habitats`
 
-The same as `/coverage`, but for one habitat: `added_area` is the area of that habitat not yet protected, which the drawn polygon would add. Takes `geometry` and a **required**
-`habitat` (one of `mangroves`, `saltmarshes`, `seagrasses`, `seamounts`, `cold-water-corals`,
-`climate-resilient-corals`, `other-corals`). There is no default, and no `environment`:
-each habitat has exactly one table.
+The same as `/coverage`, but for habitats: `added_area` is the area of a habitat not yet
+protected, which the drawn polygon would add. Takes `geometry` and a **required** `habitat`,
+either one marine habitat (`mangroves`, `saltmarshes`, `seagrasses`, `seamounts`,
+`cold-water-corals`, `climate-resilient-corals`, `other-corals`) or `terrestrial-habitats` for
+every terrestrial habitat at once (`forest`, `savanna`, `shrubland`, `grassland`,
+`wetlands-open-waters`, `rocky-mountains`, `desert`, `artificial`). There is no default, and
+no `environment`.
 
 ```bash
 curl -X POST localhost:8080/habitats \
   -H 'Content-Type: application/json' \
   -d '{"habitat": "seagrasses", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
+
+curl -X POST localhost:8080/habitats \
+  -H 'Content-Type: application/json' \
+  -d '{"habitat": "terrestrial-habitats", "geometry": {"type": "Polygon", "coordinates": [[[-72.6,7.0],[-72.2,7.0],[-72.2,7.4],[-72.6,7.4],[-72.6,7.0]]]}}'
 ```
+
+The response is shaped like the one for `/coverage`, with each location's area broken down
+by habitat:
+
+```json
+{"locations": [{"code": "COL", "habitats": [{"habitat": "forest", "added_area": 8.1}]}], "total_area": 20.1}
+```
+
+A marine habitat gives one entry per location. `terrestrial-habitats` lists only the habitats
+the drawn area adds in each location.
+
+The terrestrial habitats come from the Jung et al. (2020) ~100 m habitat raster
+(`data.terrestrial_habitats_minus_pa`, which needs the `postgis_raster` extension). A pixel
+counts when its centre is inside the drawn area, so small drawings are approximate. The
+"Other" class is left out, as it is in the progress tracker.
 
 ## Configuration
 
@@ -124,6 +146,8 @@ poetry run ruff check --fix
 | `src/main.py` | App, lifespan, CORS, routes |
 | `src/config.py` | Settings |
 | `src/db.py` | Engine and connection pool |
-| `src/analysis.py` | The spatial query and its result shaping |
+| `src/services/geometry.py` | Parsing and validating the drawn area, shared by the queries |
+| `src/services/vector.py` | The vector table queries and their result shaping |
+| `src/services/raster.py` | The raster habitats query and its result shaping |
 | `src/schemas.py` | Request and response models |
 | `src/errors.py` | Exception handlers |

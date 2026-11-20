@@ -2,7 +2,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.analysis import AnalysisTable
+from src.services.vector import AnalysisTable
 
 
 class Environment(StrEnum):
@@ -37,9 +37,12 @@ class Habitat(StrEnum):
     COLD_WATER_CORALS = "cold-water-corals"
     CLIMATE_RESILIENT_CORALS = "climate-resilient-corals"
     OTHER_CORALS = "other-corals"
+    TERRESTRIAL_HABITATS = "terrestrial-habitats"
 
     @property
     def table(self) -> AnalysisTable:
+        """The vector table of a marine habitat. terrestrial-habitats is read from the
+        terrestrial habitats raster instead, and has none."""
         return AnalysisTable[self.name]
 
 
@@ -72,7 +75,8 @@ class ProtectionLevelRequest(AnalysisRequest):
 class HabitatRequest(GeometryRequest):
     """Request body for POST /habitats.
 
-    No environment: each habitat has exactly one table.
+    No environment: each marine habitat has exactly one table, and terrestrial-habitats
+    reports every terrestrial habitat at once.
     """
 
     habitat: Habitat
@@ -86,7 +90,29 @@ class Location(BaseModel):
 
 
 class LocationStats(BaseModel):
-    """Response body for POST /coverage, POST /protection-level and POST /habitats."""
+    """Response body for POST /coverage and POST /protection-level."""
 
     locations: list[Location]
+    total_area: float = Field(description="Area of the drawn shape, in km²")
+
+
+class HabitatArea(BaseModel):
+    habitat: str
+    added_area: float = Field(
+        description="Area of this habitat in the drawn shape and location that is not yet "
+        "protected, in km²"
+    )
+
+
+class LocationHabitats(BaseModel):
+    code: str
+    habitats: list[HabitatArea] = Field(
+        description="Every habitat the drawn shape adds in this location"
+    )
+
+
+class HabitatsStats(BaseModel):
+    """Response body for POST /habitats."""
+
+    locations: list[LocationHabitats]
     total_area: float = Field(description="Area of the drawn shape, in km²")
