@@ -95,6 +95,7 @@
       "habitat-protection": "Habitat Protection",
       "newly-protected-habitat": "Newly protected habitat",
       "still-calculating-habitats": "Still calculating {habitats}...",
+      "calculating-habitat-protection": "Calculating habitat protection...",
       "habitat-data-error": "Some habitat data couldn't load.",
       "level-of-fishing-protection": "Level of Fishing Protection",
       "summary": "Summary",

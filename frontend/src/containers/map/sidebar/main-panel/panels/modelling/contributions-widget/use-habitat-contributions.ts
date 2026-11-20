@@ -229,6 +229,8 @@ const useHabitatContributions = (
     status: toStatus(stats),
     // Terrestrial only; tooltip on the heading instead of for each source
     tooltip: tooltips[TERRESTRIAL_TOOLTIP_SLUG],
+    // One request returns every habitat (terrestrial)
+    loadsAtOnce: requests.length === 1,
   };
 };
 

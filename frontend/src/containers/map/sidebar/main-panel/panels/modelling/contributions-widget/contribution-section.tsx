@@ -113,19 +113,27 @@ type HabitatProtectionProps = {
   status: StatStatus;
   rows: HabitatContribution[];
   tooltip?: ComponentProps<typeof TooltipButton>;
+  // If true, shows only "Calculating habitat protection..." instead of specific habitats;
+  // used for terrestrial habitats which come from one request and load at once
+  loadsAtOnce?: boolean;
 };
 
 /**
  * "Habitat Protection" inside a location. Shows once a habitat gains protection,
- * so a shape that adds no habitat protection never shows the section. Each habitat
- * appears once its request finishes, and a line at the bottom states which habitats are
- * still loading, or says when some failed
+ * so a shape that adds no habitat protection never shows the section.
+ * 
+ * Marine: Each habitat appears once its request finishes, and a line at the bottom
+ * states which habitats are still loading, or says when some failed.
+ * 
+ * Terrestrial: Habitats load at once and show only a "Calculating habitat protection..."
+ * line until their results arrive.
  */
 const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
   className,
   status,
   rows,
   tooltip,
+  loadsAtOnce = false,
 }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const locale = useLocale();
@@ -140,7 +148,13 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
   const isLoading = loadingNames.length > 0;
   const hasError = rows.some(({ status }) => status === 'error');
 
-  if (!addedRows.length && status !== 'error' && (isLoading || !hasError)) return null;
+  if (!addedRows.length && status !== 'error' && (isLoading || !hasError)) {
+    return loadsAtOnce && (isLoading || status === 'loading') ? (
+      <p aria-live="polite" className={cn('text-xs', className)}>
+        {t('calculating-habitat-protection')}
+      </p>
+    ) : null;
+  }
 
   return (
     <div className={className}>
