@@ -1,11 +1,14 @@
 import os
 
 import psycopg
+import pyarrow.parquet as pq
+from google.cloud import storage
 from psycopg.rows import dict_row
 from shapely.geometry import MultiPolygon, Polygon
 from sqlalchemy import create_engine, text
+from tqdm.auto import tqdm
 
-from src.core.params import BUCKET
+from src.core.params import BUCKET, PROJECT
 from src.utils.gcp import read_parquet_from_gcs
 from src.utils.logger import Logger
 
@@ -54,11 +57,16 @@ def get_connection(format: str = "psycopg"):
         logger.error(
             {"message": "Failed to establish connection with database", "error": str(excep)}
         )
+        raise
 
 
 def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     Update Conservation Builder table from GCS file.
+
+    The data is loaded and indexed in an intermediate table, which then replaces the
+    live table in one short transaction, so the API keeps reading the previous
+    data until the new data is ready.
 
     Parameters
     ----------
@@ -71,6 +79,7 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
     """
     try:
         conn = get_connection(format="sqlalchemy")
+        intermediate = f"{table_name}_new"
 
         if verbose:
             logger.info({"message": f"Loading {gcs_file}..."})
@@ -85,9 +94,9 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
         # Upload data to PostgreSQL
         if verbose:
-            logger.info({"message": f"Uploading data to PostgreSQL at data.{table_name}..."})
+            logger.info({"message": f"Uploading data to PostgreSQL at data.{intermediate}..."})
         gdf.to_postgis(
-            name=table_name,
+            name=intermediate,
             schema="data",
             con=conn,
             if_exists="replace",
@@ -100,11 +109,11 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
             connection.execute(
                 text(f"""
             WITH complex_areas AS (
-                DELETE from data.{table_name}
+                DELETE from data.{intermediate}
                 WHERE ST_NPoints(the_geom) > 10000
                 RETURNING location, the_geom
             )
-            INSERT INTO data.{table_name} (location, the_geom)
+            INSERT INTO data.{intermediate} (location, the_geom)
                 SELECT location,
                     ST_Multi(ST_Subdivide(the_geom, 10000)) as the_geom
                 FROM complex_areas;
@@ -113,23 +122,128 @@ def update_cb(table_name, gcs_file, verbose: bool = False):
 
             # Add primary key
             connection.execute(
-                text(f"ALTER TABLE data.{table_name} ADD COLUMN id SERIAL PRIMARY KEY;")
+                text(f"ALTER TABLE data.{intermediate} ADD COLUMN id SERIAL PRIMARY KEY;")
             )
 
-            # Create GIST index for fast spatial querying
+            connection.execute(text(f"ANALYZE data.{intermediate};"))
+
+            # Swap the intermediate table in, renaming the objects tied to its name so
+            # the next run's intermediate table can reuse them
+            if verbose:
+                logger.info({"message": f"Replacing data.{table_name} with data.{intermediate}..."})
+            connection.execute(text(f"DROP TABLE IF EXISTS data.{table_name};"))
+            connection.execute(text(f"ALTER TABLE data.{intermediate} RENAME TO {table_name};"))
             connection.execute(
-                text(f"""
-                CREATE INDEX gist_{table_name}_geom
-                ON data.{table_name}
-                USING GIST (the_geom);
-            """)
+                text(
+                    f"ALTER TABLE data.{table_name} "
+                    f"RENAME CONSTRAINT {intermediate}_pkey TO {table_name}_pkey;"
+                )
             )
-
-            connection.execute(text(f"ANALYZE data.{table_name};"))
+            connection.execute(
+                text(f"ALTER SEQUENCE data.{intermediate}_id_seq RENAME TO {table_name}_id_seq;")
+            )
+            # geoalchemy2's to_postgis automatically adds a spatial index on the_geom named after
+            # the table, and this renames it so it doesn't include the intermediate table name
+            connection.execute(
+                text(
+                    f"ALTER INDEX data.idx_{intermediate}_the_geom "
+                    f"RENAME TO idx_{table_name}_the_geom;"
+                )
+            )
             connection.commit()
 
     except Exception as excep:
         logger.error({"message": "Failed to update table", "error": str(excep)})
+        raise
+
+
+def update_cb_raster(table_name, gcs_dir, verbose: bool = False, batch_size: int = 1000):
+    """
+    Update Conservation Builder raster table from a GCS folder of tile files.
+
+    The tiles are loaded and indexed in an intermediate table, which then replaces the
+    live table in one short transaction, so the API keeps reading the previous
+    tiles until the new ones are ready.
+
+    Parameters
+    ----------
+    table_name : str
+      Name of the table to update.
+    gcs_dir : str
+      GCS folder holding one Parquet per location, with "location" and "rast"
+      columns, the latter as PostGIS raster WKB. Each file is streamed from GCS
+      in batches of ``batch_size`` tiles, so no file is held whole in memory.
+    verbose : bool
+      Whether to print progress messages.
+    batch_size : int
+      Number of tiles read from a file at a time.
+    """
+    conn = get_connection(format="sqlalchemy").raw_connection()
+    try:
+        intermediate = f"{table_name}_new"
+        blobs = [
+            blob
+            for blob in storage.Client(project=PROJECT).list_blobs(BUCKET, prefix=f"{gcs_dir}/")
+            if blob.name.endswith(".parquet")
+        ]
+
+        with conn.cursor() as cursor:
+            cursor.execute(f"DROP TABLE IF EXISTS data.{intermediate};")
+            cursor.execute(f"CREATE TABLE data.{intermediate} (location TEXT, rast raster);")
+            conn.commit()
+
+            # Upload data to PostgreSQL, streaming the tiles as hex WKB
+            if verbose:
+                logger.info({"message": f"Uploading {len(blobs)} files to data.{intermediate}..."})
+            for blob in tqdm(blobs, disable=not verbose):
+                with (
+                    blob.open("rb") as parquet,
+                    cursor.copy(f"COPY data.{intermediate} (location, rast) FROM STDIN") as copy,
+                ):
+                    for batch in pq.ParquetFile(parquet).iter_batches(
+                        batch_size=batch_size, columns=["location", "rast"]
+                    ):
+                        for location, rast in zip(
+                            batch["location"].to_pylist(), batch["rast"].to_pylist(), strict=True
+                        ):
+                            copy.write_row((location, rast.hex()))
+
+            # Add primary key
+            cursor.execute(f"ALTER TABLE data.{intermediate} ADD COLUMN id SERIAL PRIMARY KEY;")
+
+            # Create GIST index for fast spatial querying
+            cursor.execute(f"""
+                CREATE INDEX gist_{intermediate}_rast
+                ON data.{intermediate}
+                USING GIST (ST_ConvexHull(rast));
+            """)
+
+            cursor.execute(f"ANALYZE data.{intermediate};")
+            conn.commit()
+
+            # Swap the intermediate table in, renaming the objects tied to its name so
+            # the next run's intermediate table can reuse them
+            if verbose:
+                logger.info({"message": f"Replacing data.{table_name} with data.{intermediate}..."})
+            cursor.execute(f"DROP TABLE IF EXISTS data.{table_name};")
+            cursor.execute(f"ALTER TABLE data.{intermediate} RENAME TO {table_name};")
+            cursor.execute(
+                f"ALTER TABLE data.{table_name} "
+                f"RENAME CONSTRAINT {intermediate}_pkey TO {table_name}_pkey;"
+            )
+            cursor.execute(
+                f"ALTER SEQUENCE data.{intermediate}_id_seq RENAME TO {table_name}_id_seq;"
+            )
+            cursor.execute(
+                f"ALTER INDEX data.gist_{intermediate}_rast RENAME TO gist_{table_name}_rast;"
+            )
+        conn.commit()
+
+    except Exception as excep:
+        logger.error({"message": "Failed to update table", "error": str(excep)})
+        raise
+    finally:
+        conn.close()
 
 
 def get_pas(verbose: bool = False) -> list[dict]:
@@ -252,3 +366,4 @@ def get_pas(verbose: bool = False) -> list[dict]:
         return rows
     except Exception as excep:
         logger.error({"message": "Failed to read PAs from the Database", "error": str(excep)})
+        raise

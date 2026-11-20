@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from src.analysis import AnalysisTable, serialize_response
 from src.schemas import AnalysisRequest, Environment, LocationStats
+from src.services.vector import AnalysisTable, serialize_response
 
 POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 
