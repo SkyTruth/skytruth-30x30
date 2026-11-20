@@ -118,7 +118,7 @@ data "google_iam_policy" "noauth" {
   binding {
     role = "roles/run.invoker"
     members = concat(
-      ["allUsers"],
+      var.allow_unauthenticated ? ["allUsers"] : [],
       [for email in var.additional_invokers : "serviceAccount:${email}"],
     )
   }
