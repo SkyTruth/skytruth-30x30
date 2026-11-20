@@ -1,14 +1,14 @@
-"""The raster habitats query in src/services/raster.py, against a PostGIS database."""
+"""The raster habitats query in src/services/raster.py, against a PostGIS database.
 
-from collections.abc import Iterator
+The `raster_habitats` fixture in tests/conftest.py describes the tiles these tests draw over.
+"""
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.main import app, get_engine
-from src.services.raster import TERRESTRIAL_HABITATS_TABLE, get_raster_habitats_stats
+from src.services.raster import get_raster_habitats_stats
 from tests.integration_tests.helpers import (
     MAX_DEGREE_CELL_AT_50N_KM2,
     MIN_DEGREE_CELL_AT_50N_KM2,
@@ -16,54 +16,6 @@ from tests.integration_tests.helpers import (
 )
 
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture
-def raster_habitats(postgis: Engine) -> Iterator[Engine]:
-    """Create the terrestrial habitats raster table with one 10x10 tile of 0.1° pixels
-    per location, and drop it after the test.
-
-    AAA covers 0–1°E: columns 1–5 are forest, 6–8 savanna, 9 "Other" and 10 nodata, as
-    a protected area leaves it. BBB covers 1–2°E and is all forest.
-    """
-    with postgis.begin() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis_raster"))
-        conn.execute(text("CREATE SCHEMA IF NOT EXISTS data"))
-        conn.execute(text(f"DROP TABLE IF EXISTS data.{TERRESTRIAL_HABITATS_TABLE}"))
-        conn.execute(
-            text(
-                f"""
-                CREATE TABLE data.{TERRESTRIAL_HABITATS_TABLE} (
-                    id serial PRIMARY KEY,
-                    location text,
-                    rast raster
-                )
-                """
-            )
-        )
-        conn.execute(
-            text(
-                f"""
-                INSERT INTO data.{TERRESTRIAL_HABITATS_TABLE} (location, rast)
-                SELECT 'AAA', ST_SetValues(ST_SetValues(ST_SetValues(
-                    ST_AddBand(
-                        ST_MakeEmptyRaster(10, 10, 0, 1, 0.1, -0.1, 0, 0, 4326),
-                        '8BUI'::text, 1, 0
-                    ),
-                    1, 6, 1, 3, 10, 2), 1, 9, 1, 1, 10, 255), 1, 10, 1, 1, 10, 0)
-                UNION ALL
-                SELECT 'BBB', ST_AddBand(
-                    ST_MakeEmptyRaster(10, 10, 1, 1, 0.1, -0.1, 0, 0, 4326), '8BUI'::text, 1, 0
-                )
-                """
-            )
-        )
-
-    try:
-        yield postgis
-    finally:
-        with postgis.begin() as conn:
-            conn.execute(text(f"DROP TABLE IF EXISTS data.{TERRESTRIAL_HABITATS_TABLE}"))
 
 
 def stats(engine: Engine, geometry: dict) -> dict:
