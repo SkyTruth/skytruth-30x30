@@ -42,6 +42,15 @@
           "localized": true
         }
       }
+    },
+    "is_retired": {
+      "type": "boolean",
+      "pluginOptions": {
+        "i18n": {
+          "localized": false
+        }
+      },
+      "default": false
     }
   }
 }
