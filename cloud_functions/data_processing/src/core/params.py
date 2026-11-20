@@ -118,6 +118,8 @@ ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME = (
     f"archive/protected_seas/protected_seas_sites_{today_formatted}.parquet"
 )
 PROTECTED_SEAS_SITES_URL = "https://map.navigatormap.org/api"
+# Navigator allows 5 Site Details calls per 10 seconds
+PROTECTED_SEAS_BOUNDARY_MIN_INTERVAL_SECONDS = 2.0
 
 
 # ------------------------------------------------------------

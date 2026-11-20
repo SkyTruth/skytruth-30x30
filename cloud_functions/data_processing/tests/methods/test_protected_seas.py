@@ -200,6 +200,44 @@ def test_load_protected_seas_site_raises_after_retry_exhaustion(monkeypatch):
         protected_seas.load_protected_seas_site("123", max_retries=2, base_sleep=0)
 
 
+def test_rate_limiter_spaces_calls(monkeypatch):
+    """Wait out the remainder of the interval since the previous call."""
+    clock = iter([100.0, 100.5, 102.0, 105.0])
+    sleeps = []
+    monkeypatch.setattr(protected_seas.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(protected_seas.time, "sleep", sleeps.append)
+
+    limiter = protected_seas.RateLimiter(2.0)
+    limiter.wait()  # t=100, first call is immediate
+    limiter.wait()  # t=100.5, waits 1.5 until t=102
+    limiter.wait()  # t=105, already past t=104
+
+    assert sleeps == [1.5]
+
+
+def test_load_protected_seas_site_waits_on_rate_limiter_each_attempt(monkeypatch):
+    """Pace retries through the rate limiter as well as first attempts."""
+    responses = iter(
+        [
+            FakeResponse(status_code=429, headers={"Retry-After": "0"}),
+            FakeResponse(data={"ps_id": "1", "site_boundary": mapping(Point(0, 0))}),
+        ]
+    )
+    monkeypatch.setattr(protected_seas.requests, "get", lambda *_, **__: next(responses))
+    monkeypatch.setattr(protected_seas.time, "sleep", lambda _: None)
+
+    class CountingLimiter:
+        calls = 0
+
+        def wait(self):
+            self.calls += 1
+
+    limiter = CountingLimiter()
+    protected_seas.load_protected_seas_site("1", rate_limiter=limiter)
+
+    assert limiter.calls == 2
+
+
 def test_fetch_updated_site_details_separates_removed_changed_and_failures(monkeypatch):
     """Separate removed sites while retaining changed-site fetch failures."""
     index = pd.DataFrame(
@@ -214,7 +252,7 @@ def test_fetch_updated_site_details_separates_removed_changed_and_failures(monke
 
     fetched = []
 
-    def fake_load(ps_id):
+    def fake_load(ps_id, **_):
         fetched.append(ps_id)
         if ps_id == "3":
             raise RuntimeError("detail failed")
@@ -228,7 +266,7 @@ def test_fetch_updated_site_details_separates_removed_changed_and_failures(monke
     monkeypatch.setattr(protected_seas.time, "sleep", lambda _: None)
 
     changed, removed_ids, returned_index = protected_seas.fetch_updated_site_details(
-        "2026-01-01", sleep_seconds=0
+        "2026-01-01", min_interval=0
     )
 
     assert fetched == ["1", "3"]

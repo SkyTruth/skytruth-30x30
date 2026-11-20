@@ -14,6 +14,7 @@ from src.core.params import (
     ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
     BUCKET,
     PROJECT,
+    PROTECTED_SEAS_BOUNDARY_MIN_INTERVAL_SECONDS,
     PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTED_SEAS_SITES_URL,
 )
@@ -132,11 +133,31 @@ def get_updated_site_index(
     return pd.DataFrame(rows)
 
 
+class RateLimiter:
+    """Space calls at least `min_interval` seconds apart.
+
+    Navigator allows 5 Site Details calls per 10 seconds, so 2 seconds stays
+    under the limit.
+    """
+
+    def __init__(self, min_interval: float):
+        self.min_interval = min_interval
+        self._next_allowed = 0.0
+
+    def wait(self) -> None:
+        now = time.monotonic()
+        if now < self._next_allowed:
+            time.sleep(self._next_allowed - now)
+            now = time.monotonic()
+        self._next_allowed = now + self.min_interval
+
+
 def load_protected_seas_site(
     ps_id: str,
     keep_bounds: bool = True,
     max_retries: int = 5,
     base_sleep: float = 3.0,
+    rate_limiter: RateLimiter | None = None,
 ) -> gpd.GeoDataFrame:
     url = f"{PROTECTED_SEAS_SITES_URL}/detail/"
     params = {
@@ -147,6 +168,8 @@ def load_protected_seas_site(
     last_response = None
 
     for attempt in range(max_retries):
+        if rate_limiter is not None:
+            rate_limiter.wait()
         response = requests.get(url, params=params, timeout=60)
         last_response = response
 
@@ -178,7 +201,7 @@ def load_protected_seas_site(
 
 def fetch_updated_site_details(
     changed_since: str,
-    sleep_seconds: float = 0.1,
+    min_interval: float = PROTECTED_SEAS_BOUNDARY_MIN_INTERVAL_SECONDS,
 ) -> tuple[gpd.GeoDataFrame, list[str], pd.DataFrame]:
     updated_index = get_updated_site_index(changed_since=changed_since)
 
@@ -206,15 +229,15 @@ def fetch_updated_site_details(
         }
     )
 
+    rate_limiter = RateLimiter(min_interval)
     gdfs = []
     failures = []
 
     for ps_id in tqdm(changed_ids):
         try:
-            gdfs.append(load_protected_seas_site(ps_id))
+            gdfs.append(load_protected_seas_site(ps_id, rate_limiter=rate_limiter))
         except Exception as exc:
             failures.append({"ps_id": ps_id, "error": str(exc)})
-        time.sleep(sleep_seconds)
 
     if gdfs:
         changed_gdf = pd.concat(gdfs, ignore_index=True)
