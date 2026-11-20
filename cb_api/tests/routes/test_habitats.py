@@ -9,7 +9,7 @@ from tests.routes.helpers import ENGINE, HABITATS_STATS, POLYGON, RouteTestClien
 
 PATH = "/habitats"
 
-MARINE_HABITATS = [habitat for habitat in Habitat if habitat is not Habitat.JUNG_HABITATS]
+MARINE_HABITATS = [habitat for habitat in Habitat if habitat is not Habitat.TERRESTRIAL_HABITATS]
 
 
 # --- the happy path ----------------------------------------------------------------
@@ -44,8 +44,8 @@ def test_the_marine_habitats_read_distinct_tables():
     assert len(tables) == len(MARINE_HABITATS)
 
 
-def test_jung_habitats_returns_the_raster_habitats_stats(api: RouteTestClient):
-    response = api.client.post(PATH, json={"geometry": POLYGON, "habitat": "jung-habitats"})
+def test_terrestrial_habitats_returns_the_raster_habitats_stats(api: RouteTestClient):
+    response = api.client.post(PATH, json={"geometry": POLYGON, "habitat": "terrestrial-habitats"})
 
     assert response.status_code == 200
     assert response.json() == HABITATS_STATS
@@ -57,7 +57,7 @@ def test_other_is_not_reported():
     assert 255 not in TERRESTRIAL_HABITAT_CLASSES
 
 
-@pytest.mark.parametrize("habitat", ["mangroves", "jung-habitats"])
+@pytest.mark.parametrize("habitat", ["mangroves", "terrestrial-habitats"])
 def test_the_geometry_is_passed_through_untouched(api: RouteTestClient, habitat: str):
     feature = {"type": "Feature", "geometry": POLYGON, "properties": {}}
 

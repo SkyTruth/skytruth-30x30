@@ -87,7 +87,7 @@ def test_the_route_reads_the_raster_table(raster_habitats: Engine):
     app.dependency_overrides[get_engine] = lambda: raster_habitats
     try:
         response = TestClient(app).post(
-            "/habitats", json={"geometry": box(0, 0, 1, 1), "habitat": "jung-habitats"}
+            "/habitats", json={"geometry": box(0, 0, 1, 1), "habitat": "terrestrial-habitats"}
         )
     finally:
         app.dependency_overrides.clear()

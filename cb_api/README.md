@@ -58,8 +58,8 @@ The response is shaped like the one for `/coverage`.
 The same as `/coverage`, but for habitats: `added_area` is the area of a habitat not yet
 protected, which the drawn polygon would add. Takes `geometry` and a **required** `habitat`,
 either one marine habitat (`mangroves`, `saltmarshes`, `seagrasses`, `seamounts`,
-`cold-water-corals`, `climate-resilient-corals`, `other-corals`) or `jung-habitats` for every
-terrestrial habitat at once (`forest`, `savanna`, `shrubland`, `grassland`,
+`cold-water-corals`, `climate-resilient-corals`, `other-corals`) or `terrestrial-habitats` for
+every terrestrial habitat at once (`forest`, `savanna`, `shrubland`, `grassland`,
 `wetlands-open-waters`, `rocky-mountains`, `desert`, `artificial`). There is no default, and
 no `environment`.
 
@@ -70,7 +70,7 @@ curl -X POST localhost:8080/habitats \
 
 curl -X POST localhost:8080/habitats \
   -H 'Content-Type: application/json' \
-  -d '{"habitat": "jung-habitats", "geometry": {"type": "Polygon", "coordinates": [[[-72.6,7.0],[-72.2,7.0],[-72.2,7.4],[-72.6,7.4],[-72.6,7.0]]]}}'
+  -d '{"habitat": "terrestrial-habitats", "geometry": {"type": "Polygon", "coordinates": [[[-72.6,7.0],[-72.2,7.0],[-72.2,7.4],[-72.6,7.4],[-72.6,7.0]]]}}'
 ```
 
 The response is shaped like the one for `/coverage`, with each location's area broken down
@@ -80,8 +80,8 @@ by habitat:
 {"locations": [{"code": "COL", "habitats": [{"habitat": "forest", "added_area": 8.1}]}], "total_area": 20.1}
 ```
 
-A marine habitat gives one entry per location. `jung-habitats` lists only the habitats the
-drawn area adds in each location.
+A marine habitat gives one entry per location. `terrestrial-habitats` lists only the habitats
+the drawn area adds in each location.
 
 The terrestrial habitats come from the Jung et al. (2020) ~100 m habitat raster
 (`data.terrestrial_habitats_minus_pa`, which needs the `postgis_raster` extension). A pixel

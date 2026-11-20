@@ -85,9 +85,9 @@ def protection_level(body: ProtectionLevelRequest, engine: PooledEngine) -> dict
 @app.post("/habitats", response_model=HabitatsStats)
 def habitats(body: HabitatRequest, engine: PooledEngine) -> dict:
     """How much of the given area's `habitat` will have added protection, broken down by
-    location and habitat. `jung-habitats` reports every terrestrial habitat at once.
+    location and habitat. `terrestrial-habitats` reports every terrestrial habitat at once.
     """
-    if body.habitat is Habitat.JUNG_HABITATS:
+    if body.habitat is Habitat.TERRESTRIAL_HABITATS:
         return get_raster_habitats_stats(engine, body.geometry)
 
     stats = get_locations_stats(engine, body.geometry, body.habitat.table)

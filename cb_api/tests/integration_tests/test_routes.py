@@ -27,7 +27,7 @@ ROUTES = {
     "protection-level": ("/protection-level", {}, AnalysisTable.FULLY_HIGHLY_PROTECTED),
 }
 
-MARINE_HABITATS = [habitat for habitat in Habitat if habitat is not Habitat.JUNG_HABITATS]
+MARINE_HABITATS = [habitat for habitat in Habitat if habitat is not Habitat.TERRESTRIAL_HABITATS]
 
 
 @pytest.fixture

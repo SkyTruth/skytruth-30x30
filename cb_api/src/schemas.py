@@ -37,12 +37,12 @@ class Habitat(StrEnum):
     COLD_WATER_CORALS = "cold-water-corals"
     CLIMATE_RESILIENT_CORALS = "climate-resilient-corals"
     OTHER_CORALS = "other-corals"
-    JUNG_HABITATS = "jung-habitats"
+    TERRESTRIAL_HABITATS = "terrestrial-habitats"
 
     @property
     def table(self) -> AnalysisTable:
-        """The vector table of a marine habitat. jung-habitats is read from the terrestrial
-        habitats raster instead, and has none."""
+        """The vector table of a marine habitat. terrestrial-habitats is read from the
+        terrestrial habitats raster instead, and has none."""
         return AnalysisTable[self.name]
 
 
@@ -75,8 +75,8 @@ class ProtectionLevelRequest(AnalysisRequest):
 class HabitatRequest(GeometryRequest):
     """Request body for POST /habitats.
 
-    No environment: each marine habitat has exactly one table, and jung-habitats reports
-    every terrestrial habitat at once.
+    No environment: each marine habitat has exactly one table, and terrestrial-habitats
+    reports every terrestrial habitat at once.
     """
 
     habitat: Habitat
