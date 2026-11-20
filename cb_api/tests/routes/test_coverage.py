@@ -5,8 +5,8 @@ from typing import Any
 import pytest
 
 from src import main
-from src.analysis import AnalysisTable
 from src.errors import BadRequestError
+from src.services.vector import AnalysisTable
 from tests.routes.helpers import POLYGON, STATS, RouteTestClient
 
 PATH = "/coverage"
