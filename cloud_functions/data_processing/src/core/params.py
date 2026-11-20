@@ -118,6 +118,11 @@ ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME = (
     f"archive/protected_seas/protected_seas_sites_{today_formatted}.parquet"
 )
 PROTECTED_SEAS_SITES_URL = "https://map.navigatormap.org/api"
+# Stop fetching after this long and save progress, leaving ~45 min to read and
+# upload the dataset within the 3 hour job timeout
+PROTECTED_SEAS_FETCH_BUDGET_SECONDS = 130 * 60
+# Refuse a sync that would remove more than this share of stored sites
+PROTECTED_SEAS_MAX_REMOVED_SHARE = 0.1
 
 
 # ------------------------------------------------------------

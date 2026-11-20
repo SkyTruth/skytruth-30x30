@@ -10,6 +10,7 @@ from src.core.params import (
     PROTECTED_SEAS_SITES_FILE_NAME,
     PROTECTED_SEAS_URL,
 )
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 from src.methods.protected_seas import update_protected_seas_data
 from src.utils.gcp import duplicate_blob, upload_dataframe
 from src.utils.logger import Logger
@@ -70,9 +71,22 @@ def download_protected_seas(
 
     if verbose:
         logger.info({"message": "updating Protected Seas site geometries"})
-    update_protected_seas_data(
+    updates = update_protected_seas_data(
         sites_file_name=sites_file_name,
         bucket=bucket,
         project=project,
         verbose=verbose,
     )
+
+    # Progress is saved, continue in a new run if needed
+    # The next pipeline step only runs once the sync is complete
+    if not updates.complete:
+        cfg = METHOD_RETRY_CONFIGS["download_protected_seas"]
+        raise ScheduleRetry(
+            delay_seconds=cfg["delay_seconds"],
+            max_retries=cfg["max_retries"],
+            message=(
+                f"Protected Seas sync partial: {len(updates.unfinished_ids)} boundary(ies) "
+                f"not reached and {len(updates.failures)} failed; progress saved"
+            ),
+        )
