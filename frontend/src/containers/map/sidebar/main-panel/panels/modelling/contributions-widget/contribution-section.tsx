@@ -121,10 +121,10 @@ type HabitatProtectionProps = {
 /**
  * "Habitat Protection" inside a location. Shows once a habitat gains protection,
  * so a shape that adds no habitat protection never shows the section.
- * 
+ *
  * Marine: Each habitat appears once its request finishes, and a line at the bottom
  * states which habitats are still loading, or says when some failed.
- * 
+ *
  * Terrestrial: Habitats load at once and show only a "Calculating habitat protection..."
  * line until their results arrive.
  */
