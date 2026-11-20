@@ -16,6 +16,7 @@ import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useLocationName from '@/hooks/use-location-name';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
+import useMapLocationLayers from '@/hooks/use-map-location-layers';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
 import { cn } from '@/lib/classnames';
@@ -166,6 +167,9 @@ const SidebarDetails: FCWithMessages = () => {
 
   // Update the map's position based on the location
   useMapLocationBounds();
+
+  // Show the location's boundaries on top of the map
+  useMapLocationLayers(titleCountry);
 
   return (
     <Tabs value={tab} onValueChange={handleTabChange} className="flex h-full w-full flex-col">
