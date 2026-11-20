@@ -30,7 +30,7 @@ def test_rows_sharing_a_location_are_summed_by_the_query(analysis_tables: Engine
 
     areas = by_code(result)
     assert sorted(areas) == ["AAA", "BBB"]
-    assert areas["AAA"] == 2 * areas["BBB"]
+    assert areas["AAA"] == pytest.approx(2 * areas["BBB"])
 
 
 def test_an_area_the_table_covers_completely_is_all_added_area(analysis_tables: Engine):
