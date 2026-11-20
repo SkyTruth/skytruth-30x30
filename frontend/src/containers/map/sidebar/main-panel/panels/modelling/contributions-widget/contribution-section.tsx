@@ -23,10 +23,10 @@ import useDataInfoTooltips from './use-data-info-tooltips';
 // coverage widgets
 const COVERAGE_TOOLTIP_SLUG = 'coverage-widget';
 
-/** One legend entry: a colored square (`className` sets its color) and its label */
+/** One legend entry: a colored square with a black outline (`className` sets its color) and its label */
 const LegendItem = ({ className, children }: PropsWithChildren<{ className: string }>) => (
   <li className="flex items-center gap-2">
-    <span aria-hidden className={cn('h-2.5 w-2.5', className)} />
+    <span aria-hidden className={cn('h-2.5 w-2.5 border border-black', className)} />
     <span className="pt-[0.2em] leading-none">{children}</span>
   </li>
 );
