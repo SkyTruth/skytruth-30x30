@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from src import main
 from src.main import app, get_engine
-from tests.routes.helpers import ENGINE, STATS, RouteTestClient
+from tests.routes.helpers import ENGINE, HABITATS_STATS, STATS, RouteTestClient
 
 
 @pytest.fixture
@@ -17,7 +17,12 @@ def api(monkeypatch: pytest.MonkeyPatch) -> Iterator[RouteTestClient]:
         test_client.calls.append((engine, geometry, table))
         return dict(STATS)
 
+    def fake_get_raster_habitats_stats(engine: Any, geometry: Any) -> dict:
+        test_client.calls.append((engine, geometry))
+        return dict(HABITATS_STATS)
+
     monkeypatch.setattr(main, "get_locations_stats", fake_get_locations_stats)
+    monkeypatch.setattr(main, "get_raster_habitats_stats", fake_get_raster_habitats_stats)
     app.dependency_overrides[get_engine] = lambda: ENGINE
     try:
         yield test_client

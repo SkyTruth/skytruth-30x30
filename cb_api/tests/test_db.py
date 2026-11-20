@@ -6,9 +6,9 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import DBAPIError
 
-from src.analysis import AnalysisTable
 from src.config import Settings
 from src.db import build_database_url, create_db_engine
+from src.services.vector import AnalysisTable
 
 SETTINGS = Settings(
     _env_file=None,
