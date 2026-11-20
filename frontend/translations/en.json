@@ -295,7 +295,7 @@
     "chart-contribution": {
       "added-percentage": "+{percentage}",
       "previous-percentage": "was {percentage}",
-      "protected-area": "{protectedArea} km² (<added>+{addedArea} km²</added>) of {totalArea} km² protected",
+      "protected-area": "<added>+{addedArea} km²</added> {protectedArea} km² of {totalArea} km² protected",
       "target": "{percentage}% target",
       "percentage": "{percentage}%"
     },
