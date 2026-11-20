@@ -49,17 +49,21 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
             </span>
             {hasAddedArea && <AddedPercentageBadge percentage={addedPercentage} />}
           </div>
-          {/* Percentage before the shape was added ("was X%") */}
+          {/* Percentage before the shape was added ("was X%"). Bold Overpass Mono looks
+              smaller than regular, so it is 1px larger than the 12px text around it */}
           {hasAddedArea && (
-            <div className="pt-0.5 text-xs font-bold text-previous-value">
+            <div className="pt-0.5 text-[13px] font-bold text-previous-value">
               {t('previous-percentage', {
-                percentage: formatPercentage(locale, existingPercentage),
+                percentage: formatPercentage(locale, existingPercentage, {
+                  displayPercentageSign: false,
+                }),
               })}
+              <span className="text-[0.7em]">%</span>
             </div>
           )}
         </div>
-        {/* Protected area ("N km² (+M km²) of T km² protected") */}
-        <ProtectedAreaText className="text-right" contribution={contribution} addedOnOwnLine />
+        {/* Protected area ("+M km²", "N km² of", "T km² protected" on their own lines) */}
+        <ProtectedAreaText className="text-right" contribution={contribution} stacked />
       </div>
       {/* Bar chart: existing area then added area */}
       <ContributionBar className="my-2" contribution={contribution} target={target} />

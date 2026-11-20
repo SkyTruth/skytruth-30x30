@@ -87,16 +87,17 @@ export const ContributionBar = ({
 
 /**
  * "+M km² N km² of T km² protected": the added area first, in bold blue, then the protected
- * area including it. `addedOnOwnLine` puts the added area on a line above the rest
+ * area including it. `stacked` puts the added area, "N km² of" and "T km² protected" on
+ * their own lines
  */
 export const ProtectedAreaText = ({
   className,
   contribution: { existing, added, total },
-  addedOnOwnLine = false,
+  stacked = false,
 }: {
   className?: string;
   contribution: Contribution;
-  addedOnOwnLine?: boolean;
+  stacked?: boolean;
 }) => {
   const t = useTranslations('components.chart-contribution');
   const locale = useLocale();
@@ -108,8 +109,12 @@ export const ProtectedAreaText = ({
         addedArea: formatKM(locale, added),
         totalArea: formatKM(locale, total),
         added: (chunks) => (
-          <span className={cn('font-bold text-blue-700', { block: addedOnOwnLine })}>{chunks}</span>
+          // Bold Overpass Mono looks smaller than regular, so 1px larger than the 12px text
+          <span className={cn('text-[13px] font-bold text-blue-700', { block: stacked })}>
+            {chunks}
+          </span>
         ),
+        total: (chunks) => <span className={cn({ block: stacked })}>{chunks}</span>,
       })}
     </div>
   );
