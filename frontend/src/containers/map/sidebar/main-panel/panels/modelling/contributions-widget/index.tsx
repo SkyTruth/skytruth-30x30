@@ -13,6 +13,7 @@ import { FCWithMessages } from '@/types';
 import ContributionSection from './contribution-section';
 import useCoverageContributions, { SectionStats } from './use-coverage-contributions';
 import useFhpContributions from './use-fhp-contributions';
+import useHabitatContributions from './use-habitat-contributions';
 
 /**
  * Stats in the Conservation Builder panel once a shape is drawn or uploaded, grouped into
@@ -41,19 +42,30 @@ const ContributionsWidget: FCWithMessages = () => {
   const { countries, regionsAndSeas, global, seaCodes, isLoading } = useCoverageContributions();
   const hasLocations = countries.length > 0 || regionsAndSeas.length > 0;
 
-  // Fully/Highly Protected stats for every listed location, marine only
+  // Fully/Highly Protected (marine only) and Habitat Protection stats for every listed location
   const isMarine = tab === 'marine';
   const listedCodes = useMemo(
     () => [...countries, ...regionsAndSeas].map(({ code }) => code),
     [countries, regionsAndSeas]
   );
   const fhp = useFhpContributions(listedCodes, seaCodes, isMarine);
-  const withMarineStats = (title: string, stats: SectionStats) => ({
+  const habitats = useHabitatContributions(
+    listedCodes,
+    seaCodes,
+    isMarine ? 'marine' : 'terrestrial'
+  );
+  const withStats = (title: string, stats: SectionStats) => ({
     title,
     stats,
     ...(isMarine && {
       fhp: { status: fhp.status, contribution: fhp.byCode.get(stats.code), tooltip: fhp.tooltip },
     }),
+    habitats: {
+      status: habitats.status,
+      rows: habitats.habitatsByCode.get(stats.code) ?? [],
+      tooltip: habitats.tooltip,
+      loadsAtOnce: habitats.loadsAtOnce,
+    },
   });
 
   // One location is open, all others collapsed (starting with the first one listed)
@@ -79,23 +91,19 @@ const ContributionsWidget: FCWithMessages = () => {
         {countries.length > 0 && (
           <ContributionSection
             title={t('countries-section')}
-            items={countries.map((stats) =>
-              withMarineStats(getLocationName(stats.location), stats)
-            )}
+            items={countries.map((stats) => withStats(getLocationName(stats.location), stats))}
           />
         )}
         {regionsAndSeas.length > 0 && (
           <ContributionSection
             title={t('regions-and-seas-section')}
-            items={regionsAndSeas.map((stats) =>
-              withMarineStats(getLocationName(stats.location), stats)
-            )}
+            items={regionsAndSeas.map((stats) => withStats(getLocationName(stats.location), stats))}
           />
         )}
         {global && (
           <ContributionSection
             title={t('global-section')}
-            items={[withMarineStats(t('globe'), global)]}
+            items={[withStats(t('globe'), global)]}
           />
         )}
       </Accordion>

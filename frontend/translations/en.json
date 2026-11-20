@@ -92,6 +92,11 @@
       "global-section": "Global Level Contribution",
       "fully-highly-protected": "Fully / Highly Protected",
       "fully-highly-protected-sources": "Protection status definitions and existing data:",
+      "habitat-protection": "Habitat Protection",
+      "newly-protected-habitat": "Newly protected habitat",
+      "still-calculating-habitats": "Still calculating {habitats}...",
+      "calculating-habitat-protection": "Calculating habitat protection...",
+      "habitat-data-error": "Some habitat data couldn't load.",
       "level-of-fishing-protection": "Level of Fishing Protection",
       "summary": "Summary",
       "terrestrial": "Terrestrial",
@@ -293,6 +298,8 @@
       "new-added-area": "{area} km² of new added area"
     },
     "chart-contribution": {
+      "added": "Added",
+      "total": "Total",
       "added-percentage": "+{percentage}",
       "previous-percentage": "was {percentage}",
       "protected-area": "<added>+{addedArea} km²</added> {protectedArea} km² of <total>{totalArea} km² protected</total>",
