@@ -8,11 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from src.main import app, get_engine
-from src.services.raster import (
-    TERRESTRIAL_HABITAT_CLASSES,
-    TERRESTRIAL_HABITATS_TABLE,
-    get_raster_habitats_stats,
-)
+from src.services.raster import TERRESTRIAL_HABITATS_TABLE, get_raster_habitats_stats
 from tests.integration_tests.helpers import (
     MAX_DEGREE_CELL_AT_50N_KM2,
     MIN_DEGREE_CELL_AT_50N_KM2,
@@ -71,9 +67,7 @@ def raster_habitats(postgis: Engine) -> Iterator[Engine]:
 
 
 def stats(engine: Engine, geometry: dict) -> dict:
-    return get_raster_habitats_stats(
-        engine, geometry, TERRESTRIAL_HABITATS_TABLE, TERRESTRIAL_HABITAT_CLASSES
-    )
+    return get_raster_habitats_stats(engine, geometry)
 
 
 def by_habitat(result: dict) -> dict[str, dict[str, float]]:

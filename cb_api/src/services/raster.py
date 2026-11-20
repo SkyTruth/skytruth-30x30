@@ -51,11 +51,10 @@ def serialize_raster_habitats_response(
 def get_raster_habitats_stats(
     engine: sqlalchemy.engine.base.Engine,
     geojson: JSON,
-    table: str = TERRESTRIAL_HABITATS_TABLE,
-    classes: Mapping[int, str] = TERRESTRIAL_HABITAT_CLASSES,
 ) -> dict:
-    """How much of each habitat in the drawn area is not yet protected, by location,
-    counted from the unprotected habitat pixels of a PostGIS raster table under it.
+    """How much of each terrestrial habitat in the drawn area is not yet protected, by
+    location, counted from the unprotected habitat pixels of TERRESTRIAL_HABITATS_TABLE
+    under it. Only the habitats in TERRESTRIAL_HABITAT_CLASSES are reported.
 
     A pixel counts when its centre falls inside the drawn area. Its area is taken from
     its tile's footprint on the ellipsoid, divided evenly between the tile's pixels.
@@ -66,12 +65,6 @@ def get_raster_habitats_stats(
         Database engine.
     geojson : JSON
         The drawn area, as a GeoJSON Feature, FeatureCollection or geometry.
-    table : str
-        Raster table in the data schema, with "location" and "rast" columns, holding
-        only unprotected habitat pixels. Defaults to the terrestrial habitats table.
-    classes : Mapping[int, str]
-        Habitat slug of each pixel value to report; other values are left out. Defaults
-        to the terrestrial habitats.
     """
     geometry = get_geojson(geojson)
     with engine.connect() as conn:
@@ -87,7 +80,7 @@ def get_raster_habitats_stats(
                             vc.count * ST_Area(ST_Envelope(rast)::geography) / 1e6
                                 / (ST_Width(rast) * ST_Height(rast)) AS portion_area_km2
                         FROM
-                            data.{table},
+                            data.{TERRESTRIAL_HABITATS_TABLE},
                             user_data_stats,
                             LATERAL ST_ValueCount(
                                 ST_Clip(rast, ST_CollectionExtract(
@@ -114,9 +107,12 @@ def get_raster_habitats_stats(
                 """
         )
         data_response = (
-            conn.execute(stmt, parameters={"geometry": geometry, "classes": list(classes)})
+            conn.execute(
+                stmt,
+                parameters={"geometry": geometry, "classes": list(TERRESTRIAL_HABITAT_CLASSES)},
+            )
             .mappings()
             .all()
         )
 
-    return serialize_raster_habitats_response(data_response, classes)
+    return serialize_raster_habitats_response(data_response, TERRESTRIAL_HABITAT_CLASSES)
