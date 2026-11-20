@@ -7,7 +7,9 @@ import pytest
 import requests
 from shapely.geometry import Point, Polygon, mapping
 
+import src.methods.download_and_process.protected_seas as download_ps
 import src.methods.protected_seas as protected_seas
+from src.core.retry_params import METHOD_RETRY_CONFIGS, ScheduleRetry
 
 
 class FakeResponse:
@@ -561,3 +563,35 @@ def test_update_protected_seas_data_refuses_mass_removal(monkeypatch):
             updates,
             max_removed_share=0.25,
         )
+
+
+def _stub_download(monkeypatch, updates):
+    """Stub the region stats download and the sites update in download_protected_seas."""
+    monkeypatch.setattr(
+        download_ps,
+        "retry_and_alert",
+        lambda *_, **__: pd.DataFrame({"iso_ter": ["AAA"]}),
+    )
+    monkeypatch.setattr(download_ps, "upload_dataframe", lambda *_, **__: None)
+    monkeypatch.setattr(download_ps, "duplicate_blob", lambda *_, **__: None)
+    monkeypatch.setattr(download_ps, "update_protected_seas_data", lambda **_: updates)
+
+
+def test_download_protected_seas_schedules_continuation_after_partial_sync(monkeypatch):
+    """Queue another run when the sites sync stopped before applying every change."""
+    _stub_download(monkeypatch, _empty_updates(unfinished_ids=["1", "2"]))
+
+    with pytest.raises(ScheduleRetry) as raised:
+        download_ps.download_protected_seas(verbose=False)
+
+    cfg = METHOD_RETRY_CONFIGS["download_protected_seas"]
+    assert raised.value.delay_seconds == cfg["delay_seconds"]
+    assert raised.value.max_retries == cfg["max_retries"]
+    assert "2 boundary(ies) not reached" in str(raised.value)
+
+
+def test_download_protected_seas_finishes_after_complete_sync(monkeypatch):
+    """Return normally, letting the pipeline move on, once the sync is complete."""
+    _stub_download(monkeypatch, _empty_updates())
+
+    download_ps.download_protected_seas(verbose=False)
