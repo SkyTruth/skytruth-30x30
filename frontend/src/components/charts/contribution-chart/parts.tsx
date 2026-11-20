@@ -48,31 +48,31 @@ type ContributionBarProps = {
   existingColor?: string;
   // Target line position in %; no line when unset
   target?: number;
-  // Black outline around the existing and added areas
-  outlined?: boolean;
 };
 
-/** Bar of the existing area then the added area (blue), with a dashed line for the rest */
+/**
+ * Bar of the existing area then the added area (blue), each with a black outline, and a
+ * dashed line for the rest
+ */
 export const ContributionBar = ({
   className,
   contribution: { existingPercentage, addedPercentage },
   existingColor,
   target,
-  outlined = false,
 }: ContributionBarProps) => (
   <div className={cn('relative h-3.5', className)}>
     <span className="absolute top-1/2 h-px w-full border-b border-dashed border-black" />
     <span
       className={cn('absolute bottom-0 left-0 top-0', {
         'bg-existing-area': !existingColor,
-        'border border-black': outlined && existingPercentage > 0,
+        'border border-black': existingPercentage > 0,
       })}
       style={{ width: toWidth(existingPercentage), backgroundColor: existingColor }}
     />
     <span
       className={cn('absolute bottom-0 top-0 bg-blue-700', {
-        'border border-black': outlined && addedPercentage > 0,
-        'border-l-0': outlined && existingPercentage > 0,
+        'border border-black': addedPercentage > 0,
+        'border-l-0': existingPercentage > 0,
       })}
       style={{ left: toWidth(existingPercentage), width: toWidth(addedPercentage) }}
     />
@@ -85,13 +85,18 @@ export const ContributionBar = ({
   </div>
 );
 
-/** "N km² (+M km²) of T km² protected", with the added part in blue */
+/**
+ * "+M km² N km² of T km² protected": the added area first, in bold blue, then the protected
+ * area including it. `addedOnOwnLine` puts the added area on a line above the rest
+ */
 export const ProtectedAreaText = ({
   className,
   contribution: { existing, added, total },
+  addedOnOwnLine = false,
 }: {
   className?: string;
   contribution: Contribution;
+  addedOnOwnLine?: boolean;
 }) => {
   const t = useTranslations('components.chart-contribution');
   const locale = useLocale();
@@ -102,7 +107,9 @@ export const ProtectedAreaText = ({
         protectedArea: formatKM(locale, existing + added),
         addedArea: formatKM(locale, added),
         totalArea: formatKM(locale, total),
-        added: (chunks) => <span className="text-blue-700">{chunks}</span>,
+        added: (chunks) => (
+          <span className={cn('font-bold text-blue-700', { block: addedOnOwnLine })}>{chunks}</span>
+        ),
       })}
     </div>
   );

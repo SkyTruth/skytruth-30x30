@@ -59,7 +59,7 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
           )}
         </div>
         {/* Protected area ("N km² (+M km²) of T km² protected") */}
-        <ProtectedAreaText className="text-right" contribution={contribution} />
+        <ProtectedAreaText className="text-right" contribution={contribution} addedOnOwnLine />
       </div>
       {/* Bar chart: existing area then added area */}
       <ContributionBar className="my-2" contribution={contribution} target={target} />
