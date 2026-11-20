@@ -65,7 +65,7 @@ Seeding can also be rerun from a newer full export to skip a large backlog of ch
 
 ### Protected Seas Monthly Sync
 
-`download_protected_seas` calls `update_protected_seas_data`, which asks Navigator for sites changed since the dataset's `last_updated` date. Attributes (name, country, LFP, `wdpa_id`, `type`) come from the search results. Boundaries are fetched from Site Details, which Navigator rate limits to 5 calls per 10 seconds, only for new sites and sites whose `last_boundary_update` is newer than the stored one.
+`download_protected_seas` calls `update_protected_seas_data`, which asks Navigator for sites changed since the dataset's `last_updated` date. Attributes (name, country, LFP, `wdpa_id`, `type`) come from the search results. Boundaries are fetched from Site Details, which Navigator rate limits, only for new sites and sites whose `last_boundary_update` is newer than the stored one.
 
 Boundary fetches stop after `PROTECTED_SEAS_FETCH_BUDGET_SECONDS` (see `params.py`), leaving time to save before the Cloud Run job timeout. If the budget runs out or some fetches fail, the progress is saved but `last_updated` stays at the previous sync date, and `download_protected_seas` schedules another run a minute later (up to the limit in `METHOD_RETRY_CONFIGS`, after which it sends a Slack alert). Each run continues where the last stopped, skipping boundaries already stored. `last_updated` only advances, to the date the run started, once a sync applies every change, and only then does the pipeline move on to the next step.
 

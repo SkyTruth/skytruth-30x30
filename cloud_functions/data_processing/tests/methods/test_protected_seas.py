@@ -272,44 +272,6 @@ def test_select_sites_needing_boundary_uses_changed_since_for_seeded_data():
     assert protected_seas.select_sites_needing_boundary(index, local, "2026-01-01") == ["1"]
 
 
-def test_rate_limiter_spaces_calls(monkeypatch):
-    """Wait out the remainder of the interval since the previous call."""
-    clock = iter([100.0, 100.5, 102.0, 105.0])
-    sleeps = []
-    monkeypatch.setattr(protected_seas.time, "monotonic", lambda: next(clock))
-    monkeypatch.setattr(protected_seas.time, "sleep", sleeps.append)
-
-    limiter = protected_seas.RateLimiter(2.0)
-    limiter.wait()  # t=100, first call is immediate
-    limiter.wait()  # t=100.5, waits 1.5 until t=102
-    limiter.wait()  # t=105, already past t=104
-
-    assert sleeps == [1.5]
-
-
-def test_load_protected_seas_site_waits_on_rate_limiter_each_attempt(monkeypatch):
-    """Pace retries through the rate limiter as well as first attempts."""
-    responses = iter(
-        [
-            FakeResponse(status_code=429, headers={"Retry-After": "0"}),
-            FakeResponse(data={"ps_id": "1", "site_boundary": mapping(Point(0, 0))}),
-        ]
-    )
-    monkeypatch.setattr(protected_seas.requests, "get", lambda *_, **__: next(responses))
-    monkeypatch.setattr(protected_seas.time, "sleep", lambda _: None)
-
-    class CountingLimiter:
-        calls = 0
-
-        def wait(self):
-            self.calls += 1
-
-    limiter = CountingLimiter()
-    protected_seas.load_protected_seas_site("1", rate_limiter=limiter)
-
-    assert limiter.calls == 2
-
-
 def test_fetch_updated_site_details_updates_attributes_and_fetches_changed_boundaries(
     monkeypatch,
 ):
@@ -341,7 +303,7 @@ def test_fetch_updated_site_details_updates_attributes_and_fetches_changed_bound
     monkeypatch.setattr(protected_seas, "load_protected_seas_site", fake_load)
 
     updates = protected_seas.fetch_updated_site_details(
-        "2026-01-01", local, min_interval=0, time_budget_seconds=None
+        "2026-01-01", local, time_budget_seconds=None
     )
 
     assert fetched == ["boundary", "withheld", "failed", "new", "new-withheld"]
@@ -381,9 +343,7 @@ def test_fetch_updated_site_details_stops_at_time_budget(monkeypatch):
     clock = iter([0.0, 1.0, 5.0, 11.0])
     monkeypatch.setattr(protected_seas.time, "monotonic", lambda: next(clock))
 
-    updates = protected_seas.fetch_updated_site_details(
-        "2026-01-01", local, min_interval=0, time_budget_seconds=10
-    )
+    updates = protected_seas.fetch_updated_site_details("2026-01-01", local, time_budget_seconds=10)
 
     assert updates.changed_gdf["ps_id"].tolist() == ["1", "2"]
     assert updates.unfinished_ids == ["3"]

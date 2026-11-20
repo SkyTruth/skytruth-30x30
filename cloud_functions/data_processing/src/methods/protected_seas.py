@@ -15,7 +15,6 @@ from src.core.params import (
     ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
     BUCKET,
     PROJECT,
-    PROTECTED_SEAS_BOUNDARY_MIN_INTERVAL_SECONDS,
     PROTECTED_SEAS_FETCH_BUDGET_SECONDS,
     PROTECTED_SEAS_MAX_REMOVED_SHARE,
     PROTECTED_SEAS_SITES_FILE_NAME,
@@ -154,25 +153,6 @@ def get_updated_site_index(
     return pd.DataFrame(rows)
 
 
-class RateLimiter:
-    """Space calls at least `min_interval` seconds apart.
-
-    Navigator allows 5 Site Details calls per 10 seconds, so 2 seconds stays
-    under the limit.
-    """
-
-    def __init__(self, min_interval: float):
-        self.min_interval = min_interval
-        self._next_allowed = 0.0
-
-    def wait(self) -> None:
-        now = time.monotonic()
-        if now < self._next_allowed:
-            time.sleep(self._next_allowed - now)
-            now = time.monotonic()
-        self._next_allowed = now + self.min_interval
-
-
 class BoundaryWithheldError(ValueError):
     """Site Details returned no boundary.
 
@@ -186,7 +166,6 @@ def load_protected_seas_site(
     keep_bounds: bool = True,
     max_retries: int = 5,
     base_sleep: float = 3.0,
-    rate_limiter: RateLimiter | None = None,
 ) -> gpd.GeoDataFrame:
     url = f"{PROTECTED_SEAS_SITES_URL}/detail/"
     params = {
@@ -197,8 +176,6 @@ def load_protected_seas_site(
     last_response = None
 
     for attempt in range(max_retries):
-        if rate_limiter is not None:
-            rate_limiter.wait()
         response = requests.get(url, params=params, timeout=60)
         last_response = response
 
@@ -283,7 +260,6 @@ class SiteUpdates:
 def fetch_updated_site_details(
     changed_since: str,
     local_gdf: gpd.GeoDataFrame,
-    min_interval: float = PROTECTED_SEAS_BOUNDARY_MIN_INTERVAL_SECONDS,
     time_budget_seconds: float | None = PROTECTED_SEAS_FETCH_BUDGET_SECONDS,
 ) -> SiteUpdates:
     """Collect Navigator's site changes since `changed_since`.
@@ -323,7 +299,6 @@ def fetch_updated_site_details(
         }
     )
 
-    rate_limiter = RateLimiter(min_interval)
     fetched = {}
     failures = []
     unfinished = []
@@ -333,7 +308,7 @@ def fetch_updated_site_details(
             unfinished = need_boundary[position:]
             break
         try:
-            site = load_protected_seas_site(ps_id, keep_bounds=False, rate_limiter=rate_limiter)
+            site = load_protected_seas_site(ps_id, keep_bounds=False)
             fetched[ps_id] = site.geometry.iloc[0]
         except BoundaryWithheldError:
             # Keeps its stored geometry, or is skipped below if new
@@ -412,7 +387,6 @@ def update_protected_seas_data(
     archive_file_name: str = ARCHIVE_PROTECTED_SEAS_SITES_FILE_NAME,
     bucket: str = BUCKET,
     project: str = PROJECT,
-    min_interval: float = PROTECTED_SEAS_BOUNDARY_MIN_INTERVAL_SECONDS,
     time_budget_seconds: float | None = PROTECTED_SEAS_FETCH_BUDGET_SECONDS,
     max_removed_share: float = PROTECTED_SEAS_MAX_REMOVED_SHARE,
     verbose: bool = True,
@@ -442,7 +416,6 @@ def update_protected_seas_data(
     updates = fetch_updated_site_details(
         last_update_date,
         current_gdf,
-        min_interval=min_interval,
         time_budget_seconds=time_budget_seconds,
     )
 
