@@ -37,12 +37,12 @@ const ContributionsWidget: FCWithMessages = () => {
     ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0], { environment: tab })
     : undefined;
 
-  const { countries, global, isLoading } = useCoverageContributions();
-  const hasLocations = countries.length > 0;
+  const { countries, regionsAndSeas, global, isLoading } = useCoverageContributions();
+  const hasLocations = countries.length > 0 || regionsAndSeas.length > 0;
 
   // One location is open, all others collapsed (starting with the first one listed)
   const [openCode, setOpenCode] = useState('');
-  const firstCode = countries[0]?.code ?? '';
+  const firstCode = (countries[0] ?? regionsAndSeas[0])?.code ?? '';
   useEffect(() => setOpenCode(firstCode), [firstCode]);
 
   const loading = modellingStatus === 'running' || drawStatus === 'uploading' || isLoading;
@@ -64,6 +64,15 @@ const ContributionsWidget: FCWithMessages = () => {
           <ContributionSection
             title={t('countries-section')}
             items={countries.map((stats) => ({ title: getLocationName(stats.location), stats }))}
+          />
+        )}
+        {regionsAndSeas.length > 0 && (
+          <ContributionSection
+            title={t('regions-and-seas-section')}
+            items={regionsAndSeas.map((stats) => ({
+              title: getLocationName(stats.location),
+              stats,
+            }))}
           />
         )}
         {global && (

@@ -11,6 +11,8 @@ import { useGetLocations } from '@/types/generated/location';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
 import { Location, ProtectionCoverageStat } from '@/types/generated/strapi.schemas';
 
+const HIGH_SEAS_TYPE = 'highseas';
+
 /** Stats for one collapsible location in the Conservation Builder panel */
 export type SectionStats = {
   code: string;
@@ -117,7 +119,7 @@ const useCoverageContributions = () => {
     }
   );
 
-  const { countries, global } = useMemo(() => {
+  const { countries, regionsAndSeas, global } = useMemo(() => {
     const locationByCode = new Map(
       (coverageStats ?? []).map((stat) => [stat.location?.code, stat.location as Location])
     );
@@ -147,20 +149,25 @@ const useCoverageContributions = () => {
       };
     };
 
-    // Countries: one entry per intersected location that has coverage stats
-    const countries = locationsArea
+    // One entry per intersected location that has coverage stats
+    const locations = locationsArea
       // TECH-3764: Clean up
       .filter(({ code }) => (isIhoActive || !seaCodes.has(code)) && coverageByCode.has(code))
       .map(({ code }) => toSectionStats(code));
 
+    // Regions and Seas includes Areas Beyond National Jurisdiction (ABNJ, the high seas)
+    const isHighSeas = ({ location }: SectionStats) => location?.type === HIGH_SEAS_TYPE;
+    const countries = locations.filter((stats) => !isHighSeas(stats));
+    const regionsAndSeas = locations.filter(isHighSeas);
+
     // Global: the world's coverage plus the shape's added area summed across locations
     const global =
-      countries.length > 0 && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
+      locations.length > 0 && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
 
-    return { countries, global };
+    return { countries, regionsAndSeas, global };
   }, [coverageStats, locationsArea, seaCodes, isIhoActive, tab]);
 
-  return { countries, global, isLoading: isInitialLoading };
+  return { countries, regionsAndSeas, global, isLoading: isInitialLoading };
 };
 
 export default useCoverageContributions;
