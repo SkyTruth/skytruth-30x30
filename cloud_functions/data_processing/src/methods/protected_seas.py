@@ -48,7 +48,7 @@ def force_2d(geom):
 
 
 def _normalize_site_attributes(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize site attribute types in place and return `df`"""
+    """Normalize site attribute types in place and return `df`."""
     df["ps_id"] = df["ps_id"].astype(str)
     df["lfp"] = df["lfp"].astype(int)
     return df
@@ -62,26 +62,29 @@ def seed_protected_seas_sites(
     project: str = PROJECT,
     verbose: bool = True,
 ):
-    """Create the Protected Seas sites dataset from local Navigator exports.
+    """Create the initial Protected Seas sites dataset from local Navigator exports.
 
-    Combines every `*LFP[0-5]*.json` file in `json_dir`, keeps the
-    `SITE_ATTRIBUTE_COLUMNS` the export has and maps LFP to a fishing protection
-    level. The `MMDDYY` date in the first filename becomes `last_updated`, so the
-    next update fetches changes since the export.
+    This one-time bootstrap reads every ``*LFP[0-5]*.json`` file in ``json_dir``,
+    combines the site geometries, normalizes the fields used by the incremental
+    update workflow, and maps each numeric LFP value to a fishing-protection
+    bucket. The export date encoded as ``MMDDYY`` in the first filename becomes
+    the dataset's ``last_updated`` value.
 
-    Uploads a dated archive, then copies it to `sites_file_name`
+    The resulting GeoDataFrame is uploaded to ``archive_file_name`` in Cloud
+    Storage, then that object is copied to ``sites_file_name`` to establish the
+    current dataset used by :func:`update_protected_seas_data`.
 
     Args:
-        json_dir: Local directory with the Navigator LFP GeoJSON exports
-        sites_file_name: Cloud Storage object for the current dataset
-        archive_file_name: Cloud Storage object for the dated snapshot
-        bucket: Cloud Storage bucket for the datasets
-        project: Google Cloud project for storage operations
-        verbose: Whether storage helpers log progress
+        json_dir: Local directory containing the Navigator LFP GeoJSON exports.
+        sites_file_name: Cloud Storage object name for the current dataset.
+        archive_file_name: Cloud Storage object name for the dated seed snapshot.
+        bucket: Cloud Storage bucket containing the datasets.
+        project: Google Cloud project used for storage operations.
+        verbose: Whether storage helpers should emit progress messages.
 
     Raises:
-        FileNotFoundError: If `json_dir` has no LFP export files
-        ValueError: If the first filename has no `MMDDYY` date
+        FileNotFoundError: If ``json_dir`` contains no matching LFP export files.
+        ValueError: If the date cannot be parsed from the first export filename.
     """
     site_files = sorted(glob.glob(f"{json_dir}/*LFP[0-5]*.json"))
     if not site_files:
@@ -103,7 +106,7 @@ def seed_protected_seas_sites(
 
     gdf["last_updated"] = last_updated
 
-    # Save the dated archive, then copy it to the current file
+    # Save the dated archive snapshot, then duplicate it to the current file.
     upload_gdf(bucket, gdf, archive_file_name, project_id=project, verbose=verbose)
     duplicate_blob(bucket, archive_file_name, sites_file_name, project_id=project, verbose=verbose)
 
@@ -261,7 +264,7 @@ def select_sites_needing_boundary(
 
 @dataclass
 class SiteUpdates:
-    """Changes from one sync"""
+    """Changes from one sync."""
 
     changed_gdf: gpd.GeoDataFrame
     removed_ids: list[str]
@@ -283,7 +286,7 @@ def fetch_updated_site_details(
     min_interval: float = PROTECTED_SEAS_BOUNDARY_MIN_INTERVAL_SECONDS,
     time_budget_seconds: float | None = PROTECTED_SEAS_FETCH_BUDGET_SECONDS,
 ) -> SiteUpdates:
-    """Collect Navigator's site changes since `changed_since`
+    """Collect Navigator's site changes since `changed_since`.
 
     Attributes come from search. Boundaries come from Site Details only for
     sites picked by `select_sites_needing_boundary`, the rest keep their stored
@@ -485,7 +488,7 @@ def update_protected_seas_data(
         columns=[*SITE_ATTRIBUTE_COLUMNS, "geometry", "fishing_protection_level", "last_updated"]
     )
 
-    # Save the dated archive, then copy it to the current file
+    # Save the dated archive snapshot, then duplicate it to the current file.
     if verbose:
         logger.info({"message": f"uploading protected seas to {archive_file_name}"})
     upload_gdf(bucket, updated, archive_file_name, project_id=project, verbose=verbose)
