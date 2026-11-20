@@ -81,6 +81,9 @@ const WidgetLegend: FCWithMessages = () => {
 
 WidgetLegend.messages = ['containers.map-sidebar-main-panel'];
 
+// Legacy stats panel, shown while the use_cb_api flag is off
+// TODO: TECH-3876, clean up the use_cb_api feature flag so ../contributions-widget
+// is the default, then delete this file and its translation keys
 const ModellingWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const tUploads = useTranslations('services.uploads');
