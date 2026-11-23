@@ -5,13 +5,10 @@ import { formatPercentage } from '@/lib/utils/formats';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
-import {
-  AddedPercentageBadge,
-  ContributionBar,
-  MAX_PERCENTAGE,
-  ProtectedAreaText,
-  toWidth,
-} from './parts';
+import AddedPercentageBadge from './added-percentage-badge';
+import ContributionAxis from './axis';
+import ContributionBar from './bar';
+import ProtectedAreaText from './protected-area-text';
 
 type ContributionChartProps = {
   className?: string;
@@ -35,7 +32,6 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
   const { added, existingPercentage, addedPercentage, totalPercentage } = contribution;
   // The "+X%" badge and "was X%" display when the drawn shape adds area
   const hasAddedArea = added > 0;
-  const hasTarget = target != null;
 
   return (
     <div className={cn('font-mono', className)}>
@@ -67,19 +63,7 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
       </div>
       {/* Bar chart: existing area then added area */}
       <ContributionBar className="my-2" contribution={contribution} target={target} />
-      {/* Axis labels: 0%, the target label under its marker, 100% */}
-      <div className="relative flex justify-between text-xs">
-        <span>{t('percentage', { percentage: 0 })}</span>
-        {hasTarget && (
-          <span
-            className="absolute -translate-x-1/2 whitespace-nowrap font-bold text-orange-700"
-            style={{ left: toWidth(target) }}
-          >
-            {t('target', { percentage: target })}
-          </span>
-        )}
-        <span>{t('percentage', { percentage: MAX_PERCENTAGE })}</span>
-      </div>
+      <ContributionAxis target={target} />
     </div>
   );
 };
