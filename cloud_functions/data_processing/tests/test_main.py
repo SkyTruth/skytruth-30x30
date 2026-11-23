@@ -40,6 +40,7 @@ def patched_all(monkeypatch, call_log):
         "process_eez_land_union",
         "download_marine_habitats",
         "process_terrestrial_biome_raster",
+        "process_mangrove_raster",
         "process_marine_habitat_geoms",
         "generate_terrestrial_biome_stats_country",
         "download_mpatlas",
@@ -77,6 +78,12 @@ def patched_all(monkeypatch, call_log):
         make_recorder(call_log, "download_zip_to_gcs", return_value={"ok": True}),
         raising=True,
     )
+    monkeypatch.setattr(
+        main,
+        "download_and_duplicate_zipfile",
+        make_recorder(call_log, "download_and_duplicate_zipfile"),
+        raising=True,
+    )
 
     monkeypatch.setattr(
         main,
@@ -104,6 +111,7 @@ def patched_all(monkeypatch, call_log):
         ("process_eezs", "process_eez_geoms"),
         ("process_eez_land_union", "process_eez_land_union"),
         ("process_terrestrial_biomes", "process_terrestrial_biome_raster"),
+        ("process_mangrove_raster", "process_mangrove_raster"),
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
@@ -883,6 +891,22 @@ def test_eez_land_union_chains_into_the_near_shore_iho_job(patched_all):
 
     assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
         "process_near_shore_iho"
+    ]
+
+
+def test_mangrove_raster_download_keeps_both_copies_and_chains_into_processing(patched_all):
+    """The stack lands at the path process_mangrove_raster reads, with an archive copy."""
+    main.run_from_payload({"METHOD": "download_mangrove_raster", "TRIGGER_NEXT": True})
+
+    downloads = [
+        kwargs for name, _, kwargs in patched_all if name == "download_and_duplicate_zipfile"
+    ]
+    assert len(downloads) == 1
+    assert downloads[0]["url"] == main.MANGROVES_RASTER_URL
+    assert downloads[0]["blob_name"] == main.MANGROVES_RASTER_FILE_NAME
+    assert downloads[0]["archive_blob_name"] == main.ARCHIVE_MANGROVES_RASTER_FILE_NAME
+    assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
+        "process_mangrove_raster"
     ]
 
 

@@ -147,6 +147,14 @@ WDPA_META_FILE_NAME = "intermediates/wdpa_meta.csv"
 MANGROVES_URL = "https://zenodo.org/records/21346457/files/gmw_v4112_2025_mng_ext_cntry_info_vec.gpkg.gz?download=1"
 MANGROVES_FILE_NAME = "habitats/mangroves.gpkg.gz"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_{today_formatted}.gpkg.gz"
+# The extent stack, one band per year, from the same release as MANGROVES_URL
+MANGROVES_RASTER_URL = (
+    "https://zenodo.org/records/21346457/files/gmw_mng_ext_v4112_stack.tar.gz?download=1"
+)
+MANGROVES_RASTER_FILE_NAME = "habitats/mangroves_raster.tar.gz"
+ARCHIVE_MANGROVES_RASTER_FILE_NAME = f"archive/habitats/mangroves_raster_{today_formatted}.tar.gz"
+MANGROVES_RASTER_YEAR = 2025
+MANGROVES_RASTER_PATH = "static/mangroves.tif"
 
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
@@ -322,6 +330,7 @@ LONG_RUNNING_TASKS = [
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
     "process_marine_habitat_geoms",
+    # "process_mangrove_raster",
     "generate_habitat_protection_table",
     "generate_protection_coverage_stats_table",
     "download_protected_seas",

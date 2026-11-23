@@ -8,11 +8,12 @@ from google.cloud import run_v2, tasks_v2
 from google.protobuf import timestamp_pb2
 
 from src.core import map_params
-from src.core.commons import send_slack_alert
+from src.core.commons import download_and_duplicate_zipfile, send_slack_alert
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+    ARCHIVE_MANGROVES_RASTER_FILE_NAME,
     BUCKET,
     BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     CHUNK_SIZE,
@@ -33,6 +34,8 @@ from src.core.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
     LONG_RUNNING_TASKS,
+    MANGROVES_RASTER_FILE_NAME,
+    MANGROVES_RASTER_URL,
     MARINE_HABITAT_PARAMS,
     MARINE_LOCATIONS_FILE_NAME,
     MARINE_REGIONS_BODY,
@@ -76,6 +79,7 @@ from src.methods.static_processes import (
     process_eez_geoms,
     process_eez_land_union,
     process_gadm_geoms,
+    process_mangrove_raster,
     process_marine_habitat_geoms,
     process_near_shore_iho,
     process_terrestrial_biome_raster,
@@ -386,6 +390,20 @@ def dispatch_publisher(
         case "process_terrestrial_biomes":
             process_terrestrial_biome_raster(verbose=verbose)
             step_list = ["generate_terrestrial_biome_stats_country"]
+
+        case "download_mangrove_raster":
+            download_and_duplicate_zipfile(
+                url=MANGROVES_RASTER_URL,
+                bucket=BUCKET,
+                blob_name=MANGROVES_RASTER_FILE_NAME,
+                archive_blob_name=ARCHIVE_MANGROVES_RASTER_FILE_NAME,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+            step_list = ["process_mangrove_raster"]
+
+        case "process_mangrove_raster":
+            process_mangrove_raster(verbose=verbose)
 
         case "process_near_shore_iho":
             process_near_shore_iho(verbose=verbose)
