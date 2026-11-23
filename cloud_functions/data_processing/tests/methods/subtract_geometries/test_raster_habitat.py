@@ -10,6 +10,7 @@ import rasterio
 from rasterio.transform import from_origin
 from shapely.geometry import box
 
+import src.core.raster_pa_stats as raster_pa_stats
 import src.methods.subtract_geometries.io as subtract_io
 import src.methods.subtract_geometries.raster_habitat as raster_habitat
 from src.core.params import (
@@ -357,6 +358,32 @@ def test_tiles_are_written_one_row_group_per_chunk(
     )
 
     assert pq.ParquetFile(out_path).num_row_groups == 2
+
+
+def test_chunks_holding_only_nodata_are_not_rasterised(
+    mock_raster, mock_raster_country, mock_raster_pa, tmp_path, monkeypatch
+):
+    """Of the four 16-pixel chunks over the country, only the two holding a class block
+    have any pixels, so the location and PAs are rasterised over those two alone."""
+    rasterised = []
+    original_rasterize = raster_pa_stats.rasterize
+
+    def mock_rasterize(shapes, out_shape, transform, **kwargs):
+        rasterised.append(transform)
+        return original_rasterize(shapes, out_shape=out_shape, transform=transform, **kwargs)
+
+    monkeypatch.setattr(raster_pa_stats, "rasterize", mock_rasterize)
+
+    raster_habitat.process_location_raster_tiles(
+        mock_raster_country,
+        mock_raster_pa,
+        mock_raster,
+        tmp_path / "tiles.parquet",
+        TILE_PX,
+        chunk_size_pixels=16,
+    )
+
+    assert len(set(rasterised)) == 2
 
 
 def test_a_location_outside_the_raster_has_no_tiles(mock_raster, no_pas):

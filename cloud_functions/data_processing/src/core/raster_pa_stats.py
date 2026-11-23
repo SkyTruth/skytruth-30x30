@@ -36,7 +36,8 @@ def iter_location_pa_masks(
 ):
     """
     Yields a location's raster pixels one chunk at a time, with masks of which
-    pixels fall inside the location and which inside its protected areas.
+    pixels fall inside the location and which inside its protected areas. Chunks
+    holding only nodata are skipped.
 
     Parameters
     ----------
@@ -86,6 +87,10 @@ def iter_location_pa_masks(
 
             transform = src.window_transform(chunk)
             pixels = src.read(1, window=chunk)
+            # Rasterising the location and its PAs costs far more than the read, and a
+            # chunk holding only nodata has nothing for them to mask
+            if src.nodata is not None and (pixels == src.nodata).all():
+                continue
 
             in_location = rasterize(
                 [location_geom],
