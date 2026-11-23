@@ -722,6 +722,26 @@ def test_terrestrial_habitat_tiles_load_the_folder_they_were_written_to(patched_
     assert updated["table_name"] == "terrestrial_habitats_minus_pa"
 
 
+def test_mangrove_tiles_chain_into_their_database_load(patched_all):
+    main.run_from_payload({"METHOD": "generate_mangroves_minus_pa", "TRIGGER_NEXT": True})
+
+    assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
+        "update_mangroves_minus_pa"
+    ]
+
+
+def test_mangrove_tiles_load_the_folder_they_were_written_to(patched_all):
+    main.run_from_payload({"METHOD": "generate_mangroves_minus_pa"})
+    main.run_from_payload({"METHOD": "update_mangroves_minus_pa"})
+
+    [generated] = [kw for name, _, kw in patched_all if name == "generate_raster_habitat_tiles"]
+    [updated] = [kw for name, _, kw in patched_all if name == "update_cb_raster"]
+    assert updated["gcs_dir"] == main.CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(
+        habitat=generated["habitat"]
+    )
+    assert updated["table_name"] == "mangroves_minus_pa"
+
+
 # Non-invoking / generic flows
 def test_dry_run_calls_nothing_and_returns_ok(patched_all, monkeypatch):
     """dry_run should print and return OK without calling any target."""
@@ -910,7 +930,9 @@ def test_mangrove_raster_download_keeps_both_copies_and_chains_into_processing(p
     ]
 
 
-@pytest.mark.parametrize("habitat", list(HABITAT_PROCESSING_PARAMS))
+@pytest.mark.parametrize(
+    "habitat", [habitat for habitat in HABITAT_PROCESSING_PARAMS if habitat != "mangroves"]
+)
 def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
     """One method per habitat, each dispatching only its own key, so a Workflow can fan
     them out unchanged. Everything else is defaulted inside

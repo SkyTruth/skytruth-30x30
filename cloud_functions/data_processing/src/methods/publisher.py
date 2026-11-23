@@ -35,6 +35,7 @@ from src.core.params import (
     HIGH_SEAS_PARAMS,
     LONG_RUNNING_TASKS,
     MANGROVES_RASTER_FILE_NAME,
+    MANGROVES_RASTER_PATH,
     MANGROVES_RASTER_URL,
     MARINE_HABITAT_PARAMS,
     MARINE_LOCATIONS_FILE_NAME,
@@ -566,9 +567,12 @@ def dispatch_publisher(
         # HABITAT_PROCESSING_PARAMS. When we move to Workflows (TECH-3777), it is easiest to
         # fan out to parallel if they are separate tasks without restructuring anything.
         case "generate_mangroves_minus_pa":
-            generate_marine_habitat_minus_pa(
+            generate_raster_habitat_tiles(
                 habitat="mangroves",
-                n_jobs=2,
+                raster_file_name=MANGROVES_RASTER_PATH,
+                total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
+                pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
+                tolerance=TOLERANCE,
                 verbose=verbose,
             )
             step_list = ["update_mangroves_minus_pa"]
@@ -697,9 +701,9 @@ def dispatch_publisher(
             )
 
         case "update_mangroves_minus_pa":
-            update_cb(
+            update_cb_raster(
                 table_name="mangroves_minus_pa",
-                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="mangroves"),
+                gcs_dir=CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(habitat="mangroves"),
                 verbose=verbose,
             )
 
