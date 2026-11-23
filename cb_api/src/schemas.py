@@ -2,6 +2,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.services.constants import MANGROVES, TERRESTRIAL_HABITATS, RasterHabitats
 from src.services.vector import AnalysisTable
 
 
@@ -40,9 +41,16 @@ class Habitat(StrEnum):
     TERRESTRIAL_HABITATS = "terrestrial-habitats"
 
     @property
+    def raster(self) -> RasterHabitats | None:
+        """The raster table of a habitat read from one, or None for a vector habitat."""
+        return {
+            Habitat.MANGROVES: MANGROVES,
+            Habitat.TERRESTRIAL_HABITATS: TERRESTRIAL_HABITATS,
+        }.get(self)
+
+    @property
     def table(self) -> AnalysisTable:
-        """The vector table of a marine habitat. terrestrial-habitats is read from the
-        terrestrial habitats raster instead, and has none."""
+        """The vector table of a habitat with no raster."""
         return AnalysisTable[self.name]
 
 

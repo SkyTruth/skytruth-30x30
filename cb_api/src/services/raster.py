@@ -3,23 +3,8 @@ from typing import Any
 
 import sqlalchemy
 
+from src.services.constants import RasterHabitats
 from src.services.geometry import JSON, USER_DATA_CTES, get_geojson, validate_geometry_topology
-
-# PostGIS raster table of unprotected terrestrial habitat, one row per tile
-TERRESTRIAL_HABITATS_TABLE = "terrestrial_habitats_minus_pa"
-
-# Pixel value of each terrestrial habitat in TERRESTRIAL_HABITATS_TABLE. "Other" (255)
-# is left out, as it is in the progress tracker.
-TERRESTRIAL_HABITAT_CLASSES = {
-    1: "forest",
-    2: "savanna",
-    3: "shrubland",
-    4: "grassland",
-    5: "wetlands-open-waters",
-    6: "rocky-mountains",
-    7: "desert",
-    8: "artificial",
-}
 
 
 def serialize_raster_habitats_response(
@@ -51,10 +36,11 @@ def serialize_raster_habitats_response(
 def get_raster_habitats_stats(
     engine: sqlalchemy.engine.base.Engine,
     geojson: JSON,
+    habitats: RasterHabitats,
 ) -> dict:
-    """How much of each terrestrial habitat in the drawn area is not yet protected, by
-    location, counted from the unprotected habitat pixels of TERRESTRIAL_HABITATS_TABLE
-    under it. Only the habitats in TERRESTRIAL_HABITAT_CLASSES are reported.
+    """How much of each habitat in the drawn area is not yet protected, by location,
+    counted from the unprotected habitat pixels of habitats.table under it. Only the
+    habitats in habitats.classes are reported.
 
     A pixel counts when its centre falls inside the drawn area. Its area is taken from
     its tile's footprint on the ellipsoid, divided evenly between the tile's pixels.
@@ -65,6 +51,8 @@ def get_raster_habitats_stats(
         Database engine.
     geojson : JSON
         The drawn area, as a GeoJSON Feature, FeatureCollection or geometry.
+    habitats : RasterHabitats
+        The raster table to read and the habitat classes to report.
     """
     geometry = get_geojson(geojson)
     with engine.connect() as conn:
@@ -80,7 +68,7 @@ def get_raster_habitats_stats(
                             vc.count * ST_Area(ST_Envelope(rast)::geography) / 1e6
                                 / (ST_Width(rast) * ST_Height(rast)) AS portion_area_km2
                         FROM
-                            data.{TERRESTRIAL_HABITATS_TABLE},
+                            data.{habitats.table},
                             user_data_stats,
                             LATERAL ST_ValueCount(
                                 ST_Clip(rast, ST_CollectionExtract(
@@ -109,10 +97,10 @@ def get_raster_habitats_stats(
         data_response = (
             conn.execute(
                 stmt,
-                parameters={"geometry": geometry, "classes": list(TERRESTRIAL_HABITAT_CLASSES)},
+                parameters={"geometry": geometry, "classes": list(habitats.classes)},
             )
             .mappings()
             .all()
         )
 
-    return serialize_raster_habitats_response(data_response, TERRESTRIAL_HABITAT_CLASSES)
+    return serialize_raster_habitats_response(data_response, habitats.classes)

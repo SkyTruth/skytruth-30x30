@@ -13,7 +13,6 @@ from src.errors import BadRequestError, register_error_handlers
 from src.schemas import (
     AnalysisRequest,
     Environment,
-    Habitat,
     HabitatRequest,
     HabitatsStats,
     LocationStats,
@@ -87,8 +86,8 @@ def habitats(body: HabitatRequest, engine: PooledEngine) -> dict:
     """How much of the given area's `habitat` will have added protection, broken down by
     location and habitat. `terrestrial-habitats` reports every terrestrial habitat at once.
     """
-    if body.habitat is Habitat.TERRESTRIAL_HABITATS:
-        return get_raster_habitats_stats(engine, body.geometry)
+    if body.habitat.raster:
+        return get_raster_habitats_stats(engine, body.geometry, body.habitat.raster)
 
     stats = get_locations_stats(engine, body.geometry, body.habitat.table)
     return {

@@ -17,8 +17,8 @@ def api(monkeypatch: pytest.MonkeyPatch) -> Iterator[RouteTestClient]:
         test_client.calls.append((engine, geometry, table))
         return dict(STATS)
 
-    def fake_get_raster_habitats_stats(engine: Any, geometry: Any) -> dict:
-        test_client.calls.append((engine, geometry))
+    def fake_get_raster_habitats_stats(engine: Any, geometry: Any, habitats: Any) -> dict:
+        test_client.calls.append((engine, geometry, habitats))
         return dict(HABITATS_STATS)
 
     monkeypatch.setattr(main, "get_locations_stats", fake_get_locations_stats)
