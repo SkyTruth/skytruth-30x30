@@ -149,9 +149,7 @@ MANGROVES_URL = f"https://zenodo.org/records/21346457/files/gmw_{MANGROVES_VERSI
 MANGROVES_FILE_NAME = "habitats/mangroves.gpkg.gz"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_{today_formatted}.gpkg.gz"
 # Raster data stack - one band per year
-MANGROVES_RASTER_URL = (
-    f"https://zenodo.org/records/21346457/files/gmw_mng_ext_{MANGROVES_VERSION}_stack.tar.gz?download=1"
-)
+MANGROVES_RASTER_URL = f"https://zenodo.org/records/21346457/files/gmw_mng_ext_{MANGROVES_VERSION}_stack.tar.gz?download=1"
 MANGROVES_RASTER_FILE_NAME = "habitats/mangroves_raster.tar.gz"
 ARCHIVE_MANGROVES_RASTER_FILE_NAME = f"archive/habitats/mangroves_raster_{today_formatted}.tar.gz"
 MANGROVES_RASTER_YEAR = 2025
