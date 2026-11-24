@@ -69,8 +69,7 @@ def process_mangrove_raster(
     verbose: bool = True,
 ) -> None:
     """
-    Writes one year of the downloaded Global Mangrove Watch extent stack to GCS as the
-    raster the Conservation Builder mangrove tiles are cut from.
+    Writes one year of the downloaded Global Mangrove Watch extent stack to GCS
 
     Parameters
     ----------

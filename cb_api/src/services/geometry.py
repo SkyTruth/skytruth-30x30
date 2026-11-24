@@ -79,8 +79,6 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
     if validation["geom_type"] not in {"ST_Polygon", "ST_MultiPolygon"}:
         raise BadRequestError("Invalid geometry: input geometry must be a Polygon or MultiPolygon")
 
-    # Moved back by whole world copies, a polygon wider than the world would still
-    # reach past 180°
     if widest_polygon_degrees(geometry) > 360:
         raise BadRequestError("Invalid geometry: a polygon spans more than 360° of longitude")
 

@@ -111,8 +111,6 @@ def test_invalid_iho_geometries_are_repaired_not_dropped():
 
 
 def test_a_failed_slack_alert_is_logged_not_raised(capsys):
-    """The request's exception must reach the log as text: an exception object is not
-    JSON serialisable, and raising here would hide the failure that sent the alert."""
     send_slack_alert("", "mock alert")
 
     assert "Failed to send slack alert" in capsys.readouterr().out

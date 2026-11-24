@@ -87,8 +87,7 @@ def iter_location_pa_masks(
 
             transform = src.window_transform(chunk)
             pixels = src.read(1, window=chunk)
-            # Rasterising the location and its PAs costs far more than the read, and a
-            # chunk holding only nodata has nothing for them to mask
+            # skip chunks holding only nodata
             if src.nodata is not None and (pixels == src.nodata).all():
                 continue
 
