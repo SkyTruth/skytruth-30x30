@@ -30,14 +30,12 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
   const locale = useLocale();
 
   const { added, existingPercentage, addedPercentage, totalPercentage } = contribution;
-  // The "+X%" badge and "was X%" display when the drawn shape adds area
   const hasAddedArea = added > 0;
 
   return (
     <div className={cn('font-mono', className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="shrink-0">
-          {/* Protected percentage including the drawn shape (with "+X%") */}
           <div className="-mt-1.5 flex items-center gap-2">
             <span className="pt-[0.2em] text-3xl font-bold leading-none">
               {t.rich('total-percentage', {
@@ -49,7 +47,6 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
             </span>
             {hasAddedArea && <AddedPercentageBadge percentage={addedPercentage} />}
           </div>
-          {/* Percentage before the shape was added ("was X%") */}
           {hasAddedArea && (
             <div className="pt-0.5 text-xs-bold font-bold text-previous-value">
               {t.rich('previous-percentage', {
@@ -61,10 +58,8 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
             </div>
           )}
         </div>
-        {/* Protected area ("+M km²", "N km² of", "T km² protected" on their own lines) */}
         <ProtectedAreaText className="text-right" contribution={contribution} stacked />
       </div>
-      {/* Bar chart: existing area then added area */}
       <ContributionBar className="my-2" contribution={contribution} target={target} />
       <ContributionAxis target={target} />
     </div>
