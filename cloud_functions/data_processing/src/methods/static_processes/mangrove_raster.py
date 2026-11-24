@@ -8,7 +8,7 @@ from src.core.params import (
     BUCKET,
     MANGROVES_RASTER_FILE_NAME,
     MANGROVES_RASTER_PATH,
-    MANGROVES_RASTER_YEAR,
+    MANGROVES_YEAR,
 )
 from src.utils.gcp import download_file_from_gcs, upload_file_to_gcs
 from src.utils.logger import Logger
@@ -64,7 +64,7 @@ def build_mangrove_raster(vrt_path: str, out_path: str, year: int) -> None:
 
 def process_mangrove_raster(
     file_name: str = MANGROVES_RASTER_FILE_NAME,
-    year: int = MANGROVES_RASTER_YEAR,
+    year: int = MANGROVES_YEAR,
     bucket: str = BUCKET,
     verbose: bool = True,
 ) -> None:
