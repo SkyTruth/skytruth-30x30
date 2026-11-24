@@ -22,7 +22,7 @@ const ContributionBar: React.FC<ContributionBarProps> = ({
   existingColor,
   target,
 }) => (
-  <div className={cn('relative h-3.5', className)}>
+  <div className={cn('relative h-3.5', className)} aria-hidden>
     <span className="absolute top-1/2 h-px w-full border-b border-dashed border-black" />
     <span
       className={cn('absolute bottom-0 left-0 top-0', {
