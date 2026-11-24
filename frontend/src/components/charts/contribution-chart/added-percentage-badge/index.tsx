@@ -29,10 +29,10 @@ const AddedPercentageBadge: FCWithMessages<AddedPercentageBadgeProps> = ({
       )}
     >
       <span>
-        {t('added-percentage', {
+        {t.rich('added-percentage', {
           percentage: formatPercentage(locale, percentage, { displayPercentageSign: false }),
+          sign: (chunks) => <span className="text-[0.7em]">{chunks}</span>,
         })}
-        <span className="text-[0.7em]">%</span>
       </span>
     </span>
   );

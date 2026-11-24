@@ -40,8 +40,12 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
           {/* Protected percentage including the drawn shape (with "+X%") */}
           <div className="-mt-1.5 flex items-center gap-2">
             <span className="pt-[0.2em] text-3xl font-bold leading-none">
-              {formatPercentage(locale, totalPercentage, { displayPercentageSign: false })}
-              <span className="pl-0.5 text-xs">%</span>
+              {t.rich('total-percentage', {
+                percentage: formatPercentage(locale, totalPercentage, {
+                  displayPercentageSign: false,
+                }),
+                sign: (chunks) => <span className="pl-0.5 text-xs">{chunks}</span>,
+              })}
             </span>
             {hasAddedArea && <AddedPercentageBadge percentage={addedPercentage} />}
           </div>
@@ -49,12 +53,12 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
               smaller than regular, so it is 1px larger than the 12px text around it */}
           {hasAddedArea && (
             <div className="pt-0.5 text-[13px] font-bold text-previous-value">
-              {t('previous-percentage', {
+              {t.rich('previous-percentage', {
                 percentage: formatPercentage(locale, existingPercentage, {
                   displayPercentageSign: false,
                 }),
+                sign: (chunks) => <span className="text-[0.7em]">{chunks}</span>,
               })}
-              <span className="text-[0.7em]">%</span>
             </div>
           )}
         </div>
