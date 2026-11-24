@@ -117,10 +117,6 @@ ACROSS_THE_ANTIMERIDIAN = {
     "drawn across it, longitudes past 180": box(179.5, 0, 180.5, 1),
     "drawn across it on the world copy to the west": box(-180.5, 0, -179.5, 1),
     "drawn across it two world copies east": box(899.5, 0, 900.5, 1),
-    "ring with wrapped longitudes": {
-        "type": "Polygon",
-        "coordinates": [[[179.5, 0], [-179.5, 0], [-179.5, 1], [179.5, 1], [179.5, 0]]],
-    },
     "already split at 180": {
         "type": "MultiPolygon",
         "coordinates": [
@@ -143,23 +139,6 @@ def test_a_shape_across_the_antimeridian_counts_both_sides(analysis_tables: Engi
     assert areas["WWW"] == pytest.approx(areas["EEE"])
     assert MIN_DEGREE_CELL_KM2 < result["total_area"] < MAX_DEGREE_CELL_KM2
     assert sum(areas.values()) == pytest.approx(result["total_area"], abs=2)
-
-
-def test_parts_far_apart_are_not_taken_for_a_ring_across_the_antimeridian(
-    analysis_tables: Engine,
-):
-    """The multipolygon as a whole spans more than 180°. Each part is handled on its
-    own, so only the wrapped ring is taken to cross the antimeridian and split, and
-    the part near Greenwich stays where it is. That part sits inside AAA alone, as
-    a box touching BBB would list it too, with no area."""
-    near_greenwich = box(0, 0, 0.5, 1)["coordinates"]
-    across = ACROSS_THE_ANTIMERIDIAN["ring with wrapped longitudes"]["coordinates"]
-    geometry = {"type": "MultiPolygon", "coordinates": [near_greenwich, across]}
-
-    areas = by_code(get_locations_stats(analysis_tables, geometry, AnalysisTable.MARINE))
-
-    assert sorted(areas) == ["AAA", "EEE", "WWW"]
-    assert areas["AAA"] == pytest.approx((areas["WWW"] + areas["EEE"]) / 2, rel=0.01)
 
 
 def test_a_shape_circling_the_globe_is_left_whole(analysis_tables: Engine):

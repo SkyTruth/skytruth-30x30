@@ -153,6 +153,39 @@ def test_non_polygon_geometry_is_rejected():
         validate_geometry_topology(conn, POLYGON)
 
 
+def box(xmin: float, xmax: float) -> list:
+    return [[[xmin, 0], [xmax, 0], [xmax, 1], [xmin, 1], [xmin, 0]]]
+
+
+@pytest.mark.parametrize(
+    "geometry",
+    [
+        {"type": "Polygon", "coordinates": box(-180, 180.5)},
+        {"type": "MultiPolygon", "coordinates": [box(0, 1), box(100, 461)]},
+    ],
+    ids=["polygon", "one-part-of-a-multipolygon"],
+)
+def test_a_polygon_wider_than_the_world_is_rejected(geometry: dict):
+    conn = FakeConnection({"geom_type": "ST_Polygon", "is_empty": False})
+
+    with pytest.raises(BadRequestError, match="spans more than 360° of longitude"):
+        validate_geometry_topology(conn, geometry)
+
+
+@pytest.mark.parametrize(
+    "geometry",
+    [
+        {"type": "Polygon", "coordinates": box(-180, 180)},
+        {"type": "MultiPolygon", "coordinates": [box(-200, -100), box(500, 600)]},
+    ],
+    ids=["circling-the-globe", "parts-on-different-world-copies"],
+)
+def test_polygons_up_to_the_world_wide_pass_validation(geometry: dict):
+    conn = FakeConnection({"geom_type": "ST_MultiPolygon", "is_empty": False})
+
+    assert validate_geometry_topology(conn, geometry) is None
+
+
 def test_unparseable_geometry_is_rejected():
     conn = FakeConnection(error=sqlalchemy.exc.ProgrammingError("stmt", None, Exception("bad")))
 

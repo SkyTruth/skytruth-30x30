@@ -10,30 +10,16 @@ type JSON = dict[str, JSON] | list[JSON] | str | int | float | bool | None
 # The data stops at ±180°, so each polygon crossing the antimeridian is split there
 # first. One drawn across it on the map arrives with longitudes past ±180, possibly
 # whole world copies away, and is moved back so its west edge lies in -180–180. One
-# strictly inside -180–180 but spanning more than 180° is taken to be a ring crossing
-# the antimeridian with its longitudes already wrapped, which would otherwise read as
-# the long way round the world, and is shifted into 0–360 first. One reaching both
-# -180 and 180 already runs along the antimeridian, as a shape circling the globe
-# does, and is left whole. Polygons are handled one at a time, so a multipolygon
-# whose parts lie far apart is not mistaken for one.
+# already inside -180–180 is taken as drawn. Polygons are moved one at a time, as the
+# parts of a multipolygon may lie on different world copies.
 USER_DATA_CTES = """
     user_parts AS (
         SELECT
-            CASE
-                WHEN ST_XMax(part.geom) - ST_XMin(part.geom) > 180
-                    AND ST_XMin(part.geom) > -180
-                    AND ST_XMax(part.geom) < 180
-                    THEN ST_WrapX(ST_ShiftLongitude(part.geom), 180, -360)
-                ELSE ST_WrapX(
-                    ST_Translate(
-                        part.geom, -360 * floor((ST_XMin(part.geom) + 180) / 360), 0
-                    ),
-                    180,
-                    -360
-                )
-            END AS geom
-        -- Each polygon is repaired on its own: repaired together, a wrapped ring would
-        -- be read as the long way round and swallow the other parts as holes
+            ST_WrapX(
+                ST_Translate(part.geom, -360 * floor((ST_XMin(part.geom) + 180) / 360), 0),
+                180,
+                -360
+            ) AS geom
         FROM ST_Dump(ST_GeomFromGeoJSON(:geometry)) AS dumped,
             LATERAL ST_MakeValid(dumped.geom) AS part(geom)
     ),
@@ -92,3 +78,22 @@ def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dic
 
     if validation["geom_type"] not in {"ST_Polygon", "ST_MultiPolygon"}:
         raise BadRequestError("Invalid geometry: input geometry must be a Polygon or MultiPolygon")
+
+    # Moved back by whole world copies, a polygon wider than the world would still
+    # reach past 180°
+    if widest_polygon_degrees(geometry) > 360:
+        raise BadRequestError("Invalid geometry: a polygon spans more than 360° of longitude")
+
+
+def widest_polygon_degrees(geometry: dict) -> float:
+    """The widest longitude span of the outer rings of a Polygon or MultiPolygon."""
+    coordinates = geometry["coordinates"]
+    polygons = coordinates if geometry["type"] == "MultiPolygon" else [coordinates]
+    return max(
+        (
+            max(point[0] for point in polygon[0]) - min(point[0] for point in polygon[0])
+            for polygon in polygons
+            if polygon
+        ),
+        default=0,
+    )
