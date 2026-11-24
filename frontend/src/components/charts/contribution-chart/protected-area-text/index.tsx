@@ -12,7 +12,7 @@ type ProtectedAreaTextProps = {
 };
 
 /**
- * "+M km² N km² of T km² protected": the added area first, in bold blue, then the protected
+ * "M km² N km² of T km² protected": the added area first, in bold blue, then the protected
  * area including it. `stacked` puts the added area, "N km² of" and "T km² protected" on
  * their own lines
  */
@@ -35,6 +35,7 @@ const ProtectedAreaText: FCWithMessages<ProtectedAreaTextProps> = ({
             {chunks}
           </span>
         ),
+        sr: (chunks) => <span className="sr-only">{chunks}</span>,
         total: (chunks) => <span className={cn({ block: stacked })}>{chunks}</span>,
       })}
     </div>
