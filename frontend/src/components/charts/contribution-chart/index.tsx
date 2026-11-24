@@ -49,10 +49,9 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
             </span>
             {hasAddedArea && <AddedPercentageBadge percentage={addedPercentage} />}
           </div>
-          {/* Percentage before the shape was added ("was X%"). Bold Overpass Mono looks
-              smaller than regular, so it is 1px larger than the 12px text around it */}
+          {/* Percentage before the shape was added ("was X%") */}
           {hasAddedArea && (
-            <div className="pt-0.5 text-[13px] font-bold text-previous-value">
+            <div className="pt-0.5 text-xs-bold font-bold text-previous-value">
               {t.rich('previous-percentage', {
                 percentage: formatPercentage(locale, existingPercentage, {
                   displayPercentageSign: false,

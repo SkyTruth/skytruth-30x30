@@ -31,8 +31,7 @@ const ProtectedAreaText: FCWithMessages<ProtectedAreaTextProps> = ({
         addedArea: formatKM(locale, added),
         totalArea: formatKM(locale, total),
         added: (chunks) => (
-          // Bold Overpass Mono looks smaller than regular, so 1px larger than the 12px text
-          <span className={cn('text-[13px] font-bold text-blue-700', { block: stacked })}>
+          <span className={cn('text-xs-bold font-bold text-blue-700', { block: stacked })}>
             {chunks}
           </span>
         ),
