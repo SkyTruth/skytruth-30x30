@@ -8,7 +8,7 @@ import { GLOBAL_CODE, buildContributions } from '@/lib/utils/modelling-contribut
 import { useGetMpaaProtectionLevelStats } from '@/types/generated/mpaa-protection-level-stat';
 import { MpaaProtectionLevelStat } from '@/types/generated/strapi.schemas';
 
-import { toStatus } from './stat-status';
+import { toStatus } from './helpers';
 
 const FHP_TOOLTIP_SLUG = 'cb-fully-highly-protected';
 

@@ -5,7 +5,7 @@ import TooltipButton from '@/components/tooltip-button';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
-import type { StatStatus } from '../stat-status';
+import type { StatStatus } from '../helpers';
 import StatStatusMessage from '../stat-status-message';
 
 export type StatBlockProps = {

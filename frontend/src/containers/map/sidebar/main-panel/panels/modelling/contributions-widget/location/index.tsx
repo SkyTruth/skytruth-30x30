@@ -12,9 +12,9 @@ import useDataInfoTooltips from '@/hooks/use-data-info-tooltips';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
+import type { StatStatus } from '../helpers';
 import ContributionLegend from '../legend';
 import StatBlock, { StatBlockProps } from '../stat-block';
-import type { StatStatus } from '../stat-status';
 import { SectionStats } from '../use-coverage-contributions';
 
 // Shared with the Progress Tracker's coverage widgets

@@ -2,7 +2,7 @@ import { useTranslations } from 'next-intl';
 
 import { FCWithMessages } from '@/types';
 
-import type { StatStatus } from '../stat-status';
+import type { StatStatus } from '../helpers';
 
 const StatStatusMessage: FCWithMessages<{ status: StatStatus }> = ({ status }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
