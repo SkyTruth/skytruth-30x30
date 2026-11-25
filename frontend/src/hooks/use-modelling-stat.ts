@@ -40,10 +40,6 @@ export const FHP_LEVEL = 'fully-highly-protected';
 export const useFhpAnalysis = (enabled: boolean) =>
   useModellingStat('protection-level', { level: FHP_LEVEL, environment: 'marine' }, { enabled });
 
-/**
- * The same as `useModellingStat` for several requests to one endpoint in parallel (e.g. one
- * per marine habitat), each loading and failing on its own. Results are in the order of `paramsList`
- */
 export const useModellingStats = <E extends ModellingStatEndpoint>(
   endpoint: E,
   paramsList: Record<string, string>[],

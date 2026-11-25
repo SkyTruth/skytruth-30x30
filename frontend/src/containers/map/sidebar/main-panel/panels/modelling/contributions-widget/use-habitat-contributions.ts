@@ -31,7 +31,6 @@ type HabitatConfig = {
   request: string;
 };
 
-// Habitats that cb_api can analyze on each tab, in the order the panel lists them
 const HABITATS: Record<HabitatEnvironment, HabitatConfig[]> = {
   marine: [
     { slug: 'climate-resilient-corals', strapiSlug: 'climate-resilient-corals' },
@@ -49,7 +48,6 @@ const HABITATS: Record<HabitatEnvironment, HabitatConfig[]> = {
   })),
 };
 
-// The requests each tab sends to cb_api's /habitats, one per distinct `request`
 const toRequests = (habitats: HabitatConfig[]) =>
   [...new Set(habitats.map(({ request }) => request))].map((habitat) => ({ habitat }));
 
@@ -69,26 +67,16 @@ const TERRESTRIAL_TOOLTIP_SLUG = 'habitat-widget-terrestrial';
 // The CMS's maximum page size, so no row is cut off when locations have several update years
 const ALL_ROWS = 100_000;
 
-/** One habitat row under "Habitat Protection" */
 export type HabitatContribution = {
   slug: string;
   name: string;
   color: string;
   status: StatStatus;
   contribution?: Contribution;
-  // Marine only; each marine habitat lists a different source
+  // Marine only
   tooltip?: DataInfoTooltip;
 };
 
-/**
- * "Habitat Protection" stats for the Conservation Builder panel, keyed by location code,
- * with `GLOB` for the Global section. Lists every habitat found in the location, with the
- * state of its request
- *
- * @param codes locations listed in the panel
- * @param seaCodes IHO seas, left out of the Global sum because they overlap national waters
- * @param environment the panel's tab
- */
 const useHabitatContributions = (
   codes: string[],
   seaCodes: ReadonlySet<string>,
@@ -99,10 +87,8 @@ const useHabitatContributions = (
   const requests = HABITAT_REQUESTS[environment];
   const strapiSlugs = useMemo(() => habitats.map(({ strapiSlug }) => strapiSlug), [habitats]);
 
-  // Added habitat area per location and habitat, in the order of `requests`
   const analyses = useModellingStats('habitats', requests);
 
-  // Existing protected habitat area and habitat extent per location
   const stats = useGetHabitatStats<HabitatStat[]>(
     {
       filters: {
@@ -145,7 +131,6 @@ const useHabitatContributions = (
     }
   );
 
-  // Names of the tab's habitats in the current language
   const { data: habitatNames } = useGetHabitats<Record<string, string>>(
     {
       locale,
@@ -182,7 +167,6 @@ const useHabitatContributions = (
     habitats.forEach(({ slug, strapiSlug, request }) => {
       const analysis = analyses[requests.findIndex(({ habitat }) => habitat === request)];
 
-      // Locations where the habitat exists
       const baselines = [...codes, GLOBAL_CODE].flatMap((code): Baseline[] => {
         const stat = latestStats.get(`${code}|${strapiSlug}`);
         return Number(stat?.total_area)
@@ -227,9 +211,7 @@ const useHabitatContributions = (
   return {
     habitatsByCode,
     status: toStatus(stats),
-    // Terrestrial only; tooltip on the heading instead of for each source
     tooltip: tooltips[TERRESTRIAL_TOOLTIP_SLUG],
-    // One request returns every habitat (terrestrial)
     loadsAtOnce: requests.length === 1,
   };
 };

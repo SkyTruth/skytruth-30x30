@@ -37,10 +37,8 @@ export const fetchModelling = async (tab: string, feature: Feature, isCbApiActiv
   return { ...response, data: fromCbApiModellingData(response.data) };
 };
 
-// Each cb_api stat endpoint's response, converted to the format of the coverage results
 const STAT_CONVERSIONS = {
   'protection-level': (data: CbApiModellingData) => fromCbApiModellingData(data),
-  // One result per habitat slug
   habitats: (data: CbApiHabitatsData) => fromCbApiHabitatsData(data),
 };
 

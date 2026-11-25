@@ -39,12 +39,10 @@ export const fromCbApiModellingData = (data: CbApiModellingData): ModellingData 
   };
 };
 
-// Habitat stats in the format cb_api returns: the added area per location and habitat
 export type CbApiHabitatsData = {
   locations: {
     code: string;
     habitats: {
-      // cb_api's habitat slug
       habitat: string;
       // Area of this habitat in the drawn shape and location that is not yet protected, in km²
       added_area: number;
@@ -54,8 +52,6 @@ export type CbApiHabitatsData = {
   total_area: number;
 };
 
-// Splits cb_api's habitat stats into the coverage format, one result per habitat slug
-// A habitat the shape doesn't add anywhere has no entry
 export const fromCbApiHabitatsData = (data: CbApiHabitatsData): Record<string, ModellingData> => {
   const byHabitat: Record<string, CbApiModellingData> = {};
   data.locations.forEach(({ code, habitats }) =>
