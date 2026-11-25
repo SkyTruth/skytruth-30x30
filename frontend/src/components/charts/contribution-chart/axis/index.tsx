@@ -8,7 +8,6 @@ type ContributionAxisProps = {
   target?: number;
 };
 
-/** 0% and 100% at the ends, with the target label under the bar's target line */
 const ContributionAxis: FCWithMessages<ContributionAxisProps> = ({ target }) => {
   const t = useTranslations('components.chart-contribution');
 
