@@ -78,7 +78,7 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
               ))}
             </HabitatContributionList>
           )}
-          <p aria-live="polite" className="pt-3 text-xs empty:hidden">
+          <p aria-live="polite" className="pt-3 text-xs empty:pt-0">
             {isLoading &&
               t('still-calculating-habitats', {
                 habitats: new Intl.ListFormat(locale, { type: 'conjunction' }).format(loadingNames),
