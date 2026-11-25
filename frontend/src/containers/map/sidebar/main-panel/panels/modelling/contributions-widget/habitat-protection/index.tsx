@@ -8,8 +8,8 @@ import TooltipButton from '@/components/tooltip-button';
 import { cn } from '@/lib/classnames';
 import { FCWithMessages } from '@/types';
 
+import type { StatStatus } from '../helpers';
 import LegendItem from '../legend/item';
-import type { StatStatus } from '../stat-status';
 import StatStatusMessage from '../stat-status-message';
 import type { HabitatContribution } from '../use-habitat-contributions';
 

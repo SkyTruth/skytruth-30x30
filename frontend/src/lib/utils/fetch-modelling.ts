@@ -50,8 +50,6 @@ export type ModellingStatData<E extends ModellingStatEndpoint> = ReturnType<
   (typeof STAT_CONVERSIONS)[E]
 >;
 
-// One cb_api stat for the drawn shape (e.g. fully/highly protected), converted to the
-// format of the coverage results
 export const fetchModellingStat = async <E extends ModellingStatEndpoint>(
   endpoint: E,
   feature: Feature,

@@ -13,9 +13,9 @@ import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
 import HabitatProtection, { HabitatProtectionProps } from '../habitat-protection';
+import type { StatStatus } from '../helpers';
 import ContributionLegend from '../legend';
 import StatBlock, { StatBlockProps } from '../stat-block';
-import type { StatStatus } from '../stat-status';
 import { SectionStats } from '../use-coverage-contributions';
 
 // Shared with the Progress Tracker's coverage widgets
