@@ -2,11 +2,8 @@ import { useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import {
-  FHP_LEVEL,
-  useFhpAnalysis,
-} from '@/containers/map/content/map/modelling/use-modelling-stat';
 import useDataInfoTooltips from '@/hooks/use-data-info-tooltips';
+import { FHP_LEVEL, useFhpAnalysis } from '@/hooks/use-modelling-stat';
 import { GLOBAL_CODE, buildContributions } from '@/lib/utils/modelling-contributions';
 import { useGetMpaaProtectionLevelStats } from '@/types/generated/mpaa-protection-level-stat';
 import { MpaaProtectionLevelStat } from '@/types/generated/strapi.schemas';

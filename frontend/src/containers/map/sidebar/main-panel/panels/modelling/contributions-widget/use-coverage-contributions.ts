@@ -3,10 +3,10 @@ import { useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useLocale } from 'next-intl';
 
-import { useFhpAnalysis } from '@/containers/map/content/map/modelling/use-modelling-stat';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
+import { useFhpAnalysis } from '@/hooks/use-modelling-stat';
 import { Contribution, GLOBAL_CODE, buildContributions } from '@/lib/utils/modelling-contributions';
 import { useGetLocations } from '@/types/generated/location';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';

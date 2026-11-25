@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Feature } from 'geojson';
 
+import useModellingFeature from '@/hooks/use-modelling-feature';
 import { fetchModellingStat, ModellingStatEndpoint } from '@/lib/utils/fetch-modelling';
-
-import useModellingFeature from './use-modelling-feature';
 
 // Query for one cb_api stat of the drawn shape, cached per endpoint, params and shape
 const getModellingStatQuery = (
