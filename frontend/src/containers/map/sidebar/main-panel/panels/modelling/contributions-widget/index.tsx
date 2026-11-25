@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-
 import { useAtomValue } from 'jotai';
 import { useTranslations } from 'next-intl';
 
@@ -39,11 +37,7 @@ const ContributionsWidget: FCWithMessages = () => {
 
   const { countries, global, isLoading } = useCoverageContributions();
   const hasLocations = countries.length > 0;
-
-  // One location is open, all others collapsed (starting with the first one listed)
-  const [openCode, setOpenCode] = useState('');
   const firstCode = countries[0]?.code ?? '';
-  useEffect(() => setOpenCode(firstCode), [firstCode]);
 
   const loading = modellingStatus === 'running' || drawStatus === 'uploading' || isLoading;
   const error = modellingStatus === 'error';
@@ -59,7 +53,7 @@ const ContributionsWidget: FCWithMessages = () => {
       error={error}
       errorMessage={errorMessage}
     >
-      <Accordion type="single" collapsible value={openCode} onValueChange={setOpenCode}>
+      <Accordion key={firstCode} type="single" collapsible defaultValue={firstCode}>
         {countries.length > 0 && (
           <ContributionSection
             title={t('countries-section')}
