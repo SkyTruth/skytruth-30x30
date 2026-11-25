@@ -12,12 +12,12 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import useDataInfoTooltips from '@/hooks/use-data-info-tooltips';
 import { cn } from '@/lib/classnames';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
 import { SectionStats } from './use-coverage-contributions';
-import useDataInfoTooltips from './use-data-info-tooltips';
 
 // Shared with the Progress Tracker's coverage widgets
 const COVERAGE_TOOLTIP_SLUG = 'coverage-widget';
