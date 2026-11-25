@@ -8,7 +8,8 @@ import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useLocationName from '@/hooks/use-location-name';
 import { FCWithMessages } from '@/types';
 
-import ContributionSection from './contribution-section';
+import ContributionLocation from './location';
+import ContributionSection from './section';
 import useCoverageContributions from './use-coverage-contributions';
 
 // TODO: TECH-3876, clean up the use_cb_api feature flag so this is the only stats panel
@@ -46,16 +47,20 @@ const ContributionsWidget: FCWithMessages = () => {
     >
       <Accordion key={firstCode} type="single" collapsible defaultValue={firstCode}>
         {hasLocations && (
-          <ContributionSection
-            title={t('national-level-section')}
-            items={countries.map((stats) => ({ title: getLocationName(stats.location), stats }))}
-          />
+          <ContributionSection title={t('national-level-section')}>
+            {countries.map((stats) => (
+              <ContributionLocation
+                key={stats.code}
+                title={getLocationName(stats.location)}
+                stats={stats}
+              />
+            ))}
+          </ContributionSection>
         )}
         {global && (
-          <ContributionSection
-            title={t('global-section')}
-            items={[{ title: t('globe'), stats: global }]}
-          />
+          <ContributionSection title={t('global-section')}>
+            <ContributionLocation title={t('globe')} stats={global} />
+          </ContributionSection>
         )}
       </Accordion>
     </Widget>
@@ -67,7 +72,7 @@ ContributionsWidget.messages = [
   'services.uploads',
   'locations',
   ...Widget.messages,
-  ...ContributionSection.messages,
+  ...ContributionLocation.messages,
 ];
 
 export default ContributionsWidget;
