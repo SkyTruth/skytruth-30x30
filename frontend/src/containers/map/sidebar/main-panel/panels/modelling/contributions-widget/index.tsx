@@ -47,7 +47,7 @@ const ContributionsWidget: FCWithMessages = () => {
       <Accordion key={firstCode} type="single" collapsible defaultValue={firstCode}>
         {hasLocations && (
           <ContributionSection
-            title={t('countries-section')}
+            title={t('national-level-section')}
             items={countries.map((stats) => ({ title: getLocationName(stats.location), stats }))}
           />
         )}
