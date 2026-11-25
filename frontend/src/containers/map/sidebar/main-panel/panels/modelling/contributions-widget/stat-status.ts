@@ -1,6 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
-// Request state of a stat that loads separately from coverage
 export type StatStatus = 'loading' | 'error' | 'success';
 
 export const toStatus = (

@@ -33,11 +33,8 @@ const useCoverageContributions = () => {
   const isIhoActive = useFeatureFlag('is_iho_active');
 
   const locationsArea = useMemo(() => modellingData?.locations_area ?? [], [modellingData]);
-  // On the marine tab, also list locations the shape adds only fully/highly protected area to
-  // (inside an MPA that isn't fully/highly protected)
   const { data: fhpData } = useFhpAnalysis(tab === 'marine');
   const fhpLocations = tab === 'marine' ? fhpData?.locations_area : undefined;
-  // Every location in the coverage or fully/highly protected analysis
   const locationCodes = useMemo(
     () => [...new Set([...locationsArea, ...(fhpLocations ?? [])].map(({ code }) => code))],
     [locationsArea, fhpLocations]

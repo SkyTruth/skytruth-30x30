@@ -37,8 +37,6 @@ export const fetchModelling = async (tab: string, feature: Feature, isCbApiActiv
 
 export type ModellingStatEndpoint = 'protection-level';
 
-// One cb_api stat for the drawn shape (e.g. fully/highly protected), converted to the
-// same format as the coverage results
 export const fetchModellingStat = async (
   endpoint: ModellingStatEndpoint,
   feature: Feature,

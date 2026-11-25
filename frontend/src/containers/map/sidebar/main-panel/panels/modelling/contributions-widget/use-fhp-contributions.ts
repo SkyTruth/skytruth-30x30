@@ -10,29 +10,13 @@ import { MpaaProtectionLevelStat } from '@/types/generated/strapi.schemas';
 
 import { toStatus } from './stat-status';
 
-// Strapi data-info entry for the heading's info tooltip
 const FHP_TOOLTIP_SLUG = 'cb-fully-highly-protected';
 
-/**
- * "Fully/Highly Protected" stats for the Conservation Builder panel (marine only), keyed by
- * location code, with `GLOB` for the Global section
- *
- * The added area comes from cb_api's protection-level analysis of the drawn shape; the
- * existing fully/highly protected area and the total area come from Strapi's MPAA
- * protection level stats. A location without a Strapi row has no entry. Also returns the
- * heading's info tooltip, with its linked source, from Strapi
- *
- * @param codes locations listed in the panel
- * @param seaCodes IHO seas, left out of the Global sum because they overlap national waters
- * @param enabled false on the terrestrial tab
- */
 const useFhpContributions = (codes: string[], seaCodes: ReadonlySet<string>, enabled: boolean) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
-  // Added fully/highly protected area per location
   const analysis = useFhpAnalysis(enabled);
 
-  // Existing fully/highly protected area per location, plus global
   const stats = useGetMpaaProtectionLevelStats<MpaaProtectionLevelStat[]>(
     {
       filters: {
@@ -82,7 +66,6 @@ const useFhpContributions = (codes: string[], seaCodes: ReadonlySet<string>, ena
     [analysis.data, stats.data, seaCodes]
   );
 
-  // Info tooltip for the "Fully / Highly Protected" heading, with its linked source
   const tooltips = useDataInfoTooltips([FHP_TOOLTIP_SLUG], { enabled });
   const tooltip = tooltips[FHP_TOOLTIP_SLUG] && {
     ...tooltips[FHP_TOOLTIP_SLUG],

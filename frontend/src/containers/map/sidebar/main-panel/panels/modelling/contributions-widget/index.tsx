@@ -33,7 +33,6 @@ const ContributionsWidget: FCWithMessages = () => {
   const { countries, regionsAndSeas, global, seaCodes, isLoading } = useCoverageContributions();
   const hasLocations = countries.length > 0 || regionsAndSeas.length > 0;
 
-  // Fully/Highly Protected stats for every listed location, marine only
   const isMarine = tab === 'marine';
   const listedCodes = useMemo(
     () => [...countries, ...regionsAndSeas].map(({ code }) => code),
