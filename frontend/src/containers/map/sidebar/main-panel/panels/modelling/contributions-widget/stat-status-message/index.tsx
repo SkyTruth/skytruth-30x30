@@ -8,11 +8,10 @@ const StatStatusMessage: FCWithMessages<{ status: StatStatus }> = ({ status }) =
   const t = useTranslations('containers.map-sidebar-main-panel');
   const tUploads = useTranslations('services.uploads');
 
-  if (status === 'success') return null;
-
   return (
-    <p className="pt-3 font-mono text-xs">
-      {status === 'loading' ? t('loading-data') : tUploads('general-stats-error')}
+    <p aria-live="polite" className="pt-3 font-mono text-xs empty:pt-0">
+      {status === 'loading' && t('loading-data')}
+      {status === 'error' && tUploads('general-stats-error')}
     </p>
   );
 };
