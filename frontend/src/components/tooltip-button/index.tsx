@@ -22,7 +22,6 @@ interface TooltipButtonProps {
   text: string;
   sources?: Source | Source[];
   extraContent?: ReactNode;
-  // Side of the button the tooltip opens on; below when unset
   side?: ComponentProps<typeof PopoverContent>['side'];
 }
 
