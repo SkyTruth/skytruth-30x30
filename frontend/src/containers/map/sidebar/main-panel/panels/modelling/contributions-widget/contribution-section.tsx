@@ -4,9 +4,8 @@ import { ChevronDown } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import ContributionChart from '@/components/charts/contribution-chart';
-import HabitatContributionChart, {
-  HabitatContributionList,
-} from '@/components/charts/habitat-contribution-chart';
+import HabitatContributionChart from '@/components/charts/habitat-contribution-chart';
+import HabitatContributionList from '@/components/charts/habitat-contribution-chart/list';
 import TooltipButton from '@/components/tooltip-button';
 import {
   AccordionContent,

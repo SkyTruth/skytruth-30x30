@@ -1,4 +1,4 @@
-import { ComponentProps, PropsWithChildren } from 'react';
+import { ComponentProps } from 'react';
 
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -12,39 +12,6 @@ import { formatPercentage } from '@/lib/utils/formats';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
-/**
- * List of habitat rows sharing three columns (name, "+X%" badge, protected percentage),
- * under "Added" and "Total" labels. Each column is as wide as its widest value; every badge
- * fills its column and each percentage is centered in its column, so both line up under
- * their centered labels
- */
-export const HabitatContributionList: FCWithMessages<PropsWithChildren<{ className?: string }>> = ({
-  className,
-  children,
-}) => {
-  const t = useTranslations('components.chart-contribution');
-
-  return (
-    <div className={cn('grid grid-cols-[1fr_auto_auto] gap-x-2', className)}>
-      <span
-        aria-hidden
-        className="col-start-2 justify-self-center font-mono text-xs font-bold text-previous-value"
-      >
-        {t('added')}
-      </span>
-      <span
-        aria-hidden
-        className="justify-self-center font-mono text-xs font-bold text-previous-value"
-      >
-        {t('total')}
-      </span>
-      {children}
-    </div>
-  );
-};
-
-HabitatContributionList.messages = ['components.chart-contribution'];
-
 type HabitatContributionChartProps = {
   className?: string;
   title: string;
@@ -54,12 +21,7 @@ type HabitatContributionChartProps = {
   tooltip?: ComponentProps<typeof TooltipButton>;
 };
 
-/**
- * One habitat row under "Habitat Protection" in the Conservation Builder panel: the habitat
- * name with its "+X%" and protected percentage at the right, a bar of the existing and
- * added area, and the protected km² of the habitat's extent. Goes in a
- * `HabitatContributionList`, whose columns it shares
- */
+/** One habitat row; must be a child of `HabitatContributionList` */
 const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = ({
   className,
   title,
