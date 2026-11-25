@@ -53,7 +53,7 @@ const ContributionsWidget: FCWithMessages = () => {
     }),
     habitats: {
       status: habitats.status,
-      rows: habitats.habitatsByCode.get(stats.code) ?? [],
+      rows: habitats.rowsByCode.get(stats.code) ?? [],
       tooltip: habitats.tooltip,
       loadsAtOnce: habitats.loadsAtOnce,
     },

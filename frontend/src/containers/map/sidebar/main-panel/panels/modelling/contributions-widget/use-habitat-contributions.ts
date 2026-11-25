@@ -194,7 +194,7 @@ const useHabitatContributions = (
   });
 
   return {
-    habitatsByCode: rowsByCode,
+    rowsByCode,
     status: toStatus(stats),
     tooltip: tooltips[TERRESTRIAL_TOOLTIP_SLUG],
     loadsAtOnce: requests.length === 1,
