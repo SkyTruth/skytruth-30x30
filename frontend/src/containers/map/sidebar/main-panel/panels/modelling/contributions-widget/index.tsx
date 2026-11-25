@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { useAtomValue } from 'jotai';
 import { useTranslations } from 'next-intl';
@@ -10,20 +10,12 @@ import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useLocationName from '@/hooks/use-location-name';
 import { FCWithMessages } from '@/types';
 
-import ContributionSection from './contribution-section';
+import ContributionLocation from './location';
+import ContributionSection from './section';
 import useCoverageContributions, { SectionStats } from './use-coverage-contributions';
 import useFhpContributions from './use-fhp-contributions';
 
-/**
- * Stats in the Conservation Builder panel once a shape is drawn or uploaded, grouped into
- * sections (e.g. "National Level Contribution"), each a list of collapsible locations. A section is
- * hidden if the shape doesn't intersect any of its locations. Also shows the loading, error
- * and no-data states
- *
- * Shown while the use_cb_api flag is on; the legacy `../widget` is shown while it is off
- * TODO: TECH-3876, clean up the use_cb_api feature flag so this is the only
- * stats panel
- */
+// TODO: TECH-3876, clean up the use_cb_api feature flag so this is the only stats panel
 const ContributionsWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const tUploads = useTranslations('services.uploads');
@@ -56,10 +48,7 @@ const ContributionsWidget: FCWithMessages = () => {
     }),
   });
 
-  // One location is open, all others collapsed (starting with the first one listed)
-  const [openCode, setOpenCode] = useState('');
   const firstCode = (countries[0] ?? regionsAndSeas[0])?.code ?? '';
-  useEffect(() => setOpenCode(firstCode), [firstCode]);
 
   const loading = modellingStatus === 'running' || drawStatus === 'uploading' || isLoading;
   const error = modellingStatus === 'error';
@@ -75,28 +64,31 @@ const ContributionsWidget: FCWithMessages = () => {
       error={error}
       errorMessage={errorMessage}
     >
-      <Accordion type="single" collapsible value={openCode} onValueChange={setOpenCode}>
+      <Accordion key={firstCode} type="single" collapsible defaultValue={firstCode}>
         {countries.length > 0 && (
-          <ContributionSection
-            title={t('countries-section')}
-            items={countries.map((stats) =>
-              withMarineStats(getLocationName(stats.location), stats)
-            )}
-          />
+          <ContributionSection title={t('national-level-section')}>
+            {countries.map((stats) => (
+              <ContributionLocation
+                key={stats.code}
+                {...withMarineStats(getLocationName(stats.location), stats)}
+              />
+            ))}
+          </ContributionSection>
         )}
         {regionsAndSeas.length > 0 && (
-          <ContributionSection
-            title={t('regions-and-seas-section')}
-            items={regionsAndSeas.map((stats) =>
-              withMarineStats(getLocationName(stats.location), stats)
-            )}
-          />
+          <ContributionSection title={t('regions-and-seas-section')}>
+            {regionsAndSeas.map((stats) => (
+              <ContributionLocation
+                key={stats.code}
+                {...withMarineStats(getLocationName(stats.location), stats)}
+              />
+            ))}
+          </ContributionSection>
         )}
         {global && (
-          <ContributionSection
-            title={t('global-section')}
-            items={[withMarineStats(t('globe'), global)]}
-          />
+          <ContributionSection title={t('global-section')}>
+            <ContributionLocation {...withMarineStats(t('globe'), global)} />
+          </ContributionSection>
         )}
       </Accordion>
     </Widget>
@@ -108,7 +100,7 @@ ContributionsWidget.messages = [
   'services.uploads',
   'locations',
   ...Widget.messages,
-  ...ContributionSection.messages,
+  ...ContributionLocation.messages,
 ];
 
 export default ContributionsWidget;

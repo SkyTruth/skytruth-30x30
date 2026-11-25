@@ -6,12 +6,12 @@ import {
   FHP_LEVEL,
   useFhpAnalysis,
 } from '@/containers/map/content/map/modelling/use-modelling-stat';
+import useDataInfoTooltips from '@/hooks/use-data-info-tooltips';
 import { GLOBAL_CODE, buildContributions } from '@/lib/utils/modelling-contributions';
 import { useGetMpaaProtectionLevelStats } from '@/types/generated/mpaa-protection-level-stat';
 import { MpaaProtectionLevelStat } from '@/types/generated/strapi.schemas';
 
 import { toStatus } from './stat-status';
-import useDataInfoTooltips from './use-data-info-tooltips';
 
 // Strapi data-info entry for the heading's info tooltip
 const FHP_TOOLTIP_SLUG = 'cb-fully-highly-protected';

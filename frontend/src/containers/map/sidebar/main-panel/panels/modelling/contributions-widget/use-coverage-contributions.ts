@@ -14,27 +14,16 @@ import { Location, ProtectionCoverageStat } from '@/types/generated/strapi.schem
 
 const HIGH_SEAS_TYPE = 'highseas';
 
-/** Stats for one collapsible location in the Conservation Builder panel */
 export type SectionStats = {
   code: string;
   location: Location;
-  // "Marine/Terrestrial Conservation Coverage" block
   coverage: Contribution;
-  // Coverage target in % for the current tab, as in the Progress Tracker; unset if none reported
   coverageTarget?: number;
 };
 
-// Same target fields the Progress Tracker's coverage widgets read
 const getCoverageTarget = (location: Location, tab: string) =>
   (tab === 'marine' ? location?.marine_target : location?.terrestrial_target) ?? undefined;
 
-/**
- * Coverage stats for the Conservation Builder panel, one entry per location the drawn shape
- * intersects, grouped by panel section (e.g. Countries, Global)
- *
- * The added area comes from the analysis result in modellingAtom; the existing protected
- * area and the total area come from Strapi's protection coverage stats
- */
 const useCoverageContributions = () => {
   const locale = useLocale();
   const [{ tab }] = useSyncMapContentSettings();
@@ -55,7 +44,6 @@ const useCoverageContributions = () => {
   );
   const enabled = locationCodes.length > 0 && ['marine', 'terrestrial'].includes(tab);
 
-  // Latest coverage stats for every location the shape intersects, plus global
   const { data: coverageStats, isInitialLoading } = useGetProtectionCoverageStats<
     ProtectionCoverageStat[]
   >(
@@ -133,7 +121,6 @@ const useCoverageContributions = () => {
       (coverageStats ?? []).map((stat) => [stat.location?.code, stat.location as Location])
     );
 
-    // Coverage of every location with stats, plus global
     const coverageByCode = buildContributions(
       (coverageStats ?? []).map(({ location, protected_area, total_area }) => ({
         code: location?.code,
@@ -158,7 +145,6 @@ const useCoverageContributions = () => {
       };
     };
 
-    // One entry per intersected location that has coverage stats
     const locations = locationCodes
       // TECH-3764: Clean up
       .filter((code) => (isIhoActive || !seaCodes.has(code)) && coverageByCode.has(code))
@@ -169,7 +155,6 @@ const useCoverageContributions = () => {
     const countries = locations.filter((stats) => !isHighSeas(stats));
     const regionsAndSeas = locations.filter(isHighSeas);
 
-    // Global: the world's coverage plus the shape's added area summed across locations
     const global =
       locations.length > 0 && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
 

@@ -22,9 +22,7 @@ interface TooltipButtonProps {
   text: string;
   sources?: Source | Source[];
   extraContent?: ReactNode;
-  // Label before the list of sources; "Data sources:" when unset
   sourcesLabel?: string;
-  // Side of the button the tooltip opens on; below when unset
   side?: ComponentProps<typeof PopoverContent>['side'];
 }
 
