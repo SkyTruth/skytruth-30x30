@@ -2,12 +2,10 @@ import { ComponentProps, PropsWithChildren } from 'react';
 
 import { useLocale, useTranslations } from 'next-intl';
 
-import {
-  AddedPercentageBadge,
-  ContributionBar,
-  MAX_PERCENTAGE,
-  ProtectedAreaText,
-} from '@/components/charts/contribution-chart/parts';
+import AddedPercentageBadge from '@/components/charts/contribution-chart/added-percentage-badge';
+import ContributionBar from '@/components/charts/contribution-chart/bar';
+import { MAX_PERCENTAGE } from '@/components/charts/contribution-chart/helpers';
+import ProtectedAreaText from '@/components/charts/contribution-chart/protected-area-text';
 import TooltipButton from '@/components/tooltip-button';
 import { cn } from '@/lib/classnames';
 import { formatPercentage } from '@/lib/utils/formats';
