@@ -87,8 +87,10 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
         <span />
       )}
       <span className="justify-self-center pt-[0.2em] font-mono text-base font-bold leading-none">
-        {formatPercentage(locale, totalPercentage, { displayPercentageSign: false })}
-        <span className="text-[0.7em]">%</span>
+        {t.rich('total-percentage', {
+          percentage: formatPercentage(locale, totalPercentage, { displayPercentageSign: false }),
+          sign: (chunks) => <span className="text-[0.7em]">{chunks}</span>,
+        })}
       </span>
       <div className="col-span-full flex items-center gap-1 pt-2 font-mono">
         <ContributionBar className="flex-1" contribution={contribution} existingColor={color} />
