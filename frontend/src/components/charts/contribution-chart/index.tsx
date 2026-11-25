@@ -5,13 +5,10 @@ import { formatPercentage } from '@/lib/utils/formats';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
-import {
-  AddedPercentageBadge,
-  ContributionBar,
-  MAX_PERCENTAGE,
-  ProtectedAreaText,
-  toWidth,
-} from './parts';
+import AddedPercentageBadge from './added-percentage-badge';
+import ContributionAxis from './axis';
+import ContributionBar from './bar';
+import ProtectedAreaText from './protected-area-text';
 
 type ContributionChartProps = {
   className?: string;
@@ -33,53 +30,38 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
   const locale = useLocale();
 
   const { added, existingPercentage, addedPercentage, totalPercentage } = contribution;
-  // The "+X%" badge and "was X%" display when the drawn shape adds area
   const hasAddedArea = added > 0;
-  const hasTarget = target != null;
 
   return (
     <div className={cn('font-mono', className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="shrink-0">
-          {/* Protected percentage including the drawn shape (with "+X%") */}
           <div className="-mt-1.5 flex items-center gap-2">
             <span className="pt-[0.2em] text-3xl font-bold leading-none">
-              {formatPercentage(locale, totalPercentage, { displayPercentageSign: false })}
-              <span className="pl-0.5 text-xs">%</span>
+              {t.rich('total-percentage', {
+                percentage: formatPercentage(locale, totalPercentage, {
+                  displayPercentageSign: false,
+                }),
+                sign: (chunks) => <span className="pl-0.5 text-xs">{chunks}</span>,
+              })}
             </span>
             {hasAddedArea && <AddedPercentageBadge percentage={addedPercentage} />}
           </div>
-          {/* Percentage before the shape was added ("was X%"). Bold Overpass Mono looks
-              smaller than regular, so it is 1px larger than the 12px text around it */}
           {hasAddedArea && (
-            <div className="pt-0.5 text-[13px] font-bold text-previous-value">
-              {t('previous-percentage', {
+            <div className="pt-0.5 text-xs-bold font-bold text-previous-value">
+              {t.rich('previous-percentage', {
                 percentage: formatPercentage(locale, existingPercentage, {
                   displayPercentageSign: false,
                 }),
+                sign: (chunks) => <span className="text-[0.7em]">{chunks}</span>,
               })}
-              <span className="text-[0.7em]">%</span>
             </div>
           )}
         </div>
-        {/* Protected area ("+M km²", "N km² of", "T km² protected" on their own lines) */}
         <ProtectedAreaText className="text-right" contribution={contribution} stacked />
       </div>
-      {/* Bar chart: existing area then added area */}
       <ContributionBar className="my-2" contribution={contribution} target={target} />
-      {/* Axis labels: 0%, the target label under its marker, 100% */}
-      <div className="relative flex justify-between text-xs">
-        <span>{t('percentage', { percentage: 0 })}</span>
-        {hasTarget && (
-          <span
-            className="absolute -translate-x-1/2 whitespace-nowrap font-bold text-orange-700"
-            style={{ left: toWidth(target) }}
-          >
-            {t('target', { percentage: target })}
-          </span>
-        )}
-        <span>{t('percentage', { percentage: MAX_PERCENTAGE })}</span>
-      </div>
+      <ContributionAxis target={target} />
     </div>
   );
 };

@@ -24,6 +24,9 @@ const config: Config = {
         mono: ['var(--font-overpass-mono)', ...defaultTheme.fontFamily.mono],
         sans: ['var(--font-figtree)', ...defaultTheme.fontFamily.sans],
       },
+      fontSize: {
+        'xs-bold': '0.8125rem',
+      },
       colors: {
         black: '#000000',
         'black-300': '#666666',
