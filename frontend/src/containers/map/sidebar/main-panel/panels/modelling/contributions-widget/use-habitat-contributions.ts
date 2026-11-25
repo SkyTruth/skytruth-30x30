@@ -7,6 +7,7 @@ import {
   TERRESTRIAL_HABITAT_CHART_COLORS,
 } from '@/constants/habitat-chart-colors';
 import { useModellingStats } from '@/containers/map/content/map/modelling/use-modelling-stat';
+import useDataInfoTooltips, { DataInfoTooltip } from '@/hooks/use-data-info-tooltips';
 import {
   Baseline,
   Contribution,
@@ -18,7 +19,6 @@ import { useGetHabitatStats } from '@/types/generated/habitat-stat';
 import { HabitatStat } from '@/types/generated/strapi.schemas';
 
 import { StatStatus, toStatus } from './stat-status';
-import useDataInfoTooltips, { DataInfoTooltip } from './use-data-info-tooltips';
 
 export type HabitatEnvironment = 'marine' | 'terrestrial';
 
