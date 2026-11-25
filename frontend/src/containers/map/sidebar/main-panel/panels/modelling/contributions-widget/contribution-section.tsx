@@ -131,7 +131,7 @@ type ContributionSectionProps = {
 /** One section of the panel: its heading, then one collapsible per location */
 const ContributionSection: FCWithMessages<ContributionSectionProps> = ({ title, items }) => (
   <section className="pt-6">
-    <h3 className="font-mono text-xs uppercase">{title}</h3>
+    <h2 className="font-mono text-xs uppercase">{title}</h2>
     {items.map((item) => (
       <ContributionItem key={item.stats.code} {...item} />
     ))}
