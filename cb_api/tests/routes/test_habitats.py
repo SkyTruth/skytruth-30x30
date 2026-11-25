@@ -3,20 +3,21 @@
 import pytest
 
 from src.schemas import Habitat
-from src.services.raster import TERRESTRIAL_HABITAT_CLASSES
+from src.services.constants import MANGROVES, TERRESTRIAL_HABITATS
 from src.services.vector import AnalysisTable
 from tests.routes.helpers import ENGINE, HABITATS_STATS, POLYGON, RouteTestClient
 
 PATH = "/habitats"
 
-MARINE_HABITATS = [habitat for habitat in Habitat if habitat is not Habitat.TERRESTRIAL_HABITATS]
+VECTOR_HABITATS = [habitat for habitat in Habitat if habitat.raster is None]
+RASTER_HABITATS = [habitat for habitat in Habitat if habitat.raster is not None]
 
 
 # --- the happy path ----------------------------------------------------------------
 
 
-@pytest.mark.parametrize("habitat", MARINE_HABITATS)
-def test_each_marine_habitat_returns_its_area_by_location(api: RouteTestClient, habitat: Habitat):
+@pytest.mark.parametrize("habitat", VECTOR_HABITATS)
+def test_each_vector_habitat_returns_its_area_by_location(api: RouteTestClient, habitat: Habitat):
     response = api.client.post(PATH, json={"geometry": POLYGON, "habitat": habitat.value})
 
     assert response.status_code == 200
@@ -28,36 +29,48 @@ def test_each_marine_habitat_returns_its_area_by_location(api: RouteTestClient, 
     }
 
 
-@pytest.mark.parametrize("habitat", MARINE_HABITATS)
-def test_each_marine_habitat_reads_its_own_table(api: RouteTestClient, habitat: Habitat):
+@pytest.mark.parametrize("habitat", VECTOR_HABITATS)
+def test_each_vector_habitat_reads_its_own_table(api: RouteTestClient, habitat: Habitat):
     api.client.post(PATH, json={"geometry": POLYGON, "habitat": habitat.value})
 
     _, _, table = api.calls[0]
     assert table is habitat.table
 
 
-def test_the_marine_habitats_read_distinct_tables():
+def test_the_vector_habitats_read_distinct_tables():
     """A copy-paste slip in the enum would quietly serve one habitat's numbers
     for another."""
-    tables = {habitat.table for habitat in MARINE_HABITATS}
+    tables = {habitat.table for habitat in VECTOR_HABITATS}
 
-    assert len(tables) == len(MARINE_HABITATS)
+    assert len(tables) == len(VECTOR_HABITATS)
 
 
-def test_terrestrial_habitats_returns_the_raster_habitats_stats(api: RouteTestClient):
-    response = api.client.post(PATH, json={"geometry": POLYGON, "habitat": "terrestrial-habitats"})
+@pytest.mark.parametrize(
+    ("habitat", "raster"),
+    [("terrestrial-habitats", TERRESTRIAL_HABITATS), ("mangroves", MANGROVES)],
+)
+def test_each_raster_habitat_returns_the_stats_of_its_raster(
+    api: RouteTestClient, habitat: str, raster
+):
+    response = api.client.post(PATH, json={"geometry": POLYGON, "habitat": habitat})
 
     assert response.status_code == 200
     assert response.json() == HABITATS_STATS
-    assert api.calls == [(ENGINE, POLYGON)]
+    assert api.calls == [(ENGINE, POLYGON, raster)]
+
+
+def test_the_raster_habitats_read_distinct_tables():
+    tables = {habitat.raster.table for habitat in RASTER_HABITATS}
+
+    assert len(tables) == len(RASTER_HABITATS)
 
 
 def test_other_is_not_reported():
     """The progress tracker leaves "Other" out, so the two would not add up."""
-    assert 255 not in TERRESTRIAL_HABITAT_CLASSES
+    assert 255 not in TERRESTRIAL_HABITATS.classes
 
 
-@pytest.mark.parametrize("habitat", ["mangroves", "terrestrial-habitats"])
+@pytest.mark.parametrize("habitat", ["seagrasses", "mangroves", "terrestrial-habitats"])
 def test_the_geometry_is_passed_through_untouched(api: RouteTestClient, habitat: str):
     feature = {"type": "Feature", "geometry": POLYGON, "properties": {}}
 
@@ -108,6 +121,6 @@ def test_an_unusable_body_is_a_400_naming_the_cause(api: RouteTestClient, body: 
 # --- the enum ----------------------------------------------------------------------
 
 
-def test_every_marine_habitat_maps_to_a_table():
-    for habitat in MARINE_HABITATS:
+def test_every_vector_habitat_maps_to_a_table():
+    for habitat in VECTOR_HABITATS:
         assert isinstance(habitat.table, AnalysisTable)

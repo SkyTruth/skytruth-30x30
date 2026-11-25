@@ -37,7 +37,7 @@ class RouteTestClient:
 
     The analysis functions are replaced with fakes that return STATS or
     HABITATS_STATS, so the tests don't need a database. A call is recorded as
-    (engine, geometry, table), or (engine, geometry) for the raster habitats.
+    (engine, geometry, table), or (engine, geometry, raster habitats) for a raster.
     """
 
     client: TestClient

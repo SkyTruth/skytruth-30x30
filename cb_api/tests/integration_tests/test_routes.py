@@ -27,7 +27,7 @@ ROUTES = {
     "protection-level": ("/protection-level", {}, AnalysisTable.FULLY_HIGHLY_PROTECTED),
 }
 
-MARINE_HABITATS = [habitat for habitat in Habitat if habitat is not Habitat.TERRESTRIAL_HABITATS]
+VECTOR_HABITATS = [habitat for habitat in Habitat if habitat.raster is None]
 
 
 @pytest.fixture
@@ -51,8 +51,8 @@ def test_each_route_reads_its_own_table(
     assert MIN_DEGREE_CELL_KM2 < location["added_area"] < MAX_DEGREE_CELL_KM2
 
 
-@pytest.mark.parametrize("habitat", MARINE_HABITATS)
-def test_each_marine_habitat_reads_its_own_table(client: TestClient, habitat: Habitat):
+@pytest.mark.parametrize("habitat", VECTOR_HABITATS)
+def test_each_vector_habitat_reads_its_own_table(client: TestClient, habitat: Habitat):
     response = client.post("/habitats", json={"geometry": TABLE_NAME_BOX, "habitat": habitat.value})
 
     assert response.status_code == 200

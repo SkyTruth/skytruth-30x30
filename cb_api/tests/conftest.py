@@ -7,10 +7,12 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from testcontainers.community.postgres import PostgresContainer
 
-from src.services.raster import TERRESTRIAL_HABITATS_TABLE
+from src.services.constants import MANGROVES, TERRESTRIAL_HABITATS
 from src.services.vector import AnalysisTable
 
 POSTGIS_IMAGE = "postgis/postgis:14-3.4"
+
+RASTER_TABLES = [TERRESTRIAL_HABITATS.table, MANGROVES.table]
 
 
 @pytest.fixture(scope="session")
@@ -57,6 +59,9 @@ def analysis_tables(postgis: Engine) -> Iterator[Engine]:
                         ('AAA', ST_Multi(ST_MakeEnvelope(0, 0, 1, 1, 4326))),
                         ('BBB', ST_Multi(ST_MakeEnvelope(1, 0, 2, 1, 4326))),
                         ('AAA', ST_Multi(ST_MakeEnvelope(2, 0, 3, 1, 4326))),
+                        -- Either side of the antimeridian
+                        ('WWW', ST_Multi(ST_MakeEnvelope(179, 0, 180, 1, 4326))),
+                        ('EEE', ST_Multi(ST_MakeEnvelope(-180, 0, -179, 1, 4326))),
                         -- Named after its own table, so a request over this box shows
                         -- which table was read
                         (:table, ST_Multi(ST_MakeEnvelope(10, 0, 11, 1, 4326)))
@@ -75,31 +80,48 @@ def analysis_tables(postgis: Engine) -> Iterator[Engine]:
 
 @pytest.fixture
 def raster_habitats(postgis: Engine) -> Iterator[Engine]:
-    """Create the terrestrial habitats raster table with one 10x10 tile of 0.1° pixels
-    per location, and drop it after the test.
+    """Create the terrestrial habitats and mangrove raster tables with one 10x10 tile of
+    0.1° pixels per location, and drop them after the test.
 
-    AAA covers 0–1°E: columns 1–5 are forest, 6–8 savanna, 9 "Other" and 10 nodata, as
-    a protected area leaves it. BBB covers 1–2°E and is all forest.
+    Terrestrial habitats: AAA covers 0–1°E: columns 1–5 are forest, 6–8 savanna, 9
+    "Other" and 10 nodata, as a protected area leaves it. BBB covers 1–2°E and is all
+    forest.
+
+    Mangroves: AAA covers 0–1°E: columns 1–4 are mangroves and the rest nodata.
     """
     with postgis.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis_raster"))
         conn.execute(text("CREATE SCHEMA IF NOT EXISTS data"))
-        conn.execute(text(f"DROP TABLE IF EXISTS data.{TERRESTRIAL_HABITATS_TABLE}"))
+        for table in RASTER_TABLES:
+            conn.execute(text(f"DROP TABLE IF EXISTS data.{table}"))
+            conn.execute(
+                text(
+                    f"""
+                    CREATE TABLE data.{table} (
+                        id serial PRIMARY KEY,
+                        location text,
+                        rast raster
+                    )
+                    """
+                )
+            )
         conn.execute(
             text(
                 f"""
-                CREATE TABLE data.{TERRESTRIAL_HABITATS_TABLE} (
-                    id serial PRIMARY KEY,
-                    location text,
-                    rast raster
-                )
+                INSERT INTO data.{MANGROVES.table} (location, rast)
+                SELECT 'AAA', ST_SetValues(
+                    ST_AddBand(
+                        ST_MakeEmptyRaster(10, 10, 0, 1, 0.1, -0.1, 0, 0, 4326),
+                        '8BUI'::text, 0, 0
+                    ),
+                    1, 1, 1, 4, 10, 1)
                 """
             )
         )
         conn.execute(
             text(
                 f"""
-                INSERT INTO data.{TERRESTRIAL_HABITATS_TABLE} (location, rast)
+                INSERT INTO data.{TERRESTRIAL_HABITATS.table} (location, rast)
                 SELECT 'AAA', ST_SetValues(ST_SetValues(ST_SetValues(
                     ST_AddBand(
                         ST_MakeEmptyRaster(10, 10, 0, 1, 0.1, -0.1, 0, 0, 4326),
@@ -118,4 +140,5 @@ def raster_habitats(postgis: Engine) -> Iterator[Engine]:
         yield postgis
     finally:
         with postgis.begin() as conn:
-            conn.execute(text(f"DROP TABLE IF EXISTS data.{TERRESTRIAL_HABITATS_TABLE}"))
+            for table in RASTER_TABLES:
+                conn.execute(text(f"DROP TABLE IF EXISTS data.{table}"))

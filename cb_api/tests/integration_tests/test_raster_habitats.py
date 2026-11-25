@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.engine import Engine
 
 from src.main import app, get_engine
+from src.services.constants import MANGROVES, TERRESTRIAL_HABITATS
 from src.services.raster import get_raster_habitats_stats
 from tests.integration_tests.helpers import (
     MAX_DEGREE_CELL_AT_50N_KM2,
@@ -19,7 +20,7 @@ pytestmark = pytest.mark.integration
 
 
 def stats(engine: Engine, geometry: dict) -> dict:
-    return get_raster_habitats_stats(engine, geometry)
+    return get_raster_habitats_stats(engine, geometry, TERRESTRIAL_HABITATS)
 
 
 def by_habitat(result: dict) -> dict[str, dict[str, float]]:
@@ -83,14 +84,32 @@ def test_an_area_touching_no_habitat_lists_no_locations(raster_habitats: Engine)
     assert MIN_DEGREE_CELL_AT_50N_KM2 < result["total_area"] < MAX_DEGREE_CELL_AT_50N_KM2
 
 
-def test_the_route_reads_the_raster_table(raster_habitats: Engine):
-    app.dependency_overrides[get_engine] = lambda: raster_habitats
+def test_mangroves_are_read_from_their_own_raster(raster_habitats: Engine):
+    """Mangroves share pixel value 1 with forest, so only the table and classes passed
+    in tell them apart. AAA's mangroves are its first four columns."""
+    result = get_raster_habitats_stats(raster_habitats, box(0, 0, 1, 1), MANGROVES)
+
+    habitats = by_habitat(result)
+    assert list(habitats) == ["mangroves"]
+    assert habitats["mangroves"]["AAA"] == pytest.approx(0.4 * result["total_area"], rel=0.01)
+
+
+def post_habitats(engine: Engine, habitat: str) -> dict:
+    app.dependency_overrides[get_engine] = lambda: engine
     try:
         response = TestClient(app).post(
-            "/habitats", json={"geometry": box(0, 0, 1, 1), "habitat": "terrestrial-habitats"}
+            "/habitats", json={"geometry": box(0, 0, 1, 1), "habitat": habitat}
         )
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    assert sorted(by_habitat(response.json())["forest"]) == ["AAA"]
+    return by_habitat(response.json())
+
+
+def test_the_route_reads_the_terrestrial_raster_table(raster_habitats: Engine):
+    assert sorted(post_habitats(raster_habitats, "terrestrial-habitats")["forest"]) == ["AAA"]
+
+
+def test_the_route_reads_the_mangrove_raster_table(raster_habitats: Engine):
+    assert list(post_habitats(raster_habitats, "mangroves")) == ["mangroves"]

@@ -520,7 +520,7 @@ def send_slack_alert(webhook_url, text):
         logger.info({"message": "ALERT sent to slack", "alert": text})
         return response.status_code, response.text
     except Exception as e:
-        logger.error({"message": "Failed to send slack alert", "alert": text, "exception": e})
+        logger.error({"message": "Failed to send slack alert", "alert": text, "exception": str(e)})
 
 
 class RetryFailed(Exception):

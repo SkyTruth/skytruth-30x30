@@ -3,6 +3,7 @@ from src.methods.static_processes.eez import (
     process_eez_land_union,
 )
 from src.methods.static_processes.gadm import process_gadm_geoms
+from src.methods.static_processes.mangrove_raster import process_mangrove_raster
 from src.methods.static_processes.marine_habitat_geoms import process_marine_habitat_geoms
 from src.methods.static_processes.marine_habitat_sources import download_marine_habitats
 from src.methods.static_processes.near_shore_iho import process_near_shore_iho
@@ -22,6 +23,7 @@ __all__ = [
     # Marine habitats
     "download_marine_habitats",
     "process_marine_habitat_geoms",
+    "process_mangrove_raster",
     # Terrestrial biome
     "generate_terrestrial_biome_stats_country",
     "process_terrestrial_biome_raster",

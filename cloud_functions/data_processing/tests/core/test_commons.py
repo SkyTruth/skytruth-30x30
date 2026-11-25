@@ -7,7 +7,7 @@ import rasterio
 from rasterio.transform import Affine
 from shapely.geometry import Polygon, box, mapping
 
-from src.core.commons import get_cover_areas, process_buffered_iho
+from src.core.commons import get_cover_areas, process_buffered_iho, send_slack_alert
 from src.utils.geo import compute_pixel_area_map_km2
 
 CLASS_MAP = {0: "class-a", 1: "class-b"}
@@ -108,3 +108,9 @@ def test_invalid_iho_geometries_are_repaired_not_dropped():
     assert result.geometry.is_valid.all()
     # The caller's frame is left untouched by the repair.
     assert not iho.geometry.is_valid.all()
+
+
+def test_a_failed_slack_alert_is_logged_not_raised(capsys):
+    send_slack_alert("", "mock alert")
+
+    assert "Failed to send slack alert" in capsys.readouterr().out

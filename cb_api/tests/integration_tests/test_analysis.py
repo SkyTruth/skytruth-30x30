@@ -110,6 +110,49 @@ def test_an_invalid_user_geometry_is_repaired(analysis_tables: Engine, geometry:
     assert sum(by_code(result).values()) > 0
 
 
+# --- shapes crossing the antimeridian -----------------------------------------
+
+# The same 1°x1° box straddling 180°, in each form it reaches the API
+ACROSS_THE_ANTIMERIDIAN = {
+    "drawn across it, longitudes past 180": box(179.5, 0, 180.5, 1),
+    "drawn across it on the world copy to the west": box(-180.5, 0, -179.5, 1),
+    "drawn across it two world copies east": box(899.5, 0, 900.5, 1),
+    "already split at 180": {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [[[179.5, 0], [180, 0], [180, 1], [179.5, 1], [179.5, 0]]],
+            [[[-180, 0], [-179.5, 0], [-179.5, 1], [-180, 1], [-180, 0]]],
+        ],
+    },
+}
+
+
+@pytest.mark.parametrize("geometry", ACROSS_THE_ANTIMERIDIAN.values(), ids=ACROSS_THE_ANTIMERIDIAN)
+def test_a_shape_across_the_antimeridian_counts_both_sides(analysis_tables: Engine, geometry: dict):
+    """Half the box lies in WWW, west of 180°, and half in EEE, east of it. Left
+    unsplit, the area would be measured the long way round the world, and the
+    intersections would miss one side or take in every location in between."""
+    result = get_locations_stats(analysis_tables, geometry, AnalysisTable.MARINE)
+
+    areas = by_code(result)
+    assert sorted(areas) == ["EEE", "WWW"]
+    assert areas["WWW"] == pytest.approx(areas["EEE"])
+    assert MIN_DEGREE_CELL_KM2 < result["total_area"] < MAX_DEGREE_CELL_KM2
+    assert sum(areas.values()) == pytest.approx(result["total_area"], abs=2)
+
+
+def test_a_shape_circling_the_globe_is_left_whole(analysis_tables: Engine):
+    """A band from -180 to 180 spans more than 180° too, but its edges run along the
+    antimeridian rather than across it. Taken for a wrapped ring, it would be shifted
+    onto itself and collapse to nothing."""
+    result = get_locations_stats(analysis_tables, box(-180, 0, 180, 1), AnalysisTable.MARINE)
+
+    areas = by_code(result)
+    assert MIN_DEGREE_CELL_KM2 < areas["WWW"] < MAX_DEGREE_CELL_KM2
+    assert MIN_DEGREE_CELL_KM2 < areas["EEE"] < MAX_DEGREE_CELL_KM2
+    assert 360 * MIN_DEGREE_CELL_KM2 < result["total_area"] < 360 * MAX_DEGREE_CELL_KM2
+
+
 # --- geometries PostGIS has to reject ---------------------------------------
 
 

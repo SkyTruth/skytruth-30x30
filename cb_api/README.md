@@ -84,9 +84,10 @@ A marine habitat gives one entry per location. `terrestrial-habitats` lists only
 the drawn area adds in each location.
 
 The terrestrial habitats come from the Jung et al. (2020) ~100 m habitat raster
-(`data.terrestrial_habitats_minus_pa`, which needs the `postgis_raster` extension). A pixel
+(`data.terrestrial_habitats_minus_pa`), and mangroves from the Global Mangrove Watch ~30 m
+extent raster (`data.mangroves_minus_pa`). Both need the `postgis_raster` extension. A pixel
 counts when its centre is inside the drawn area, so small drawings are approximate. The
-"Other" class is left out, as it is in the progress tracker.
+"Other" terrestrial class is left out, as it is in the progress tracker.
 
 ## Configuration
 
