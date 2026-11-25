@@ -1,20 +1,11 @@
 import { ModellingLocationArea } from '@/types/modelling';
 
-// Strapi location code of the whole world, shown in the Global section
 export const GLOBAL_CODE = 'GLOB';
 
-/**
- * How much of an area is protected before and after a drawn shape,
- * shown in one stat block of the Conservation Builder panel
- */
 export type Contribution = {
-  // Area already protected, in km²
   existing: number;
-  // Area the drawn shape newly protects, in km²
   added: number;
-  // Total area, in km²
   total: number;
-  // Each as a percentage of total, from 0 to 100
   existingPercentage: number;
   addedPercentage: number;
   totalPercentage: number;
@@ -44,23 +35,13 @@ const computeContribution = (existing: number, added: number, total: number): Co
   };
 };
 
-// Added area for one location in an analysis result, in km²
-// TODO: TECH-3876, clean up the use_cb_api feature flag: read cb_api's added_area once
-// ModellingData takes cb_api's format
-const getAddedArea = ({ protected_area: area }: ModellingLocationArea) => {
-  // 0s in the analysis result indicate small overlaps that were rounded to 0,
-  // so use EPSILON (a tiny non-zero value) to show "<1 km²" and "+<0.1%" in the frontend
-  return area === 0 ? Number.EPSILON : area;
-};
-
-// Total added area across locations
 const sumAddedArea = (
   locations: ModellingLocationArea[],
   exclude: ReadonlySet<string> = new Set()
 ) =>
   locations
     .filter(({ code }) => !exclude.has(code))
-    .reduce((total, location) => total + getAddedArea(location), 0);
+    .reduce((total, location) => total + location.protected_area, 0);
 
 /** Existing protected area and total area of one location for a stat in km² */
 export type Baseline = {
@@ -79,7 +60,9 @@ export const buildContributions = (
   locations: ModellingLocationArea[],
   exclude: ReadonlySet<string> = new Set()
 ) => {
-  const addedByCode = new Map(locations.map((location) => [location.code, getAddedArea(location)]));
+  const addedByCode = new Map(
+    locations.map((location) => [location.code, location.protected_area])
+  );
 
   return new Map(
     baselines.map(({ code, existing, total }) => {

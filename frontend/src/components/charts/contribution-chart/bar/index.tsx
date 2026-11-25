@@ -12,10 +12,6 @@ type ContributionBarProps = {
   target?: number;
 };
 
-/**
- * Bar of the existing area then the added area (blue), each with a black outline, and a
- * dashed line for the rest
- */
 const ContributionBar: React.FC<ContributionBarProps> = ({
   className,
   contribution: { existingPercentage, addedPercentage },
