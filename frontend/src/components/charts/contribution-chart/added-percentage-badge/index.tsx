@@ -9,10 +9,6 @@ type AddedPercentageBadgeProps = {
   percentage: number;
 };
 
-/**
- * Blue "+X%" badge: how much the drawn shape adds to the protected percentage. The box
- * scales with its font size, so a text size in `className` makes it larger or smaller
- */
 const AddedPercentageBadge: FCWithMessages<AddedPercentageBadgeProps> = ({
   className,
   percentage,
