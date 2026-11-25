@@ -11,16 +11,7 @@ import { FCWithMessages } from '@/types';
 import ContributionSection from './contribution-section';
 import useCoverageContributions from './use-coverage-contributions';
 
-/**
- * Stats in the Conservation Builder panel once a shape is drawn or uploaded, grouped into
- * sections (e.g. "National Level Contribution"), each a list of collapsible locations. A section is
- * hidden if the shape doesn't intersect any of its locations. Also shows the loading, error
- * and no-data states
- *
- * Shown while the use_cb_api flag is on; the legacy `../widget` is shown while it is off
- * TODO: TECH-3876, clean up the use_cb_api feature flag so this is the only
- * stats panel
- */
+// TODO: TECH-3876, clean up the use_cb_api feature flag so this is the only stats panel
 const ContributionsWidget: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const tUploads = useTranslations('services.uploads');

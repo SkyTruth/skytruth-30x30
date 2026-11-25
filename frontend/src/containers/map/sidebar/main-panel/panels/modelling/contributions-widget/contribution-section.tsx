@@ -19,11 +19,9 @@ import { FCWithMessages } from '@/types';
 import { SectionStats } from './use-coverage-contributions';
 import useDataInfoTooltips from './use-data-info-tooltips';
 
-// Strapi data-info entry for the coverage tooltip, shared with the Progress Tracker's
-// coverage widgets
+// Shared with the Progress Tracker's coverage widgets
 const COVERAGE_TOOLTIP_SLUG = 'coverage-widget';
 
-/** One legend entry: a colored square with a black outline (`className` sets its color) and its label */
 const LegendItem = ({ className, children }: PropsWithChildren<{ className: string }>) => (
   <li className="flex items-center gap-2">
     <span aria-hidden className={cn('h-2.5 w-2.5 border border-black', className)} />
@@ -31,7 +29,6 @@ const LegendItem = ({ className, children }: PropsWithChildren<{ className: stri
   </li>
 );
 
-/** Existing area and Added area legend shown at the top of each open location */
 const ContributionLegend: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
@@ -50,11 +47,9 @@ type StatBlockProps = {
   title: string;
   contribution?: Contribution;
   target?: number;
-  // Info tooltip at the right of the heading
   tooltip?: ComponentProps<typeof TooltipButton>;
 };
 
-/** One section inside a location, with heading and chart */
 const StatBlock: FCWithMessages<StatBlockProps> = ({
   className,
   title,
@@ -82,7 +77,6 @@ type ContributionItemProps = {
   stats: SectionStats;
 };
 
-/** One collapsible location in the panel: each shows the legend and stats */
 const ContributionItem: FCWithMessages<ContributionItemProps> = ({ title, stats }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
@@ -128,7 +122,6 @@ type ContributionSectionProps = {
   items: ContributionItemProps[];
 };
 
-/** One section of the panel: its heading, then one collapsible per location */
 const ContributionSection: FCWithMessages<ContributionSectionProps> = ({ title, items }) => (
   <section className="pt-6">
     <h2 className="font-mono text-xs uppercase">{title}</h2>
