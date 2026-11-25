@@ -153,63 +153,48 @@ const useHabitatContributions = (
     environment === 'marine' ? strapiSlugs : [TERRESTRIAL_TOOLTIP_SLUG]
   );
 
-  const habitatsByCode = useMemo(() => {
-    const rowsByCode = new Map<string, HabitatContribution[]>();
-    if (!stats.data) return rowsByCode;
+  const rowsByCode = new Map<string, HabitatContribution[]>();
 
-    // Newest year per location and habitat
-    const latestStats = new Map<string, HabitatStat>();
-    stats.data.forEach((stat) => {
-      const key = `${stat.location?.code}|${stat.habitat?.slug}`;
-      if (!latestStats.has(key)) latestStats.set(key, stat);
+  // Newest year per location and habitat
+  const latestStats = new Map<string, HabitatStat>();
+  (stats.data ?? []).forEach((stat) => {
+    const key = `${stat.location?.code}|${stat.habitat?.slug}`;
+    if (!latestStats.has(key)) latestStats.set(key, stat);
+  });
+
+  habitats.forEach(({ slug, strapiSlug, request }) => {
+    const analysis = analyses[requests.findIndex(({ habitat }) => habitat === request)];
+
+    const baselines = [...codes, GLOBAL_CODE].flatMap((code): Baseline[] => {
+      const stat = latestStats.get(`${code}|${strapiSlug}`);
+      return Number(stat?.total_area)
+        ? [{ code, existing: Number(stat.protected_area), total: Number(stat.total_area) }]
+        : [];
     });
+    // A habitat missing from the response gains nothing in any location
+    const contributions = analysis.data
+      ? buildContributions(baselines, analysis.data[slug]?.locations_area ?? [], seaCodes)
+      : undefined;
 
-    habitats.forEach(({ slug, strapiSlug, request }) => {
-      const analysis = analyses[requests.findIndex(({ habitat }) => habitat === request)];
+    baselines.forEach(({ code }) => {
+      const contribution = contributions?.get(code);
 
-      const baselines = [...codes, GLOBAL_CODE].flatMap((code): Baseline[] => {
-        const stat = latestStats.get(`${code}|${strapiSlug}`);
-        return Number(stat?.total_area)
-          ? [{ code, existing: Number(stat.protected_area), total: Number(stat.total_area) }]
-          : [];
-      });
-      // A habitat missing from the response gains nothing in any location
-      const contributions = analysis.data
-        ? buildContributions(baselines, analysis.data[slug]?.locations_area ?? [], seaCodes)
-        : undefined;
-
-      baselines.forEach(({ code }) => {
-        const contribution = contributions?.get(code);
-
-        rowsByCode.set(code, [
-          ...(rowsByCode.get(code) ?? []),
-          {
-            slug,
-            name: habitatNames?.[strapiSlug] ?? strapiSlug,
-            color: HABITAT_COLORS[environment][strapiSlug],
-            status: toStatus(analysis),
-            contribution,
-            tooltip: tooltips[strapiSlug],
-          },
-        ]);
-      });
+      rowsByCode.set(code, [
+        ...(rowsByCode.get(code) ?? []),
+        {
+          slug,
+          name: habitatNames?.[strapiSlug] ?? strapiSlug,
+          color: HABITAT_COLORS[environment][strapiSlug],
+          status: toStatus(analysis),
+          contribution,
+          tooltip: tooltips[strapiSlug],
+        },
+      ]);
     });
-
-    return rowsByCode;
-  }, [
-    stats.data,
-    habitats,
-    requests,
-    analyses,
-    codes,
-    seaCodes,
-    environment,
-    habitatNames,
-    tooltips,
-  ]);
+  });
 
   return {
-    habitatsByCode,
+    habitatsByCode: rowsByCode,
     status: toStatus(stats),
     tooltip: tooltips[TERRESTRIAL_TOOLTIP_SLUG],
     loadsAtOnce: requests.length === 1,
