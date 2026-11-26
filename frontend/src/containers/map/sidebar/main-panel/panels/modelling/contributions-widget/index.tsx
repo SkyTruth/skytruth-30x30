@@ -27,9 +27,9 @@ const ContributionsWidget: FCWithMessages = () => {
     ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0], { environment: tab })
     : undefined;
 
-  const { countries, global, isLoading } = useCoverageContributions();
-  const hasLocations = countries.length > 0;
-  const firstCode = countries[0]?.code ?? '';
+  const { countries, regionsAndSeas, global, isLoading } = useCoverageContributions();
+  const hasLocations = countries.length > 0 || regionsAndSeas.length > 0;
+  const firstCode = (countries[0] ?? regionsAndSeas[0])?.code ?? '';
 
   const loading = modellingStatus === 'running' || drawStatus === 'uploading' || isLoading;
   const error = modellingStatus === 'error';
@@ -46,9 +46,20 @@ const ContributionsWidget: FCWithMessages = () => {
       errorMessage={errorMessage}
     >
       <Accordion key={firstCode} type="single" collapsible defaultValue={firstCode}>
-        {hasLocations && (
+        {countries.length > 0 && (
           <ContributionSection title={t('national-level-section')}>
             {countries.map((stats) => (
+              <ContributionLocation
+                key={stats.code}
+                title={getLocationName(stats.location)}
+                stats={stats}
+              />
+            ))}
+          </ContributionSection>
+        )}
+        {regionsAndSeas.length > 0 && (
+          <ContributionSection title={t('regions-and-seas-section')}>
+            {regionsAndSeas.map((stats) => (
               <ContributionLocation
                 key={stats.code}
                 title={getLocationName(stats.location)}
