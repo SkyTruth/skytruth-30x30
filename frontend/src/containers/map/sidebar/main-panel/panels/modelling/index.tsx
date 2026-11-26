@@ -10,12 +10,15 @@ import {
   modellingCustomLayerIdAtom,
 } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import { cn } from '@/lib/classnames';
+import { CB_API_FLAG } from '@/lib/utils/fetch-modelling';
 import { FCWithMessages } from '@/types';
 
 import LocationSelector from '../../location-selector';
 
+import ContributionsWidget from './contributions-widget';
 import ModellingButtons from './modelling-buttons';
 import ModellingIntro from './modelling-intro';
 import ModellingWidget from './widget';
@@ -31,6 +34,12 @@ const SidebarModelling: FCWithMessages = () => {
   const [{ tab }, setSettings] = useSyncMapContentSettings();
 
   const showIntro = useMemo(() => modellingStatus === 'idle', [modellingStatus]);
+
+  // The redesigned stats panel ships with cb_api; the legacy widget stays while the flag is off
+  // TODO: TECH-3876, clean up the use_cb_api feature flag so ContributionsWidget is
+  // always shown, then delete ./widget
+  const isCbApiActive = Boolean(useFeatureFlag(CB_API_FLAG));
+  const StatsWidget = isCbApiActive ? ContributionsWidget : ModellingWidget;
 
   const handleViewInstructions = useCallback(() => {
     setModellingCustomLayerId(null);
@@ -94,11 +103,11 @@ const SidebarModelling: FCWithMessages = () => {
       <div ref={contentRef} className="flex-grow overflow-y-auto">
         <TabsContent value="terrestrial">
           {showIntro && <ModellingIntro />}
-          {!showIntro && <ModellingWidget />}
+          {!showIntro && <StatsWidget />}
         </TabsContent>
         <TabsContent value="marine">
           {showIntro && <ModellingIntro />}
-          {!showIntro && <ModellingWidget />}
+          {!showIntro && <StatsWidget />}
         </TabsContent>
       </div>
       <div className="shrink-0 border-t border-t-black bg-white py-5">
@@ -114,6 +123,7 @@ SidebarModelling.messages = [
   ...ModellingButtons.messages,
   ...ModellingIntro.messages,
   ...ModellingWidget.messages,
+  ...ContributionsWidget.messages,
 ];
 
 export default SidebarModelling;
