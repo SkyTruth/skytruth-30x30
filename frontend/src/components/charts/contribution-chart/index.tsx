@@ -9,6 +9,7 @@ import AddedPercentageBadge from './added-percentage-badge';
 import ContributionAxis from './axis';
 import ContributionBar from './bar';
 import ProtectedAreaText from './protected-area-text';
+import ContributionSummary from './summary';
 
 type ContributionChartProps = {
   className?: string;
@@ -34,38 +35,41 @@ const ContributionChart: FCWithMessages<ContributionChartProps> = ({
 
   return (
     <div className={cn('font-mono', className)}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="shrink-0">
-          <div className="-mt-1.5 flex items-center gap-2">
-            <span className="pt-[0.2em] text-3xl font-bold leading-none">
-              {t.rich('total-percentage', {
-                percentage: formatPercentage(locale, totalPercentage, {
-                  displayPercentageSign: false,
-                }),
-                sign: (chunks) => <span className="pl-0.5 text-xs">{chunks}</span>,
-              })}
-            </span>
-            {hasAddedArea && <AddedPercentageBadge percentage={addedPercentage} />}
-          </div>
-          {hasAddedArea && (
-            <div className="pt-0.5 text-xs-bold font-bold text-previous-value">
-              {t.rich('previous-percentage', {
-                percentage: formatPercentage(locale, existingPercentage, {
-                  displayPercentageSign: false,
-                }),
-                sign: (chunks) => <span className="text-[0.7em]">{chunks}</span>,
-              })}
+      <ContributionSummary contribution={contribution} target={target} />
+      <div aria-hidden>
+        <div className="flex items-start justify-between gap-4">
+          <div className="shrink-0">
+            <div className="-mt-1.5 flex items-center gap-2">
+              <span className="pt-[0.2em] text-3xl font-bold leading-none">
+                {t.rich('total-percentage', {
+                  percentage: formatPercentage(locale, totalPercentage, {
+                    displayPercentageSign: false,
+                  }),
+                  sign: (chunks) => <span className="pl-0.5 text-xs">{chunks}</span>,
+                })}
+              </span>
+              {hasAddedArea && <AddedPercentageBadge percentage={addedPercentage} />}
             </div>
-          )}
+            {hasAddedArea && (
+              <div className="pt-0.5 text-xs-bold font-bold text-previous-value">
+                {t.rich('previous-percentage', {
+                  percentage: formatPercentage(locale, existingPercentage, {
+                    displayPercentageSign: false,
+                  }),
+                  sign: (chunks) => <span className="text-[0.7em]">{chunks}</span>,
+                })}
+              </div>
+            )}
+          </div>
+          <ProtectedAreaText className="text-right" contribution={contribution} stacked />
         </div>
-        <ProtectedAreaText className="text-right" contribution={contribution} stacked />
+        <ContributionBar className="my-2" contribution={contribution} target={target} />
+        <ContributionAxis target={target} />
       </div>
-      <ContributionBar className="my-2" contribution={contribution} target={target} />
-      <ContributionAxis target={target} />
     </div>
   );
 };
 
-ContributionChart.messages = ['components.chart-contribution'];
+ContributionChart.messages = ['components.chart-contribution', ...ContributionSummary.messages];
 
 export default ContributionChart;
