@@ -43,11 +43,11 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
   const hasError = rows.some(({ status }) => status === 'error');
 
   if (!addedRows.length && status !== 'error' && (isLoading || !hasError)) {
-    return loadsAtOnce && (isLoading || status === 'loading') ? (
-      <p aria-live="polite" className={cn('text-xs', className)}>
-        {t('calculating-habitat-protection')}
+    return (
+      <p aria-live="polite" className={cn('text-xs empty:pt-0', className)}>
+        {loadsAtOnce && (isLoading || status === 'loading') && t('calculating-habitat-protection')}
       </p>
-    ) : null;
+    );
   }
 
   return (
