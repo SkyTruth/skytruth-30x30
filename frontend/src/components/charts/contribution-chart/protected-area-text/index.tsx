@@ -8,14 +8,10 @@ import { FCWithMessages } from '@/types';
 type ProtectedAreaTextProps = {
   className?: string;
   contribution: Contribution;
+  // Puts "T km² protected" on its own line
   stacked?: boolean;
 };
 
-/**
- * "M km² N km² of T km² protected": the added area first, in bold blue, then the protected
- * area including it. `stacked` puts the added area, "N km² of" and "T km² protected" on
- * their own lines
- */
 const ProtectedAreaText: FCWithMessages<ProtectedAreaTextProps> = ({
   className,
   contribution: { existing, added, total },
@@ -30,12 +26,7 @@ const ProtectedAreaText: FCWithMessages<ProtectedAreaTextProps> = ({
         protectedArea: formatKM(locale, existing + added),
         addedArea: formatKM(locale, added),
         totalArea: formatKM(locale, total),
-        added: (chunks) => (
-          <span className={cn('text-xs-bold font-bold text-blue-700', { block: stacked })}>
-            {chunks}
-          </span>
-        ),
-        sr: (chunks) => <span className="sr-only">{chunks}</span>,
+        added: (chunks) => <span className="text-xs-bold font-bold text-blue-700">{chunks}</span>,
         total: (chunks) => <span className={cn({ block: stacked })}>{chunks}</span>,
       })}
     </div>
