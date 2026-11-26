@@ -14,6 +14,7 @@ import ContributionLocation from './location';
 import ContributionSection from './section';
 import useCoverageContributions, { SectionStats } from './use-coverage-contributions';
 import useFhpContributions from './use-fhp-contributions';
+import useHabitatContributions from './use-habitat-contributions';
 
 // TODO: TECH-3876, clean up the use_cb_api feature flag so this is the only stats panel
 const ContributionsWidget: FCWithMessages = () => {
@@ -39,12 +40,23 @@ const ContributionsWidget: FCWithMessages = () => {
     [countries, regionsAndSeas]
   );
   const fhp = useFhpContributions(listedCodes, seaCodes, isMarine);
-  const withMarineStats = (title: string, stats: SectionStats) => ({
+  const habitats = useHabitatContributions(
+    listedCodes,
+    seaCodes,
+    isMarine ? 'marine' : 'terrestrial'
+  );
+  const withStats = (title: string, stats: SectionStats) => ({
     title,
     stats,
     ...(isMarine && {
       fhp: { status: fhp.status, contribution: fhp.byCode.get(stats.code), tooltip: fhp.tooltip },
     }),
+    habitats: {
+      status: habitats.status,
+      rows: habitats.rowsByCode.get(stats.code) ?? [],
+      tooltip: habitats.tooltip,
+      loadsAtOnce: habitats.loadsAtOnce,
+    },
   });
 
   const firstCode = (countries[0] ?? regionsAndSeas[0])?.code ?? '';
@@ -69,7 +81,7 @@ const ContributionsWidget: FCWithMessages = () => {
             {countries.map((stats) => (
               <ContributionLocation
                 key={stats.code}
-                {...withMarineStats(getLocationName(stats.location), stats)}
+                {...withStats(getLocationName(stats.location), stats)}
               />
             ))}
           </ContributionSection>
@@ -79,14 +91,14 @@ const ContributionsWidget: FCWithMessages = () => {
             {regionsAndSeas.map((stats) => (
               <ContributionLocation
                 key={stats.code}
-                {...withMarineStats(getLocationName(stats.location), stats)}
+                {...withStats(getLocationName(stats.location), stats)}
               />
             ))}
           </ContributionSection>
         )}
         {global && (
           <ContributionSection title={t('global-section')}>
-            <ContributionLocation {...withMarineStats(t('globe'), global)} />
+            <ContributionLocation {...withStats(t('globe'), global)} />
           </ContributionSection>
         )}
       </Accordion>

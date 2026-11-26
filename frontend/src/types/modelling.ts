@@ -38,3 +38,30 @@ export const fromCbApiModellingData = (data: CbApiModellingData): ModellingData 
     ),
   };
 };
+
+export type CbApiHabitatsData = {
+  locations: {
+    code: string;
+    habitats: {
+      habitat: string;
+      // Area of this habitat in the drawn shape and location that is not yet protected, in km²
+      added_area: number;
+    }[];
+  }[];
+  // Area of the drawn shape, in km²
+  total_area: number;
+};
+
+export const fromCbApiHabitatsData = (data: CbApiHabitatsData): Record<string, ModellingData> => {
+  const byHabitat: Record<string, CbApiModellingData> = {};
+  data.locations.forEach(({ code, habitats }) =>
+    habitats.forEach(({ habitat, added_area }) => {
+      byHabitat[habitat] ??= { locations: [], total_area: data.total_area };
+      byHabitat[habitat].locations.push({ code, added_area });
+    })
+  );
+
+  return Object.fromEntries(
+    Object.entries(byHabitat).map(([habitat, stats]) => [habitat, fromCbApiModellingData(stats)])
+  );
+};

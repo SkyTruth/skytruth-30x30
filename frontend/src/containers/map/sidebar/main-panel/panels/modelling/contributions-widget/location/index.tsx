@@ -12,6 +12,7 @@ import useDataInfoTooltips from '@/hooks/use-data-info-tooltips';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
+import HabitatProtection, { HabitatProtectionProps } from '../habitat-protection';
 import type { StatStatus } from '../helpers';
 import ContributionLegend from '../legend';
 import StatBlock, { StatBlockProps } from '../stat-block';
@@ -24,9 +25,15 @@ type ContributionLocationProps = {
   title: string;
   stats: SectionStats;
   fhp?: { status: StatStatus; contribution?: Contribution; tooltip?: StatBlockProps['tooltip'] };
+  habitats?: Omit<HabitatProtectionProps, 'className'>;
 };
 
-const ContributionLocation: FCWithMessages<ContributionLocationProps> = ({ title, stats, fhp }) => {
+const ContributionLocation: FCWithMessages<ContributionLocationProps> = ({
+  title,
+  stats,
+  fhp,
+  habitats,
+}) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
   const tooltips = useDataInfoTooltips([COVERAGE_TOOLTIP_SLUG]);
@@ -56,6 +63,7 @@ const ContributionLocation: FCWithMessages<ContributionLocationProps> = ({ title
           tooltip={tooltips[COVERAGE_TOOLTIP_SLUG]}
         />
         {fhp && <StatBlock className="pt-6" title={t('fully-highly-protected')} {...fhp} />}
+        {habitats && <HabitatProtection className="pt-6" {...habitats} />}
       </AccordionContent>
     </AccordionItem>
   );
@@ -65,6 +73,7 @@ ContributionLocation.messages = [
   'containers.map-sidebar-main-panel',
   ...ContributionLegend.messages,
   ...StatBlock.messages,
+  ...HabitatProtection.messages,
 ];
 
 export default ContributionLocation;

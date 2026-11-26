@@ -2,7 +2,9 @@ import axios from 'axios';
 import type { Feature } from 'geojson';
 
 import {
+  fromCbApiHabitatsData,
   fromCbApiModellingData,
+  type CbApiHabitatsData,
   type CbApiModellingData,
   type ModellingData,
 } from '@/types/modelling';
@@ -35,16 +37,25 @@ export const fetchModelling = async (tab: string, feature: Feature, isCbApiActiv
   return { ...response, data: fromCbApiModellingData(response.data) };
 };
 
-export type ModellingStatEndpoint = 'protection-level';
+const STAT_CONVERSIONS = {
+  'protection-level': (data: CbApiModellingData) => fromCbApiModellingData(data),
+  habitats: (data: CbApiHabitatsData) => fromCbApiHabitatsData(data),
+};
 
-export const fetchModellingStat = async (
-  endpoint: ModellingStatEndpoint,
+export type ModellingStatEndpoint = keyof typeof STAT_CONVERSIONS;
+
+export type ModellingStatData<E extends ModellingStatEndpoint> = ReturnType<
+  (typeof STAT_CONVERSIONS)[E]
+>;
+
+export const fetchModellingStat = async <E extends ModellingStatEndpoint>(
+  endpoint: E,
   feature: Feature,
   params: Record<string, string>
 ) => {
-  const response = await axios.post<CbApiModellingData>(getCbApiUrl(endpoint), {
-    ...params,
-    geometry: feature,
-  });
-  return { ...response, data: fromCbApiModellingData(response.data) };
+  const response = await axios.post(getCbApiUrl(endpoint), { ...params, geometry: feature });
+  return {
+    ...response,
+    data: STAT_CONVERSIONS[endpoint](response.data) as ModellingStatData<E>,
+  };
 };
