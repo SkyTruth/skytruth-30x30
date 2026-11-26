@@ -24,17 +24,23 @@ const config: Config = {
         mono: ['var(--font-overpass-mono)', ...defaultTheme.fontFamily.mono],
         sans: ['var(--font-figtree)', ...defaultTheme.fontFamily.sans],
       },
+      fontSize: {
+        'xs-bold': '0.8125rem',
+      },
       colors: {
         black: '#000000',
         'black-300': '#666666',
         'black-400': '#333333',
         blue: '#3C70FF',
         'blue-600': '#4879FF',
+        'blue-700': '#3765E5',
         green: '#02B07C',
         orange: '#FD8E28',
         'orange-700': '#b75e0b',
         violet: '#AD6CFF',
         'gray-300': '#999999',
+        'existing-area': '#A5AAB0',
+        'previous-value': '#717684',
         red: '#F43F4C',
         'error': '#d60909',
         'overlapping-eez': '#d60909'
