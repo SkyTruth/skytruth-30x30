@@ -60,7 +60,7 @@ const HabitatProtection: FCWithMessages<HabitatProtectionProps> = ({
       {status === 'success' && (
         <>
           {addedRows.length > 0 && (
-            <ul className="pt-3 font-mono text-xs">
+            <ul aria-hidden className="pt-3 font-mono text-xs">
               <LegendItem className="bg-blue-700">{t('newly-protected-habitat')}</LegendItem>
             </ul>
           )}

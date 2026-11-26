@@ -6,6 +6,7 @@ import AddedPercentageBadge from '@/components/charts/contribution-chart/added-p
 import ContributionBar from '@/components/charts/contribution-chart/bar';
 import { MAX_PERCENTAGE } from '@/components/charts/contribution-chart/helpers';
 import ProtectedAreaText from '@/components/charts/contribution-chart/protected-area-text';
+import ContributionSummary from '@/components/charts/contribution-chart/summary';
 import TooltipButton from '@/components/tooltip-button';
 import { cn } from '@/lib/classnames';
 import { formatPercentage } from '@/lib/utils/formats';
@@ -40,29 +41,39 @@ const HabitatContributionChart: FCWithMessages<HabitatContributionChartProps> = 
         <span className="text-base font-bold">{title}</span>
         {tooltip && <TooltipButton side="right" {...tooltip} />}
       </div>
-      {added > 0 ? (
-        <AddedPercentageBadge
-          className="justify-center justify-self-stretch pb-[0.1em] pt-[0.3em] font-mono text-sm"
-          percentage={addedPercentage}
-        />
-      ) : (
-        <span />
-      )}
-      <span className="justify-self-center pt-[0.2em] font-mono text-base font-bold leading-none">
+      <ContributionSummary contribution={contribution} />
+      <div aria-hidden className="justify-self-stretch">
+        {added > 0 && (
+          <AddedPercentageBadge
+            className="flex justify-center pb-[0.1em] pt-[0.3em] font-mono text-sm"
+            percentage={addedPercentage}
+          />
+        )}
+      </div>
+      <span
+        aria-hidden
+        className="justify-self-center pt-[0.2em] font-mono text-base font-bold leading-none"
+      >
         {t.rich('total-percentage', {
           percentage: formatPercentage(locale, totalPercentage, { displayPercentageSign: false }),
           sign: (chunks) => <span className="text-[0.7em]">{chunks}</span>,
         })}
       </span>
-      <div className="col-span-full flex items-center gap-1 pt-2 font-mono">
-        <ContributionBar className="flex-1" contribution={contribution} existingColor={color} />
-        <span className="text-xs">{t('percentage', { percentage: MAX_PERCENTAGE })}</span>
+      <div aria-hidden className="col-span-full pt-2 font-mono">
+        <div className="flex items-center gap-1">
+          <ContributionBar className="flex-1" contribution={contribution} existingColor={color} />
+          <span className="text-xs">{t('percentage', { percentage: MAX_PERCENTAGE })}</span>
+        </div>
+        <ProtectedAreaText className="pt-2" contribution={contribution} />
       </div>
-      <ProtectedAreaText className="col-span-full pt-2 font-mono" contribution={contribution} />
     </div>
   );
 };
 
-HabitatContributionChart.messages = ['components.chart-contribution', ...TooltipButton.messages];
+HabitatContributionChart.messages = [
+  'components.chart-contribution',
+  ...ContributionSummary.messages,
+  ...TooltipButton.messages,
+];
 
 export default HabitatContributionChart;

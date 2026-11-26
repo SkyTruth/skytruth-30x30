@@ -8,7 +8,7 @@ const ContributionLegend: FCWithMessages = () => {
   const t = useTranslations('containers.map-sidebar-main-panel');
 
   return (
-    <ul className="flex gap-8 font-mono text-xs">
+    <ul aria-hidden className="flex gap-8 font-mono text-xs">
       <LegendItem className="bg-existing-area">{t('existing-area')}</LegendItem>
       <LegendItem className="bg-blue-700">{t('added-area')}</LegendItem>
     </ul>

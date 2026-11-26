@@ -305,7 +305,9 @@
       "previous-percentage": "was {percentage}<sign>%</sign>",
       "protected-area": "<added>{addedArea} km²</added><sr> added,</sr> {protectedArea} km² of <total>{totalArea} km² protected</total>",
       "target": "{percentage}% target",
-      "percentage": "{percentage}%"
+      "percentage": "{percentage}%",
+      "summary": "{addedArea} square kilometers newly protected, for a total of {protectedArea} out of {totalArea} square kilometers protected ({percentage}).",
+      "summary-target": "Target: {percentage}%."
     },
     "tooltip-button": {
       "info": "Info",
