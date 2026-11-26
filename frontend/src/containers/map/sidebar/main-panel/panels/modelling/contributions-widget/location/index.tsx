@@ -9,10 +9,12 @@ import {
 } from '@/components/ui/accordion';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useDataInfoTooltips from '@/hooks/use-data-info-tooltips';
+import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
+import type { StatStatus } from '../helpers';
 import ContributionLegend from '../legend';
-import StatBlock from '../stat-block';
+import StatBlock, { StatBlockProps } from '../stat-block';
 import { SectionStats } from '../use-coverage-contributions';
 
 // Shared with the Progress Tracker's coverage widgets
@@ -21,9 +23,10 @@ const COVERAGE_TOOLTIP_SLUG = 'coverage-widget';
 type ContributionLocationProps = {
   title: string;
   stats: SectionStats;
+  fhp?: { status: StatStatus; contribution?: Contribution; tooltip?: StatBlockProps['tooltip'] };
 };
 
-const ContributionLocation: FCWithMessages<ContributionLocationProps> = ({ title, stats }) => {
+const ContributionLocation: FCWithMessages<ContributionLocationProps> = ({ title, stats, fhp }) => {
   const t = useTranslations('containers.map-sidebar-main-panel');
   const [{ tab }] = useSyncMapContentSettings();
   const tooltips = useDataInfoTooltips([COVERAGE_TOOLTIP_SLUG]);
@@ -52,6 +55,7 @@ const ContributionLocation: FCWithMessages<ContributionLocationProps> = ({ title
           target={stats.coverageTarget}
           tooltip={tooltips[COVERAGE_TOOLTIP_SLUG]}
         />
+        {fhp && <StatBlock className="pt-6" title={t('fully-highly-protected')} {...fhp} />}
       </AccordionContent>
     </AccordionItem>
   );

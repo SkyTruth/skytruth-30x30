@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { useAtomValue } from 'jotai';
 import { useTranslations } from 'next-intl';
 
@@ -10,7 +12,8 @@ import { FCWithMessages } from '@/types';
 
 import ContributionLocation from './location';
 import ContributionSection from './section';
-import useCoverageContributions from './use-coverage-contributions';
+import useCoverageContributions, { SectionStats } from './use-coverage-contributions';
+import useFhpContributions from './use-fhp-contributions';
 
 // TODO: TECH-3876, clean up the use_cb_api feature flag so this is the only stats panel
 const ContributionsWidget: FCWithMessages = () => {
@@ -27,8 +30,23 @@ const ContributionsWidget: FCWithMessages = () => {
     ? tUploads(errorMessageKey as Parameters<typeof tUploads>[0], { environment: tab })
     : undefined;
 
-  const { countries, regionsAndSeas, global, isLoading } = useCoverageContributions();
+  const { countries, regionsAndSeas, global, seaCodes, isLoading } = useCoverageContributions();
   const hasLocations = countries.length > 0 || regionsAndSeas.length > 0;
+
+  const isMarine = tab === 'marine';
+  const listedCodes = useMemo(
+    () => [...countries, ...regionsAndSeas].map(({ code }) => code),
+    [countries, regionsAndSeas]
+  );
+  const fhp = useFhpContributions(listedCodes, seaCodes, isMarine);
+  const withMarineStats = (title: string, stats: SectionStats) => ({
+    title,
+    stats,
+    ...(isMarine && {
+      fhp: { status: fhp.status, contribution: fhp.byCode.get(stats.code), tooltip: fhp.tooltip },
+    }),
+  });
+
   const firstCode = (countries[0] ?? regionsAndSeas[0])?.code ?? '';
 
   const loading = modellingStatus === 'running' || drawStatus === 'uploading' || isLoading;
@@ -51,8 +69,7 @@ const ContributionsWidget: FCWithMessages = () => {
             {countries.map((stats) => (
               <ContributionLocation
                 key={stats.code}
-                title={getLocationName(stats.location)}
-                stats={stats}
+                {...withMarineStats(getLocationName(stats.location), stats)}
               />
             ))}
           </ContributionSection>
@@ -62,15 +79,14 @@ const ContributionsWidget: FCWithMessages = () => {
             {regionsAndSeas.map((stats) => (
               <ContributionLocation
                 key={stats.code}
-                title={getLocationName(stats.location)}
-                stats={stats}
+                {...withMarineStats(getLocationName(stats.location), stats)}
               />
             ))}
           </ContributionSection>
         )}
         {global && (
           <ContributionSection title={t('global-section')}>
-            <ContributionLocation title={t('globe')} stats={global} />
+            <ContributionLocation {...withMarineStats(t('globe'), global)} />
           </ContributionSection>
         )}
       </Accordion>

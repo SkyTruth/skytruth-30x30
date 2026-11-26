@@ -6,6 +6,7 @@ import { useLocale } from 'next-intl';
 import { modellingAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
+import { useFhpAnalysis } from '@/hooks/use-modelling-stat';
 import { Contribution, GLOBAL_CODE, buildContributions } from '@/lib/utils/modelling-contributions';
 import { useGetLocations } from '@/types/generated/location';
 import { useGetProtectionCoverageStats } from '@/types/generated/protection-coverage-stat';
@@ -32,7 +33,12 @@ const useCoverageContributions = () => {
   const isIhoActive = useFeatureFlag('is_iho_active');
 
   const locationsArea = useMemo(() => modellingData?.locations_area ?? [], [modellingData]);
-  const locationCodes = useMemo(() => locationsArea.map(({ code }) => code), [locationsArea]);
+  const { data: fhpData } = useFhpAnalysis(tab === 'marine');
+  const fhpLocations = tab === 'marine' ? fhpData?.locations_area : undefined;
+  const locationCodes = useMemo(
+    () => [...new Set([...locationsArea, ...(fhpLocations ?? [])].map(({ code }) => code))],
+    [locationsArea, fhpLocations]
+  );
   const enabled = locationCodes.length > 0 && ['marine', 'terrestrial'].includes(tab);
 
   const { data: coverageStats, isInitialLoading } = useGetProtectionCoverageStats<
@@ -136,10 +142,10 @@ const useCoverageContributions = () => {
       };
     };
 
-    const locations = locationsArea
+    const locations = locationCodes
       // TECH-3764: Clean up
-      .filter(({ code }) => (isIhoActive || !seaCodes.has(code)) && coverageByCode.has(code))
-      .map(({ code }) => toSectionStats(code));
+      .filter((code) => (isIhoActive || !seaCodes.has(code)) && coverageByCode.has(code))
+      .map((code) => toSectionStats(code));
 
     // Regions and Seas includes Areas Beyond National Jurisdiction (ABNJ, the high seas)
     const isHighSeas = ({ location }: SectionStats) => location?.type === HIGH_SEAS_TYPE;
@@ -150,9 +156,9 @@ const useCoverageContributions = () => {
       locations.length > 0 && coverageByCode.has(GLOBAL_CODE) ? toSectionStats(GLOBAL_CODE) : null;
 
     return { countries, regionsAndSeas, global };
-  }, [coverageStats, locationsArea, seaCodes, isIhoActive, tab]);
+  }, [coverageStats, locationsArea, locationCodes, seaCodes, isIhoActive, tab]);
 
-  return { countries, regionsAndSeas, global, isLoading: isInitialLoading };
+  return { countries, regionsAndSeas, global, seaCodes, isLoading: isInitialLoading };
 };
 
 export default useCoverageContributions;

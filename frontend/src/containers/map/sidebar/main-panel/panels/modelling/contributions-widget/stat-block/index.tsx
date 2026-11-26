@@ -5,11 +5,15 @@ import TooltipButton from '@/components/tooltip-button';
 import { Contribution } from '@/lib/utils/modelling-contributions';
 import { FCWithMessages } from '@/types';
 
+import type { StatStatus } from '../helpers';
+import StatStatusMessage from '../stat-status-message';
+
 export type StatBlockProps = {
   className?: string;
   title: string;
   contribution?: Contribution;
   target?: number;
+  status?: StatStatus;
   tooltip?: ComponentProps<typeof TooltipButton>;
 };
 
@@ -18,9 +22,10 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
   title,
   contribution,
   target,
+  status = 'success',
   tooltip,
 }) => {
-  if (!contribution) return null;
+  if (status === 'success' && !contribution) return null;
 
   return (
     <div className={className}>
@@ -28,11 +33,18 @@ const StatBlock: FCWithMessages<StatBlockProps> = ({
         <h4 className="text-base font-bold">{title}</h4>
         {tooltip && <TooltipButton side="right" {...tooltip} />}
       </div>
-      <ContributionChart className="pt-3" contribution={contribution} target={target} />
+      <StatStatusMessage status={status} />
+      {status === 'success' && (
+        <ContributionChart className="pt-3" contribution={contribution} target={target} />
+      )}
     </div>
   );
 };
 
-StatBlock.messages = [...TooltipButton.messages, ...ContributionChart.messages];
+StatBlock.messages = [
+  ...StatStatusMessage.messages,
+  ...ContributionChart.messages,
+  ...TooltipButton.messages,
+];
 
 export default StatBlock;

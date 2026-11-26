@@ -34,3 +34,17 @@ export const fetchModelling = async (tab: string, feature: Feature, isCbApiActiv
   const response = await axios.post<CbApiModellingData>(getCbApiUrl('coverage'), body);
   return { ...response, data: fromCbApiModellingData(response.data) };
 };
+
+export type ModellingStatEndpoint = 'protection-level';
+
+export const fetchModellingStat = async (
+  endpoint: ModellingStatEndpoint,
+  feature: Feature,
+  params: Record<string, string>
+) => {
+  const response = await axios.post<CbApiModellingData>(getCbApiUrl(endpoint), {
+    ...params,
+    geometry: feature,
+  });
+  return { ...response, data: fromCbApiModellingData(response.data) };
+};
