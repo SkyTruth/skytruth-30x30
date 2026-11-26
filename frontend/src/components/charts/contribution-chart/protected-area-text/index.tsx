@@ -8,7 +8,7 @@ import { FCWithMessages } from '@/types';
 type ProtectedAreaTextProps = {
   className?: string;
   contribution: Contribution;
-  // Puts "T km² protected" on its own line
+  // Puts "total km² protected" on its own line
   stacked?: boolean;
 };
 
