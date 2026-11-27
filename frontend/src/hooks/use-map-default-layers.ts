@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { useRouter } from 'next/router';
+
 import { usePreviousImmediate } from 'rooks';
 
 import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
@@ -8,14 +10,16 @@ import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useDatasetsByEnvironment from './use-datasets-by-environment';
 
 export default function useMapDefaultLayers() {
-  const [mapLayers, setMapLayers] = useSyncMapLayers();
+  const [, setMapLayers] = useSyncMapLayers();
   const [{ tab }] = useSyncMapContentSettings();
+  const { pathname, query } = useRouter();
 
   const previousTab = usePreviousImmediate(tab);
+  const previousPathname = usePreviousImmediate(pathname);
 
   const [datasets] = useDatasetsByEnvironment();
 
-  const initialMapLayersRef = useRef(mapLayers);
+  const hasInitialLayersParamRef = useRef(query.layers !== undefined);
   const hasSetInitialDefaultsRef = useRef(false);
 
   const defaultLayerSlugs = useMemo(() => {
@@ -58,7 +62,7 @@ export default function useMapDefaultLayers() {
   );
 
   // Initial page load set for default map layers. Only fires if the layers query param is
-  // empty or missing
+  // missing, so an empty param (all layers turned off) is kept
   useEffect(() => {
     if (hasSetInitialDefaultsRef.current) return;
     if (datasets.terrestrial === undefined && datasets.marine === undefined) {
@@ -67,7 +71,7 @@ export default function useMapDefaultLayers() {
 
     hasSetInitialDefaultsRef.current = true;
 
-    if (initialMapLayersRef.current.length > 0) {
+    if (hasInitialLayersParamRef.current) {
       // URL already had layers when the page loaded — respect the user's state.
       return;
     }
@@ -78,13 +82,22 @@ export default function useMapDefaultLayers() {
   // Intentionally excludes `tab` since this is to catch only the initial map load
   // and Conservation builder forces tab to a new state often while data is fetching
 
-  // Sets default map layers on tab switch, only runs after above initial set-up has run
+  // Sets default map layers on tab switch, only runs after above initial set-up has run.
+  // Skipped when the page changes, so switching between PT and CB keeps the layers
   useEffect(() => {
     if (!hasSetInitialDefaultsRef.current) return;
 
-    if (tab !== previousTab && !!previousTab) {
+    if (tab !== previousTab && !!previousTab && pathname === previousPathname) {
       const mapLayers = getDefaultLayersForTab(tab);
       setMapLayers(mapLayers);
     }
-  }, [tab, previousTab, defaultLayerSlugs, setMapLayers, getDefaultLayersForTab]);
+  }, [
+    tab,
+    previousTab,
+    pathname,
+    previousPathname,
+    defaultLayerSlugs,
+    setMapLayers,
+    getDefaultLayersForTab,
+  ]);
 }
