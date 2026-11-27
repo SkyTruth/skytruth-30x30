@@ -1,9 +1,11 @@
 """Guards that the ported analysis still sends the cloud function's SQL, apart from
-one intended change to the stats query's join.
+two intended changes to the stats query: its join, and splitting the drawn shape at
+the antimeridian.
 
 Compares the strings input to sqlalchemy.text() at runtime,
-so src/analysis.py can be reformatted as long as the statements the database
-receives are unchanged. Delete once the cloud function is removed.
+so src/services/vector.py can be reformatted as long as the statements the database
+receives are unchanged, apart from the stats query's whitespace. Delete once the
+cloud function is removed.
 """
 
 import importlib.util
@@ -14,7 +16,8 @@ from types import ModuleType
 import pytest
 import sqlalchemy
 
-from src.analysis import get_locations_stats
+from src.services.geometry import USER_DATA_CTES
+from src.services.vector import get_locations_stats
 
 ORIGINAL = (
     pathlib.Path(__file__).resolve().parents[2]
@@ -38,6 +41,11 @@ CB_API_JOIN = f"""                        FROM
                             LEFT JOIN data.{TABLE}
                                 ON ST_Intersects(the_geom, user_data_stats.geom)
 """
+CLOUD_FUNCTION_USER_DATA = """user_data AS (
+                        SELECT ST_MakeValid(ST_UnaryUnion(ST_GeomFromGeoJSON(:geometry))) AS geom
+                    ),"""
+# The CTEs cb_api runs in place of CLOUD_FUNCTION_USER_DATA, up to user_data_stats
+CB_API_USER_DATA = USER_DATA_CTES.split("user_data_stats AS")[0]
 
 pytestmark = pytest.mark.skipif(
     not ORIGINAL.exists(), reason="the analysis cloud function has been removed"
@@ -115,10 +123,18 @@ def test_runtime_sql_is_identical_to_the_cloud_function():
 
     assert len(ported) == len(original) == 2, "expected a topology check and a stats query"
     assert ported[0] == original[0]
-    # The one intended difference: a LEFT JOIN instead of a comma join and WHERE, so a
-    # shape that intersects nothing still returns a row carrying its drawn area
-    assert ported[1] == original[1].replace(CLOUD_FUNCTION_JOIN, CB_API_JOIN)
+    # The intended differences: a LEFT JOIN instead of a comma join and WHERE, so a
+    # shape that intersects nothing still returns a row carrying its drawn area, and
+    # the drawn shape split at the antimeridian before anything reads it. Whitespace is
+    # ignored, as the CTEs shared with the raster query are indented differently.
+    assert " ".join(ported[1].split()) == " ".join(
+        original[1]
+        .replace(CLOUD_FUNCTION_JOIN, CB_API_JOIN)
+        .replace(CLOUD_FUNCTION_USER_DATA, CB_API_USER_DATA)
+        .split()
+    )
     assert CLOUD_FUNCTION_JOIN in original[1], "the cloud function's join has changed"
+    assert CLOUD_FUNCTION_USER_DATA in original[1], "the cloud function's user_data has changed"
 
 
 def test_the_table_name_reaches_the_statement():

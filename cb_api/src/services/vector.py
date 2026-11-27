@@ -4,65 +4,19 @@ from typing import Any
 
 import sqlalchemy
 
-from src.errors import BadRequestError
-
-type JSON = dict[str, JSON] | list[JSON] | str | int | float | bool | None
+from src.services.geometry import JSON, USER_DATA_CTES, get_geojson, validate_geometry_topology
 
 
 class AnalysisTable(StrEnum):
     MARINE = "eez_minus_mpa_v2"
     TERRESTRIAL = "gadm_minus_pa_v2"
     FULLY_HIGHLY_PROTECTED = "location_minus_fhp_mpa"
-    MANGROVES = "mangroves_minus_pa"
     SALTMARSHES = "saltmarshes_minus_pa"
     SEAGRASSES = "seagrasses_minus_pa"
     SEAMOUNTS = "seamounts_minus_pa"
     COLD_WATER_CORALS = "cold_water_corals_minus_pa"
     CLIMATE_RESILIENT_CORALS = "climate_resilient_corals_minus_pa"
     OTHER_CORALS = "other_corals_minus_pa"
-
-
-def get_geojson(geojson: JSON) -> dict:
-    if not isinstance(geojson, dict):
-        raise BadRequestError("Invalid geometry: unable to parse input geometry")
-
-    if geojson.get("type") == "FeatureCollection":
-        features = geojson.get("features")
-        if not isinstance(features, list) or not features:
-            raise BadRequestError("Invalid geometry: unable to parse input geometry")
-        return get_geojson(features[0])
-    elif geojson.get("type") == "Feature":
-        return geojson.get("geometry")
-    else:
-        return geojson
-
-
-def validate_geometry_topology(conn: sqlalchemy.engine.Connection, geometry: dict) -> None:
-    stmt = sqlalchemy.text(
-        """
-        WITH g AS (
-            SELECT ST_SetSRID(ST_GeomFromGeoJSON(:geometry), 4326) AS geom
-        )
-        SELECT
-            ST_GeometryType(geom) AS geom_type,
-            ST_IsEmpty(geom) AS is_empty
-        FROM g
-        """
-    )
-    try:
-        validation = conn.execute(stmt, parameters={"geometry": geometry}).mappings().one()
-    except sqlalchemy.exc.DBAPIError as exc:
-        # This statement only parses the geometry, so any error the database returns
-        # is caused by the input. A lost connection is the exception.
-        if exc.connection_invalidated:
-            raise
-        raise BadRequestError("Invalid geometry: unable to parse input geometry") from exc
-
-    if validation["is_empty"]:
-        raise BadRequestError("Invalid geometry: input geometry is empty")
-
-    if validation["geom_type"] not in {"ST_Polygon", "ST_MultiPolygon"}:
-        raise BadRequestError("Invalid geometry: input geometry must be a Polygon or MultiPolygon")
 
 
 def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
@@ -102,25 +56,15 @@ def get_locations_stats(
         stmt = sqlalchemy.text(
             f"""
                 WITH
-                    user_data AS (
-                        SELECT ST_MakeValid(ST_UnaryUnion(ST_GeomFromGeoJSON(:geometry))) AS geom
-                    ),
-                    user_data_stats AS (
-                        SELECT *,
-                            ROUND((ST_Area(ST_Transform(geom,
-                                '+proj=longlat +datum=WGS84 +no_defs +type=crs',
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
-                            ) AS user_area_km2
-                        FROM user_data
-                    ),
+                    {USER_DATA_CTES},
                     stats AS (
                         SELECT
                             location,
-                            ROUND((ST_Area(ST_Transform(
+                            ST_Area(ST_Transform(
                                 ST_MakeValid(ST_Intersection(the_geom, user_data_stats.geom)),
                                 '+proj=longlat +datum=WGS84 +no_defs +type=crs',
-                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6)
-                            ) AS portion_area_km2,
+                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6
+                            AS portion_area_km2,
                             user_data_stats.user_area_km2
                         FROM
                             user_data_stats

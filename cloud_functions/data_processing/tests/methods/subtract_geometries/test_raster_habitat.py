@@ -1,14 +1,21 @@
+import struct
+from pathlib import Path
+
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 import pytest
 import rasterio
 from rasterio.transform import from_origin
 from shapely.geometry import box
 
+import src.core.raster_pa_stats as raster_pa_stats
 import src.methods.subtract_geometries.io as subtract_io
 import src.methods.subtract_geometries.raster_habitat as raster_habitat
-from src.core.params import ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN
+from src.core.params import (
+    ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
+)
 
 RASTER_HABITATS = ("other-corals", "climate-resilient-corals")
 
@@ -273,3 +280,183 @@ def test_a_class_with_no_rows_anywhere_still_writes_its_blobs(raster_job_mocks, 
     for blob in raster_job_mocks.values():
         assert blob.empty
         assert list(blob.columns) == ["location", "habitat", "geometry"]
+
+
+# --- raster tiles -------------------------------------------------------------------
+
+TILE_PX = 16
+CHUNK_PX = 32
+WKB_HEADER = "<BHHddddddiHH"
+
+
+def _decode_tile(wkb):
+    """Reads back the header fields and pixels of one PostGIS raster WKB tile."""
+    fields = struct.unpack_from(WKB_HEADER, wkb)
+    flags, nodata = struct.unpack_from("<BB", wkb, struct.calcsize(WKB_HEADER))
+    width, height = fields[-2], fields[-1]
+    pixels = np.frombuffer(wkb, dtype="uint8", offset=struct.calcsize(WKB_HEADER) + 2)
+    return fields, flags, nodata, pixels.reshape(height, width)
+
+
+def _tiles(country, pas, raster):
+    out_path = Path(raster).parent / "tiles.parquet"
+    n_tiles = raster_habitat.process_location_raster_tiles(
+        country, pas, raster, out_path, tile_size_pixels=TILE_PX, chunk_size_pixels=CHUNK_PX
+    )
+    tiles = pd.read_parquet(out_path)
+    assert len(tiles) == n_tiles
+    return tiles
+
+
+def _pixel_counts(tiles):
+    values = np.concatenate([_decode_tile(wkb)[3].ravel() for wkb in tiles["rast"]])
+    return dict(zip(*np.unique(values, return_counts=True), strict=True))
+
+
+def test_tile_wkb_follows_the_postgis_raster_layout():
+    pixels = np.arange(6, dtype="uint8").reshape(2, 3)
+    transform = from_origin(10.0, 20.0, 0.5, 0.25)
+
+    fields, flags, nodata, decoded = _decode_tile(
+        raster_habitat.raster_tile_wkb(pixels, transform, 4326, 0)
+    )
+
+    assert fields == (1, 0, 1, 0.5, -0.25, 10.0, 20.0, 0.0, 0.0, 4326, 3, 2)
+    assert flags == raster_habitat.PT_8BUI | raster_habitat.BAND_HAS_NODATA
+    assert nodata == 0
+    np.testing.assert_array_equal(decoded, pixels)
+
+
+def test_protected_and_outside_pixels_become_nodata(
+    mock_raster, mock_raster_country, mock_raster_pa
+):
+    """Class 1 keeps the 50 unprotected pixels of its block and loses the stray pixel
+    outside the country; class 0 keeps all 100."""
+    counts = _pixel_counts(_tiles(mock_raster_country, mock_raster_pa, mock_raster))
+
+    assert counts[1] == 50
+    assert counts[0] == 100
+
+
+def test_tiles_holding_only_nodata_are_dropped(mock_raster, mock_raster_country, no_pas):
+    """Of the four 16-pixel tiles over the country, only the two holding a class block
+    have any habitat."""
+    tiles = _tiles(mock_raster_country, no_pas, mock_raster)
+
+    assert len(tiles) == 2
+
+
+def test_tiles_are_written_one_row_group_per_chunk(
+    mock_raster, mock_raster_country, no_pas, tmp_path
+):
+    """The two class blocks fall in different 16-pixel chunks, so each chunk's tiles
+    reach the file on their own and are never all held in memory together."""
+    out_path = tmp_path / "tiles.parquet"
+
+    raster_habitat.process_location_raster_tiles(
+        mock_raster_country, no_pas, mock_raster, out_path, TILE_PX, chunk_size_pixels=16
+    )
+
+    assert pq.ParquetFile(out_path).num_row_groups == 2
+
+
+def test_chunks_holding_only_nodata_are_not_rasterised(
+    mock_raster, mock_raster_country, mock_raster_pa, tmp_path, monkeypatch
+):
+    """Of the four 16-pixel chunks over the country, only the two holding a class block
+    have any pixels, so the location and PAs are rasterised over those two alone."""
+    rasterised = []
+    original_rasterize = raster_pa_stats.rasterize
+
+    def mock_rasterize(shapes, out_shape, transform, **kwargs):
+        rasterised.append(transform)
+        return original_rasterize(shapes, out_shape=out_shape, transform=transform, **kwargs)
+
+    monkeypatch.setattr(raster_pa_stats, "rasterize", mock_rasterize)
+
+    raster_habitat.process_location_raster_tiles(
+        mock_raster_country,
+        mock_raster_pa,
+        mock_raster,
+        tmp_path / "tiles.parquet",
+        TILE_PX,
+        chunk_size_pixels=16,
+    )
+
+    assert len(set(rasterised)) == 2
+
+
+def test_a_location_outside_the_raster_has_no_tiles(mock_raster, no_pas):
+    far = _country("BBB", box(5_000_000, 5_000_000, 5_010_000, 5_010_000))
+
+    tiles = _tiles(far, no_pas, mock_raster)
+
+    assert tiles.empty
+    assert list(tiles.columns) == ["location", "rast"]
+
+
+@pytest.fixture
+def tiles_job_mocks(raster_job_mocks, monkeypatch):
+    """raster_job_mocks, with the locations and PAs served through read_geo_df, and the
+    file uploads and stale-file cleanup captured instead of run."""
+    uploads = raster_job_mocks
+    monkeypatch.setattr(
+        raster_habitat,
+        "upload_file_to_gcs",
+        lambda bucket, file_name, blob_name, **_: uploads.__setitem__(
+            blob_name, pd.read_parquet(file_name)
+        ),
+    )
+    reads = {
+        "locations_0.001.parquet": raster_habitat.read_parquet_from_gcs(
+            "mock-bucket", "locations_0.001.parquet"
+        ),
+        "pas_0.001.parquet": raster_habitat.read_parquet_from_gcs(
+            "mock-bucket", "pas_0.001.parquet"
+        ),
+    }
+    monkeypatch.setattr(
+        raster_habitat,
+        "read_geo_df",
+        lambda bucket_name, filename, verbose=True: reads[filename].copy(),
+    )
+    cleanups = []
+    monkeypatch.setattr(
+        raster_habitat,
+        "delete_stale_blobs",
+        lambda bucket_name, prefix, current, **_: cleanups.append((prefix, current)),
+    )
+    return raster_job_mocks, cleanups
+
+
+def _run_tiles_job():
+    return raster_habitat.generate_raster_habitat_tiles(
+        habitat="terrestrial-habitats",
+        raster_file_name="raw/corals.tif",
+        total_area_file="locations.parquet",
+        pa_file="pas.parquet",
+        tolerance=0.001,
+        bucket="mock-bucket",
+        n_jobs=1,
+        verbose=False,
+    )
+
+
+def test_each_location_with_habitat_gets_a_file(tiles_job_mocks):
+    """BBB lies outside the raster, so it gets no file."""
+    uploads, _ = tiles_job_mocks
+
+    _run_tiles_job()
+
+    assert set(uploads) == {"conservation_builder/terrestrial-habitats_minus_pa_tiles/AAA.parquet"}
+
+
+def test_stale_files_are_cleared_against_this_runs_files(tiles_job_mocks):
+    """Anything else in the live folder, such as BBB's file from an earlier run, would
+    otherwise still be loaded."""
+    _, cleanups = tiles_job_mocks
+
+    written = _run_tiles_job()
+
+    assert cleanups == [("conservation_builder/terrestrial-habitats_minus_pa_tiles/", written)]
+    assert written == {"conservation_builder/terrestrial-habitats_minus_pa_tiles/AAA.parquet"}

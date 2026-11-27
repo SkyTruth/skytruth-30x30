@@ -953,6 +953,44 @@ def load_gdb_layer_from_gcs(
             return pd.concat((to_append), axis=0)
 
 
+def delete_stale_blobs(
+    bucket_name: str,
+    prefix: str,
+    current: set[str],
+    project_id: str = PROJECT,
+    verbose: bool = True,
+) -> list[str]:
+    """
+    Deletes every blob under a prefix that is not one of the current blobs.
+
+    Parameters
+    ----------
+    bucket_name : str
+        Name of the GCS bucket.
+    prefix : str
+        Blob name prefix to look under.
+    current : set[str]
+        Full names of the blobs to keep.
+    project_id : str, optional
+        Google Cloud project ID. Defaults to global PROJECT.
+    verbose : bool, optional
+        If True, logs each deleted blob.
+
+    Returns
+    -------
+        Names of the deleted blobs.
+    """
+    client = storage.Client(project=project_id)
+    deleted = []
+    for blob in client.list_blobs(bucket_name, prefix=prefix):
+        if blob.name not in current:
+            blob.delete()
+            deleted.append(blob.name)
+            if verbose:
+                logger.info({"message": f"Deleted stale gs://{bucket_name}/{blob.name}"})
+    return deleted
+
+
 def rename_blob(bucket_name, old_name, new_name, project_id=PROJECT, verbose=True):
     """
     Rename a blob in Google Cloud Storage by copying it

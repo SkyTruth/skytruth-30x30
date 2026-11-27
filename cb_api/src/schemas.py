@@ -2,7 +2,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.analysis import AnalysisTable
+from src.services.constants import MANGROVES, TERRESTRIAL_HABITATS, RasterHabitats
+from src.services.vector import AnalysisTable
 
 
 class Environment(StrEnum):
@@ -37,9 +38,19 @@ class Habitat(StrEnum):
     COLD_WATER_CORALS = "cold-water-corals"
     CLIMATE_RESILIENT_CORALS = "climate-resilient-corals"
     OTHER_CORALS = "other-corals"
+    TERRESTRIAL_HABITATS = "terrestrial-habitats"
+
+    @property
+    def raster(self) -> RasterHabitats | None:
+        """The raster table of a habitat read from one, or None for a vector habitat."""
+        return {
+            Habitat.MANGROVES: MANGROVES,
+            Habitat.TERRESTRIAL_HABITATS: TERRESTRIAL_HABITATS,
+        }.get(self)
 
     @property
     def table(self) -> AnalysisTable:
+        """The vector table of a habitat with no raster."""
         return AnalysisTable[self.name]
 
 
@@ -72,7 +83,8 @@ class ProtectionLevelRequest(AnalysisRequest):
 class HabitatRequest(GeometryRequest):
     """Request body for POST /habitats.
 
-    No environment: each habitat has exactly one table.
+    No environment: each marine habitat has exactly one table, and terrestrial-habitats
+    reports every terrestrial habitat at once.
     """
 
     habitat: Habitat
@@ -86,7 +98,29 @@ class Location(BaseModel):
 
 
 class LocationStats(BaseModel):
-    """Response body for POST /coverage, POST /protection-level and POST /habitats."""
+    """Response body for POST /coverage and POST /protection-level."""
 
     locations: list[Location]
+    total_area: float = Field(description="Area of the drawn shape, in km²")
+
+
+class HabitatArea(BaseModel):
+    habitat: str
+    added_area: float = Field(
+        description="Area of this habitat in the drawn shape and location that is not yet "
+        "protected, in km²"
+    )
+
+
+class LocationHabitats(BaseModel):
+    code: str
+    habitats: list[HabitatArea] = Field(
+        description="Every habitat the drawn shape adds in this location"
+    )
+
+
+class HabitatsStats(BaseModel):
+    """Response body for POST /habitats."""
+
+    locations: list[LocationHabitats]
     total_area: float = Field(description="Area of the drawn shape, in km²")

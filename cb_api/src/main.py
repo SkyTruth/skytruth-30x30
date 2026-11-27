@@ -7,7 +7,6 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.engine import Engine
 
-from src.analysis import get_locations_stats
 from src.config import ALLOWED_ORIGINS, get_settings
 from src.db import create_db_engine
 from src.errors import BadRequestError, register_error_handlers
@@ -15,9 +14,12 @@ from src.schemas import (
     AnalysisRequest,
     Environment,
     HabitatRequest,
+    HabitatsStats,
     LocationStats,
     ProtectionLevelRequest,
 )
+from src.services.raster import get_raster_habitats_stats
+from src.services.vector import get_locations_stats
 
 logging.basicConfig(level=logging.INFO)
 
@@ -79,9 +81,22 @@ def protection_level(body: ProtectionLevelRequest, engine: PooledEngine) -> dict
     return get_locations_stats(engine, body.geometry, body.level.table)
 
 
-@app.post("/habitats", response_model=LocationStats)
+@app.post("/habitats", response_model=HabitatsStats)
 def habitats(body: HabitatRequest, engine: PooledEngine) -> dict:
-    """How much of the given area's `habitat` will have added protection,
-    broken down by location.
+    """How much of the given area's `habitat` will have added protection, broken down by
+    location and habitat. `terrestrial-habitats` reports every terrestrial habitat at once.
     """
-    return get_locations_stats(engine, body.geometry, body.habitat.table)
+    if body.habitat.raster:
+        return get_raster_habitats_stats(engine, body.geometry, body.habitat.raster)
+
+    stats = get_locations_stats(engine, body.geometry, body.habitat.table)
+    return {
+        "locations": [
+            {
+                "code": location["code"],
+                "habitats": [{"habitat": body.habitat.value, "added_area": location["added_area"]}],
+            }
+            for location in stats["locations"]
+        ],
+        "total_area": stats["total_area"],
+    }

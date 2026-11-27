@@ -47,7 +47,7 @@ POLYGON = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}
 ANALYSIS_REQUESTS = [
     ("/coverage", {"geometry": POLYGON}),
     ("/protection-level", {"geometry": POLYGON}),
-    ("/habitats", {"geometry": POLYGON, "habitat": "mangroves"}),
+    ("/habitats", {"geometry": POLYGON, "habitat": "seagrasses"}),
 ]
 
 
