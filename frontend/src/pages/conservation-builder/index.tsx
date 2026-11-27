@@ -45,11 +45,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const { mapParams = null, 'run-as-of': runAsOf } = query;
 
   if (mapParams) {
-    // Drop the layers so Conservation Builder loads its own default layers
-    const params = JSON.parse(mapParams as string);
-    delete params.layers;
-
-    let searchParams = mapParamsToSearchParams(JSON.stringify(params));
+    let searchParams = mapParamsToSearchParams(mapParams);
     if (runAsOf) {
       searchParams += `&run-as-of=${runAsOf}`;
     }
