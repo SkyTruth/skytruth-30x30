@@ -29,6 +29,17 @@ ConservationBuilderPage.layout = {
 
 ConservationBuilderPage.messages = ['pages.conservation-builder', ...MapLayout.messages];
 
+// Conservation Builder has no summary tab, so default to terrestrial if the URL has no valid tab
+const CONSERVATION_BUILDER_CONTENT = JSON.stringify({ showDetails: false, tab: 'terrestrial' });
+
+const hasConservationBuilderTab = (content: unknown) => {
+  try {
+    return ['terrestrial', 'marine'].includes(JSON.parse(content as string)?.tab);
+  } catch {
+    return false;
+  }
+};
+
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { query } = context;
   const { mapParams = null, 'run-as-of': runAsOf } = query;
@@ -38,6 +49,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     if (runAsOf) {
       searchParams += `&run-as-of=${runAsOf}`;
     }
+    searchParams += `&content=${CONSERVATION_BUILDER_CONTENT}`;
 
     const target = `/${context.locale}${PAGES.conservationBuilder}/?${searchParams}`;
 
@@ -45,6 +57,19 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       redirect: {
         permanent: false,
         destination: target,
+      },
+    };
+  }
+
+  // Redirect URLs with a missing, summary or invalid tab to the default tab
+  if (!hasConservationBuilderTab(query.content)) {
+    const searchParams = new URLSearchParams(query as Record<string, string>);
+    searchParams.set('content', CONSERVATION_BUILDER_CONTENT);
+
+    return {
+      redirect: {
+        permanent: false,
+        destination: `/${context.locale}${PAGES.conservationBuilder}?${searchParams}`,
       },
     };
   }

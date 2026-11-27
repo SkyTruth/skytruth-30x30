@@ -85,7 +85,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const [mapLayers] = useSyncMapLayers();
   const [mapLayerSettings] = useSyncMapLayerSettings();
   const [runAsOf] = useQueryState('run-as-of');
-  const { query } = useRouter();
+  const { query, pathname } = useRouter();
   const { locationCode = 'GLOB' } = query;
 
   const navigationEntries = useMemo(() => {
@@ -110,9 +110,11 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
           as: href,
         }),
         colorClassName: colorClassName,
+        // Clicking the link for the current page does nothing
+        onNavigate: pathname.startsWith(href) ? (e) => e.preventDefault() : undefined,
       };
     });
-  }, [navigationItems, locationCode, mapSettings, mapLayers, mapLayerSettings, runAsOf]);
+  }, [navigationItems, locationCode, mapSettings, mapLayers, mapLayerSettings, runAsOf, pathname]);
 
   return (
     <header className={cn('border-b font-mono text-sm', headerVariants({ theme }))}>
@@ -152,11 +154,12 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
                   <div className="mt-6 flow-root">
                     <div className="-my-6 divide-y divide-gray-500/10">
                       <div className="space-y-2 py-6 font-mono text-sm">
-                        {navigationEntries.map(({ name, href, as, colorClassName }) => (
+                        {navigationEntries.map(({ name, href, as, colorClassName, onNavigate }) => (
                           <ActiveLink
                             key={name}
                             href={href}
                             as={as}
+                            onNavigate={onNavigate}
                             className={cn(
                               'group -mx-3 block px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                               buttonVariants({ theme })
@@ -187,11 +190,12 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         </div>
 
         <ul className="hidden md:flex md:gap-x-10">
-          {navigationEntries.map(({ name, href, as, colorClassName }) => (
+          {navigationEntries.map(({ name, href, as, colorClassName, onNavigate }) => (
             <li key={name}>
               <ActiveLink
                 href={href}
                 as={as}
+                onNavigate={onNavigate}
                 className="group -mx-3 flex px-3 py-2 ring-offset-white transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                 activeClassName="bg-white text-black hover:bg-white is-active"
               >
