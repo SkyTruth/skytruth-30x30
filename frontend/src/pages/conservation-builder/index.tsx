@@ -7,7 +7,9 @@ import { PAGES } from '@/constants/pages';
 import MapLayout from '@/layouts/map';
 import { fetchTranslations } from '@/lib/i18n';
 import mapParamsToSearchParams from '@/lib/mapparams-to-searchparams';
+import { getServiceUnavailableProps, isBackendDown } from '@/lib/service-unavailable';
 import { FCWithMessages } from '@/types';
+import { getLocations } from '@/types/generated/location';
 import { MapTypes } from '@/types/map';
 
 import { LayoutProps } from '../_app';
@@ -82,6 +84,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         destination: `/${context.locale}${PAGES.conservationBuilder}?${searchParams}`,
       },
     };
+  }
+
+  try {
+    await getLocations({ filters: { code: 'GLOB' }, 'pagination[limit]': 1 });
+  } catch (error) {
+    if (isBackendDown(error)) return getServiceUnavailableProps(context);
   }
 
   const queryClient = new QueryClient();

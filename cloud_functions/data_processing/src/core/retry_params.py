@@ -38,6 +38,14 @@ METHOD_RETRY_CONFIGS = {
         "delay_seconds": ONE_HOUR,
         "max_retries": 3,
     },
+    "update_mangroves_tileset": {
+        "delay_seconds": ONE_HOUR,
+        "max_retries": 3,
+    },
+    "update_seagrasses_tileset": {
+        "delay_seconds": ONE_HOUR,
+        "max_retries": 3,
+    },
 }
 
 

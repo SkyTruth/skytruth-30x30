@@ -8,16 +8,19 @@ from google.cloud import run_v2, tasks_v2
 from google.protobuf import timestamp_pb2
 
 from src.core import map_params
-from src.core.commons import send_slack_alert
+from src.core.commons import download_and_duplicate_zipfile, send_slack_alert
 from src.core.params import (
     ARCHIVE_CONSERVATION_BUILDER_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     ARCHIVE_CONSERVATION_BUILDER_TERRESTRIAL_DATA,
+    ARCHIVE_MANGROVES_RASTER_FILE_NAME,
     BUCKET,
     BUFFERED_MARINE_LOCATIONS_FILE_NAME,
     CHUNK_SIZE,
     CLIMATE_RES_CORAL_SOURCE_FILE,
     CLIMATE_RESILIENT_CORALS_HABITATS,
+    CONSERVATION_BUILDER_HABITAT_DATA_PATTERN,
+    CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN,
     CONSERVATION_BUILDER_MARINE_DATA,
     CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
     CONSERVATION_BUILDER_TERRESTRIAL_DATA,
@@ -31,12 +34,16 @@ from src.core.params import (
     HABITAT_PROTECTION_FILE_NAME,
     HIGH_SEAS_PARAMS,
     LONG_RUNNING_TASKS,
+    MANGROVES_RASTER_FILE_NAME,
+    MANGROVES_RASTER_PATH,
+    MANGROVES_RASTER_URL,
     MARINE_HABITAT_PARAMS,
     MARINE_LOCATIONS_FILE_NAME,
     MARINE_REGIONS_BODY,
     MARINE_REGIONS_HEADERS,
     MARINE_REGIONS_URL,
     MPATLAS_WITH_SEAS_FILE_NAME,
+    PROCESSED_BIOME_RASTER_PATH,
     PROTECTION_COVERAGE_FILE_NAME,
     PROTECTION_LEVEL_FILE_NAME,
     TOLERANCE,
@@ -73,6 +80,7 @@ from src.methods.static_processes import (
     process_eez_geoms,
     process_eez_land_union,
     process_gadm_geoms,
+    process_mangrove_raster,
     process_marine_habitat_geoms,
     process_near_shore_iho,
     process_terrestrial_biome_raster,
@@ -81,6 +89,7 @@ from src.methods.subtract_geometries import (
     generate_location_minus_fhp_mpa,
     generate_marine_habitat_minus_pa,
     generate_raster_habitat_minus_pa,
+    generate_raster_habitat_tiles,
     generate_total_area_minus_pa,
 )
 from src.methods.terrestrial_habitats import generate_terrestrial_biome_stats_pa
@@ -88,12 +97,13 @@ from src.methods.tileset_processes import (
     create_and_update_climate_resilient_coral_tileset,
     create_and_update_country_tileset,
     create_and_update_eez_tileset,
+    create_and_update_marine_habitat_tileset,
     create_and_update_marine_regions_tileset,
     create_and_update_mpatlas_tileset,
     create_and_update_protected_area_tileset,
     create_and_update_terrestrial_regions_tileset,
 )
-from src.utils.database import update_cb
+from src.utils.database import update_cb, update_cb_raster
 from src.utils.gcp import download_zip_to_gcs
 from src.utils.logger import Logger
 from src.utils.resource_handling import release_memory
@@ -382,6 +392,20 @@ def dispatch_publisher(
             process_terrestrial_biome_raster(verbose=verbose)
             step_list = ["generate_terrestrial_biome_stats_country"]
 
+        case "download_mangrove_raster":
+            download_and_duplicate_zipfile(
+                url=MANGROVES_RASTER_URL,
+                bucket=BUCKET,
+                blob_name=MANGROVES_RASTER_FILE_NAME,
+                archive_blob_name=ARCHIVE_MANGROVES_RASTER_FILE_NAME,
+                chunk_size=CHUNK_SIZE,
+                verbose=verbose,
+            )
+            step_list = ["process_mangrove_raster"]
+
+        case "process_mangrove_raster":
+            process_mangrove_raster(verbose=verbose)
+
         case "process_near_shore_iho":
             process_near_shore_iho(verbose=verbose)
             step_list = ["process_marine_habitat_geoms"]
@@ -432,6 +456,7 @@ def dispatch_publisher(
             step_list = [
                 "generate_iho_pa_intersections",
                 "generate_gadm_minus_pa",
+                "generate_terrestrial_habitats_minus_pa",
             ]
 
         case "generate_iho_pa_intersections":
@@ -451,9 +476,10 @@ def dispatch_publisher(
             step_list = [
                 "generate_mangroves_minus_pa",
                 "generate_seamounts_minus_pa",
-                "generate_coldwatercorals_minus_pa",
+                "generate_cold_water_corals_minus_pa",
                 "generate_saltmarshes_minus_pa",
                 "generate_seagrasses_minus_pa",
+                "generate_climate_resilient_corals_minus_pa",
             ]
 
         # ------------------
@@ -541,35 +567,43 @@ def dispatch_publisher(
         # HABITAT_PROCESSING_PARAMS. When we move to Workflows (TECH-3777), it is easiest to
         # fan out to parallel if they are separate tasks without restructuring anything.
         case "generate_mangroves_minus_pa":
-            generate_marine_habitat_minus_pa(
+            generate_raster_habitat_tiles(
                 habitat="mangroves",
-                n_jobs=2,
+                raster_file_name=MANGROVES_RASTER_PATH,
+                total_area_file=BUFFERED_MARINE_LOCATIONS_FILE_NAME,
+                pa_file=WDPA_WITH_BUFFERED_SEAS_FILE_NAME,
+                tolerance=TOLERANCE,
                 verbose=verbose,
             )
+            step_list = ["update_mangroves_minus_pa"]
 
         case "generate_seamounts_minus_pa":
             generate_marine_habitat_minus_pa(
                 habitat="seamounts",
                 verbose=verbose,
             )
+            step_list = ["update_seamounts_minus_pa"]
 
-        case "generate_coldwatercorals_minus_pa":
+        case "generate_cold_water_corals_minus_pa":
             generate_marine_habitat_minus_pa(
-                habitat="coldwatercorals",
+                habitat="cold-water-corals",
                 verbose=verbose,
             )
+            step_list = ["update_cold_water_corals_minus_pa"]
 
         case "generate_saltmarshes_minus_pa":
             generate_marine_habitat_minus_pa(
                 habitat="saltmarshes",
                 verbose=verbose,
             )
+            step_list = ["update_saltmarshes_minus_pa"]
 
         case "generate_seagrasses_minus_pa":
             generate_marine_habitat_minus_pa(
                 habitat="seagrasses",
                 verbose=verbose,
             )
+            step_list = ["update_seagrasses_minus_pa"]
 
         case "generate_climate_resilient_corals_minus_pa":
             generate_raster_habitat_minus_pa(
@@ -580,6 +614,18 @@ def dispatch_publisher(
                 n_jobs=-1,
                 verbose=verbose,
             )
+            step_list = ["update_climate_resilient_corals_minus_pa"]
+
+        case "generate_terrestrial_habitats_minus_pa":
+            generate_raster_habitat_tiles(
+                habitat="terrestrial-habitats",
+                raster_file_name=PROCESSED_BIOME_RASTER_PATH,
+                total_area_file=GADM_FILE_NAME,
+                pa_file=WDPA_TERRESTRIAL_FILE_NAME,
+                tolerance=TOLERANCE,
+                verbose=verbose,
+            )
+            step_list = ["update_terrestrial_habitats_minus_pa"]
 
         # ------------------
         #   Database updates
@@ -631,6 +677,15 @@ def dispatch_publisher(
                 verbose=verbose,
             )
 
+        case "update_terrestrial_habitats_minus_pa":
+            update_cb_raster(
+                table_name="terrestrial_habitats_minus_pa",
+                gcs_dir=CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(
+                    habitat="terrestrial-habitats"
+                ),
+                verbose=verbose,
+            )
+
         case "update_location_minus_mpa":
             update_cb(
                 table_name="eez_minus_mpa_v2",
@@ -644,6 +699,52 @@ def dispatch_publisher(
                 gcs_file=CONSERVATION_BUILDER_NON_FULLY_HIGHLY_PROTECTED_MARINE_DATA,
                 verbose=verbose,
             )
+
+        case "update_mangroves_minus_pa":
+            update_cb_raster(
+                table_name="mangroves_minus_pa",
+                gcs_dir=CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(habitat="mangroves"),
+                verbose=verbose,
+            )
+
+        case "update_seamounts_minus_pa":
+            update_cb(
+                table_name="seamounts_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="seamounts"),
+                verbose=verbose,
+            )
+
+        case "update_cold_water_corals_minus_pa":
+            update_cb(
+                table_name="cold_water_corals_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(
+                    habitat="cold-water-corals"
+                ),
+                verbose=verbose,
+            )
+
+        case "update_saltmarshes_minus_pa":
+            update_cb(
+                table_name="saltmarshes_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="saltmarshes"),
+                verbose=verbose,
+            )
+
+        case "update_seagrasses_minus_pa":
+            update_cb(
+                table_name="seagrasses_minus_pa",
+                gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat="seagrasses"),
+                verbose=verbose,
+            )
+
+        case "update_climate_resilient_corals_minus_pa":
+            # One table per raster class
+            for habitat in CLIMATE_RESILIENT_CORALS_HABITATS:
+                update_cb(
+                    table_name=f"{habitat.replace('-', '_')}_minus_pa",
+                    gcs_file=CONSERVATION_BUILDER_HABITAT_DATA_PATTERN.format(habitat=habitat),
+                    verbose=verbose,
+                )
 
         # ------------------
         #   Map Tilesets Updates
@@ -692,6 +793,28 @@ def dispatch_publisher(
 
         case "update_climate_resilient_coral_tileset":
             create_and_update_climate_resilient_coral_tileset(
+                verbose=verbose,
+            )
+
+        case "update_mangroves_tileset":
+            create_and_update_marine_habitat_tileset(
+                habitat="mangroves",
+                output_blob=map_params.MANGROVES_TILESET_FILE,
+                archive_blob=map_params.MANGROVES_TILESET_ARCHIVE_FILE,
+                layer_name=map_params.MANGROVES_TILESET_ID,
+                display_name=map_params.MANGROVES_TILESET_NAME,
+                method="update_mangroves_tileset",
+                verbose=verbose,
+            )
+
+        case "update_seagrasses_tileset":
+            create_and_update_marine_habitat_tileset(
+                habitat="seagrasses",
+                output_blob=map_params.SEAGRASSES_TILESET_FILE,
+                archive_blob=map_params.SEAGRASSES_TILESET_ARCHIVE_FILE,
+                layer_name=map_params.SEAGRASSES_TILESET_ID,
+                display_name=map_params.SEAGRASSES_TILESET_NAME,
+                method="update_seagrasses_tileset",
                 verbose=verbose,
             )
 
@@ -792,7 +915,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
         else:
             msg = f"METHOD {method} failed after {attempt} attempts"
             logger.error({"message": msg, "error": str(e)})
-            send_slack_alert(webhook_url, f"{msg} on {env.upper()}")
+            send_slack_alert(webhook_url, f"{msg} on {env.upper()}: {e}")
             return f"{msg}: {e}", 500
 
     except Exception as e:
@@ -821,7 +944,7 @@ def run_from_payload(data: dict, verbose: bool = True) -> tuple[str, int]:
                     "traceback": traceback.format_exc(),
                 }
             )
-            send_slack_alert(webhook_url, f"METHOD {method} failed on {env.upper()}")
+            send_slack_alert(webhook_url, f"METHOD {method} failed on {env.upper()}: {e}")
             return f"METHOD {method} failed after {attempt} attempts: {e}", 500
 
     finally:

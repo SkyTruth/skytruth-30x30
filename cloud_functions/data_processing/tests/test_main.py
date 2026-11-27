@@ -40,6 +40,7 @@ def patched_all(monkeypatch, call_log):
         "process_eez_land_union",
         "download_marine_habitats",
         "process_terrestrial_biome_raster",
+        "process_mangrove_raster",
         "process_marine_habitat_geoms",
         "generate_terrestrial_biome_stats_country",
         "download_mpatlas",
@@ -57,6 +58,9 @@ def patched_all(monkeypatch, call_log):
         "generate_total_area_minus_pa",
         "generate_location_minus_fhp_mpa",
         "generate_marine_habitat_minus_pa",
+        "generate_raster_habitat_tiles",
+        "update_cb_raster",
+        "create_and_update_marine_habitat_tileset",
     ]
     for name in simple_targets:
         return_value = {"ok": True}
@@ -72,6 +76,12 @@ def patched_all(monkeypatch, call_log):
         main,
         "download_zip_to_gcs",
         make_recorder(call_log, "download_zip_to_gcs", return_value={"ok": True}),
+        raising=True,
+    )
+    monkeypatch.setattr(
+        main,
+        "download_and_duplicate_zipfile",
+        make_recorder(call_log, "download_and_duplicate_zipfile"),
         raising=True,
     )
 
@@ -101,6 +111,7 @@ def patched_all(monkeypatch, call_log):
         ("process_eezs", "process_eez_geoms"),
         ("process_eez_land_union", "process_eez_land_union"),
         ("process_terrestrial_biomes", "process_terrestrial_biome_raster"),
+        ("process_mangrove_raster", "process_mangrove_raster"),
         ("generate_terrestrial_biome_stats_country", "generate_terrestrial_biome_stats_country"),
         ("download_mpatlas", "download_mpatlas"),
         ("download_protected_seas", "download_protected_seas"),
@@ -159,6 +170,7 @@ def test_protected_planet_pas_receives_the_tolerance(patched_all):
         "generate_gadm_minus_pa",
         "generate_location_minus_mpa",
         "generate_location_minus_fhp_mpa",
+        "generate_terrestrial_habitats_minus_pa",
     ],
 )
 def test_conservation_builder_methods_use_the_pipeline_tolerance(patched_all, method):
@@ -188,7 +200,7 @@ def _fetched_habitats(call_log):
 
 @pytest.mark.parametrize(
     "habitat",
-    ["coldwatercorals", ["coldwatercorals", "saltmarshes", "seagrasses"]],
+    ["cold-water-corals", ["cold-water-corals", "saltmarshes", "seagrasses"]],
     ids=["single", "list"],
 )
 def test_download_marine_habitats_forwards_habitat_selection(patched_all, habitat):
@@ -370,12 +382,12 @@ def test_failed_download_retries_only_the_habitats_that_never_landed(patched_all
     main.run_from_payload(
         {
             "METHOD": "download_marine_habitats",
-            "HABITAT": ["coldwatercorals", "saltmarshes", "seagrasses"],
+            "HABITAT": ["cold-water-corals", "saltmarshes", "seagrasses"],
             "MAX_RETRIES": 3,
         }
     )
 
-    assert fetched == ["coldwatercorals", "saltmarshes"]
+    assert fetched == ["cold-water-corals", "saltmarshes"]
     assert _retry_payloads(patched_all)[0]["HABITAT"] == ["seagrasses"]
 
 
@@ -690,6 +702,46 @@ def test_pair_file_consumers_are_downstream_of_the_step_that_writes_them(chained
     assert method in _all_enqueued(chained_jobs("generate_iho_pa_intersections"))
 
 
+def test_terrestrial_habitat_tiles_follow_the_pa_download(patched_all):
+    """The tiles read the terrestrial PAs, so they wait for the step that writes them."""
+    main.run_from_payload({"METHOD": "download_protected_planet_pas", "TRIGGER_NEXT": True})
+
+    launched = [payload["METHOD"] for payload in _next_step_payloads(patched_all)]
+    assert "generate_terrestrial_habitats_minus_pa" in launched
+
+
+def test_terrestrial_habitat_tiles_load_the_folder_they_were_written_to(patched_all):
+    main.run_from_payload({"METHOD": "generate_terrestrial_habitats_minus_pa"})
+    main.run_from_payload({"METHOD": "update_terrestrial_habitats_minus_pa"})
+
+    [generated] = [kw for name, _, kw in patched_all if name == "generate_raster_habitat_tiles"]
+    [updated] = [kw for name, _, kw in patched_all if name == "update_cb_raster"]
+    assert updated["gcs_dir"] == main.CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(
+        habitat=generated["habitat"]
+    )
+    assert updated["table_name"] == "terrestrial_habitats_minus_pa"
+
+
+def test_mangrove_tiles_chain_into_their_database_load(patched_all):
+    main.run_from_payload({"METHOD": "generate_mangroves_minus_pa", "TRIGGER_NEXT": True})
+
+    assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
+        "update_mangroves_minus_pa"
+    ]
+
+
+def test_mangrove_tiles_load_the_folder_they_were_written_to(patched_all):
+    main.run_from_payload({"METHOD": "generate_mangroves_minus_pa"})
+    main.run_from_payload({"METHOD": "update_mangroves_minus_pa"})
+
+    [generated] = [kw for name, _, kw in patched_all if name == "generate_raster_habitat_tiles"]
+    [updated] = [kw for name, _, kw in patched_all if name == "update_cb_raster"]
+    assert updated["gcs_dir"] == main.CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN.format(
+        habitat=generated["habitat"]
+    )
+    assert updated["table_name"] == "mangroves_minus_pa"
+
+
 # Non-invoking / generic flows
 def test_dry_run_calls_nothing_and_returns_ok(patched_all, monkeypatch):
     """dry_run should print and return OK without calling any target."""
@@ -862,12 +914,30 @@ def test_eez_land_union_chains_into_the_near_shore_iho_job(patched_all):
     ]
 
 
-@pytest.mark.parametrize("habitat", list(HABITAT_PROCESSING_PARAMS))
+def test_mangrove_raster_download_keeps_both_copies_and_chains_into_processing(patched_all):
+    """The stack lands at the path process_mangrove_raster reads, with an archive copy."""
+    main.run_from_payload({"METHOD": "download_mangrove_raster", "TRIGGER_NEXT": True})
+
+    downloads = [
+        kwargs for name, _, kwargs in patched_all if name == "download_and_duplicate_zipfile"
+    ]
+    assert len(downloads) == 1
+    assert downloads[0]["url"] == main.MANGROVES_RASTER_URL
+    assert downloads[0]["blob_name"] == main.MANGROVES_RASTER_FILE_NAME
+    assert downloads[0]["archive_blob_name"] == main.ARCHIVE_MANGROVES_RASTER_FILE_NAME
+    assert [payload["METHOD"] for payload in _next_step_payloads(patched_all)] == [
+        "process_mangrove_raster"
+    ]
+
+
+@pytest.mark.parametrize(
+    "habitat", [habitat for habitat in HABITAT_PROCESSING_PARAMS if habitat != "mangroves"]
+)
 def test_each_habitat_has_its_own_minus_pa_method(patched_all, habitat):
     """One method per habitat, each dispatching only its own key, so a Workflow can fan
     them out unchanged. Everything else is defaulted inside
     generate_marine_habitat_minus_pa."""
-    resp = main.run_from_payload({"METHOD": f"generate_{habitat}_minus_pa"})
+    resp = main.run_from_payload({"METHOD": f"generate_{habitat.replace('-', '_')}_minus_pa"})
 
     assert resp == ("OK", 200)
 
@@ -901,6 +971,29 @@ def test_buffered_iho_pa_intersections_launches_every_habitat_minus_pa_job(patch
 
     launched = [payload["METHOD"] for payload in _next_step_payloads(patched_all)]
 
-    assert [f"generate_{habitat}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS] == [
+    assert [
+        f"generate_{habitat.replace('-', '_')}_minus_pa" for habitat in HABITAT_PROCESSING_PARAMS
+    ] + ["generate_climate_resilient_corals_minus_pa"] == [
         method for method in launched if method.endswith("_minus_pa") and "location" not in method
     ]
+
+
+@pytest.mark.parametrize(
+    ("method", "habitat", "layer_name", "output_blob"),
+    [
+        ("update_mangroves_tileset", "mangroves", "mangroves", "mangroves.pmtiles"),
+        ("update_seagrasses_tileset", "seagrasses", "seagrasses", "seagrasses.pmtiles"),
+    ],
+)
+def test_habitat_tileset_methods_publish_their_habitat(
+    patched_all, method, habitat, layer_name, output_blob
+):
+    resp = main.run_from_payload({"METHOD": method})
+
+    assert resp == ("OK", 200)
+    [(name, _, kwargs)] = patched_all
+    assert name == "create_and_update_marine_habitat_tileset"
+    assert kwargs["habitat"] == habitat
+    assert kwargs["layer_name"] == layer_name
+    assert kwargs["output_blob"] == output_blob
+    assert kwargs["method"] == method

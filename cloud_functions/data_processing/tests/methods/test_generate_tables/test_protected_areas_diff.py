@@ -3,7 +3,7 @@ import pickle
 import pandas as pd
 import pytest
 
-import src.methods.generate_tables as gen_tables
+import src.methods.generate_tables.protected_areas_diff as gen_tables
 from tests.fixtures.utils.util_mocks import MockBlob, MockBucket, MockClient
 
 # ---------------------------------------------------------------------------

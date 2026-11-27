@@ -10,6 +10,10 @@ output "database_user" {
   value = google_sql_user.app-user.name
 }
 
+output "read_only_user" {
+  value = google_sql_user.read-only-user.name
+}
+
 output "database_password" {
   value = google_sql_user.app-user.password
 }

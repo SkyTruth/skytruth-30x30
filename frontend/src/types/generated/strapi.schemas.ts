@@ -7996,6 +7996,7 @@ export type HabitatStatHabitat = {
   slug?: string;
   name?: string;
   info?: string;
+  is_retired?: boolean;
   createdAt?: string;
   updatedAt?: string;
   publishedAt?: string;
@@ -8953,6 +8954,7 @@ export interface Habitat {
   slug: string;
   name: string;
   info?: string;
+  is_retired?: boolean;
   createdAt?: string;
   updatedAt?: string;
   publishedAt?: string;
@@ -8996,6 +8998,7 @@ export type HabitatLocalizationsItem = {
   slug?: string;
   name?: string;
   info?: string;
+  is_retired?: boolean;
   createdAt?: string;
   updatedAt?: string;
   publishedAt?: string;

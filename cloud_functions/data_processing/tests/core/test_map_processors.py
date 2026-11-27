@@ -51,6 +51,24 @@ def test_vector_tile_generation_happy_path(monkeypatch, patch_subprocess):
     assert any("Vector tiles created" in m for m in logged)
 
 
+def test_vector_tile_generation_passes_every_input_file(patch_subprocess):
+    mp.generate_vector_tiles(["polygons.geojson", "points.geojson"], "out.pmtiles")
+
+    assert "-ae polygons.geojson points.geojson" in patch_subprocess["cmd"]
+
+
+def test_vector_tile_generation_adds_options(patch_subprocess):
+    mp.generate_vector_tiles("in.geojson", "out.pmtiles", options=["-r1", "-B0"])
+
+    assert patch_subprocess["cmd"] == "tippecanoe -zg -f -P -r1 -B0 -o out.pmtiles -ae in.geojson"
+
+
+def test_vector_tile_generation_without_options(patch_subprocess):
+    mp.generate_vector_tiles("in.geojson", "out.pmtiles")
+
+    assert patch_subprocess["cmd"] == "tippecanoe -zg -f -P -o out.pmtiles -ae in.geojson"
+
+
 # ----------------------------
 # generate_vector_tiles
 # ----------------------------

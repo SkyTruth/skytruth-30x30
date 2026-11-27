@@ -44,6 +44,16 @@ variable "database_password" {
   description = "Password for the database user"
 }
 
+variable "read_only_user" {
+  type        = string
+  description = "Name of the database user granted read-only access"
+}
+
+variable "read_only_password" {
+  type        = string
+  description = "Password for the read-only database user"
+}
+
 variable "enable_backups" {
   type        = bool
   default     = true

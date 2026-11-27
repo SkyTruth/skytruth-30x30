@@ -28,4 +28,5 @@ def create_db_engine(settings: Settings) -> Engine:
         max_overflow=settings.database_max_overflow,
         pool_pre_ping=True,
         pool_recycle=settings.database_pool_recycle_seconds,
+        execution_options={"postgresql_readonly": True},
     )
