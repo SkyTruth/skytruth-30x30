@@ -1,6 +1,7 @@
 import io
 import json
 import os
+import shutil
 import tempfile
 import time
 import traceback
@@ -492,6 +493,25 @@ def unzip_file(base_zip_path, destination_folder):
         zip_ref.extractall(destination_folder)
 
 
+def remove_file_or_folder(path, verbose=True):
+    """Delete a file or folder (recursively) if it exists."""
+    try:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+            if verbose:
+                logger.info({"message": f"Deleted folder and its contents: {path}"})
+        elif os.path.exists(path):
+            os.remove(path)
+            if verbose:
+                logger.info({"message": f"Deleted file: {path}"})
+        else:
+            return
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        logger.warning({"message": f"Warning: could not delete {path}: {e}"})
+
+
 def send_slack_alert(webhook_url, text):
     try:
         headers = {"Content-Type": "application/json"}
@@ -500,7 +520,7 @@ def send_slack_alert(webhook_url, text):
         logger.info({"message": "ALERT sent to slack", "alert": text})
         return response.status_code, response.text
     except Exception as e:
-        logger.error({"message": "Failed to send slack alert", "alert": text, "exception": e})
+        logger.error({"message": "Failed to send slack alert", "alert": text, "exception": str(e)})
 
 
 class RetryFailed(Exception):

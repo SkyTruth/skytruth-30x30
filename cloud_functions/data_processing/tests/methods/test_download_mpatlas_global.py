@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-import src.methods.download_and_process as download
+import src.methods.download_and_process.mpatlas as download
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -26,9 +26,9 @@ def api_response():
     }
 
 
-@patch("src.methods.download_and_process.duplicate_blob")
-@patch("src.methods.download_and_process.save_file_bucket")
-@patch("src.methods.download_and_process.requests.get")
+@patch("src.methods.download_and_process.mpatlas.duplicate_blob")
+@patch("src.methods.download_and_process.mpatlas.save_file_bucket")
+@patch("src.methods.download_and_process.mpatlas.requests.get")
 def test_get_request(mock_get, mock_save, mock_duplicate, api_response):
     # Configure the mock response
     mock_get.return_value.status_code = 200

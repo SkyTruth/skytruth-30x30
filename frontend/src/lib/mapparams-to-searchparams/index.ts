@@ -14,10 +14,6 @@ export function mapParamsToSearchParams(mapParams: string | string[] | null): st
     searchParams.set('layer-settings', JSON.stringify(params?.layerSettings || null));
   }
 
-  if (params?.content) {
-    searchParams.set('content', JSON.stringify(params?.content));
-  }
-
   const searchParamsUri = searchParams.toString();
 
   return decodeURIComponent(searchParamsUri);

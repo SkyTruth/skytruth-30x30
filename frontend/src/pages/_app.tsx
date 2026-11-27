@@ -13,6 +13,7 @@ import 'styles/globals.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 import Analytics from '@/components/analytics';
+import ServiceUnavailable from '@/containers/service-unavailable';
 import { figtree, overpassMono } from '@/styles/fonts';
 
 export type LayoutProps<PageProps = object, Props = React.ComponentProps<'div'>> = {
@@ -61,9 +62,13 @@ const App: React.FC<AppProps> = ({ Component, pageProps }: Props) => {
             <Hydrate state={pageProps.dehydratedState}>
               <MapProvider>
                 <Analytics />
-                <Layout {...layoutProps}>
-                  <Component {...pageProps} />
-                </Layout>
+                {pageProps.serviceUnavailable ? (
+                  <ServiceUnavailable {...pageProps.serviceUnavailable} />
+                ) : (
+                  <Layout {...layoutProps}>
+                    <Component {...pageProps} />
+                  </Layout>
+                )}
               </MapProvider>
             </Hydrate>
           </QueryClientProvider>

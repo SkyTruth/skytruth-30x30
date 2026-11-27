@@ -20,13 +20,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { EXTERNAL_LINKS } from '@/constants/external-links';
 import { PAGES } from '@/constants/pages';
 import {
   useSyncMapLayerSettings,
   useSyncMapLayers,
   useSyncMapSettings,
 } from '@/containers/map/content/map/sync-settings';
-import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { cn } from '@/lib/classnames';
 import ArrowRight from '@/styles/icons/arrow-right.svg';
 import { FCWithMessages } from '@/types';
@@ -84,7 +84,6 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
   const [mapSettings] = useSyncMapSettings();
   const [mapLayers] = useSyncMapLayers();
   const [mapLayerSettings] = useSyncMapLayerSettings();
-  const [mapContentSettings] = useSyncMapContentSettings();
   const [runAsOf] = useQueryState('run-as-of');
   const { query, pathname } = useRouter();
   const { locationCode = 'GLOB' } = query;
@@ -103,7 +102,6 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
                 settings: mapSettings,
                 layers: mapLayers,
                 layerSettings: mapLayerSettings,
-                content: mapContentSettings,
               }),
             }),
           },
@@ -116,16 +114,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         onNavigate: pathname.startsWith(href) ? (e) => e.preventDefault() : undefined,
       };
     });
-  }, [
-    navigationItems,
-    locationCode,
-    mapSettings,
-    mapLayers,
-    mapLayerSettings,
-    mapContentSettings,
-    runAsOf,
-    pathname,
-  ]);
+  }, [navigationItems, locationCode, mapSettings, mapLayers, mapLayerSettings, runAsOf, pathname]);
 
   return (
     <header className={cn('border-b font-mono text-sm', headerVariants({ theme }))}>
@@ -136,7 +125,7 @@ const Header: FCWithMessages<HeaderProps> = ({ theme, hideLogo = false }) => {
         <span className="flex">
           {!hideLogo && (
             <a
-              href="https://www.skytruth.org/30x30"
+              href={EXTERNAL_LINKS.skytruth30x30}
               target="_blank"
               rel="noopener noreferrer"
               className="-my-1.5 inline-block ring-offset-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"

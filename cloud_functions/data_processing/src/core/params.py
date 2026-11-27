@@ -144,9 +144,16 @@ WDPA_META_FILE_NAME = "intermediates/wdpa_meta.csv"
 # ------------------------------------------------------------
 #                     Marine Habitats
 # ------------------------------------------------------------
-MANGROVES_URL = "https://zenodo.org/records/21346457/files/gmw_v4112_2025_mng_ext_cntry_info_vec.gpkg.gz?download=1"
+MANGROVES_YEAR = 2025
+MANGROVES_VERSION = "v4112"
+MANGROVES_URL = f"https://zenodo.org/records/21346457/files/gmw_{MANGROVES_VERSION}_{MANGROVES_YEAR}_mng_ext_cntry_info_vec.gpkg.gz?download=1"
 MANGROVES_FILE_NAME = "habitats/mangroves.gpkg.gz"
 ARCHIVE_MANGROVES_FILE_NAME = f"archive/habitats/mangroves_{today_formatted}.gpkg.gz"
+# Raster data stack - one band per year
+MANGROVES_RASTER_URL = f"https://zenodo.org/records/21346457/files/gmw_mng_ext_{MANGROVES_VERSION}_stack.tar.gz?download=1"
+MANGROVES_RASTER_FILE_NAME = "habitats/mangroves_raster.tar.gz"
+ARCHIVE_MANGROVES_RASTER_FILE_NAME = f"archive/habitats/mangroves_raster_{today_formatted}.tar.gz"
+MANGROVES_RASTER_PATH = "static/mangroves.tif"
 
 SEAMOUNTS_URL = (
     "https://datadownload-production.s3.amazonaws.com/ZSL002_ModelledSeamounts2011_v1.zip"
@@ -189,7 +196,7 @@ MARINE_HABITAT_PARAMS = {
         "source": "shapefile",
         "overlaps": True,
     },
-    "coldwatercorals": {
+    "cold-water-corals": {
         "url": COLD_WATER_CORALS_URL,
         "file_name": COLD_WATER_CORALS_ZIPFILE_NAME,
         "archive_file_name": ARCHIVE_COLD_WATER_CORALS_FILE_NAME,
@@ -294,6 +301,8 @@ CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = "conservation_builder/{habitat}_minu
 ARCHIVE_CONSERVATION_BUILDER_HABITAT_DATA_PATTERN = (
     f"archive/conservation_builder/{{habitat}}_minus_pa_{today_formatted}.parquet"
 )
+# Raster habitats: a folder of {location}.parquet files of PostGIS raster tiles
+CONSERVATION_BUILDER_HABITAT_TILES_DIR_PATTERN = "conservation_builder/{habitat}_minus_pa_tiles"
 
 # ------------------------------------------------------------
 #                     Raster Data Sources
@@ -307,17 +316,20 @@ CLIMATE_RESILIENT_CORALS_HABITATS = ("other-corals", "climate-resilient-corals")
 LONG_RUNNING_TASKS = [
     "download_protected_planet_pas",
     "generate_mangroves_minus_pa",
-    "generate_coldwatercorals_minus_pa",
+    "generate_cold_water_corals_minus_pa",
     "generate_saltmarshes_minus_pa",
     "generate_seagrasses_minus_pa",
     "generate_climate_resilient_corals_minus_pa",
     "generate_terrestrial_biome_stats",
     "update_protected_areas",
     "generate_gadm_minus_pa",
+    "generate_terrestrial_habitats_minus_pa",
+    "update_terrestrial_habitats_minus_pa",
     "generate_protected_areas_table",
     "update_gadm_minus_pa",
     "update_climate_resilient_coral_tileset",
     "process_marine_habitat_geoms",
+    "process_mangrove_raster",
     "generate_habitat_protection_table",
     "generate_protection_coverage_stats_table",
     "download_protected_seas",
@@ -326,10 +338,14 @@ LONG_RUNNING_TASKS = [
     "generate_location_minus_fhp_mpa",
     "update_location_minus_mpa",
     "update_location_minus_fhp_mpa",
+    "update_mangroves_minus_pa",
+    "update_climate_resilient_corals_minus_pa",
     "generate_locations_table",
     "generate_marine_protection_level_stats_table",
     "update_marine_protected_areas_tileset",
     "update_terrestrial_protected_areas_tileset",
+    "update_mangroves_tileset",
+    "update_seagrasses_tileset",
     "generate_iho_pa_intersections",
     "generate_buffered_iho_pa_intersections",
 ]

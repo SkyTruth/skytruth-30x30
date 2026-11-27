@@ -1,0 +1,84 @@
+from collections.abc import Mapping, Sequence
+from enum import StrEnum
+from typing import Any
+
+import sqlalchemy
+
+from src.services.geometry import JSON, USER_DATA_CTES, get_geojson, validate_geometry_topology
+
+
+class AnalysisTable(StrEnum):
+    MARINE = "eez_minus_mpa_v2"
+    TERRESTRIAL = "gadm_minus_pa_v2"
+    FULLY_HIGHLY_PROTECTED = "location_minus_fhp_mpa"
+    SALTMARSHES = "saltmarshes_minus_pa"
+    SEAGRASSES = "seagrasses_minus_pa"
+    SEAMOUNTS = "seamounts_minus_pa"
+    COLD_WATER_CORALS = "cold_water_corals_minus_pa"
+    CLIMATE_RESILIENT_CORALS = "climate_resilient_corals_minus_pa"
+    OTHER_CORALS = "other_corals_minus_pa"
+
+
+def serialize_response(data: Sequence[Mapping[str, Any]]) -> dict:
+    """Converts the stats query's rows into a Dict
+    {locations: [{"code": <location_iso>, "added_area": <area>}],
+    "total_area": <total_area>} response
+    """
+    sub_result = {}
+    for row in data:
+        iso = row["location"]
+        if iso is None:
+            continue
+        if iso not in sub_result:
+            sub_result[iso] = {"code": iso, "added_area": row["portion_area_km2"]}
+        else:
+            sub_result[iso]["added_area"] += row["portion_area_km2"]
+
+    return {
+        "locations": list(sub_result.values()),
+        "total_area": data[0]["user_area_km2"],
+    }
+
+
+def get_locations_stats(
+    engine: sqlalchemy.engine.base.Engine,
+    geojson: JSON,
+    table_name: AnalysisTable | str,
+) -> dict:
+    try:
+        table = AnalysisTable(table_name)
+    except ValueError as exc:
+        raise LookupError(f"Unknown analysis table: {table_name!r}") from exc
+
+    geometry = get_geojson(geojson)
+    with engine.connect() as conn:
+        validate_geometry_topology(conn, geometry)
+        stmt = sqlalchemy.text(
+            f"""
+                WITH
+                    {USER_DATA_CTES},
+                    stats AS (
+                        SELECT
+                            location,
+                            ST_Area(ST_Transform(
+                                ST_MakeValid(ST_Intersection(the_geom, user_data_stats.geom)),
+                                '+proj=longlat +datum=WGS84 +no_defs +type=crs',
+                                '+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs'))/1e6
+                            AS portion_area_km2,
+                            user_data_stats.user_area_km2
+                        FROM
+                            user_data_stats
+                            LEFT JOIN data.{table.value}
+                                ON ST_Intersects(the_geom, user_data_stats.geom)
+                    )
+                SELECT
+                    location,
+                    SUM(portion_area_km2) AS portion_area_km2,
+                    AVG(user_area_km2) AS user_area_km2
+                FROM stats
+                GROUP BY location
+                """
+        )
+        data_response = conn.execute(stmt, parameters={"geometry": geometry}).mappings().all()
+
+    return serialize_response(data_response)

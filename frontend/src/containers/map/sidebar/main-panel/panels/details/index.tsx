@@ -15,7 +15,7 @@ import {
 import { sharedMarineAreaCountriesAtom } from '@/containers/map/store';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import useLocationName from '@/hooks/use-location-name';
-import useMapDefaultLayers, { useChangeMapTab } from '@/hooks/use-map-default-layers';
+import useMapDefaultLayers from '@/hooks/use-map-default-layers';
 import useScrollPosition from '@/hooks/use-scroll-position';
 import useMapLocationBounds from '@/hooks/useMapLocationBounds';
 import { cn } from '@/lib/classnames';
@@ -49,8 +49,7 @@ const SidebarDetails: FCWithMessages = () => {
 
   const [customRegionLocations] = useSyncCustomRegion();
   const searchParams = useMapSearchParams();
-  const [{ tab }] = useSyncMapContentSettings();
-  const handleTabChange = useChangeMapTab();
+  const [{ tab }, setSettings] = useSyncMapContentSettings();
 
   const setSharedMarineAreasCountries = useSetAtom(sharedMarineAreaCountriesAtom);
 
@@ -149,6 +148,11 @@ const SidebarDetails: FCWithMessages = () => {
     [push, searchParams]
   );
 
+  const handleTabChange = useCallback(
+    (tab: string) => setSettings((prevSettings) => ({ ...prevSettings, tab })),
+    [setSettings]
+  );
+
   const handleToggleWarning = () => setIsWarningCollapsed(!isWarningCollapsed);
 
   // Scroll to the top when the tab changes (whether that's initiated by clicking on the tab trigger
@@ -157,7 +161,7 @@ const SidebarDetails: FCWithMessages = () => {
     containerRef.current?.scrollTo({ top: 0 });
   }, [tab, locationCode]);
 
-  // Set the map's default layers on page load
+  // Update the map's default layers based on the tab
   useMapDefaultLayers();
 
   // Update the map's position based on the location

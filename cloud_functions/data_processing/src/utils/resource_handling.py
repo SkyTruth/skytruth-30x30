@@ -100,7 +100,8 @@ def handle_sigterm(signum, frame):
     )
 
     webhook_url = os.environ.get("SLACK_ALERTS_WEBHOOK", "")
-    send_slack_alert(webhook_url, "TIMEOUT ERROR - SIGTERM signal received")
+    env = os.environ.get("ENVIRONMENT", "")
+    send_slack_alert(webhook_url, f"TIMEOUT ERROR - SIGTERM signal received on {env.upper()}")
 
     # Free up memory
     release_memory()

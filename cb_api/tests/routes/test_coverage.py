@@ -1,0 +1,109 @@
+"""Route-level checks for POST /coverage."""
+
+from typing import Any
+
+import pytest
+
+from src import main
+from src.errors import BadRequestError
+from src.services.vector import AnalysisTable
+from tests.routes.helpers import POLYGON, STATS, RouteTestClient
+
+PATH = "/coverage"
+
+
+# --- the happy path ----------------------------------------------------------------
+
+
+def test_a_geometry_returns_location_stats(api: RouteTestClient):
+    response = api.client.post(PATH, json={"geometry": POLYGON})
+
+    assert response.status_code == 200
+    assert response.json() == STATS
+
+
+def test_the_geometry_is_passed_through_untouched(api: RouteTestClient):
+    feature = {"type": "Feature", "geometry": POLYGON, "properties": {}}
+
+    api.client.post(PATH, json={"geometry": feature})
+
+    _, geometry, _ = api.calls[0]
+    assert geometry == feature
+
+
+# --- environment to table ----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("body", "table"),
+    [
+        ({"geometry": POLYGON}, AnalysisTable.MARINE),
+        ({"geometry": POLYGON, "environment": "marine"}, AnalysisTable.MARINE),
+        ({"geometry": POLYGON, "environment": "terrestrial"}, AnalysisTable.TERRESTRIAL),
+    ],
+)
+def test_the_environment_chooses_the_table(api: RouteTestClient, body: dict, table: AnalysisTable):
+    api.client.post("/coverage", json=body)
+
+    _, _, chosen = api.calls[0]
+    assert chosen is table
+
+
+# --- the response shape ------------------------------------------------------------
+
+
+def test_extra_keys_from_the_analysis_layer_do_not_reach_the_caller(
+    api: RouteTestClient, monkeypatch: pytest.MonkeyPatch
+):
+    """response_model is what guarantees the body, not the analysis layer."""
+    monkeypatch.setattr(main, "get_locations_stats", lambda *_: {**STATS, "debug": "leak"})
+
+    response = api.client.post("/coverage", json={"geometry": POLYGON})
+
+    assert response.status_code == 200
+    assert "debug" not in response.json()
+
+
+def test_unknown_request_fields_are_ignored(api: RouteTestClient):
+    """`stats` is no longer an input, and sending it is not an error."""
+    response = api.client.post(
+        "/coverage", json={"geometry": POLYGON, "stats": "fully-highly-protected"}
+    )
+
+    assert response.status_code == 200
+    assert response.json() == STATS
+
+
+# --- rejections --------------------------------------------------------------------
+
+
+def test_a_missing_geometry_is_a_400(api: RouteTestClient):
+    response = api.client.post(PATH, json={})
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "Geometry is required"}
+    assert api.calls == []
+
+
+def test_an_unknown_environment_is_a_400(api: RouteTestClient):
+    response = api.client.post(PATH, json={"geometry": POLYGON, "environment": "lunar"})
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "Environment must be one of `marine` or `terrestrial`"}
+    assert api.calls == []
+
+
+def test_a_rejected_geometry_keeps_its_message(
+    api: RouteTestClient, monkeypatch: pytest.MonkeyPatch
+):
+    """The frontend matches on 'Invalid geometry', so the text has to survive."""
+
+    def reject(*_: Any) -> dict:
+        raise BadRequestError("Invalid geometry: input geometry is empty")
+
+    monkeypatch.setattr(main, "get_locations_stats", reject)
+
+    response = api.client.post(PATH, json={"geometry": POLYGON})
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "Invalid geometry: input geometry is empty"}

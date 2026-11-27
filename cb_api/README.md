@@ -1,6 +1,6 @@
 # Conservation Builder API
 
-Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area is already protected, broken down by location.
+Spatial analysis service for the 30x30 Conservation Builder. Given an area a user has drawn on the map, it reports how much of that area will have added protection, broken down by location.
 
 It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL PostGIS database. Those tables are produced by `cloud_functions/data_processing`.
 
@@ -9,6 +9,85 @@ It runs on Cloud Run and queries precomputed `data.*` tables in a Cloud SQL Post
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Liveness check, returns `{"status": "ok"}` |
+| `POST` | `/coverage` | How much of a drawn area will have added protection coverage, by location |
+| `POST` | `/protection-level` | The same, for protection at a given level |
+| `POST` | `/habitats` | The same, for one marine habitat or every terrestrial habitat, by location and habitat |
+
+### `POST /coverage`
+
+`geometry` is required and takes a GeoJSON Feature, FeatureCollection or bare geometry;
+it must resolve to a Polygon or MultiPolygon. **Only the first feature of a
+FeatureCollection is used**; any others are ignored, so to analyze several shapes
+together, send them as one MultiPolygon. `environment` is optional and selects the
+table the area is compared against (`marine` by default or `terrestrial`).
+
+```bash
+curl -X POST localhost:8080/coverage \
+  -H 'Content-Type: application/json' \
+  -d '{"environment": "marine", "geometry": {"type": "Polygon", "coordinates": [[[146.9,-39.2],[147,-39.2],[147,-39.1],[146.9,-39.1],[146.9,-39.2]]]}}'
+```
+
+```json
+{
+  "locations": [{ "code": "AUS", "added_area": 34.0 }],
+  "total_area": 96.0
+}
+```
+
+Areas are square kilometers, computed in a Mollweide equal-area projection. `total_area` is the drawn area. `added_area` is the part of it in each location that is not yet protected, which a protected area drawn there would add.
+
+An area that intersects nothing (e.g., a marine request over land) returns an empty `locations`, and `total_area` is still the drawn area.
+
+Unrecognized fields in the body are ignored.
+
+### `POST /protection-level`
+**Marine only.**
+
+The same as `/coverage`, but for protection at a given level: `added_area` is the area not yet protected at that level, which the drawn polygon would add. Takes `geometry` and `environment` as above, plus an optional `level` (currently only `fully-highly-protected`, which is the default).
+
+```bash
+curl -X POST localhost:8080/protection-level \
+  -H 'Content-Type: application/json' \
+  -d '{"level": "fully-highly-protected", "geometry": {"type": "Polygon", "coordinates": [[[146.9,-39.2],[147,-39.2],[147,-39.1],[146.9,-39.1],[146.9,-39.2]]]}}'
+```
+
+The response is shaped like the one for `/coverage`.
+
+### `POST /habitats`
+
+The same as `/coverage`, but for habitats: `added_area` is the area of a habitat not yet
+protected, which the drawn polygon would add. Takes `geometry` and a **required** `habitat`,
+either one marine habitat (`mangroves`, `saltmarshes`, `seagrasses`, `seamounts`,
+`cold-water-corals`, `climate-resilient-corals`, `other-corals`) or `terrestrial-habitats` for
+every terrestrial habitat at once (`forest`, `savanna`, `shrubland`, `grassland`,
+`wetlands-open-waters`, `rocky-mountains`, `desert`, `artificial`). There is no default, and
+no `environment`.
+
+```bash
+curl -X POST localhost:8080/habitats \
+  -H 'Content-Type: application/json' \
+  -d '{"habitat": "seagrasses", "geometry": {"type": "Polygon", "coordinates": [[[-5,36],[-4.9,36],[-4.9,36.1],[-5,36.1],[-5,36]]]}}'
+
+curl -X POST localhost:8080/habitats \
+  -H 'Content-Type: application/json' \
+  -d '{"habitat": "terrestrial-habitats", "geometry": {"type": "Polygon", "coordinates": [[[-72.6,7.0],[-72.2,7.0],[-72.2,7.4],[-72.6,7.4],[-72.6,7.0]]]}}'
+```
+
+The response is shaped like the one for `/coverage`, with each location's area broken down
+by habitat:
+
+```json
+{"locations": [{"code": "COL", "habitats": [{"habitat": "forest", "added_area": 8.1}]}], "total_area": 20.1}
+```
+
+A marine habitat gives one entry per location. `terrestrial-habitats` lists only the habitats
+the drawn area adds in each location.
+
+The terrestrial habitats come from the Jung et al. (2020) ~100 m habitat raster
+(`data.terrestrial_habitats_minus_pa`), and mangroves from the Global Mangrove Watch ~30 m
+extent raster (`data.mangroves_minus_pa`). Both need the `postgis_raster` extension. A pixel
+counts when its centre is inside the drawn area, so small drawings are approximate. The
+"Other" terrestrial class is left out, as it is in the progress tracker.
 
 ## Configuration
 
@@ -22,7 +101,7 @@ DATABASE_PASSWORD={database password}
 DATABASE_PORT=5432
 ```
 
-In GCP, these are set by Terraform, with the password coming from Secret Manager.
+In GCP, these are set by Terraform, with the password coming from Secret Manager. This differs from the other services on purpose to reduce potential secret exposure. Other deploy workflows write `.env` files from GitHub secrets into the image at build time, while Cloud Run gets cb_api's password from Secret Manager when the container starts, so it never enters the image, the registry, or GitHub.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
@@ -68,6 +147,8 @@ poetry run ruff check --fix
 | `src/main.py` | App, lifespan, CORS, routes |
 | `src/config.py` | Settings |
 | `src/db.py` | Engine and connection pool |
-| `src/analysis.py` | The spatial query and its result shaping |
+| `src/services/geometry.py` | Parsing and validating the drawn area, shared by the queries |
+| `src/services/vector.py` | The vector table queries and their result shaping |
+| `src/services/raster.py` | The raster habitats query and its result shaping |
 | `src/schemas.py` | Request and response models |
 | `src/errors.py` | Exception handlers |

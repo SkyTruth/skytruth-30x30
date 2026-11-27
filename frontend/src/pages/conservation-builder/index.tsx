@@ -7,7 +7,9 @@ import { PAGES } from '@/constants/pages';
 import MapLayout from '@/layouts/map';
 import { fetchTranslations } from '@/lib/i18n';
 import mapParamsToSearchParams from '@/lib/mapparams-to-searchparams';
+import { getServiceUnavailableProps, isBackendDown } from '@/lib/service-unavailable';
 import { FCWithMessages } from '@/types';
+import { getLocations } from '@/types/generated/location';
 import { MapTypes } from '@/types/map';
 
 import { LayoutProps } from '../_app';
@@ -30,12 +32,9 @@ ConservationBuilderPage.messages = ['pages.conservation-builder', ...MapLayout.m
 // Conservation Builder has no summary tab, so default to terrestrial if the URL has no valid tab
 const CONSERVATION_BUILDER_CONTENT = JSON.stringify({ showDetails: false, tab: 'terrestrial' });
 
-const isConservationBuilderTab = (tab: unknown) =>
-  ['terrestrial', 'marine'].includes(tab as string);
-
 const hasConservationBuilderTab = (content: unknown) => {
   try {
-    return isConservationBuilderTab(JSON.parse(content as string)?.tab);
+    return ['terrestrial', 'marine'].includes(JSON.parse(content as string)?.tab);
   } catch {
     return false;
   }
@@ -46,20 +45,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const { mapParams = null, 'run-as-of': runAsOf } = query;
 
   if (mapParams) {
-    // Keep the previous page's settings (summary on PT goes to terrestrial on CB),
-    // except with showDetails always false
-    const params = JSON.parse(mapParams as string);
-    const tab = params.content?.tab;
-    params.content = {
-      ...params.content,
-      showDetails: false,
-      tab: isConservationBuilderTab(tab) ? tab : 'terrestrial',
-    };
-
-    let searchParams = mapParamsToSearchParams(JSON.stringify(params));
+    let searchParams = mapParamsToSearchParams(mapParams);
     if (runAsOf) {
       searchParams += `&run-as-of=${runAsOf}`;
     }
+    searchParams += `&content=${CONSERVATION_BUILDER_CONTENT}`;
 
     const target = `/${context.locale}${PAGES.conservationBuilder}/?${searchParams}`;
 
@@ -82,6 +72,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         destination: `/${context.locale}${PAGES.conservationBuilder}?${searchParams}`,
       },
     };
+  }
+
+  try {
+    await getLocations({ filters: { code: 'GLOB' }, 'pagination[limit]': 1 });
+  } catch (error) {
+    if (isBackendDown(error)) return getServiceUnavailableProps(context);
   }
 
   const queryClient = new QueryClient();
