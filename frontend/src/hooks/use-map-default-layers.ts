@@ -68,7 +68,7 @@ export default function useMapDefaultLayers() {
     hasSetInitialDefaultsRef.current = true;
 
     if (initialMapLayersRef.current.length > 0) {
-      // URL already had layers when the page loaded; respect the user's state.
+      // URL already had layers when the page loaded — respect the user's state.
       return;
     }
 
