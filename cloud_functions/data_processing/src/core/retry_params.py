@@ -18,6 +18,11 @@ METHOD_RETRY_CONFIGS = {
         "delay_seconds": ONE_DAY,
         "max_retries": 3,
     },
+    # A partial Protected Seas sync continues in a new run if needed
+    "download_protected_seas": {
+        "delay_seconds": ONE_MINUTE,
+        "max_retries": 4,
+    },
     "download_protected_planet_pas": {
         "delay_seconds": ONE_DAY,
         "max_retries": 7,
