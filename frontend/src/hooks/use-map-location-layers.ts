@@ -2,17 +2,14 @@ import { useEffect, useRef } from 'react';
 
 import { useRouter } from 'next/router';
 
-import { EEZ_SOURCE } from '@/containers/map/content/map/popup/constants';
 import { useSyncMapLayers } from '@/containers/map/content/map/sync-settings';
 import { useSyncMapContentSettings } from '@/containers/map/sync-settings';
 import { Location } from '@/types/generated/strapi.schemas';
 
-import useDatasetsByEnvironment from './use-datasets-by-environment';
-
-// Identify layers for regions and countries
-const BOUNDARY_SOURCES_BY_LOCATION_TYPE: Record<string, string[]> = {
-  region: ['terrestrial-regions', 'marine-regions-source'],
-  country: ['countries', EEZ_SOURCE],
+// Slugs of the boundary layers for regions and countries, for each tab
+const BOUNDARY_LAYER_SLUGS: Record<string, Record<'terrestrial' | 'marine', string[]>> = {
+  region: { terrestrial: ['trr'], marine: ['mrr'] },
+  country: { terrestrial: ['cnt'], marine: ['eez'] },
 };
 
 /**
@@ -28,7 +25,6 @@ export default function useMapLocationLayers(location: Pick<Location, 'code' | '
 
   const [, setMapLayers] = useSyncMapLayers();
   const [{ tab }] = useSyncMapContentSettings();
-  const [datasets] = useDatasetsByEnvironment();
 
   // Keep track of location changes
   const previousLocationCodeRef = useRef(locationCode);
@@ -41,25 +37,16 @@ export default function useMapLocationLayers(location: Pick<Location, 'code' | '
     }
     previousLocationCodeRef.current = locationCode;
 
-    // Wait until the new location's details and the list of map layers have loaded
-    const isDataReady = location?.code === locationCode && datasets.terrestrial !== undefined;
-    if (!pendingLocationChangeRef.current || !isDataReady) return;
+    // Wait until the new location's details have loaded
+    if (!pendingLocationChangeRef.current || location?.code !== locationCode) return;
     pendingLocationChangeRef.current = false;
 
-    // Get region/country layers
-    const sources = BOUNDARY_SOURCES_BY_LOCATION_TYPE[location.type];
-    if (!sources) return;
+    // Get region/country layers, both land and ocean on the summary tab
+    const layers = BOUNDARY_LAYER_SLUGS[location.type];
+    if (!layers) return;
 
-    const environments =
-      tab === 'summary' ? [datasets.terrestrial, datasets.marine] : [datasets[tab]];
-
-    const boundarySlugs = environments
-      .flat()
-      .flatMap((dataset) => dataset?.layers ?? [])
-      .filter((layer) =>
-        sources.includes((layer?.config as { source?: { id?: string } })?.source?.id)
-      )
-      .map(({ slug }) => slug);
+    const boundarySlugs =
+      tab === 'summary' ? [...layers.terrestrial, ...layers.marine] : (layers[tab] ?? []);
 
     // Put the boundary layers first
     // If a boundary layer was already on, it's moved up
@@ -67,5 +54,5 @@ export default function useMapLocationLayers(location: Pick<Location, 'code' | '
       ...boundarySlugs,
       ...activeLayers.filter((slug) => !boundarySlugs.includes(slug)),
     ]);
-  }, [locationCode, location, datasets, tab, setMapLayers]);
+  }, [locationCode, location, tab, setMapLayers]);
 }
